@@ -1,55 +1,84 @@
+import numpy as np
+
+#be careful with deep and shallow copies
 class Quat(object):
     def __init__(self, *args, **kwargs):
-        self.quat = np.zeros(4, dtype=float)
+        self.quatCoef = np.zeros(4, dtype=float)
         #construt with euler angles
         if len(args) == 3:
             ph1 = args[0]
             phi = args[1]
             ph2 = args[2]
             
-            self.quat[0] = np.cos(phi/2.) * np.cos((ph1+ph2)/2.)
-            self.quat[1] = -np.sin(phi/2.) * np.cos((ph2-ph1)/2.)
-            self.quat[2] = np.sin(phi/2.) * np.sin((ph2-ph1)/2.)
-            self.quat[3] = -np.cos(phi/2.) * np.sin((ph1+ph2)/2.)
+            self.quatCoef[0] = np.cos(phi/2.) * np.cos((ph1+ph2)/2.)
+            self.quatCoef[1] = -np.sin(phi/2.) * np.cos((ph2-ph1)/2.)
+            self.quatCoef[2] = np.sin(phi/2.) * np.sin((ph2-ph1)/2.)
+            self.quatCoef[3] = -np.cos(phi/2.) * np.sin((ph1+ph2)/2.)
         #construt with array of quat coefficients
         elif len(args) == 1:
-            self.quat = args[0]
+            self.quatCoef = args[0]
         
-        if (self.quat[0] < 0):
-            self.quat = self.quat * -1
+        if (self.quatCoef[0] < 0):
+            self.quatCoef = self.quatCoef * -1
     
     #overload * operator for quaterion product
     def __mul__(self, right):
-        if type(right) is Quat:
-            quatCoef = np.zeros(4, dtype=float)
-            quatCoef[0] = self.quat[0]*right.quat[0] - np.dot(self.quat[1:4], right.quat[1:4])
-            quatCoef[1:4] = self.quat[0]*right.quat[1:4] + right.quat[0]*self.quat[1:4] + np.cross(self.quat[1:4],right.quat[1:4])
-            return Quat(quatCoef)
-        return
+        if isinstance(right, type(self)):
+            newQuatCoef = np.zeros(4, dtype=float)
+            newQuatCoef[0] = self.quatCoef[0]*right.quatCoef[0] - np.dot(self.quatCoef[1:4], right.quatCoef[1:4])
+            newQuatCoef[1:4] = self.quatCoef[0]*right.quatCoef[1:4] + right.quatCoef[0]*self.quatCoef[1:4] + np.cross(self.quatCoef[1:4],right.quatCoef[1:4])
+            return Quat(newQuatCoef)
+        raise TypeError()
     
     #overload % operator for dot product
     def __mod__(self, right):
-        if type(right) is Quat:
-            return np.dot(self.quat[0:4], right.quat[0:4])
-        return
+        if isinstance(right, type(self)):
+            return np.dot(self.quatCoef, right.quatCoef)
+        raise TypeError()
+    
+    #overload + operator for dot product
+    def __add__(self, right):
+        if isinstance(right, type(self)):
+            return Quat(self.quatCoef + right.quatCoef)
+        raise TypeError()
+    
+    #overload += operator for dot product
+    def __iadd__(self, right):
+        if isinstance(right, type(self)):
+            self.quatCoef += right.quatCoef
+            return self
+        raise TypeError()
     
     #allow array like setting/getting of components
     def __getitem__(self, key):
-        return self.quat[key]
+        return self.quatCoef[key]
     
     def __setitem__(self, key, value):
-        self.quat[key] = value
+        self.quatCoef[key] = value
         return
     
     def norm(self):
-        return np.sqrt(np.dot(self.quat[0:4], self.quat[0:4]))
+        return np.sqrt(np.dot(self.quatCoef[0:4], self.quatCoef[0:4]))
     
-    def disOri(self, right, symGroup):
-        misori = []
-        for sym in Quat.symEqv(symGroup):
-            c = np.dot(self.quat, (right * sym).quat)
-            misori.append(c)
-        return max(np.array(abs(np.array(misori))))
+    def normalise(self):
+        self.quatCoef /= self.norm()
+        return
+    
+    def misOri(self, right, symGroup, returnQuat = False):
+        if isinstance(right, type(self)):
+            minMisOri = 0   #actually looking for max of this as it is cos of misoriention angle
+            for sym in Quat.symEqv(symGroup):   #loop over symmetrically equivelent orienations
+                quatSym = right * sym
+                currentMisOri = abs(self % quatSym)
+                if currentMisOri > minMisOri:   #keep if misorientation lower
+                    minMisOri = currentMisOri
+                    minQuatSym = quatSym
+        
+            if returnQuat:
+                return minQuatSym
+            else:
+                return minMisOri
+        raise TypeError()
     
     @staticmethod
     def symEqv(group):

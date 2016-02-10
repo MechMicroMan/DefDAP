@@ -1,20 +1,30 @@
-class EbsdTools:
+import numpy as np
+import matplotlib.pyplot as plt
+import copy
+
+import DataAnalysisUtilities.Quat
+reload(DataAnalysisUtilities.Quat) #force reload of package while developing
+from DataAnalysisUtilities.Quat import Quat
+
+class Map(object):
     #defined instance variables
     #xDim, yDim - (int) dimensions of maps
     #binData - imported binary data
     
     def __init__(self):
-        self.xDim = None
+        self.xDim = None #(int) dimensions of maps
         self.yDim = None
-        self.binData = None
-        self.quatArray = None
-        self.grainDict = None
-        self.misOx = None
+        self.binData = None #imported binary data
+        self.quatArray = None #(array) array of quaterions for each point of map
+        self.misOx = None #(array) map of misorientation with single neighbour pixel in positive x dir
         self.misOy = None
-        self.boundaries = None
+        self.boundaries = None #(array) map of boundariers
+        self.grains = None #(array) map of grains
+        self.grainList = None #(list) list of Grains
+        self.crystalSym = None #symmetry of material e.g. "cubic", "hexagonal"
         return
     
-    def loadData(self, fileName):
+    def loadData(self, fileName, crystalSym):
         #open meta data file and read in x and y dimensions
         f = open(fileName + ".cpr", 'r')
         for line in f:
@@ -28,6 +38,7 @@ class EbsdTools:
                          ('mad','f'), ('IB2','uint8'), ('IB3','uint8'), ('IB4','uint8'),
                          ('IB5','uint8'), ('IB6','f')])
         self.binData = np.fromfile(fileName + ".crc", fmt_np, count=-1)
+        self.crystalSym = crystalSym
         return
                          
     def plotBandContrastMap(self):
@@ -55,6 +66,7 @@ class EbsdTools:
     def checkDataLoaded(self):
         if self.binData is None:
             raise Exception("Data not loaded")
+        return
     
     def buildQuatArray(self):
         self.checkDataLoaded()
@@ -86,15 +98,14 @@ class EbsdTools:
         
         self.smap2 = np.copy(self.smap)
         
-        plt.figure(), plt.imshow(self.smap, interpolation='none')
-        plt.xlim([0,30]), plt.ylim([0,30])
+        #plt.figure(), plt.imshow(self.smap, interpolation='none')
+        #plt.xlim([0,30]), plt.ylim([0,30])
         
         
         #sweep in positive x and y dirs calculating misorientation with neighbour
         #if > boundDef then mark as a grain boundary
         for i in range(self.xDim):
             for j in range(self.yDim - 1):
-                
                 aux = abs(self.quatArray[j,i] % self.quatArray[j+1,i])
                 if aux > 1:
                     aux = 1
@@ -125,18 +136,19 @@ class EbsdTools:
         
         
         #mat,mataux=mismapl(d,xdim,ydim,bound_def=10)
-        plt.figure(), plt.imshow(self.smap2, interpolation='none')
-        plt.xlim([0,30]), plt.ylim([0,30])
-        plt.figure(), plt.imshow(self.boundaries, vmax=15),plt.colorbar()
+        #plt.figure(), plt.imshow(self.smap2, interpolation='none')
+        #plt.xlim([0,30]), plt.ylim([0,30])
+        #plt.figure(), plt.imshow(self.boundaries, vmax=15),plt.colorbar()
+        
+        return
                             
   
                             
                             
     def findGrains(self):
-        self.grainDict = {}
-    
-    
         self.grains = np.copy(self.boundaries)
+        
+        self.grainList = []
         
         unknownPoints = np.where(self.grains == 0)
         
@@ -147,13 +159,14 @@ class EbsdTools:
             
             grainIndex += 1
             unknownPoints = np.where(self.grains == 0)
-
-
-
+        return
 
 
     def floodFill(self, x, y, grainIndex):
-    
+        currentGrain = Grain(self.crystalSym)
+
+        currentGrain.addPoint(self.quatArray[y, x], (x, y))
+        
         edge = [(x, y)]
         grain = [(x, y)]
         
@@ -180,15 +193,116 @@ class EbsdTools:
                 
                 for (s, t) in moves:
                     if self.grains[t, s] == 0:
+                        currentGrain.addPoint(self.quatArray[t, s], (s, t))
                         newedge.append((s, t))
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
                     elif self.grains[t, s] == 255 and (s > x or t > y):
+                        currentGrain.addPoint(self.quatArray[t, s], (s, t))
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
             
             if newedge == []:
+                self.grainList.append(currentGrain)
                 return grain
-                break
             else:
                 edge = newedge
+
+    def calcGrainMisOri(self):
+        for grain in self.grainList:
+            grain.buildMisOriList()
+
+
+
+class Grain(object):
+    
+    def __init__(self, crystalSym):
+        self.coordList = [] #list of coords stored as tuples (x, y)
+        self.quatList = [] #list of quats
+        self.misOriList = None
+        self.crystalSym = crystalSym #symmetry of material e.g. "cubic", "hexagonal"
+        self.averageOri = None
+        self.averageMisOri = None
+        return
+    
+    def __len__(self):
+        return len(self.quatList)
+    
+    #quat is a quaterion and coord is a tuple (x, y)
+    def addPoint(self, quat, coord):
+        self.coordList.append(coord)
+        self.quatList.append(quat)
+        return
+
+    def calcAverageOri(self):
+        firstQuat = True
+        for quat in self.quatList:
+            if firstQuat: #if 1st orientation, start the average
+                self.averageOri = copy.deepcopy(quat) #check deep copy
+                firstQuat = False
+            else: #otherwise need to loop over symmetries and find min misorientation for average
+                #add the symetric equivelent of quat with the minimum misorientation (relative to the average)
+                #to the average. Then normalise.
+                self.averageOri += self.averageOri.misOri(quat, self.crystalSym, returnQuat = True)
+                self.averageOri.normalise()
+        return
+
+    def buildMisOriList(self):
+        if self.averageOri is None:
+            self.calcAverageOri()
+
+        self.misOriList = []
+        for quat in self.quatList:
+            self.misOriList.append(quat.misOri(self.averageOri, self.crystalSym))
+
+        self.averageMisOri = np.array(self.misOriList).mean()
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+#def calculateMisorientation(phi1, Phi, phi2):
+#    #Calculate average orientation taking into account symmetry
+#    syms = qu.symeq('cubic')
+#    i=0
+#    quats = []
+#    for p1 in phi1: #loop over each orientation
+#        quat = qu.euler2quat([p1, Phi[i], phi2[i]]) #convert to quaterion representation
+#        quats.append(quat)
+#        if i==0: #if 1st orientation, start the average
+#            averageOri = quat
+#        else: #otherwise need to loop over symmetries and find min misorientation for average
+#            maxMisO = 0
+#            for sym in syms:
+#                quatSym = qu.dq(quat, sym)
+#                currentMisO = abs(np.dot(quatSym, averageOri))
+#                if currentMisO > maxMisO:
+#                    maxMisO = currentMisO
+#                    quatSymMin = quatSym
+#            averageOri = quatSymMin + averageOri
+#            averageOri = averageOri / qu.quatNorm(averageOri)
+#        i+=1
+#
+##Calculate misorientation for each orientation given
+#misOri = []
+#    for quat in quats:
+#        misOri.append(qu.disori(quat, averageOri, syms))
+#misOri = np.array(misOri)
+#    return misOri
+
+
+
+
