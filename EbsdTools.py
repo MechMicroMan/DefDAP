@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy
 
-import DataAnalysisUtilities.Quat
-reload(DataAnalysisUtilities.Quat) #force reload of package while developing
-from DataAnalysisUtilities.Quat import Quat
+from Quat import Quat
+
+import ipyparallel as ipp
 
 class Map(object):
     #defined instance variables
@@ -12,6 +12,7 @@ class Map(object):
     #binData - imported binary data
     
     def __init__(self):
+        self.crystalSym = None #symmetry of material e.g. "cubic", "hexagonal"
         self.xDim = None #(int) dimensions of maps
         self.yDim = None
         self.binData = None #imported binary data
@@ -20,8 +21,8 @@ class Map(object):
         self.misOy = None
         self.boundaries = None #(array) map of boundariers
         self.grains = None #(array) map of grains
-        self.grainList = None #(list) list of Grains
-        self.crystalSym = None #symmetry of material e.g. "cubic", "hexagonal"
+        self.grainList = None #(list) list of grains
+        self.misOri = None #(array) map of misorientation
         return
     
     def loadData(self, fileName, crystalSym):
@@ -45,7 +46,7 @@ class Map(object):
         self.checkDataLoaded()
                                  
         bcmap = np.reshape(self.binData[('IB2')], (self.yDim, self.xDim))
-        plt.imshow(bcmap)
+        plt.imshow(bcmap, cmap='gray')
         plt.colorbar()
         return
 
@@ -80,8 +81,6 @@ class Map(object):
         return
     
     
-    
-    
     def findBoundaries(self, boundDef = 10):
         self.buildQuatArray()
         
@@ -90,16 +89,10 @@ class Map(object):
         self.boundaries = np.zeros([self.yDim, self.xDim])
         
         
-        
         self.smap = np.zeros([self.yDim, self.xDim])
         for i in range(self.xDim):
             for j in range(self.yDim):
                 self.smap[j,i] = np.arccos(self.quatArray[j,i][0])
-        
-        self.smap2 = np.copy(self.smap)
-        
-        #plt.figure(), plt.imshow(self.smap, interpolation='none')
-        #plt.xlim([0,30]), plt.ylim([0,30])
         
         
         #sweep in positive x and y dirs calculating misorientation with neighbour
@@ -116,7 +109,7 @@ class Map(object):
                     self.misOx[j,i] = 0.0
                     self.boundaries[j,i] = 255
                     
-                    self.smap2[j,i] = 0
+                    self.smap[j,i] = 0
         
         
         for i in range(self.xDim - 1):
@@ -132,19 +125,16 @@ class Map(object):
                     self.misOy[j,i] = 0.0
                     self.boundaries[j,i] = 255
                     
-                    self.smap2[j,i] = 0
-        
-        
-        #mat,mataux=mismapl(d,xdim,ydim,bound_def=10)
-        #plt.figure(), plt.imshow(self.smap2, interpolation='none')
-        #plt.xlim([0,30]), plt.ylim([0,30])
-        #plt.figure(), plt.imshow(self.boundaries, vmax=15),plt.colorbar()
+                    self.smap[j,i] = 0
         
         return
-                            
+
+    def plotBoundaryMap(self):
+        plt.figure(), plt.imshow(self.smap, interpolation='none')
+        plt.figure(), plt.imshow(self.boundaries, vmax=15),plt.colorbar()
+        return
   
-                            
-                            
+  
     def findGrains(self):
         self.grains = np.copy(self.boundaries)
         
@@ -159,6 +149,11 @@ class Map(object):
             
             grainIndex += 1
             unknownPoints = np.where(self.grains == 0)
+        return
+            
+    def plotGrainMap(self):
+        plt.figure()
+        plt.imshow(self.grains)
         return
 
 
@@ -208,21 +203,51 @@ class Map(object):
             else:
                 edge = newedge
 
+
     def calcGrainMisOri(self):
+        #localGrainList = self.grainList[0:10]
+
+        #paraClient = ipp.Client()
+        
+        
+        
+        #dview = paraClient[:]
+        #dview.map_sync(lambda x: x**10, range(32000000))
+        #print dview.map_sync(lambda grain: grain.buildMisOriList(), localGrainList)
+        
+        #paraClient.close()
+        
         for grain in self.grainList:
             grain.buildMisOriList()
+        return
 
+
+    def buildMisOriMap(self):
+        self.misOri = np.zeros([self.yDim, self.xDim])
+        
+        for grain in  self.grainList:
+            for coord, misOri in zip(grain.coordList, grain.misOriList):
+                self.misOri[coord[1], coord[0]] = misOri
+
+        return
+
+
+    def plotMisOriMap(self):
+        plt.figure()
+        plt.imshow(np.arccos(self.misOri) * 180 / np.pi, interpolation='none')
+        plt.colorbar()
+        return
 
 
 class Grain(object):
     
     def __init__(self, crystalSym):
-        self.coordList = [] #list of coords stored as tuples (x, y)
-        self.quatList = [] #list of quats
-        self.misOriList = None
-        self.crystalSym = crystalSym #symmetry of material e.g. "cubic", "hexagonal"
-        self.averageOri = None
-        self.averageMisOri = None
+        self.crystalSym = crystalSym    #symmetry of material e.g. "cubic", "hexagonal"
+        self.coordList = []             #list of coords stored as tuples (x, y)
+        self.quatList = []              #list of quats
+        self.misOriList = None          #list of misOri at each point in grain
+        self.averageOri = None          #(quat) average ori of grain
+        self.averageMisOri = None       #average misOri of grain
         return
     
     def __len__(self):
@@ -257,12 +282,68 @@ class Grain(object):
 
         self.averageMisOri = np.array(self.misOriList).mean()
 
+        return
+        #return self#to make it work with parallel
 
-
-
-
-
+    def plotMisOri(self):
+        unzippedCoordlist = zip(*self.coordList)
+        x0 = min(unzippedCoordlist[0])
+        y0 = min(unzippedCoordlist[1])
+        xmax = max(unzippedCoordlist[0])
+        ymax = max(unzippedCoordlist[1])
         
+        #initialise array with nans so area not in grain displays white
+        grainMisOri = np.full([ymax - y0 + 1, xmax - x0 + 1], np.nan, dtype=float)
+
+        for coord, misOri in zip(self.coordList, self.misOriList):
+            grainMisOri[coord[1] - y0, coord[0] - x0] = misOri
+
+        plt.figure()
+        plt.imshow(np.arccos(grainMisOri) * 180 / np.pi, interpolation='none')
+        plt.colorbar()
+
+        return grainMisOri
+    
+
+    def buildSchmidFactor(self):
+        loadVector = np.array([0, 0, 1])
+
+        loadVectorCrystal
+
+
+
+
+    def slipSystems(self):
+        systems = []
+        if self.crystalSym == "cubic":
+            systems.append([np.array([0, 0.707107, -0.707107]), np.array([0.577350, 0.577350, 0.577350]), "label"])
+            systems.append([np.array([-0.707107, 0, 0.707107]), np.array([0.577350, 0.577350, 0.577350]), "label"]])
+            systems.append([np.array([0.707107, -0.707107, 0]), np.array([0.577350, 0.577350, 0.577350]), "label"]])
+
+            systems.append([np.array([0, 0.707107, 0.707107]), np.array([0.577350, 0.577350, -0.577350]), "label"]])
+            systems.append([np.array([-0.707107, 0, -0.707107]), np.array([0.577350, 0.577350, -0.577350]), "label"]])
+            systems.append([np.array([0.707107, -0.707107, 0]), np.array([0.577350, 0.577350, -0.577350]), "label"]])
+
+            systems.append([np.array([0, 0.707107, -0.707107]), np.array([-0.577350, 0.577350, 0.577350]), "label"]])
+            systems.append([np.array([0.707107, 0, 0.707107]), np.array([-0.577350, 0.577350, 0.577350]), "label"]])
+            systems.append([np.array([-0.707107, -0.707107, 0]), np.array([-0.577350, 0.577350, 0.577350]), "label"]])
+
+            systems.append([np.array([0, -0.707107, -0.707107]), np.array([0.577350, -0.577350, 0.577350]), "label"]])
+            systems.append([np.array([-0.707107, 0, 0.707107]), np.array([0.577350, -0.577350, 0.577350]), "label"]])
+            systems.append([np.array([0.707107, 0.707107, 0]), np.array([0.577350, -0.577350, 0.577350]), "label"]])
+
+        return systems
+
+
+
+
+
+
+
+
+
+
+
 
 
 

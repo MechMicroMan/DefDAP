@@ -20,6 +20,11 @@ class Quat(object):
         
         if (self.quatCoef[0] < 0):
             self.quatCoef = self.quatCoef * -1
+
+    def __repr__(self):
+        return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
+    def __str__(self):
+        return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
     
     #overload * operator for quaterion product
     def __mul__(self, right):
