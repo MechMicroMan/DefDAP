@@ -17,22 +17,33 @@ class Quat(object):
         #construt with array of quat coefficients
         elif len(args) == 1:
             self.quatCoef = args[0]
+        #construt with quat coefficients
+        elif len(args) == 4:
+            self.quatCoef[0] = args[0]
+            self.quatCoef[1] = args[1]
+            self.quatCoef[2] = args[2]
+            self.quatCoef[3] = args[3]
         
         if (self.quatCoef[0] < 0):
             self.quatCoef = self.quatCoef * -1
 
+    #show something meaningful when the quat is printed
     def __repr__(self):
         return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
     def __str__(self):
         return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
     
-    #overload * operator for quaterion product
+    #overload * operator for quaterion product and vector product
     def __mul__(self, right):
-        if isinstance(right, type(self)):
+        if isinstance(right, type(self)):   #another quat
             newQuatCoef = np.zeros(4, dtype=float)
             newQuatCoef[0] = self.quatCoef[0]*right.quatCoef[0] - np.dot(self.quatCoef[1:4], right.quatCoef[1:4])
             newQuatCoef[1:4] = self.quatCoef[0]*right.quatCoef[1:4] + right.quatCoef[0]*self.quatCoef[1:4] + np.cross(self.quatCoef[1:4],right.quatCoef[1:4])
             return Quat(newQuatCoef)
+        #elif isinstance(right, np.ndarray) and len(right) == 3: #a 3 vector
+        #    returnVector = np.empty(3, dtype=float)
+        #    returnVector = self.quatCoef[1:4] * right
+        #    return returnVector
         raise TypeError()
     
     #overload % operator for dot product
@@ -68,6 +79,10 @@ class Quat(object):
     def normalise(self):
         self.quatCoef /= self.norm()
         return
+    
+    #also the inverse if this is a unit quaterion
+    def conjugate(self):
+        return Quat(self.quatCoef[0], -self.quatCoef[1], -self.quatCoef[2], -self.quatCoef[3])
     
     def misOri(self, right, symGroup, returnQuat = False):
         if isinstance(right, type(self)):

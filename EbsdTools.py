@@ -23,6 +23,7 @@ class Map(object):
         self.grains = None #(array) map of grains
         self.grainList = None #(list) list of grains
         self.misOri = None #(array) map of misorientation
+        self.averageSchmidFactor = None #(array) map of average Schmid factor
         return
     
     def loadData(self, fileName, crystalSym):
@@ -221,20 +222,40 @@ class Map(object):
             grain.buildMisOriList()
         return
 
-
     def buildMisOriMap(self):
         self.misOri = np.zeros([self.yDim, self.xDim])
         
-        for grain in  self.grainList:
+        for grain in self.grainList:
             for coord, misOri in zip(grain.coordList, grain.misOriList):
                 self.misOri[coord[1], coord[0]] = misOri
-
+    
         return
-
 
     def plotMisOriMap(self):
         plt.figure()
         plt.imshow(np.arccos(self.misOri) * 180 / np.pi, interpolation='none')
+        plt.colorbar()
+        return
+
+
+
+    def calcAverageGrainSchmidFactors(self, loadVector = np.array([0, 0, 1])):
+        for grain in self.grainList:
+            grain.calcAverageSchmidFactors(loadVector = loadVector)
+        return
+
+    def buildAverageGrainSchmidFactorsMap(self):
+        self.averageSchmidFactor = np.zeros([self.yDim, self.xDim])
+        
+        for grain in self.grainList:
+            currentSchmidFactor = max(np.array(grain.averageSchmidFactors))
+            for coord in grain.coordList:
+                self.averageSchmidFactor[coord[1], coord[0]] = currentSchmidFactor
+        return
+
+    def plotAverageGrainSchmidFactorsMap(self):
+        plt.figure()
+        plt.imshow(self.averageSchmidFactor, interpolation='none')
         plt.colorbar()
         return
 
@@ -248,6 +269,8 @@ class Grain(object):
         self.misOriList = None          #list of misOri at each point in grain
         self.averageOri = None          #(quat) average ori of grain
         self.averageMisOri = None       #average misOri of grain
+        self.loadVectorCrystal = None   #load vector in crystal coordinates
+        self.averageSchmidFactors = None       #list of Schmid factors for each system
         return
     
     def __len__(self):
@@ -263,7 +286,7 @@ class Grain(object):
         firstQuat = True
         for quat in self.quatList:
             if firstQuat: #if 1st orientation, start the average
-                self.averageOri = copy.deepcopy(quat) #check deep copy
+                self.averageOri = copy.deepcopy(quat)
                 firstQuat = False
             else: #otherwise need to loop over symmetries and find min misorientation for average
                 #add the symetric equivelent of quat with the minimum misorientation (relative to the average)
@@ -278,7 +301,10 @@ class Grain(object):
 
         self.misOriList = []
         for quat in self.quatList:
-            self.misOriList.append(quat.misOri(self.averageOri, self.crystalSym))
+            currentMisOri = quat.misOri(self.averageOri, self.crystalSym)
+            if currentMisOri > 1:
+                currentMisOri = 1
+            self.misOriList.append(currentMisOri)
 
         self.averageMisOri = np.array(self.misOriList).mean()
 
@@ -304,33 +330,48 @@ class Grain(object):
 
         return grainMisOri
     
+    
+    #define load axis as unit vector to save calculations
+    def calcAverageSchmidFactors(self, loadVector = np.array([0, 0, 1])):
+        if self.averageOri is None:
+            self.calcAverageOri()
+        
+        #Transform the load vector into crystal coordinates
+        loadQuat = Quat(0, loadVector[0], loadVector[1], loadVector[2])
 
-    def buildSchmidFactor(self):
-        loadVector = np.array([0, 0, 1])
+        loadQuatCrystal = (self.averageOri * loadQuat) * self.averageOri.conjugate()
+    
+        loadVectorCrystal = loadQuatCrystal[1:4]    #will still be a unit vector as aveageOri is a unit quat
+        self.loadVectorCrystal = loadVectorCrystal
+        
+        self.averageSchmidFactors = []
+    
+        #calculated Schmid factor of average ori with all slip systems
+        for slipSystem in self.slipSystems():
+            self.averageSchmidFactors.append(abs(np.dot(loadVectorCrystal, slipSystem[1])
+                                                 * np.dot(loadVectorCrystal, slipSystem[0])))
 
-        loadVectorCrystal
 
-
-
-
+    #slip systems defined as list with 1st value the slip direction, 2nd the slip plane and 3rd a label
+    #define as unit vectors to save calculations
     def slipSystems(self):
         systems = []
         if self.crystalSym == "cubic":
-            systems.append([np.array([0, 0.707107, -0.707107]), np.array([0.577350, 0.577350, 0.577350]), "label"])
-            systems.append([np.array([-0.707107, 0, 0.707107]), np.array([0.577350, 0.577350, 0.577350]), "label"]])
-            systems.append([np.array([0.707107, -0.707107, 0]), np.array([0.577350, 0.577350, 0.577350]), "label"]])
+            systems.append([np.array([0, 0.707107, -0.707107]), np.array([0.577350, 0.577350, 0.577350]), "(111)[01-1]"])
+            systems.append([np.array([-0.707107, 0, 0.707107]), np.array([0.577350, 0.577350, 0.577350]), "(111)[-101]"])
+            systems.append([np.array([0.707107, -0.707107, 0]), np.array([0.577350, 0.577350, 0.577350]), "(111)[1-10]"])
 
-            systems.append([np.array([0, 0.707107, 0.707107]), np.array([0.577350, 0.577350, -0.577350]), "label"]])
-            systems.append([np.array([-0.707107, 0, -0.707107]), np.array([0.577350, 0.577350, -0.577350]), "label"]])
-            systems.append([np.array([0.707107, -0.707107, 0]), np.array([0.577350, 0.577350, -0.577350]), "label"]])
+            systems.append([np.array([0, 0.707107, 0.707107]), np.array([0.577350, 0.577350, -0.577350]), "(11-1)[011]"])
+            systems.append([np.array([-0.707107, 0, -0.707107]), np.array([0.577350, 0.577350, -0.577350]), "(11-1)[-10-1]"])
+            systems.append([np.array([0.707107, -0.707107, 0]), np.array([0.577350, 0.577350, -0.577350]), "(11-1)[1-10]"])
 
-            systems.append([np.array([0, 0.707107, -0.707107]), np.array([-0.577350, 0.577350, 0.577350]), "label"]])
-            systems.append([np.array([0.707107, 0, 0.707107]), np.array([-0.577350, 0.577350, 0.577350]), "label"]])
-            systems.append([np.array([-0.707107, -0.707107, 0]), np.array([-0.577350, 0.577350, 0.577350]), "label"]])
+            systems.append([np.array([0, 0.707107, -0.707107]), np.array([-0.577350, 0.577350, 0.577350]), "(-111)[01-1]"])
+            systems.append([np.array([0.707107, 0, 0.707107]), np.array([-0.577350, 0.577350, 0.577350]), "(-111)[101]"])
+            systems.append([np.array([-0.707107, -0.707107, 0]), np.array([-0.577350, 0.577350, 0.577350]), "(-111)[-1-10]"])
 
-            systems.append([np.array([0, -0.707107, -0.707107]), np.array([0.577350, -0.577350, 0.577350]), "label"]])
-            systems.append([np.array([-0.707107, 0, 0.707107]), np.array([0.577350, -0.577350, 0.577350]), "label"]])
-            systems.append([np.array([0.707107, 0.707107, 0]), np.array([0.577350, -0.577350, 0.577350]), "label"]])
+            systems.append([np.array([0, -0.707107, -0.707107]), np.array([0.577350, -0.577350, 0.577350]), "(1-11)[0-1-1]"])
+            systems.append([np.array([-0.707107, 0, 0.707107]), np.array([0.577350, -0.577350, 0.577350]), "(1-11)[-101]"])
+            systems.append([np.array([0.707107, 0.707107, 0]), np.array([0.577350, -0.577350, 0.577350]), "(1-11)[110]"])
 
         return systems
 
