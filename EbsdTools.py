@@ -4,7 +4,7 @@ import copy
 
 from Quat import Quat
 
-import ipyparallel as ipp
+#import ipyparallel as ipp
 
 class Map(object):
     #defined instance variables
@@ -62,8 +62,10 @@ class Map(object):
         eumap = np.reshape(emap, (self.yDim,self.xDim,3))
         #make non-indexed points green
         eumap = np.where(eumap!=[0.,0.,0.], eumap, [0.,1.,0.])
-        plt.imshow(eumap/norm, aspect='equal')
-        return
+        
+        fig, ax = plt.subplots()
+        ax.imshow(eumap/norm, aspect='equal')
+        return fig
     
     def checkDataLoaded(self):
         if self.binData is None:
@@ -104,7 +106,7 @@ class Map(object):
                 if aux > 1:
                     aux = 1
                 
-                self.misOx[j,i] = 360*np.arccos(aux)/np.pi
+                self.misOx[j,i] = 360 * np.arccos(aux) / np.pi
                 
                 if self.misOx[j,i] > boundDef:
                     self.misOx[j,i] = 0.0
@@ -120,7 +122,7 @@ class Map(object):
                 if aux > 1:
                     aux = 1
                 
-                self.misOy[j,i] = 360*np.arccos(aux)/np.pi
+                self.misOy[j,i] = 360 * np.arccos(aux) / np.pi
                 
                 if self.misOy[j,i] > boundDef:
                     self.misOy[j,i] = 0.0
@@ -156,7 +158,19 @@ class Map(object):
         plt.figure()
         plt.imshow(self.grains)
         return
+    
+    def locateGrainID(self):
+        if (self.grainList is not None) and (self.grainList != []):
+            fig = self.plotEulerMap()
+            fig.canvas.callbacks.connect('button_press_event', self.fig_on_click)
+        else:
+            raise Exception("Grain list empty")
+            
 
+    def fig_on_click(self, event):
+        if event.inaxes is not None:
+            print self.grains[int(event.ydata), int(event.xdata)] - 1
+    
 
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self.crystalSym)
@@ -204,6 +218,10 @@ class Map(object):
             else:
                 edge = newedge
 
+    def calcGrainAvOris(self):
+        for grain in self.grainList:
+            grain.calcAverageOri()
+        return
 
     def calcGrainMisOri(self):
         #localGrainList = self.grainList[0:10]
@@ -231,9 +249,9 @@ class Map(object):
     
         return
 
-    def plotMisOriMap(self):
+    def plotMisOriMap(self, vMin=None, vMax=None):
         plt.figure()
-        plt.imshow(np.arccos(self.misOri) * 180 / np.pi, interpolation='none')
+        plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='none', vmin=vMin, vmax=vMax)
         plt.colorbar()
         return
 
@@ -260,6 +278,9 @@ class Map(object):
         return
 
 
+
+
+
 class Grain(object):
     
     def __init__(self, crystalSym):
@@ -270,7 +291,7 @@ class Grain(object):
         self.averageOri = None          #(quat) average ori of grain
         self.averageMisOri = None       #average misOri of grain
         self.loadVectorCrystal = None   #load vector in crystal coordinates
-        self.averageSchmidFactors = None       #list of Schmid factors for each system
+        self.averageSchmidFactors = None    #list of Schmid factors for each system
         return
     
     def __len__(self):
@@ -310,13 +331,34 @@ class Grain(object):
 
         return
         #return self#to make it work with parallel
-
-    def plotMisOri(self):
-        unzippedCoordlist = zip(*self.coordList)
+    
+    
+    
+    def extremeCoords(self):
+        unzippedCoordlist = list(zip(*self.coordList))
         x0 = min(unzippedCoordlist[0])
         y0 = min(unzippedCoordlist[1])
         xmax = max(unzippedCoordlist[0])
         ymax = max(unzippedCoordlist[1])
+        return x0, y0, xmax, ymax
+
+    def plotOutline(self):
+        x0, y0, xmax, ymax = self.extremeCoords()
+    
+        #initialise array with nans so area not in grain displays white
+        grainOuline = np.full([ymax - y0 + 1, xmax - x0 + 1], np.nan, dtype=float)
+
+        for coord in self.coordList:
+            grainOuline[coord[1] - y0, coord[0] - x0] = 0
+
+        plt.figure()
+        plt.imshow(grainOuline, interpolation='none')
+        plt.colorbar()
+        
+        return
+
+    def plotMisOri(self, vMin=None, vMax=None):
+        x0, y0, xmax, ymax = self.extremeCoords()
         
         #initialise array with nans so area not in grain displays white
         grainMisOri = np.full([ymax - y0 + 1, xmax - x0 + 1], np.nan, dtype=float)
@@ -325,10 +367,14 @@ class Grain(object):
             grainMisOri[coord[1] - y0, coord[0] - x0] = misOri
 
         plt.figure()
-        plt.imshow(np.arccos(grainMisOri) * 180 / np.pi, interpolation='none')
+        plt.imshow(np.arccos(grainMisOri) * 360 / np.pi, interpolation='none', vmin=vMin, vmax=vMax)
         plt.colorbar()
 
-        return grainMisOri
+        return
+    
+    
+    
+    
     
     
     #define load axis as unit vector to save calculations
@@ -374,57 +420,4 @@ class Grain(object):
             systems.append([np.array([0.707107, 0.707107, 0]), np.array([0.577350, -0.577350, 0.577350]), "(1-11)[110]"])
 
         return systems
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#def calculateMisorientation(phi1, Phi, phi2):
-#    #Calculate average orientation taking into account symmetry
-#    syms = qu.symeq('cubic')
-#    i=0
-#    quats = []
-#    for p1 in phi1: #loop over each orientation
-#        quat = qu.euler2quat([p1, Phi[i], phi2[i]]) #convert to quaterion representation
-#        quats.append(quat)
-#        if i==0: #if 1st orientation, start the average
-#            averageOri = quat
-#        else: #otherwise need to loop over symmetries and find min misorientation for average
-#            maxMisO = 0
-#            for sym in syms:
-#                quatSym = qu.dq(quat, sym)
-#                currentMisO = abs(np.dot(quatSym, averageOri))
-#                if currentMisO > maxMisO:
-#                    maxMisO = currentMisO
-#                    quatSymMin = quatSym
-#            averageOri = quatSymMin + averageOri
-#            averageOri = averageOri / qu.quatNorm(averageOri)
-#        i+=1
-#
-##Calculate misorientation for each orientation given
-#misOri = []
-#    for quat in quats:
-#        misOri.append(qu.disori(quat, averageOri, syms))
-#misOri = np.array(misOri)
-#    return misOri
-
-
-
 

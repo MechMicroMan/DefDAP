@@ -4,16 +4,16 @@ import numpy as np
 class Quat(object):
     def __init__(self, *args, **kwargs):
         self.quatCoef = np.zeros(4, dtype=float)
-        #construt with euler angles
+        #construt with euler angles (radians)
         if len(args) == 3:
             ph1 = args[0]
             phi = args[1]
             ph2 = args[2]
             
-            self.quatCoef[0] = np.cos(phi/2.) * np.cos((ph1+ph2)/2.)
-            self.quatCoef[1] = -np.sin(phi/2.) * np.cos((ph2-ph1)/2.)
-            self.quatCoef[2] = np.sin(phi/2.) * np.sin((ph2-ph1)/2.)
-            self.quatCoef[3] = -np.cos(phi/2.) * np.sin((ph1+ph2)/2.)
+            self.quatCoef[0] = np.cos(phi/2.0) * np.cos((ph1+ph2)/2.0)
+            self.quatCoef[1] = np.sin(phi/2.0) * np.cos((ph1-ph2)/2.0)
+            self.quatCoef[2] = np.sin(phi/2.0) * np.sin((ph1-ph2)/2.0)
+            self.quatCoef[3] = np.cos(phi/2.0) * np.sin((ph1+ph2)/2.0)
         #construt with array of quat coefficients
         elif len(args) == 1:
             self.quatCoef = args[0]
@@ -26,6 +26,59 @@ class Quat(object):
         
         if (self.quatCoef[0] < 0):
             self.quatCoef = self.quatCoef * -1
+
+    def eulerAngles(self):
+        eulers = np.empty(3, dtype=float)
+        eulers1 = np.empty(3, dtype=float)
+        
+        chi = np.sqrt((self.quatCoef[0]**2 + self.quatCoef[3]**2) * (self.quatCoef[1]**2 + self.quatCoef[2]**2))
+        
+        cosPh1 = (self.quatCoef[0]*self.quatCoef[1] - self.quatCoef[2]*self.quatCoef[3]) / (2*chi)
+        sinPh1 = (self.quatCoef[0]*self.quatCoef[2] + self.quatCoef[1]*self.quatCoef[3]) / (2*chi)
+        
+        cosPhi = self.quatCoef[0]**2 + self.quatCoef[3]**2 - self.quatCoef[1]**2 - self.quatCoef[2]**2
+        sinPhi = 2*chi
+        
+        cosPh2 = (self.quatCoef[0]*self.quatCoef[1] + self.quatCoef[2]*self.quatCoef[3]) / (2*chi)
+        sinPh2 = (self.quatCoef[1]*self.quatCoef[3] - self.quatCoef[0]*self.quatCoef[2]) / (2*chi)
+        
+        #eulers[0] = np.arctan(sinPh1/cosPh1)
+        #eulers[1] = np.arctan(sinPhi/cosPhi)
+        #eulers[2] = np.arctan(sinPh2/cosPh2)
+        
+        eulers[0] = np.arctan2(sinPh1, cosPh1)
+        eulers[1] = np.arctan2(sinPhi, cosPhi)
+        eulers[2] = np.arctan2(sinPh2, cosPh2)
+        
+        if eulers[0] < 0: eulers[0] += 2*np.pi
+        if eulers[2] < 0: eulers[2] += 2*np.pi
+        
+        
+        
+        
+        #at1 = atan2(qd,qa);
+        #at2 = atan2(qb,qc);
+
+#alpha = at1 - at2;
+#beta = 2*atan2(sqrt(qb.^2+qc.^2), sqrt(qa.^2+qd.^2));
+#gamma = at1 + at2;
+        
+        
+        #phi1
+        #eulers[0] = np.arccos((self.quatCoef[0]*self.quatCoef[1] - self.quatCoef[2]*self.quatCoef[3]) / (2*chi))
+        #eulers1[0] = np.arcsin((self.quatCoef[0]*self.quatCoef[2] + self.quatCoef[1]*self.quatCoef[3]) / (2*chi))
+        
+        #Phi
+        #eulers[1] = np.arccos((self.quatCoef[0]**2 + self.quatCoef[3]**2) - (self.quatCoef[1]**2 + self.quatCoef[2]**2))
+        #eulers1[1] = np.arcsin(2*chi)
+        
+        #phi2
+        #eulers[2] = np.arccos((self.quatCoef[0]*self.quatCoef[1] + self.quatCoef[2]*self.quatCoef[3]) / (2*chi))
+        #eulers1[2] = np.arcsin((self.quatCoef[1]*self.quatCoef[3] - self.quatCoef[0]*self.quatCoef[2]) / (2*chi))
+    
+    
+    
+        return eulers
 
     #show something meaningful when the quat is printed
     def __repr__(self):
