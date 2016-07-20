@@ -23,6 +23,7 @@ class Map(object):
         self.grains = None #(array) map of grains
         self.grainList = None #(list) list of grains
         self.misOri = None #(array) map of misorientation
+        self.misOriAxis = None #(list of arrays) map of misorientation axis components
         self.averageSchmidFactor = None #(array) map of average Schmid factor
         return
     
@@ -223,7 +224,7 @@ class Map(object):
             grain.calcAverageOri()
         return
 
-    def calcGrainMisOri(self):
+    def calcGrainMisOri(self, calcAxis = False):
         #localGrainList = self.grainList[0:10]
 
         #paraClient = ipp.Client()
@@ -237,24 +238,30 @@ class Map(object):
         #paraClient.close()
         
         for grain in self.grainList:
-            grain.buildMisOriList()
+            grain.buildMisOriList(calcAxis = calcAxis)
         return
 
-    def buildMisOriMap(self):
+    def plotMisOriMap(self, component=0, vMin=None, vMax=None, cmap=None):
         self.misOri = np.zeros([self.yDim, self.xDim])
         
-        for grain in self.grainList:
-            for coord, misOri in zip(grain.coordList, grain.misOriList):
-                self.misOri[coord[1], coord[0]] = misOri
-    
-        return
-
-    def plotMisOriMap(self, vMin=None, vMax=None):
         plt.figure()
-        plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='none', vmin=vMin, vmax=vMax)
+        
+        if component in [1,2,3]:
+            for grain in self.grainList:
+                for coord, misOriAxis in zip(grain.coordList, np.array(grain.misOriAxisList)):
+                    self.misOri[coord[1], coord[0]] = misOriAxis[component-1]
+    
+            plt.imshow(self.misOri * 180 / np.pi, interpolation='none', vmin=vMin, vmax=vMax, cmap=cmap)
+    
+        else:
+            for grain in self.grainList:
+                for coord, misOri in zip(grain.coordList, grain.misOriList):
+                    self.misOri[coord[1], coord[0]] = misOri
+
+            plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='none', vmin=vMin, vmax=vMax, cmap=cmap)
+    
         plt.colorbar()
         return
-
 
 
     def calcAverageGrainSchmidFactors(self, loadVector = np.array([0, 0, 1])):
@@ -288,8 +295,10 @@ class Grain(object):
         self.coordList = []             #list of coords stored as tuples (x, y)
         self.quatList = []              #list of quats
         self.misOriList = None          #list of misOri at each point in grain
+        self.misOriAxisList = None      #list of misOri axes at each point in grain
         self.averageOri = None          #(quat) average ori of grain
         self.averageMisOri = None       #average misOri of grain
+        
         self.loadVectorCrystal = None   #load vector in crystal coordinates
         self.averageSchmidFactors = None    #list of Schmid factors for each system
         return
@@ -312,22 +321,38 @@ class Grain(object):
             else: #otherwise need to loop over symmetries and find min misorientation for average
                 #add the symetric equivelent of quat with the minimum misorientation (relative to the average)
                 #to the average. Then normalise.
-                self.averageOri += self.averageOri.misOri(quat, self.crystalSym, returnQuat = True)
-                self.averageOri.normalise()
+                self.averageOri += self.averageOri.misOri(quat, self.crystalSym, returnQuat = 1)
+        self.averageOri.normalise()
         return
 
-    def buildMisOriList(self):
+    def buildMisOriList(self, calcAxis = False):
         if self.averageOri is None:
             self.calcAverageOri()
 
+
         self.misOriList = []
+        
+        if calcAxis:
+            self.misOriAxisList = []
+            aveageOriInverse = self.averageOri.conjugate()
+        
         for quat in self.quatList:
-            currentMisOri = quat.misOri(self.averageOri, self.crystalSym)
+            #Calculate misOri to average ori. Return closest symmetric equivalent for later use
+            currentMisOri, currentQuatSym = self.averageOri.misOri(quat, self.crystalSym, returnQuat = 2)
             if currentMisOri > 1:
                 currentMisOri = 1
             self.misOriList.append(currentMisOri)
+            
+            
+            if calcAxis:
+                #Calculate misorientation axix
+                Dq = aveageOriInverse * currentQuatSym #definately quaternion product?
+                self.misOriAxisList.append((2 * Dq[1:4] * np.arccos(Dq[0])) / np.sqrt(1 - np.power(Dq[0], 2)))
+
+                        
 
         self.averageMisOri = np.array(self.misOriList).mean()
+        
 
         return
         #return self#to make it work with parallel
@@ -356,19 +381,59 @@ class Grain(object):
         plt.colorbar()
         
         return
-
-    def plotMisOri(self, vMin=None, vMax=None):
+    
+    
+    #component
+    #0 = misOri
+    #n = misOri axis n
+    #4 = all
+    #5 = all axis
+    def plotMisOri(self, component=0, vMin=None, vMax=None, vRange=[None, None, None], cmap=[None, "seismic"]):
+        component = int(component)
+        
         x0, y0, xmax, ymax = self.extremeCoords()
         
-        #initialise array with nans so area not in grain displays white
-        grainMisOri = np.full([ymax - y0 + 1, xmax - x0 + 1], np.nan, dtype=float)
+        if component in [4, 5]:
+            #subplots
+            grainMisOri = np.full([4, ymax - y0 + 1, xmax - x0 + 1], np.nan, dtype=float)
+            
+            for coord, misOri, misOriAxis in zip(self.coordList,
+                                                 np.arccos(self.misOriList) * 360 / np.pi,
+                                                 np.array(self.misOriAxisList) * 180 / np.pi):
+                grainMisOri[0, coord[1] - y0, coord[0] - x0] = misOri
+                grainMisOri[1:4, coord[1] - y0, coord[0] - x0] = misOriAxis
+            
+            f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+            
+            img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vMin, vmax=vMax)
+            plt.colorbar(img, ax=ax1)
+            vmin = None if vRange[0] is None else -vRange[0]
+            img = ax2.imshow(grainMisOri[1], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[0])
+            plt.colorbar(img, ax=ax2)
+            vmin = None if vRange[0] is None else -vRange[1]
+            img = ax3.imshow(grainMisOri[2], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[1])
+            plt.colorbar(img, ax=ax3)
+            vmin = None if vRange[0] is None else -vRange[2]
+            img = ax4.imshow(grainMisOri[3], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[2])
+            plt.colorbar(img, ax=ax4)
+                
+            
+        else:
+            #single plot
+            #initialise array with nans so area not in grain displays white
+            grainMisOri = np.full([ymax - y0 + 1, xmax - x0 + 1], np.nan, dtype=float)
+        
+            if component in [1,2,3]:
+                plotData = np.array(self.misOriAxisList)[:, component-1] * 180 / np.pi
+            else:
+                plotData = np.arccos(self.misOriList) * 360 / np.pi
+        
+            for coord, misOri in zip(self.coordList, plotData):
+                grainMisOri[coord[1] - y0, coord[0] - x0] = misOri
 
-        for coord, misOri in zip(self.coordList, self.misOriList):
-            grainMisOri[coord[1] - y0, coord[0] - x0] = misOri
-
-        plt.figure()
-        plt.imshow(np.arccos(grainMisOri) * 360 / np.pi, interpolation='none', vmin=vMin, vmax=vMax)
-        plt.colorbar()
+            plt.figure()
+            plt.imshow(grainMisOri, interpolation='none', vmin=vMin, vmax=vMax, cmap=cmap[0])
+            plt.colorbar()
 
         return
     

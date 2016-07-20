@@ -28,6 +28,8 @@ class Quat(object):
             self.quatCoef = self.quatCoef * -1
 
     def eulerAngles(self):
+        #See Melcher, a. Unser, A. Reichhardt, M. Nestler, B. Conversion of EBSD data by a quaternion based algorithm to be used for grain structure simulations
+    
         eulers = np.empty(3, dtype=float)
         eulers1 = np.empty(3, dtype=float)
         
@@ -105,13 +107,13 @@ class Quat(object):
             return np.dot(self.quatCoef, right.quatCoef)
         raise TypeError()
     
-    #overload + operator for dot product
+    #overload + operator
     def __add__(self, right):
         if isinstance(right, type(self)):
             return Quat(self.quatCoef + right.quatCoef)
         raise TypeError()
     
-    #overload += operator for dot product
+    #overload += operator
     def __iadd__(self, right):
         if isinstance(right, type(self)):
             self.quatCoef += right.quatCoef
@@ -137,7 +139,7 @@ class Quat(object):
     def conjugate(self):
         return Quat(self.quatCoef[0], -self.quatCoef[1], -self.quatCoef[2], -self.quatCoef[3])
     
-    def misOri(self, right, symGroup, returnQuat = False):
+    def misOri(self, right, symGroup, returnQuat = 0):
         if isinstance(right, type(self)):
             minMisOri = 0   #actually looking for max of this as it is cos of misoriention angle
             for sym in Quat.symEqv(symGroup):   #loop over symmetrically equivelent orienations
@@ -147,8 +149,10 @@ class Quat(object):
                     minMisOri = currentMisOri
                     minQuatSym = quatSym
         
-            if returnQuat:
+            if returnQuat == 1:
                 return minQuatSym
+            elif returnQuat == 2:
+                return minMisOri, minQuatSym
             else:
                 return minMisOri
         raise TypeError()
