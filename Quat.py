@@ -4,7 +4,7 @@ import numpy as np
 class Quat(object):
     def __init__(self, *args, **kwargs):
         self.quatCoef = np.zeros(4, dtype=float)
-        #construt with euler angles (radians)
+        #construt with Bunge euler angles (radians)
         if len(args) == 3:
             ph1 = args[0]
             phi = args[1]

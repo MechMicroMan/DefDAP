@@ -314,14 +314,12 @@ class Grain(object):
 
     def calcAverageOri(self):
         firstQuat = True
-        for quat in self.quatList:
-            if firstQuat: #if 1st orientation, start the average
-                self.averageOri = copy.deepcopy(quat)
-                firstQuat = False
-            else: #otherwise need to loop over symmetries and find min misorientation for average
-                #add the symetric equivelent of quat with the minimum misorientation (relative to the average)
-                #to the average. Then normalise.
-                self.averageOri += self.averageOri.misOri(quat, self.crystalSym, returnQuat = 1)
+        self.averageOri = copy.deepcopy(self.quatList[0])  #start average
+        for quat in self.quatList[1:]:
+            #loop over symmetries and find min misorientation for average
+            #add the symetric equivelent of quat with the minimum misorientation (relative to the average)
+            #to the average. Then normalise.
+            self.averageOri += self.averageOri.misOri(quat, self.crystalSym, returnQuat = 1)
         self.averageOri.normalise()
         return
 
