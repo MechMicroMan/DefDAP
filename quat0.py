@@ -57,7 +57,6 @@ class Quat(object):
         
         
         
-        
         #at1 = atan2(qd,qa);
         #at2 = atan2(qb,qc);
 
