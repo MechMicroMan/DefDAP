@@ -1,8 +1,10 @@
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+
 import copy
 
-from Quat import Quat
+from quat import Quat
 
 #import ipyparallel as ipp
 
@@ -12,19 +14,20 @@ class Map(object):
     #binData - imported binary data
     
     def __init__(self):
-        self.crystalSym = None #symmetry of material e.g. "cubic", "hexagonal"
-        self.xDim = None #(int) dimensions of maps
+        self.crystalSym = None  #symmetry of material e.g. "cubic", "hexagonal"
+        self.xDim = None        #(int) dimensions of maps
         self.yDim = None
-        self.binData = None #imported binary data
-        self.quatArray = None #(array) array of quaterions for each point of map
-        self.misOx = None #(array) map of misorientation with single neighbour pixel in positive x dir
+        self.binData = None     #imported binary data
+        self.quatArray = None   #(array) array of quaterions for each point of map
+        self.misOx = None       #(array) map of misorientation with single neighbour pixel in positive x dir
         self.misOy = None
-        self.boundaries = None #(array) map of boundariers
-        self.grains = None #(array) map of grains
-        self.grainList = None #(list) list of grains
-        self.misOri = None #(array) map of misorientation
-        self.misOriAxis = None #(list of arrays) map of misorientation axis components
+        self.boundaries = None  #(array) map of boundariers
+        self.grains = None      #(array) map of grains
+        self.grainList = None   #(list) list of grains
+        self.misOri = None      #(array) map of misorientation
+        self.misOriAxis = None  #(list of arrays) map of misorientation axis components
         self.averageSchmidFactor = None #(array) map of average Schmid factor
+        self.currGrainId = None  #Id of last selected grain
         return
     
     def loadData(self, fileName, crystalSym):
@@ -52,21 +55,24 @@ class Map(object):
         plt.colorbar()
         return
 
-    def plotEulerMap(self):
+    def plotEulerMap(self, updateCurrent = False):
         self.checkDataLoaded()
-        
-        emap = np.transpose(np.array([self.binData['Eulers']['ph1'], self.binData['Eulers']['phi'],
+
+        if not updateCurrent:
+            emap = np.transpose(np.array([self.binData['Eulers']['ph1'], self.binData['Eulers']['phi'],
                                       self.binData['Eulers']['ph2']]))
-        #this is the normalization for the
-        norm = np.tile(np.array([2*np.pi, np.pi/2, np.pi/2]), (self.yDim,self.xDim))
-        norm = np.reshape(norm, (self.yDim,self.xDim,3))
-        eumap = np.reshape(emap, (self.yDim,self.xDim,3))
-        #make non-indexed points green
-        eumap = np.where(eumap!=[0.,0.,0.], eumap, [0.,1.,0.])
-        
-        fig, ax = plt.subplots()
-        ax.imshow(eumap/norm, aspect='equal')
-        return fig
+            #this is the normalization for the
+            norm = np.tile(np.array([2*np.pi, np.pi/2, np.pi/2]), (self.yDim,self.xDim))
+            norm = np.reshape(norm, (self.yDim,self.xDim,3))
+            eumap = np.reshape(emap, (self.yDim,self.xDim,3))
+            #make non-indexed points green
+            eumap = np.where(eumap!=[0.,0.,0.], eumap, [0.,1.,0.])
+
+            self.cacheEulerMap = eumap/norm
+            self.fig, self.ax = plt.subplots()
+
+        self.ax.imshow(self.cacheEulerMap, aspect='equal')
+        return
     
     def checkDataLoaded(self):
         if self.binData is None:
@@ -162,16 +168,43 @@ class Map(object):
     
     def locateGrainID(self):
         if (self.grainList is not None) and (self.grainList != []):
-            fig = self.plotEulerMap()
-            fig.canvas.callbacks.connect('button_press_event', self.fig_on_click)
+            #reset current selected grain and plot euler map with click handler
+            self.currGrainId = None
+            self.plotEulerMap()
+            self.fig.canvas.callbacks.connect('button_press_event', self.clickGrainId)
         else:
             raise Exception("Grain list empty")
             
 
-    def fig_on_click(self, event):
+    def clickGrainId(self, event):
         if event.inaxes is not None:
-            print self.grains[int(event.ydata), int(event.xdata)] - 1
-    
+            #self.ax.imshow(self.grains, aspect='equal')
+            #self.fig.canvas.draw()
+
+            #grain id of selected grain
+            self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
+            print self.currGrainId
+
+            #outline of current grain
+            grainOutline = self.grainList[self.currGrainId].grainOutline(bg = 0, fg = 255)
+            x0, y0, xmax, ymax = self.grainList[self.currGrainId].extremeCoords()
+
+            #need in correct place on map to plot on same axis
+            outline = np.full((self.yDim,self.xDim), 0, dtype=int)
+            outline[y0:ymax+1, x0:xmax+1] = grainOutline
+
+            #Custom colour map where 0 is tranparent white for bg and 255 is opaque black for fg
+            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap',['white','white'],256)
+            cmap1._init()
+            cmap1._lut[:,-1] = np.linspace(0, 1, cmap1.N+3)
+            
+            #clear current axis and redraw euler map with highlighted grain overlay
+            self.ax.clear()
+            self.plotEulerMap(updateCurrent = True)
+            self.ax.imshow(outline, interpolation='none', vmin=0, vmax=254, cmap=cmap1)
+            self.fig.canvas.draw()
+
+            
 
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self.crystalSym)
@@ -242,7 +275,7 @@ class Map(object):
         return
 
     def plotMisOriMap(self, component=0, vMin=None, vMax=None, cmap=None):
-        self.misOri = np.zeros([self.yDim, self.xDim])
+        self.misOri = np.ones([self.yDim, self.xDim])
         
         plt.figure()
         
@@ -262,6 +295,10 @@ class Map(object):
     
         plt.colorbar()
         return
+
+
+
+
 
 
     def calcAverageGrainSchmidFactors(self, loadVector = np.array([0, 0, 1])):
@@ -288,6 +325,9 @@ class Map(object):
 
 
 
+
+
+
 class Grain(object):
     
     def __init__(self, crystalSym):
@@ -296,7 +336,7 @@ class Grain(object):
         self.quatList = []              #list of quats
         self.misOriList = None          #list of misOri at each point in grain
         self.misOriAxisList = None      #list of misOri axes at each point in grain
-        self.averageOri = None          #(quat) average ori of grain
+        self.refOri = None          #(quat) average ori of grain
         self.averageMisOri = None       #average misOri of grain
         
         self.loadVectorCrystal = None   #load vector in crystal coordinates
@@ -314,17 +354,17 @@ class Grain(object):
 
     def calcAverageOri(self):
         firstQuat = True
-        self.averageOri = copy.deepcopy(self.quatList[0])  #start average
+        self.refOri = copy.deepcopy(self.quatList[0])  #start average
         for quat in self.quatList[1:]:
             #loop over symmetries and find min misorientation for average
             #add the symetric equivelent of quat with the minimum misorientation (relative to the average)
             #to the average. Then normalise.
-            self.averageOri += self.averageOri.misOri(quat, self.crystalSym, returnQuat = 1)
-        self.averageOri.normalise()
+            self.refOri += self.refOri.misOri(quat, self.crystalSym, returnQuat = 1)
+        self.refOri.normalise()
         return
 
     def buildMisOriList(self, calcAxis = False):
-        if self.averageOri is None:
+        if self.refOri is None:
             self.calcAverageOri()
 
 
@@ -332,26 +372,24 @@ class Grain(object):
         
         if calcAxis:
             self.misOriAxisList = []
-            aveageOriInverse = self.averageOri.conjugate()
+            aveageOriInverse = self.refOri.conjugate()
         
         for quat in self.quatList:
             #Calculate misOri to average ori. Return closest symmetric equivalent for later use
-            currentMisOri, currentQuatSym = self.averageOri.misOri(quat, self.crystalSym, returnQuat = 2)
+            currentMisOri, currentQuatSym = self.refOri.misOri(quat, self.crystalSym, returnQuat = 2)
             if currentMisOri > 1:
                 currentMisOri = 1
             self.misOriList.append(currentMisOri)
             
             
             if calcAxis:
-                #Calculate misorientation axix
+                #Calculate misorientation axis
                 Dq = aveageOriInverse * currentQuatSym #definately quaternion product?
                 self.misOriAxisList.append((2 * Dq[1:4] * np.arccos(Dq[0])) / np.sqrt(1 - np.power(Dq[0], 2)))
 
-                        
 
         self.averageMisOri = np.array(self.misOriList).mean()
         
-
         return
         #return self#to make it work with parallel
     
@@ -365,17 +403,20 @@ class Grain(object):
         ymax = max(unzippedCoordlist[1])
         return x0, y0, xmax, ymax
 
-    def plotOutline(self):
+    def grainOutline(self, bg = np.nan, fg = 0):
         x0, y0, xmax, ymax = self.extremeCoords()
     
         #initialise array with nans so area not in grain displays white
-        grainOuline = np.full([ymax - y0 + 1, xmax - x0 + 1], np.nan, dtype=float)
+        outline = np.full([ymax - y0 + 1, xmax - x0 + 1], bg, dtype=int)
 
         for coord in self.coordList:
-            grainOuline[coord[1] - y0, coord[0] - x0] = 0
+            outline[coord[1] - y0, coord[0] - x0] = fg
 
+        return outline
+
+    def plotOutline(self):
         plt.figure()
-        plt.imshow(grainOuline, interpolation='none')
+        plt.imshow(self.grainOutline(), interpolation='none')
         plt.colorbar()
         
         return
@@ -383,7 +424,7 @@ class Grain(object):
     
     #component
     #0 = misOri
-    #n = misOri axis n
+    #{1-3} = misOri axis {1-3}
     #4 = all
     #5 = all axis
     def plotMisOri(self, component=0, vMin=None, vMax=None, vRange=[None, None, None], cmap=[None, "seismic"]):
@@ -442,13 +483,13 @@ class Grain(object):
     
     #define load axis as unit vector to save calculations
     def calcAverageSchmidFactors(self, loadVector = np.array([0, 0, 1])):
-        if self.averageOri is None:
+        if self.refOri is None:
             self.calcAverageOri()
         
         #Transform the load vector into crystal coordinates
         loadQuat = Quat(0, loadVector[0], loadVector[1], loadVector[2])
 
-        loadQuatCrystal = (self.averageOri * loadQuat) * self.averageOri.conjugate()
+        loadQuatCrystal = (self.refOri * loadQuat) * self.refOri.conjugate()
     
         loadVectorCrystal = loadQuatCrystal[1:4]    #will still be a unit vector as aveageOri is a unit quat
         self.loadVectorCrystal = loadVectorCrystal
@@ -483,4 +524,69 @@ class Grain(object):
             systems.append([np.array([0.707107, 0.707107, 0]), np.array([0.577350, -0.577350, 0.577350]), "(1-11)[110]"])
 
         return systems
+
+
+
+
+class Linker(object):
+
+    def __init__(self, maps):
+        self.ebsdMaps = maps
+        self.numMaps = len(maps)
+        self.links = []
+        return
+
+    def startLinking(self):
+        for ebsdMap in self.ebsdMaps:
+            ebsdMap.locateGrainID()
+
+    def makeLink(self):
+        #create empty list for link
+        currLink = []
+
+        for i, ebsdMap in enumerate(self.ebsdMaps):
+            if ebsdMap.currGrainId is not None:
+                currLink.append(ebsdMap.currGrainId)
+            else:
+                raise Exception("No grain setected in map {:d}.".format(i+1))
+
+        self.links.append(tuple(currLink))
+
+    def resetLinks(self):
+        self.links = []
+
+
+
+
+    def setAvOriFromInitial(self):
+        masterMap = self.ebsdMaps[0]
+
+        #loop over each map (not first/refernece) and each link. Set refOri of linked grains
+        #to refOri of grain in first map
+        for i, ebsdMap in enumerate(self.ebsdMaps[1:], start = 1):
+            for link in self.links:
+                ebsdMap.grainList[link[i]].refOri = copy.deepcopy(masterMap.grainList[link[0]].refOri)
+
+        return
+
+    def updateMisOri(self, calcAxis = False):
+        #recalculate misorientation for linked grain (not for first map)
+        for i, ebsdMap in enumerate(self.ebsdMaps[1:], start = 1):
+            for link in self.links:
+                ebsdMap.grainList[link[i]].buildMisOriList(calcAxis = calcAxis)
+
+        return
+
+
+
+
+
+
+
+
+
+
+
+
+
 

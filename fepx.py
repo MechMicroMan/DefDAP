@@ -1,9 +1,9 @@
 import numpy as np
 import copy
 
-from Quat import Quat
+from quat import Quat
 
-class FepxMesh(object):
+class Mesh(object):
     def __init__(self, name, meshDir = "", dataDir = ""):
         ### object variables ###
         # meshDir
