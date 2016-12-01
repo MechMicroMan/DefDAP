@@ -274,7 +274,7 @@ class Map(object):
             grain.buildMisOriList(calcAxis = calcAxis)
         return
 
-    def plotMisOriMap(self, component=0, vMin=None, vMax=None, cmap=None):
+    def plotMisOriMap(self, component=0, plotGBs=False, vMin=None, vMax=None, cmap=None):
         self.misOri = np.ones([self.yDim, self.xDim])
         
         plt.figure()
@@ -284,16 +284,24 @@ class Map(object):
                 for coord, misOriAxis in zip(grain.coordList, np.array(grain.misOriAxisList)):
                     self.misOri[coord[1], coord[0]] = misOriAxis[component-1]
     
-            plt.imshow(self.misOri * 180 / np.pi, interpolation='none', vmin=vMin, vmax=vMax, cmap=cmap)
+            plt.imshow(self.misOri * 180 / np.pi, interpolation='None', vmin=vMin, vmax=vMax, cmap=cmap)
     
         else:
             for grain in self.grainList:
                 for coord, misOri in zip(grain.coordList, grain.misOriList):
                     self.misOri[coord[1], coord[0]] = misOri
 
-            plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='none', vmin=vMin, vmax=vMax, cmap=cmap)
+            plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='None', vmin=vMin, vmax=vMax, cmap=cmap)
     
         plt.colorbar()
+
+        if plotGBs:
+            #create colourmap for boundaries and plot. colourmap goes transparent white to opaque black
+            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap',['white','black'],256)
+            cmap1._init()
+            cmap1._lut[:,-1] = np.linspace(0, 1, cmap1.N+3)
+            plt.imshow(self.boundaries, interpolation='None', vmin=0, vmax=254, cmap=cmap1)
+
         return
 
 
