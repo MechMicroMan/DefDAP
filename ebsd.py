@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Button
 
 import copy
 
@@ -9,6 +10,27 @@ from quat import Quat
 #import ipyparallel as ipp
 
 class Map(object):
+    """Summary
+    
+    Attributes:
+        averageSchmidFactor (TYPE): Description
+        binData (TYPE): Description
+        boundaries (TYPE): Description
+        cacheEulerMap (TYPE): Description
+        crystalSym (TYPE): Description
+        currGrainId (TYPE): Description
+        grainList (list): Description
+        grains (TYPE): Description
+        misOri (TYPE): Description
+        misOriAxis (TYPE): Description
+        misOx (TYPE): Description
+        misOy (TYPE): Description
+        quatArray (TYPE): Description
+        smap (TYPE): Description
+        stepSize (TYPE): Description
+        xDim (TYPE): Description
+        yDim (TYPE): Description
+    """
     #defined instance variables
     #xDim, yDim - (int) dimensions of maps
     #binData - imported binary data
@@ -17,6 +39,7 @@ class Map(object):
         self.crystalSym = None  #symmetry of material e.g. "cubic", "hexagonal"
         self.xDim = None        #(int) dimensions of maps
         self.yDim = None
+        self.stepSize = None   #(float) step size
         self.binData = None     #imported binary data
         self.quatArray = None   #(array) array of quaterions for each point of map
         self.misOx = None       #(array) map of misorientation with single neighbour pixel in positive x dir
@@ -27,7 +50,9 @@ class Map(object):
         self.misOri = None      #(array) map of misorientation
         self.misOriAxis = None  #(list of arrays) map of misorientation axis components
         self.averageSchmidFactor = None #(array) map of average Schmid factor
-        self.currGrainId = None  #Id of last selected grain
+        self.currGrainId = None #Id of last selected grain
+        self.origin = (0, 0)    #Map origin (y, x). Used by linker class where origin is a 
+                                # homologue point of the maps
         return
     
     def loadData(self, fileName, crystalSym):
@@ -38,6 +63,10 @@ class Map(object):
                 self.xDim = int(line[7:])
             if line[:6] == 'yCells':
                 self.yDim = int(line[7:])
+            if line[:9] == 'GridDistX':
+                self.stepSize = float(line[10:])
+
+                
         f.close()
         #now read the binary .crc file
         fmt_np=np.dtype([('Phase','b'), ('Eulers', [('ph1','f'), ('phi','f'), ('ph2','f')]),
@@ -55,7 +84,13 @@ class Map(object):
         plt.colorbar()
         return
 
-    def plotEulerMap(self, updateCurrent = False):
+    def plotEulerMap(self, updateCurrent = False, highlightGrains = None):
+        """Summary
+        
+        Args:
+            updateCurrent (bool, optional): Description
+            highlightGrains (List int, optional): Grain ids of grains to highlight
+        """
         self.checkDataLoaded()
 
         if not updateCurrent:
@@ -72,6 +107,26 @@ class Map(object):
             self.fig, self.ax = plt.subplots()
 
         self.ax.imshow(self.cacheEulerMap, aspect='equal')
+
+        if highlightGrains is not None:
+            outline = np.full((self.yDim,self.xDim), 0, dtype=int)
+            for grainId in highlightGrains:
+                #outline of highlighted grain
+                grainOutline = self.grainList[grainId].grainOutline(bg = 0, fg = 1)
+                x0, y0, xmax, ymax = self.grainList[grainId].extremeCoords()
+
+                grainOutline = np.logical_or(outline[y0:ymax+1, x0:xmax+1], grainOutline).astype(int)
+                outline[y0:ymax+1, x0:xmax+1] = grainOutline
+
+
+            #Custom colour map where 0 is tranparent white for bg and 255 is opaque black for fg
+            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white','white'], 256)
+            cmap1._init()
+            cmap1._lut[:,-1] = np.linspace(0, 1, cmap1.N+3)
+            
+            #plot highlighted grain overlay
+            self.ax.imshow(outline*255, interpolation='none', vmin=0, vmax=254, cmap=cmap1)
+
         return
     
     def checkDataLoaded(self):
@@ -166,42 +221,32 @@ class Map(object):
         plt.imshow(self.grains)
         return
     
-    def locateGrainID(self):
+    def locateGrainID(self, clickEvent = None):
         if (self.grainList is not None) and (self.grainList != []):
             #reset current selected grain and plot euler map with click handler
             self.currGrainId = None
             self.plotEulerMap()
-            self.fig.canvas.callbacks.connect('button_press_event', self.clickGrainId)
+            if clickEvent is None:
+                #default click handler which highlights grain and prints id
+                sself.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
+            else:
+                #click handler loaded from linker classs. Pass current ebsd to it.
+                self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
+
+
         else:
             raise Exception("Grain list empty")
             
 
     def clickGrainId(self, event):
         if event.inaxes is not None:
-            #self.ax.imshow(self.grains, aspect='equal')
-            #self.fig.canvas.draw()
-
             #grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
             print self.currGrainId
 
-            #outline of current grain
-            grainOutline = self.grainList[self.currGrainId].grainOutline(bg = 0, fg = 255)
-            x0, y0, xmax, ymax = self.grainList[self.currGrainId].extremeCoords()
-
-            #need in correct place on map to plot on same axis
-            outline = np.full((self.yDim,self.xDim), 0, dtype=int)
-            outline[y0:ymax+1, x0:xmax+1] = grainOutline
-
-            #Custom colour map where 0 is tranparent white for bg and 255 is opaque black for fg
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap',['white','white'],256)
-            cmap1._init()
-            cmap1._lut[:,-1] = np.linspace(0, 1, cmap1.N+3)
-            
             #clear current axis and redraw euler map with highlighted grain overlay
             self.ax.clear()
-            self.plotEulerMap(updateCurrent = True)
-            self.ax.imshow(outline, interpolation='none', vmin=0, vmax=254, cmap=cmap1)
+            self.plotEulerMap(updateCurrent = True, highlightGrains=[self.currGrainId])
             self.fig.canvas.draw()
 
             
@@ -544,9 +589,62 @@ class Linker(object):
         self.links = []
         return
 
+    def setOrigin(self):
+        for ebsdMap in self.ebsdMaps:
+            ebsdMap.locateGrainID(clickEvent = self.clickSetOrigin)
+
+    def clickSetOrigin(self, event, currentEbsdMap):
+        currentEbsdMap.origin = (int(event.ydata), int(event.xdata))
+        print "Origin set to ({:}, {:})".format(currentEbsdMap.origin[0], currentEbsdMap.origin[1])
+
     def startLinking(self):
         for ebsdMap in self.ebsdMaps:
-            ebsdMap.locateGrainID()
+            ebsdMap.locateGrainID(clickEvent = self.clickGrainGuess)
+
+            #Add make link button to axes
+            btnAx = ebsdMap.fig.add_axes([0.8, 0.0, 0.1, 0.07])
+            
+            btnLink = Button(btnAx, 'Make link', color='0.85', hovercolor='0.95')
+
+
+    def clickGrainGuess(self, event, currentEbsdMap):
+        #self is cuurent linker instance even if run as click event handler from map class
+        if event.inaxes is currentEbsdMap.fig.axes[0]:
+            #axis 0 then is a click on the map
+
+            if currentEbsdMap is self.ebsdMaps[0]:
+                #clicked on 'master' map so highlight and guess grain on other maps
+                for ebsdMap in self.ebsdMaps:
+                    if ebsdMap is currentEbsdMap:
+                        #set current grain in ebsd map that clicked
+                        ebsdMap.clickGrainId(event)
+                    else:
+                        #Guess at grain in other maps
+                        #Calculated position relative to set origin of the map, scaled from step size of maps
+                        y0m = currentEbsdMap.origin[0]
+                        x0m = currentEbsdMap.origin[1]
+                        y0 = ebsdMap.origin[0]
+                        x0 = ebsdMap.origin[1]
+                        scaling = currentEbsdMap.stepSize / ebsdMap.stepSize
+
+                        x = int((event.xdata - x0m)*scaling + x0)
+                        y = int((event.ydata - y0m)*scaling + y0)
+
+                        ebsdMap.currGrainId = int(ebsdMap.grains[y, x]) - 1
+                        print ebsdMap.currGrainId
+
+                        #clear current axis and redraw euler map with highlighted grain overlay
+                        ebsdMap.ax.clear()
+                        ebsdMap.plotEulerMap(updateCurrent = True, highlightGrains=[ebsdMap.currGrainId])
+                        ebsdMap.fig.canvas.draw()
+            else:
+                #clicked on other map so correct guessed selected grain
+                currentEbsdMap.clickGrainId(event)
+
+        elif event.inaxes is currentEbsdMap.fig.axes[1]:
+            #axis 1 then is a click on the button
+            self.makeLink()
+
 
     def makeLink(self):
         #create empty list for link
@@ -559,6 +657,8 @@ class Linker(object):
                 raise Exception("No grain setected in map {:d}.".format(i+1))
 
         self.links.append(tuple(currLink))
+
+        print "Link added " + str(tuple(currLink))
 
     def resetLinks(self):
         self.links = []
