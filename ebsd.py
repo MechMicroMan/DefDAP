@@ -145,7 +145,6 @@ class Map(object):
                     self.quatArray[j, i] = Quat(eulers[0], eulers[1], eulers[2])
         return
     
-    
     def findBoundaries(self, boundDef = 10):
         self.buildQuatArray()
         
@@ -228,7 +227,7 @@ class Map(object):
             self.plotEulerMap()
             if clickEvent is None:
                 #default click handler which highlights grain and prints id
-                sself.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
+                self.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
             else:
                 #click handler loaded from linker classs. Pass current ebsd to it.
                 self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
@@ -319,7 +318,7 @@ class Map(object):
             grain.buildMisOriList(calcAxis = calcAxis)
         return
 
-    def plotMisOriMap(self, component=0, plotGBs=False, vMin=None, vMax=None, cmap=None):
+    def plotMisOriMap(self, component=0, plotGBs=False, vMin=None, vMax=None, cmap=None, cBarLabel="ROD (degrees)"):
         self.misOri = np.ones([self.yDim, self.xDim])
         
         plt.figure()
@@ -338,7 +337,7 @@ class Map(object):
 
             plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='None', vmin=vMin, vmax=vMax, cmap=cmap)
     
-        plt.colorbar()
+        plt.colorbar(label = cBarLabel)
 
         if plotGBs:
             #create colourmap for boundaries and plot. colourmap goes transparent white to opaque black
@@ -534,7 +533,7 @@ class Grain(object):
     
     
     
-    #define load axis as unit vector to save calculations
+    #define load axis as unit vector
     def calcAverageSchmidFactors(self, loadVector = np.array([0, 0, 1])):
         if self.refOri is None:
             self.calcAverageOri()
@@ -556,25 +555,64 @@ class Grain(object):
 
 
     #slip systems defined as list with 1st value the slip direction, 2nd the slip plane and 3rd a label
-    #define as unit vectors to save calculations
+    #define as unit vectors
     def slipSystems(self):
         systems = []
         if self.crystalSym == "cubic":
-            systems.append([np.array([0, 0.707107, -0.707107]), np.array([0.577350, 0.577350, 0.577350]), "(111)[01-1]"])
-            systems.append([np.array([-0.707107, 0, 0.707107]), np.array([0.577350, 0.577350, 0.577350]), "(111)[-101]"])
-            systems.append([np.array([0.707107, -0.707107, 0]), np.array([0.577350, 0.577350, 0.577350]), "(111)[1-10]"])
+            systems.append([
+                np.array([0, 0.707107, -0.707107]), 
+                np.array([0.577350, 0.577350, 0.577350]), 
+                "(111)[01-1]"
+                ])
+            systems.append([
+                np.array([-0.707107, 0, 0.707107]), 
+                np.array([0.577350, 0.577350, 0.577350]), 
+                "(111)[-101]"
+                ])
+            systems.append([
+                np.array([0.707107, -0.707107, 0]), 
+                np.array([0.577350, 0.577350, 0.577350]), 
+                "(111)[1-10]"
+                ])
 
-            systems.append([np.array([0, 0.707107, 0.707107]), np.array([0.577350, 0.577350, -0.577350]), "(11-1)[011]"])
-            systems.append([np.array([-0.707107, 0, -0.707107]), np.array([0.577350, 0.577350, -0.577350]), "(11-1)[-10-1]"])
-            systems.append([np.array([0.707107, -0.707107, 0]), np.array([0.577350, 0.577350, -0.577350]), "(11-1)[1-10]"])
+            systems.append([
+                np.array([0, 0.707107, 0.707107]), 
+                np.array([0.577350, 0.577350, -0.577350]), 
+                "(11-1)[011]"])
+            systems.append([
+                np.array([-0.707107, 0, -0.707107]), 
+                np.array([0.577350, 0.577350, -0.577350]), 
+                "(11-1)[-10-1]"])
+            systems.append([
+                np.array([0.707107, -0.707107, 0]), 
+                np.array([0.577350, 0.577350, -0.577350]), 
+                "(11-1)[1-10]"])
 
-            systems.append([np.array([0, 0.707107, -0.707107]), np.array([-0.577350, 0.577350, 0.577350]), "(-111)[01-1]"])
-            systems.append([np.array([0.707107, 0, 0.707107]), np.array([-0.577350, 0.577350, 0.577350]), "(-111)[101]"])
-            systems.append([np.array([-0.707107, -0.707107, 0]), np.array([-0.577350, 0.577350, 0.577350]), "(-111)[-1-10]"])
+            systems.append([
+                np.array([0, 0.707107, -0.707107]), 
+                np.array([-0.577350, 0.577350, 0.577350]), 
+                "(-111)[01-1]"])
+            systems.append([
+                np.array([0.707107, 0, 0.707107]), 
+                np.array([-0.577350, 0.577350, 0.577350]), 
+                "(-111)[101]"])
+            systems.append([
+                np.array([-0.707107, -0.707107, 0]), 
+                np.array([-0.577350, 0.577350, 0.577350]), 
+                "(-111)[-1-10]"])
 
-            systems.append([np.array([0, -0.707107, -0.707107]), np.array([0.577350, -0.577350, 0.577350]), "(1-11)[0-1-1]"])
-            systems.append([np.array([-0.707107, 0, 0.707107]), np.array([0.577350, -0.577350, 0.577350]), "(1-11)[-101]"])
-            systems.append([np.array([0.707107, 0.707107, 0]), np.array([0.577350, -0.577350, 0.577350]), "(1-11)[110]"])
+            systems.append([
+                np.array([0, -0.707107, -0.707107]), 
+                np.array([0.577350, -0.577350, 0.577350]), 
+                "(1-11)[0-1-1]"])
+            systems.append([
+                np.array([-0.707107, 0, 0.707107]), 
+                np.array([0.577350, -0.577350, 0.577350]), 
+                "(1-11)[-101]"])
+            systems.append([
+                np.array([0.707107, 0.707107, 0]), 
+                np.array([0.577350, -0.577350, 0.577350]), 
+                "(1-11)[110]"])
 
         return systems
 
