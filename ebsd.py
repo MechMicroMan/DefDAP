@@ -35,7 +35,7 @@ class Map(object):
     #xDim, yDim - (int) dimensions of maps
     #binData - imported binary data
     
-    def __init__(self):
+    def __init__(self, fileName, crystalSym):
         self.crystalSym = None  #symmetry of material e.g. "cubic", "hexagonal"
         self.xDim = None        #(int) dimensions of maps
         self.yDim = None
@@ -44,15 +44,19 @@ class Map(object):
         self.quatArray = None   #(array) array of quaterions for each point of map
         self.misOx = None       #(array) map of misorientation with single neighbour pixel in positive x dir
         self.misOy = None
-        self.boundaries = None  #(array) map of boundariers
+        self.boundaries = None  #(array) map of boundariers. -1 for a boundary, 0 otherwise
         self.grains = None      #(array) map of grains
         self.grainList = None   #(list) list of grains
+        self.grainSizes = None  #(list) list of grain sizes (number of pixels in grain)
         self.misOri = None      #(array) map of misorientation
         self.misOriAxis = None  #(list of arrays) map of misorientation axis components
         self.averageSchmidFactor = None #(array) map of average Schmid factor
         self.currGrainId = None #Id of last selected grain
         self.origin = (0, 0)    #Map origin (y, x). Used by linker class where origin is a 
                                 # homologue point of the maps
+        self.homogPoints = None
+
+        self.loadData(fileName, crystalSym)
         return
     
     def loadData(self, fileName, crystalSym):
@@ -97,7 +101,7 @@ class Map(object):
             emap = np.transpose(np.array([self.binData['Eulers']['ph1'], self.binData['Eulers']['phi'],
                                       self.binData['Eulers']['ph2']]))
             #this is the normalization for the
-            norm = np.tile(np.array([2*np.pi, np.pi/2, np.pi/2]), (self.yDim,self.xDim))
+            norm = np.tile(np.array([2*np.pi, np.pi/2, np.pi/2]), (self.yDim, self.xDim))
             norm = np.reshape(norm, (self.yDim,self.xDim,3))
             eumap = np.reshape(emap, (self.yDim,self.xDim,3))
             #make non-indexed points green
@@ -108,27 +112,33 @@ class Map(object):
 
         self.ax.imshow(self.cacheEulerMap, aspect='equal')
 
-        if highlightGrains is not None:
-            outline = np.full((self.yDim,self.xDim), 0, dtype=int)
-            for grainId in highlightGrains:
-                #outline of highlighted grain
-                grainOutline = self.grainList[grainId].grainOutline(bg = 0, fg = 1)
-                x0, y0, xmax, ymax = self.grainList[grainId].extremeCoords()
-
-                grainOutline = np.logical_or(outline[y0:ymax+1, x0:xmax+1], grainOutline).astype(int)
-                outline[y0:ymax+1, x0:xmax+1] = grainOutline
-
-
-            #Custom colour map where 0 is tranparent white for bg and 255 is opaque black for fg
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white','white'], 256)
-            cmap1._init()
-            cmap1._lut[:,-1] = np.linspace(0, 1, cmap1.N+3)
-            
-            #plot highlighted grain overlay
-            self.ax.imshow(outline*255, interpolation='none', vmin=0, vmax=254, cmap=cmap1)
+        if highlightGrains is not None: self.highlightGrains(highlightGrains)
 
         return
-    
+
+    def highlightGrains(self, grainIds):
+        outline = np.zeros((self.yDim, self.xDim), dtype=int)
+        for grainId in grainIds:
+            #outline of highlighted grain
+            grainOutline = self.grainList[grainId].grainOutline(bg = 0, fg = 1)
+            x0, y0, xmax, ymax = self.grainList[grainId].extremeCoords()
+
+            #use logical of same are in entire area to ensure neigbouring grains display correctly
+            grainOutline = np.logical_or(outline[y0:ymax+1, x0:xmax+1], grainOutline).astype(int)
+            outline[y0:ymax+1, x0:xmax+1] = grainOutline
+
+
+        #Custom colour map where 0 is tranparent white for bg and 255 is opaque white for fg
+        cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white','white'], 256)
+        cmap1._init()
+        cmap1._lut[:,-1] = np.linspace(0, 1, cmap1.N+3)
+        
+        #plot highlighted grain overlay
+        self.ax.imshow(outline, interpolation='none', vmin=0, vmax=1, cmap=cmap1)
+
+        return
+
+
     def checkDataLoaded(self):
         if self.binData is None:
             raise Exception("Data not loaded")
@@ -148,15 +158,9 @@ class Map(object):
     def findBoundaries(self, boundDef = 10):
         self.buildQuatArray()
         
-        self.misOx = np.zeros([self.yDim, self.xDim])
-        self.misOy = np.zeros([self.yDim, self.xDim])
-        self.boundaries = np.zeros([self.yDim, self.xDim])
-        
-        
-        self.smap = np.zeros([self.yDim, self.xDim])
-        for i in range(self.xDim):
-            for j in range(self.yDim):
-                self.smap[j,i] = np.arccos(self.quatArray[j,i][0])
+        self.misOx = np.zeros((self.yDim, self.xDim))
+        self.misOy = np.zeros((self.yDim, self.xDim))
+        self.boundaries = np.zeros((self.yDim, self.xDim), dtype=int)
         
         
         #sweep in positive x and y dirs calculating misorientation with neighbour
@@ -171,9 +175,7 @@ class Map(object):
                 
                 if self.misOx[j,i] > boundDef:
                     self.misOx[j,i] = 0.0
-                    self.boundaries[j,i] = 255
-                    
-                    self.smap[j,i] = 0
+                    self.boundaries[j,i] = -1
         
         
         for i in range(self.xDim - 1):
@@ -187,37 +189,53 @@ class Map(object):
                 
                 if self.misOy[j,i] > boundDef:
                     self.misOy[j,i] = 0.0
-                    self.boundaries[j,i] = 255
-                    
-                    self.smap[j,i] = 0
+                    self.boundaries[j,i] = -1
         
         return
 
     def plotBoundaryMap(self):
-        plt.figure(), plt.imshow(self.smap, interpolation='none')
-        plt.figure(), plt.imshow(self.boundaries, vmax=15),plt.colorbar()
+        plt.figure()
+        plt.imshow(-self.boundaries, vmax=1)
+        plt.colorbar()
         return
   
   
-    def findGrains(self):
+    def findGrains(self, minGrainSize = 10):
+        #Initialise the grain map
         self.grains = np.copy(self.boundaries)
         
         self.grainList = []
-        
+        self.grainSizes = []
+
+        #List of points where no grain has be set yet
         unknownPoints = np.where(self.grains == 0)
-        
+        #Start counter for grains
         grainIndex = 1
         
+        #Loop until all points (except boundaries) have been assigned to a grain or ignored
         while unknownPoints[0].shape[0] > 0:
-            self.floodFill(unknownPoints[1][0], unknownPoints[0][0], grainIndex)
-            
-            grainIndex += 1
+            #Flood fill first unknown point and return grain object
+            currentGrain = self.floodFill(unknownPoints[1][0], unknownPoints[0][0], grainIndex)
+
+            grainSize = len(currentGrain)
+            if grainSize < minGrainSize:
+                #if grain size less than minimum, ignore grain and set values in grain map to -2
+                for coord in currentGrain.coordList:
+                    self.grains[coord[1], coord[0]] = -2
+            else:
+                #add grain and size to lists and increment grain label
+                self.grainList.append(currentGrain)
+                self.grainSizes.append(grainSize)
+                grainIndex += 1
+
+            #update unknown points
             unknownPoints = np.where(self.grains == 0)
         return
             
     def plotGrainMap(self):
         plt.figure()
         plt.imshow(self.grains)
+        plt.colorbar()
         return
     
     def locateGrainID(self, clickEvent = None):
@@ -229,9 +247,8 @@ class Map(object):
                 #default click handler which highlights grain and prints id
                 self.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
             else:
-                #click handler loaded from linker classs. Pass current ebsd to it.
+                #click handler loaded from linker classs. Pass current ebsd map to it.
                 self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
-
 
         else:
             raise Exception("Grain list empty")
@@ -285,14 +302,13 @@ class Map(object):
                         newedge.append((s, t))
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
-                    elif self.grains[t, s] == 255 and (s > x or t > y):
+                    elif self.grains[t, s] == -1 and (s > x or t > y):
                         currentGrain.addPoint(self.quatArray[t, s], (s, t))
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
             
             if newedge == []:
-                self.grainList.append(currentGrain)
-                return grain
+                return currentGrain
             else:
                 edge = newedge
 
@@ -306,8 +322,6 @@ class Map(object):
 
         #paraClient = ipp.Client()
         
-        
-        
         #dview = paraClient[:]
         #dview.map_sync(lambda x: x**10, range(32000000))
         #print dview.map_sync(lambda grain: grain.buildMisOriList(), localGrainList)
@@ -318,7 +332,7 @@ class Map(object):
             grain.buildMisOriList(calcAxis = calcAxis)
         return
 
-    def plotMisOriMap(self, component=0, plotGBs=False, vMin=None, vMax=None, cmap=None, cBarLabel="ROD (degrees)"):
+    def plotMisOriMap(self, component=0, plotGBs=False, vMin=None, vMax=None, cmap="viridis", cBarLabel="ROD (degrees)"):
         self.misOri = np.ones([self.yDim, self.xDim])
         
         plt.figure()
@@ -344,10 +358,9 @@ class Map(object):
             cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap',['white','black'],256)
             cmap1._init()
             cmap1._lut[:,-1] = np.linspace(0, 1, cmap1.N+3)
-            plt.imshow(self.boundaries, interpolation='None', vmin=0, vmax=254, cmap=cmap1)
+            plt.imshow(-self.boundaries, interpolation='None', vmin=0, vmax=1, cmap=cmap1)
 
         return
-
 
 
 
@@ -388,7 +401,7 @@ class Grain(object):
         self.quatList = []              #list of quats
         self.misOriList = None          #list of misOri at each point in grain
         self.misOriAxisList = None      #list of misOri axes at each point in grain
-        self.refOri = None          #(quat) average ori of grain
+        self.refOri = None              #(quat) average ori of grain
         self.averageMisOri = None       #average misOri of grain
         
         self.loadVectorCrystal = None   #load vector in crystal coordinates
@@ -459,7 +472,7 @@ class Grain(object):
         x0, y0, xmax, ymax = self.extremeCoords()
     
         #initialise array with nans so area not in grain displays white
-        outline = np.full([ymax - y0 + 1, xmax - x0 + 1], bg, dtype=int)
+        outline = np.full((ymax - y0 + 1, xmax - x0 + 1), bg, dtype=int)
 
         for coord in self.coordList:
             outline[coord[1] - y0, coord[0] - x0] = fg
@@ -479,14 +492,14 @@ class Grain(object):
     #{1-3} = misOri axis {1-3}
     #4 = all
     #5 = all axis
-    def plotMisOri(self, component=0, vMin=None, vMax=None, vRange=[None, None, None], cmap=[None, "seismic"]):
+    def plotMisOri(self, component=0, vMin=None, vMax=None, vRange=[None, None, None], cmap=["viridis", "bwr"]):
         component = int(component)
         
         x0, y0, xmax, ymax = self.extremeCoords()
         
         if component in [4, 5]:
             #subplots
-            grainMisOri = np.full([4, ymax - y0 + 1, xmax - x0 + 1], np.nan, dtype=float)
+            grainMisOri = np.full((4, ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
             
             for coord, misOri, misOriAxis in zip(self.coordList,
                                                  np.arccos(self.misOriList) * 360 / np.pi,
@@ -512,7 +525,7 @@ class Grain(object):
         else:
             #single plot
             #initialise array with nans so area not in grain displays white
-            grainMisOri = np.full([ymax - y0 + 1, xmax - x0 + 1], np.nan, dtype=float)
+            grainMisOri = np.full((ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
         
             if component in [1,2,3]:
                 plotData = np.array(self.misOriAxisList)[:, component-1] * 180 / np.pi

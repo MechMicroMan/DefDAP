@@ -28,7 +28,8 @@ class Quat(object):
             self.quatCoef = self.quatCoef * -1
 
     def eulerAngles(self):
-        #See Melcher, a. Unser, A. Reichhardt, M. Nestler, B. Conversion of EBSD data by a quaternion based algorithm to be used for grain structure simulations
+        #See Melcher, a. Unser, A. Reichhardt, M. Nestler, B. Conversion of EBSD data by a 
+        #quaternion based algorithm to be used for grain structure simulations
     
         eulers = np.empty(3, dtype=float)
         eulers1 = np.empty(3, dtype=float)
@@ -81,7 +82,7 @@ class Quat(object):
     
         return eulers
 
-    #show something meaningful when the quat is printed
+    #show components when the quat is printed
     def __repr__(self):
         return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
     def __str__(self):
