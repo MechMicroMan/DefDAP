@@ -112,6 +112,28 @@ class Map(object):
 
         self.ax.imshow(self.cacheEulerMap, aspect='equal')
 
+
+        # if highlightGrains is not None:
+        #     grainIds = highlightGrains
+        #     outline = np.zeros((self.yDim, self.xDim), dtype=int)
+        #     for grainId in grainIds:
+        #         #outline of highlighted grain
+        #         grainOutline = self.grainList[grainId].grainOutline(bg = 0, fg = 1)
+        #         x0, y0, xmax, ymax = self.grainList[grainId].extremeCoords()
+
+        #         #use logical of same are in entire area to ensure neigbouring grains display correctly
+        #         grainOutline = np.logical_or(outline[y0:ymax+1, x0:xmax+1], grainOutline).astype(int)
+        #         outline[y0:ymax+1, x0:xmax+1] = grainOutline
+
+
+        #     #Custom colour map where 0 is tranparent white for bg and 255 is opaque white for fg
+        #     cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white','white'], 256)
+        #     cmap1._init()
+        #     cmap1._lut[:,-1] = np.linspace(0, 1, cmap1.N+3)
+            
+        #     #plot highlighted grain overlay
+        #     self.ax.imshow(outline, interpolation='none', vmin=0, vmax=1, cmap=cmap1)
+
         if highlightGrains is not None: self.highlightGrains(highlightGrains)
 
         return
@@ -195,7 +217,7 @@ class Map(object):
 
     def plotBoundaryMap(self):
         plt.figure()
-        plt.imshow(-self.boundaries, vmax=1)
+        plt.imshow(-self.boundaries, vmax=1, cmap='gray')
         plt.colorbar()
         return
   
@@ -262,7 +284,7 @@ class Map(object):
 
             #clear current axis and redraw euler map with highlighted grain overlay
             self.ax.clear()
-            self.plotEulerMap(updateCurrent = True, highlightGrains=[self.currGrainId])
+            self.plotEulerMap(updateCurrent=True, highlightGrains=[self.currGrainId])
             self.fig.canvas.draw()
 
             

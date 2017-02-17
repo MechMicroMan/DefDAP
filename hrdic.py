@@ -149,23 +149,28 @@ class Map(object):
 
         return
 
-    def locateGrainID(self, clickEvent=None):
+    def locateGrainID(self, clickEvent=None, displaySelected=False):
         if (self.grainList is not None) and (self.grainList != []):
             #reset current selected grain and plot max shear map with click handler
             self.currGrainId = None
             self.plotMaxShear(plotGBs=True)
             if clickEvent is None:
                 #default click handler which highlights grain and prints id
-                self.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
+                self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickGrainId(x, displaySelected))
             else:
                 #click handler loaded from linker classs. Pass current map object to it.
                 self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
+
+            #unset figure for plotting grains
+            self.grainFig = None
+            self.grainAx = None
+
 
         else:
             raise Exception("Grain list empty")
             
 
-    def clickGrainId(self, event):
+    def clickGrainId(self, event, displaySelected):
         if event.inaxes is not None:
             #grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
@@ -175,6 +180,14 @@ class Map(object):
             self.ax.clear()
             self.plotMaxShear(plotGBs=True, updateCurrent=True, highlightGrains=[self.currGrainId])
             self.fig.canvas.draw()
+
+            if displaySelected:
+                if self.grainFig is None: self.grainFig, self.grainAx = plt.subplots()
+                self.grainList[self.currGrainId].calcSlipTraces()
+                self.grainAx.clear()
+                self.grainList[self.currGrainId].plotMaxShear(plotSlipTraces=True, ax=self.grainAx)
+                self.grainFig.canvas.draw()
+
 
 
     def findGrains(self, minGrainSize=10):
@@ -326,7 +339,7 @@ class Grain(object):
         plt.colorbar()
         return
 
-    def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, vmin=None, vmax=None, cmap="viridis"):
+    def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, vmin=None, vmax=None, cmap="viridis", ax=None):
         multiplier = 100 if plotPercent else 1
         x0, y0, xmax, ymax = self.extremeCoords()
         
@@ -336,22 +349,30 @@ class Grain(object):
         for coord, maxShear in zip(self.coordList, self.maxShearList):
             grainMaxShear[coord[1] - y0, coord[0] - x0] = maxShear
 
-        plt.figure()
-        plt.imshow(grainMaxShear*multiplier, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
-        plt.colorbar()
+        if ax is None:
+            plt.figure()
+            plt.imshow(grainMaxShear*multiplier, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
+            plt.colorbar()
+        else:
+            ax.imshow(grainMaxShear*multiplier, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
+            #ax.colorbar()
 
         if plotSlipTraces:
             colours = ["white", "green", "red", "black"]
             xPos = int((xmax - x0)/2)
             yPos = int((ymax - y0)/2)
             for slipTrace, colour in zip(self.slipTraces, colours):
-                plt.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle", 
-                            color=colour, headwidth=1, headlength=0)
+                if ax is None:
+                    plt.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle", 
+                                color=colour, headwidth=1, headlength=0)
+                else:
+                    ax.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle", 
+                                color=colour, headwidth=1, headlength=0)
 
         return
 
 
-    def calcSlipTraces(self):
+    def calcSlipTraces(self, correctAvOri=True):
         #Define slip plane normals. These are in the crystal frame but in orthonormal coordinates
         overRoot3 = 1.0 / np.sqrt(3)
         slipPlaneNorms = [
@@ -360,9 +381,16 @@ class Grain(object):
             overRoot3 * np.array((1,-1,1), dtype=float),
             overRoot3 * np.array((1,1,-1), dtype=float)
         ]
+        planeLabels = ["[111]", "[-111]", "[1-11]", "[11-1]"]
         screenPlaneNorm = np.array((0,0,1))   #in sample frame
 
         grainAvOri = self.ebsdGrain.refOri   #orientation of grain
+
+        if correctAvOri:
+            #transformRotation = Quat(-DicMap.ebsdTransform.rotation, 0, 0)
+            transformRotation = Quat(0.1329602509925417, 0, 0)
+            grainAvOri = grainAvOri * transformRotation
+        
 
         #transform screenPlaneNormal into crystal frame
         screenPlaneNormQuat = Quat(0, screenPlaneNorm[0], screenPlaneNorm[1], screenPlaneNorm[2])
@@ -371,9 +399,14 @@ class Grain(object):
 
         self.slipTraces = []
         #Loop over each slip plane
-        for slipPlaneNorm in slipPlaneNorms:
+        for slipPlaneNorm, planeLabel in zip(slipPlaneNorms, planeLabels):
             #Calculate intersection of slip plane with plane of screen
             intersectionCrystal = np.cross(screenPlaneNormCrystal, slipPlaneNorm)
+
+            #Calculate angle between planes
+            inclination = np.arccos(np.dot(screenPlaneNormCrystal, slipPlaneNorm))
+            if inclination > np.pi/2: inclination = np.pi - inclination 
+            print "{} inclination: {:.1f}".format(planeLabel, inclination*180/np.pi)
 
             #Transform back to sample frame
             intersectionCrystalQuat = Quat(0, intersectionCrystal[0], intersectionCrystal[1], intersectionCrystal[2])
@@ -381,23 +414,7 @@ class Grain(object):
             intersection = intersectionQuat.quatCoef[1:4]
             intersection = intersection / np.sqrt(np.dot(intersection, intersection))  #normalise
 
+            #Append to list 
             self.slipTraces.append(intersection)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
