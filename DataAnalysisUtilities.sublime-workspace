@@ -4,8 +4,56 @@
 		"selected_items":
 		[
 			[
+				"sel",
+				"selPoint\tstatement"
+			],
+			[
+				"update",
+				"updateCurrent"
+			],
+			[
+				"correct",
+				"correctAvOri\tparam"
+			],
+			[
+				"inter",
+				"intersection\tstatement"
+			],
+			[
+				"maxS",
+				"maxShearList\tstatement"
+			],
+			[
+				"grain",
+				"grainIds\tparam"
+			],
+			[
+				"high",
+				"highlightGrains\tfunction"
+			],
+			[
+				"eb",
+				"ebsdShift\tstatement"
+			],
+			[
 				"ebsd",
-				"ebsdMap"
+				"ebsdShift"
+			],
+			[
+				"pl",
+				"plotGBs\tparam"
+			],
+			[
+				"ym",
+				"ydim\tstatement"
+			],
+			[
+				"coor",
+				"coordList"
+			],
+			[
+				"curr",
+				"currentGrain\tstatement"
 			],
 			[
 				"e",
@@ -16,20 +64,12 @@
 				"currentEbsdMap"
 			],
 			[
-				"eb",
-				"ebsdMaps"
-			],
-			[
 				"step",
 				"stepSize"
 			],
 			[
 				"cli",
 				"clickEvent"
-			],
-			[
-				"curr",
-				"currGrainId"
 			],
 			[
 				"gr",
@@ -43,7 +83,8 @@
 			"file": "ebsd.py",
 			"settings":
 			{
-				"buffer_size": 27127,
+				"buffer_size": 30744,
+				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
@@ -51,7 +92,17 @@
 			"file": "hrdic.py",
 			"settings":
 			{
-				"buffer_size": 1629,
+				"buffer_size": 18400,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "quat.py",
+			"settings":
+			{
+				"buffer_size": 8917,
+				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		}
@@ -97,6 +148,7 @@
 	],
 	"file_history":
 	[
+		"/Users/mbcx9ma4/modelling_stuff/packages/DataAnalysisUtilities/fepx.py",
 		"/Users/mbcx9ma4/modelling_stuff/packages/DataAnalysisUtilities/quat.py",
 		"/Users/mbcx9ma4/modelling_stuff/packages/DataAnalysisUtilities/ebsd.py",
 		"/Users/mbcx9ma4/anaconda/lib/python2.7/site-packages/IPython/core/usage.py",
@@ -111,7 +163,7 @@
 	],
 	"find":
 	{
-		"height": 23.0
+		"height": 35.0
 	},
 	"find_in_files":
 	{
@@ -125,6 +177,18 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"#",
+			"estimate",
+			"boundaries",
+			"warpToEbsdFrame",
+			"None",
+			"currentGrain",
+			"self.grains",
+			"boundaries",
+			"grainOutline",
+			"np.full",
+			"smap",
+			"boundaries",
 			"):\n",
 			"cur",
 			"averageOri",
@@ -142,6 +206,7 @@
 		"regex": false,
 		"replace_history":
 		[
+			"# "
 		],
 		"reverse": false,
 		"show_context": true,
@@ -152,7 +217,7 @@
 	"groups":
 	[
 		{
-			"selected": 1,
+			"selected": 0,
 			"sheets":
 			[
 				{
@@ -161,19 +226,71 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 27127,
+						"buffer_size": 30744,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								1058,
+								1058
 							]
 						],
 						"settings":
 						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html"
+								},
+								{
+									"characters": ".",
+									"selector": "source.python - string - constant.numeric"
+								}
+							],
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 419.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "hrdic.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 18400,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								17183,
+								17183
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": "<",
+									"selector": "text.html"
+								},
+								{
+									"characters": ".",
+									"selector": "source.python - string - constant.numeric"
+								}
+							],
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
 							"translate_tabs_to_spaces": true
@@ -186,20 +303,20 @@
 					"type": "text"
 				},
 				{
-					"buffer": 1,
-					"file": "hrdic.py",
+					"buffer": 2,
+					"file": "quat.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1629,
+						"buffer_size": 8917,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								2472,
+								2472
 							]
 						],
 						"settings":
@@ -212,7 +329,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
+					"stack_index": 2,
 					"type": "text"
 				}
 			]
@@ -257,7 +374,7 @@
 	"project": "DataAnalysisUtilities.sublime-project",
 	"replace":
 	{
-		"height": 42.0
+		"height": 64.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -295,7 +412,7 @@
 	"show_open_files": false,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 150.0,
+	"side_bar_width": 151.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{
