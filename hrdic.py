@@ -8,10 +8,11 @@ from skimage import morphology as mph
 
 from scipy.stats import mode
 
-from quat import Quat
+from .quat import Quat
+from . import base
 
 
-class Map(object):
+class Map(base.Map):
 
     def __init__(self, path, fname):
         self.ebsdMap = None
@@ -19,11 +20,12 @@ class Map(object):
         self.ebsdTransform = None
         self.ebsdShift = (0, 0)
         self.grainList = None
-        self.grainSizes = None
         self.currGrainId = None     # Id of last selected grain
         # ...
         self.ebsdGrainIds = None
         self.selPoint = None
+
+        self.plotDefault = self.plotMaxShear
 
         self.path = path
         self.fname = fname
@@ -83,40 +85,6 @@ class Map(object):
         return mapData[int(self.cropDists[1, 0]):-int(self.cropDists[1, 1]),
                        int(self.cropDists[0, 0]):-int(self.cropDists[0, 1])]
 
-    def setHomogPoint(self):
-        self.selPoint = None
-
-        self.plotMaxShear()
-        homogPoints = np.array(self.homogPoints)
-        self.ax.scatter(x=homogPoints[:, 0], y=homogPoints[:, 1], c='y', s=60)
-
-        btnAx = self.fig.add_axes([0.8, 0.0, 0.1, 0.07])
-        Button(btnAx, 'Save point', color='0.85', hovercolor='0.95')
-
-        # coonect click handler
-        self.fig.canvas.mpl_connect('button_press_event', self.clickHomog)
-
-    def clickHomog(self, event):
-        if event.inaxes is not None:
-            # clear current axis and redraw map
-            self.ax.clear()
-            self.plotMaxShear(updateCurrent=True)
-
-            if event.inaxes is self.fig.axes[0]:
-                # axis 0 then is a click on the map. Update selected point and plot
-                self.selPoint = (int(event.xdata), int(event.ydata))
-                self.ax.scatter(x=self.selPoint[0], y=self.selPoint[1], c='w', s=60, marker='x')
-
-            elif (event.inaxes is self.fig.axes[1]) and (self.selPoint is not None):
-                # axis 1 then is a click on the button. Add selected point to list
-                self.homogPoints.append(self.selPoint)
-                self.selPoint = None
-
-            homogPoints = np.array(self.homogPoints)
-            self.ax.scatter(x=homogPoints[:, 0], y=homogPoints[:, 1], c='y', s=60)
-
-            self.fig.canvas.draw()
-
     def linkEbsdMap(self, ebsdMap):
         self.ebsdMap = ebsdMap
         self.ebsdTransform = tf.AffineTransform()
@@ -167,6 +135,35 @@ class Map(object):
         if highlightGrains is not None:
             self.highlightGrains(highlightGrains)
 
+        # plot slip traces
+
+        numGrains = len(self.grainList)
+        numSS = len(self.ebsdMap.slipSystems)
+        grainSizeDate = np.zeros((numGrains, 4))
+        slipTraceDate = np.zeros((numGrains, numSS, 2))
+
+        for i, grain in enumerate(self.grainList):
+            if len(grain) < 1000:
+                continue
+
+            # x0, y0, xmax, ymax
+            grainSizeDate[i, 0], grainSizeDate[i, 1], grainSizeDate[i, 2], grainSizeDate[i, 3] = grain.extremeCoords()
+
+            for j, slipTrace in enumerate(grain.slipTraces()):
+                slipTraceDate[i, j, 0:2] = slipTrace[0:2]
+
+        scale = 4 / ((grainSizeDate[:, 2] - grainSizeDate[:, 0]) / self.xDim +
+                     (grainSizeDate[:, 3] - grainSizeDate[:, 1]) / self.xDim)
+
+        xPos = grainSizeDate[:, 0] + (grainSizeDate[:, 2] - grainSizeDate[:, 0]) / 2
+        yPos = grainSizeDate[:, 1] + (grainSizeDate[:, 3] - grainSizeDate[:, 1]) / 2
+
+        colours = ["white", "green", "red", "black"]
+
+        for i, colour in enumerate(colours[0:numSS]):
+            self.ax.quiver(xPos, yPos, slipTraceDate[:, i, 0], slipTraceDate[:, i, 1], scale=scale, pivot="middle",
+                           color=colour, headwidth=1, headlength=0, width=0.002)
+
         return
 
     def highlightGrains(self, grainIds):
@@ -213,7 +210,7 @@ class Map(object):
         if event.inaxes is not None:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
-            print self.currGrainId
+            print(self.currGrainId)
 
             # clear current axis and redraw map with highlighted grain overlay
             self.ax.clear()
@@ -233,7 +230,6 @@ class Map(object):
         self.grains = np.copy(self.boundaries)
 
         self.grainList = []
-        self.grainSizes = []
 
         # List of points where no grain has been set yet
         unknownPoints = np.where(self.grains == 0)
@@ -253,7 +249,6 @@ class Map(object):
             else:
                 # add grain and size to lists and increment grain label
                 self.grainList.append(currentGrain)
-                self.grainSizes.append(grainSize)
                 grainIndex += 1
 
             # update unknown points
@@ -285,7 +280,7 @@ class Map(object):
         return
 
     def floodFill(self, x, y, grainIndex):
-        currentGrain = Grain()
+        currentGrain = Grain(self)
 
         currentGrain.addPoint((x, y), self.max_shear[y + self.cropDists[1, 0], x + self.cropDists[0, 0]])
 
@@ -333,12 +328,11 @@ class Map(object):
 
 
 class Grain(object):
-    def __init__(self):
+    def __init__(self, dicMap):
+        self.dicMap = dicMap       # dic map this grain is a member of
         self.coordList = []         # list of coords stored as tuples (x, y)
         self.maxShearList = []
-        self.ebsdGrainId = None
         self.ebsdGrain = None
-        self.slipTraces = None
         return
 
     def __len__(self):
@@ -388,16 +382,21 @@ class Grain(object):
         if ax is None:
             plt.figure()
             plt.imshow(grainMaxShear * multiplier, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
-            plt.colorbar()
+            plt.colorbar(label="Effective shear strain (%)")
+            plt.xticks([])
+            plt.yticks([])
         else:
             ax.imshow(grainMaxShear * multiplier, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
             # ax.colorbar()
 
         if plotSlipTraces:
+            if self.slipTraces() is None:
+                raise Exception("First calculate slip traces")
+
             colours = ["white", "green", "red", "black"]
             xPos = int((xmax - x0) / 2)
             yPos = int((ymax - y0) / 2)
-            for slipTrace, colour in zip(self.slipTraces, colours):
+            for slipTrace, colour in zip(self.slipTraces(), colours):
                 if ax is None:
                     plt.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle",
                                color=colour, headwidth=1, headlength=0)
@@ -407,48 +406,19 @@ class Grain(object):
 
         return
 
-    def calcSlipTraces(self, correctAvOri=True):
-        # Define slip plane normals. These are in the crystal frame but in orthonormal coordinates
-        overRoot3 = 1.0 / np.sqrt(3)
-        slipPlaneNorms = [
-            overRoot3 * np.array((1, 1, 1), dtype=float),
-            overRoot3 * np.array((-1, 1, 1), dtype=float),
-            overRoot3 * np.array((-1, -1, 1), dtype=float),
-            overRoot3 * np.array((1, -1, 1), dtype=float)
-        ]
-        planeLabels = ["[111]", "[-111]", "[-1-11]", "[1-11]"]
-        screenPlaneNorm = np.array((0, 0, 1))   # in sample frame
-
-        grainAvOri = self.ebsdGrain.refOri   # orientation of grain
-
+    def slipTraces(self, correctAvOri=False):
         if correctAvOri:
-            # transformRotation = Quat(-DicMap.ebsdTransform.rotation, 0, 0)
-            transformRotation = Quat(0.1329602509925417, 0, 0)
-            grainAvOri = grainAvOri * transformRotation
+            # need to correct slip traces due to warping of map
+            return self.ebsdGrain.slipTraces
+        else:
+            return self.ebsdGrain.slipTraces
 
-        # Euler angles define a rotation from crystal frame to sample frame
-        # transform screenPlaneNormal into crystal frame
-        screenPlaneNormQuat = Quat(0, screenPlaneNorm[0], screenPlaneNorm[1], screenPlaneNorm[2])
-        screenPlaneNormQuatCrystal = (grainAvOri.conjugate * screenPlaneNormQuat) * grainAvOri
-        screenPlaneNormCrystal = screenPlaneNormQuatCrystal.quatCoef[1:4]
+    def calcSlipTraces(self, slipSystems=None):
+        self.ebsdGrain.calcSlipTraces(slipSystems=slipSystems)
 
-        self.slipTraces = []
-        # Loop over each slip plane
-        for slipPlaneNorm, planeLabel in zip(slipPlaneNorms, planeLabels):
-            # Calculate intersection of slip plane with plane of screen
-            intersectionCrystal = np.cross(screenPlaneNormCrystal, slipPlaneNorm)
+    # def calcSlipTraces(self, correctAvOri=False):
 
-            # Calculate angle between planes
-            inclination = np.arccos(np.dot(screenPlaneNormCrystal, slipPlaneNorm))
-            if inclination > np.pi / 2:
-                inclination = np.pi - inclination
-            print "{} n inclination: {:.1f}".format(planeLabel, inclination * 180 / np.pi)
-
-            # Transform back to sample frame
-            intersectionCrystalQuat = Quat(0, intersectionCrystal[0], intersectionCrystal[1], intersectionCrystal[2])
-            intersectionQuat = (grainAvOri * intersectionCrystalQuat) * grainAvOri.conjugate
-            intersection = intersectionQuat.quatCoef[1:4]
-            intersection = intersection / np.sqrt(np.dot(intersection, intersection))  # normalise
-
-            # Append to list
-            self.slipTraces.append(intersection)
+    #     if correctAvOri:
+    #         # transformRotation = Quat(-DicMap.ebsdTransform.rotation, 0, 0)
+    #         transformRotation = Quat(0.1329602509925417, 0, 0)
+    #         grainAvOri = grainAvOri * transformRotation

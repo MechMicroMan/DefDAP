@@ -7,7 +7,7 @@ import evtk.vtk
 
 import numpy as np
 
-from quat import Quat
+from .quat import Quat
 
 
 class Mesh(object):
@@ -54,7 +54,7 @@ class Mesh(object):
         self.numElmts, self.numNodes, self.elType = (int(x) for x in header.split())
 
         # read element connectivity data
-        self.elmtCon = np.genfromtxt(meshFile, dtype=int, max_rows=self.numElmts, usecols=range(1, 11))
+        self.elmtCon = np.genfromtxt(meshFile, dtype=int, max_rows=self.numElmts, usecols=list(range(1, 11)))
 
         # read node positions
         self.nodePos = np.genfromtxt(meshFile, dtype=float, max_rows=self.numNodes, usecols=[1, 2, 3])
@@ -167,7 +167,7 @@ class Mesh(object):
         if type(frameNums) != list:
             if type(frameNums) == int:
                 if frameNums < 0:
-                    frameNums = range(self.numFrames + 1)
+                    frameNums = list(range(self.numFrames + 1))
                 else:
                     frameNums = [frameNums]
         return frameNums
@@ -206,7 +206,7 @@ class Mesh(object):
                 self.avMisOri[grainID - 1, frameNum] = meanMisOri / (i + 1)
 
                 clear_output()
-                print "Grain {:d} of {:d} done. On frame {:d}.".format(grainID, self.numGrains + 1, frameNum)
+                print("Grain {:d} of {:d} done. On frame {:d}.".format(grainID, self.numGrains + 1, frameNum))
 
         self.misOri[:, frameNums] = np.arccos(self.misOri[:, frameNums]) * 360 / np.pi
         self.avMisOri[:, frameNums] = np.arccos(self.avMisOri[:, frameNums]) * 360 / np.pi

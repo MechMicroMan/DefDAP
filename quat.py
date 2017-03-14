@@ -5,7 +5,7 @@ import numpy as np
 class Quat(object):
     def __init__(self, *args, **kwargs):
         self.quatCoef = np.zeros(4, dtype=float)
-        # construt with Bunge euler angles (radians)
+        # construt with Bunge euler angles (radians, ZXZ)
         if len(args) == 3:
             ph1 = args[0]
             phi = args[1]
@@ -77,10 +77,6 @@ class Quat(object):
                                 right.quatCoef[0] * self.quatCoef[1:4] +
                                 np.cross(self.quatCoef[1:4], right.quatCoef[1:4]))
             return Quat(newQuatCoef)
-        # elif isinstance(right, np.ndarray) and len(right) == 3: #a 3 vector
-        #    returnVector = np.empty(3, dtype=float)
-        #    returnVector = self.quatCoef[1:4] * right
-        #    return returnVector
         raise TypeError()
 
     # overload % operator for dot product
