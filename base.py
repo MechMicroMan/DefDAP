@@ -56,6 +56,24 @@ class SlipSystem(object):
         if crystalSym == "cubic":
             self.slipPlaneOrtho = slipPlane / np.sqrt(np.dot(slipPlane, slipPlane))
             self.slipDirOrtho = slipDir / np.sqrt(np.dot(slipDir, slipDir))
+        elif crystalSym == "hexagonal":
+            self.cOverA = cOverA
+
+            # Convert plane and dir from Miller-Bravais to Miller
+            slipPlaneM = slipPlane[[0, 1, 3]]
+            slipDirM = slipDir[[0, 1, 3]]
+            slipDirM[[0, 1]] -= slipDir[2]
+
+            # Create L matrix
+            lMatrix = SlipSystem.lMatrix(1, 1, cOverA, np.pi / 2, np.pi / 2, np.pi * 2 / 3)
+
+            # Transform into ortho-normal basis and then normalise
+            self.slipPlaneOrtho = lMatrix.dot(slipPlaneM)
+            self.slipDirOrtho = lMatrix.dot(slipDirM)
+            self.slipPlaneOrtho /= np.sqrt(np.dot(self.slipPlaneOrtho, self.slipPlaneOrtho))
+            self.slipDirOrtho /= np.sqrt(np.dot(self.slipDirOrtho, self.slipDirOrtho))
+        else:
+            raise Exception("Only cubic and hexagonal currently supported.")
 
     # overload ==. Two slip systems are equal if they have the same slip plane in miller
     def __eq__(self, right):
@@ -72,12 +90,18 @@ class SlipSystem(object):
     @property
     def slipPlaneLabel(self):
         slipPlane = self.slipPlaneMiller
-        return "({:d}{:d}{:d})".format(slipPlane[0], slipPlane[1], slipPlane[2])
+        if self.crystalSym == "hexagonal":
+            return "({:d}{:d}{:d}{:d})".format(slipPlane[0], slipPlane[1], slipPlane[2], slipPlane[3])
+        else:
+            return "({:d}{:d}{:d})".format(slipPlane[0], slipPlane[1], slipPlane[2])
 
     @property
     def slipDirLabel(self):
         slipDir = self.slipDirMiller
-        return "[{:d}{:d}{:d}]".format(slipDir[0], slipDir[1], slipDir[2])
+        if self.crystalSym == "hexagonal":
+            return "[{:d}{:d}{:d}{:d}]".format(slipDir[0], slipDir[1], slipDir[2], slipDir[3])
+        else:
+            return "[{:d}{:d}{:d}]".format(slipDir[0], slipDir[1], slipDir[2])
 
     @staticmethod
     def loadSlipSystems(filepath, crystalSym, cOverA=None):

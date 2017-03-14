@@ -117,7 +117,8 @@ class Map(base.Map):
 
         return boundaries
 
-    def plotMaxShear(self, plotGBs=False, plotPercent=True, updateCurrent=False, highlightGrains=None):
+    def plotMaxShear(self, plotGBs=False, plotSlipTraces=False, plotPercent=True,
+                     updateCurrent=False, highlightGrains=None):
         if not updateCurrent:
             self.fig, self.ax = plt.subplots()
 
@@ -136,33 +137,39 @@ class Map(base.Map):
             self.highlightGrains(highlightGrains)
 
         # plot slip traces
+        if plotSlipTraces:
+            numGrains = len(self.grainList)
+            numSS = len(self.ebsdMap.slipSystems)
+            grainSizeData = np.zeros((numGrains, 4))
+            slipTraceData = np.zeros((numGrains, numSS, 2))
 
-        numGrains = len(self.grainList)
-        numSS = len(self.ebsdMap.slipSystems)
-        grainSizeDate = np.zeros((numGrains, 4))
-        slipTraceDate = np.zeros((numGrains, numSS, 2))
+            i = 0   # keep track of number of slip traces
+            for grain in self.grainList:
+                if len(grain) < 1000:
+                    continue
 
-        for i, grain in enumerate(self.grainList):
-            if len(grain) < 1000:
-                continue
+                # x0, y0, xmax, ymax
+                grainSizeData[i, 0], grainSizeData[i, 1], grainSizeData[i, 2], grainSizeData[i, 3] = grain.extremeCoords()
 
-            # x0, y0, xmax, ymax
-            grainSizeDate[i, 0], grainSizeDate[i, 1], grainSizeDate[i, 2], grainSizeDate[i, 3] = grain.extremeCoords()
+                for j, slipTrace in enumerate(grain.slipTraces()):
+                    slipTraceData[i, j, 0:2] = slipTrace[0:2]
 
-            for j, slipTrace in enumerate(grain.slipTraces()):
-                slipTraceDate[i, j, 0:2] = slipTrace[0:2]
+                i += 1
 
-        scale = 4 / ((grainSizeDate[:, 2] - grainSizeDate[:, 0]) / self.xDim +
-                     (grainSizeDate[:, 3] - grainSizeDate[:, 1]) / self.xDim)
+            grainSizeData = grainSizeData[0:i, :]
+            slipTraceData = slipTraceData[0:i, :, :]
 
-        xPos = grainSizeDate[:, 0] + (grainSizeDate[:, 2] - grainSizeDate[:, 0]) / 2
-        yPos = grainSizeDate[:, 1] + (grainSizeDate[:, 3] - grainSizeDate[:, 1]) / 2
+            scale = 4 / ((grainSizeData[:, 2] - grainSizeData[:, 0]) / self.xDim +
+                         (grainSizeData[:, 3] - grainSizeData[:, 1]) / self.xDim)
 
-        colours = ["white", "green", "red", "black"]
+            xPos = grainSizeData[:, 0] + (grainSizeData[:, 2] - grainSizeData[:, 0]) / 2
+            yPos = grainSizeData[:, 1] + (grainSizeData[:, 3] - grainSizeData[:, 1]) / 2
 
-        for i, colour in enumerate(colours[0:numSS]):
-            self.ax.quiver(xPos, yPos, slipTraceDate[:, i, 0], slipTraceDate[:, i, 1], scale=scale, pivot="middle",
-                           color=colour, headwidth=1, headlength=0, width=0.002)
+            colours = ["white", "green", "red", "black"]
+
+            for i, colour in enumerate(colours[0:numSS]):
+                self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1], scale=scale, pivot="middle",
+                               color=colour, headwidth=1, headlength=0, width=0.002)
 
         return
 

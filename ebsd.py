@@ -378,8 +378,8 @@ class Map(base.Map):
 
         return
 
-    def loadSlipSystems(self, filepath):
-        self.slipSystems = base.SlipSystem.loadSlipSystems(filepath, self.crystalSym)
+    def loadSlipSystems(self, filepath, cOverA=None):
+        self.slipSystems = base.SlipSystem.loadSlipSystems(filepath, self.crystalSym, cOverA=cOverA)
 
         if self.grainList is not None:
             for grain in self.grainList:
