@@ -8,6 +8,8 @@ from skimage import morphology as mph
 
 from scipy.stats import mode
 
+import peakutils
+
 from .quat import Quat
 from . import base
 
@@ -57,7 +59,7 @@ class Map(base.Map):
                                  ((self.f12 + self.f21) / 2.)**2)  # max shear component
         self.mapshape = np.shape(self.max_shear)
 
-        self.cropDists = np.array(((0, self.xdim), (0, self.ydim)), dtype=int)
+        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
 
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (int(self.ydim), int(self.xdim)))
@@ -82,8 +84,8 @@ class Map(base.Map):
         self.yDim = int(self.ydim - yMin - yMax)
 
     def crop(self, mapData):
-        return mapData[int(self.cropDists[1, 0]):-int(self.cropDists[1, 1]),
-                       int(self.cropDists[0, 0]):-int(self.cropDists[0, 1])]
+        return mapData[int(self.cropDists[1, 0]):int(self.ydim - self.cropDists[1, 1]),
+                       int(self.cropDists[0, 0]):int(self.xdim - self.cropDists[0, 1])]
 
     def linkEbsdMap(self, ebsdMap):
         self.ebsdMap = ebsdMap
@@ -123,8 +125,10 @@ class Map(base.Map):
             self.fig, self.ax = plt.subplots()
 
         multiplier = 100 if plotPercent else 1
-        self.ax.imshow(self.crop(self.max_shear) * multiplier,
-                       cmap='viridis', interpolation='None', vmin=0, vmax=10)
+        img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
+                             cmap='viridis', interpolation='None', vmin=0, vmax=10)
+        if not updateCurrent:
+            plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
 
         if plotGBs:
             cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'white'], 256)
@@ -203,7 +207,7 @@ class Map(base.Map):
                 # default click handler which highlights grain and prints id
                 self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickGrainId(x, displaySelected))
             else:
-                # click handler loaded from linker classs. Pass current map object to it.
+                # click handler loaded in as parameter. Pass current map object to it.
                 self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
 
             # unset figure for plotting grains
@@ -229,7 +233,7 @@ class Map(base.Map):
                     self.grainFig, self.grainAx = plt.subplots()
                 self.grainList[self.currGrainId].calcSlipTraces()
                 self.grainAx.clear()
-                self.grainList[self.currGrainId].plotMaxShear(plotSlipTraces=True, ax=self.grainAx)
+                self.grainList[self.currGrainId].plotMaxShear(plotSlipTraces=True, plotShearBands=True, ax=self.grainAx)
                 self.grainFig.canvas.draw()
 
     def findGrains(self, minGrainSize=10):
@@ -376,7 +380,7 @@ class Grain(object):
         plt.colorbar()
         return
 
-    def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, vmin=None, vmax=None, cmap="viridis", ax=None):
+    def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False, vmin=None, vmax=None, cmap="viridis", ax=None):
         multiplier = 100 if plotPercent else 1
         x0, y0, xmax, ymax = self.extremeCoords()
 
@@ -410,6 +414,33 @@ class Grain(object):
                 else:
                     ax.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle",
                               color=colour, headwidth=1, headlength=0)
+
+        if plotShearBands:
+            grainMaxShear = np.nan_to_num(grainMaxShear)
+
+            sin_map = tf.radon(grainMaxShear)
+            profile = np.max(sin_map, axis=0)
+
+            x = np.arange(180)
+            y = profile
+
+            indexes = peakutils.indexes(y, thres=0.5, min_dist=30)
+            peaks = peakutils.interpolate(x, y, ind=indexes)
+            print("Number of bands detected: {:}".format(len(peaks)))
+
+            shearBandAngles = peaks
+            shearBandAngles = -shearBandAngles * np.pi / 180
+            shearBandVectors = np.array((np.sin(shearBandAngles), np.cos(shearBandAngles)))
+
+            xPos = int((xmax - x0) / 2)
+            yPos = int((ymax - y0) / 2)
+
+            if ax is None:
+                plt.quiver(xPos, yPos, shearBandVectors[0], shearBandVectors[1], scale=1, pivot="middle",
+                           color='yellow', headwidth=1, headlength=0)
+            else:
+                ax.quiver(xPos, yPos, shearBandVectors[0], shearBandVectors[1], scale=1, pivot="middle",
+                          color='yellow', headwidth=1, headlength=0)
 
         return
 

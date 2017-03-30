@@ -4,6 +4,9 @@ from matplotlib.widgets import Button
 
 
 class Map(object):
+    def __len__(self):
+        return len(self.grainList)
+
     # allow array like getting of grains
     def __getitem__(self, key):
         return self.grainList[key]
@@ -57,6 +60,8 @@ class SlipSystem(object):
             self.slipPlaneOrtho = slipPlane / np.sqrt(np.dot(slipPlane, slipPlane))
             self.slipDirOrtho = slipDir / np.sqrt(np.dot(slipDir, slipDir))
         elif crystalSym == "hexagonal":
+            if cOverA is None:
+                raise Exception("No c over a ratio given")
             self.cOverA = cOverA
 
             # Convert plane and dir from Miller-Bravais to Miller
@@ -182,5 +187,14 @@ class SlipSystem(object):
 
         lMatrix[2, 2] = c * np.sqrt(1 + 2 * cosAlpha * cosBeta * cosGamma -
                                     cosAlpha**2 - cosBeta**2 - cosGamma**2) / sinGamma
+
+        # t1 = lMatrix[0, 0]
+        # t2 = lMatrix[1, 0]
+
+        # lMatrix[0, 0] = lMatrix[1, 1]
+        # lMatrix[1, 0] = lMatrix[0, 1]
+
+        # lMatrix[1, 1] = t1
+        # lMatrix[0, 1] = t2
 
         return lMatrix

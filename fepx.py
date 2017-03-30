@@ -1,9 +1,10 @@
 import glob, os, fnmatch
+import io
 import copy
 
 from IPython.display import clear_output
 
-import evtk.vtk
+import pyevtk.vtk
 
 import numpy as np
 
@@ -37,7 +38,7 @@ class Mesh(object):
 
     # misOri
 
-    def __init__(self, name, meshDir="", dataDir=""):
+    def __init__(self, name, meshDir="./", dataDir="./"):
         MESH_FILE_EX = "mesh"
         GRAIN_FILE_EX = "grain"
         ORI_FILE_EX = "ori"
@@ -94,39 +95,38 @@ class Mesh(object):
         if numSlipSys > 0:
             self.numSlipSys = numSlipSys
 
-    def loadNodePosData(self, numProcs=-1, numFrames=-1):
-        self.setSimParams(numProcs=numProcs, numFrames=numFrames)
+    def loadFrameData(self, dataName, initialIncd, usecols=None, numProcs=-1, numFrames=-1, numSlipSys=-1):
+        self.setSimParams(numProcs=numProcs, numFrames=numFrames, numSlipSys=numSlipSys)
 
-        nodePosData = []
+        loadedData = []
         for i in range(self.numProcs):
-            # load node position data per processor
-            fileName = "{:s}post.adx.{:d}".format(self.dataDir, i)
-            nodePosData.append(np.loadtxt(fileName, dtype=float, comments="%", unpack=True))
+            # load data per processor
+            fileName = "{:s}post.{:s}.{:d}".format(self.dataDir, dataName, i)
+            loadedData.append(np.loadtxt(fileName, dtype=float, comments="%", usecols=usecols, unpack=True))
 
             # reshape into 3d array with 3rd dim for each frame
-            rows, cols = nodePosData[i].shape
-            perFrame = cols / (self.numFrames + 1)  # +1 because initial orienataions are also stored
-            nodePosData[i] = np.reshape(nodePosData[i], (3, perFrame, self.numFrames + 1), order='F')
+            rows, cols = loadedData[i].shape
+            # +1 if initial values are also stored
+            numFrames = (self.numFrames + 1) if initialIncd else self.numFrames
+            perFrame = cols / numFrames
+            loadedData[i] = np.reshape(loadedData[i], (rows, perFrame, numFrames), order='F')
 
         # concatenate data from all processors into one array and transpose first 2 axes
-        self.nodePosData = np.transpose(np.concatenate(nodePosData, axis=1), axes=(1, 0, 2))
+        return np.transpose(np.concatenate(loadedData, axis=1), axes=(1, 0, 2))
+
+    # load node positions for each frame of the simulation
+    def loadNodePosData(self, numProcs=-1, numFrames=-1):
+        self.nodePosData = self.loadFrameData("adx",
+                                              True,
+                                              numProcs=numProcs,
+                                              numFrames=numFrames)
 
     def loadAngleData(self, numProcs=-1, numFrames=-1):
-        self.setSimParams(numProcs=numProcs, numFrames=numFrames)
-
-        anglesData = []
-        for i in range(self.numProcs):
-            # load angles data per processor
-            fileName = "{:s}post.ang.{:d}".format(self.dataDir, i)
-            anglesData.append(np.loadtxt(fileName, dtype=float, comments="%", usecols=[1, 2, 3], unpack=True))
-
-            # reshape into 3d array with 3rd dim for each frame
-            rows, cols = anglesData[i].shape
-            perFrame = cols / (self.numFrames + 1)  # +1 because initial orienataions are also stored
-            anglesData[i] = np.reshape(anglesData[i], (3, perFrame, self.numFrames + 1), order='F')
-
-        # concatenate data from all processors into one array and transpose first 2 axes
-        self.angles = np.transpose(np.concatenate(anglesData, axis=1), axes=(1, 0, 2))
+        self.angles = self.loadFrameData("ang",
+                                         True,
+                                         usecols=[1, 2, 3],
+                                         numProcs=numProcs,
+                                         numFrames=numFrames)
 
         # Covert to Bunge rep. in radians (were Kocks in degrees)
         self.angles *= (np.pi / 180)
@@ -146,21 +146,39 @@ class Mesh(object):
         self.avMisOri = np.zeros([self.numGrains, self.oris.shape[1]], dtype=float)
 
     def loadShearRateData(self, numProcs=-1, numFrames=-1, numSlipSys=-1):
-        self.setSimParams(numProcs=numProcs, numFrames=numFrames, numSlipSys=numSlipSys)
+        self.shearRates = self.loadFrameData("gammadot",
+                                             False,
+                                             numProcs=numProcs,
+                                             numFrames=numFrames,
+                                             numSlipSys=numSlipSys)
 
-        shearRateData = []
-        for i in range(self.numProcs):
-            # load shear rate data per processor
-            fileName = "{:s}post.gammadot.{:d}".format(self.dataDir, i)
-            shearRateData.append(np.loadtxt(fileName, dtype=float, comments="%", unpack=True))
+    def loadBackstressData(self, numProcs=-1, numFrames=-1):
+        self.backstress = self.loadFrameData("backstress",
+                                             False,
+                                             numProcs=numProcs,
+                                             numFrames=numFrames)
 
-            # reshape into 3d array with 3rd dim for each frame
-            rows, cols = shearRateData[i].shape
-            perFrame = cols / self.numFrames
-            shearRateData[i] = np.reshape(shearRateData[i], (self.numSlipSys, perFrame, self.numFrames), order='F')
+    def loadMeshElStatsData(self, name):
+        # open mesh stats file
+        ELSTAT_FILE_EX = "stelt3d"
+        fileName = "{:s}{:s}.{:s}".format(self.meshDir, name, ELSTAT_FILE_EX)
+        elStatFile = open(fileName, "r")
 
-        # concatenate data from all processors into one array and transpose first 2 axes
-        self.shearRates = np.transpose(np.concatenate(shearRateData, axis=1), axes=(1, 0, 2))
+        # read grain and phase info for each element
+        elStats = np.loadtxt(elStatFile)
+
+        if elStats.shape[0] != self.numElmts:
+            print("Problem with element stats file. Missing element data.")
+        else:
+            self.elStats = elStats
+
+        self.meshElStatNames = ["ID",
+                                "coord-x", "coord-y", "coord-z",
+                                "elset (grains)", "partition", "volume",
+                                "2dmeshp-x", "2dmeshp-y", "2dmeshp-z",
+                                "2dmeshd",
+                                "2dmeshv-x", "2dmeshv-y", "2dmeshv-z",
+                                "2dmeshn-x", "2dmeshn-y", "2dmeshn-z"]
 
     def __validateFrameNums(self, frameNums):
         # frameNums: frame or list of frames to run calculation for. -1 for all
@@ -210,6 +228,136 @@ class Mesh(object):
 
         self.misOri[:, frameNums] = np.arccos(self.misOri[:, frameNums]) * 360 / np.pi
         self.avMisOri[:, frameNums] = np.arccos(self.avMisOri[:, frameNums]) * 360 / np.pi
+
+    def writeVTU(self, fileName, frameNums, outputs, times=None, useInitialNodePos=True):
+        """Write data out to VTK compatible files. Files are output to the data directory.
+
+        Args:
+            fileName (string): Base name of output files.
+            frameNums (lst(int)): The simlation frames to output. Either an integer for a single
+                                  frame, a list of ints for many or -1 for all.
+            outputs (list(string)): The properties to be output. Current options are misOri, gammadot, backstress and elStats.
+            times (list(float), optional): The time at each frame (only used for labeling)
+            useInitialNodePos (bool, optional): If false uses updateded node positions from each frame. Default: True.
+        """
+        # Constants
+        CON_ORDER = [0, 2, 4, 9, 1, 3, 5, 6, 7, 8]  # corners, then midpoints
+        FILE_POSTFIX = "_misorientation"
+
+        # create arrays for element type, conneectivity offset and node positions
+        cell_types = np.empty(self.numElmts, dtype='uint8')
+        # cell_types[:] = pyevtk.vtk.VtkQuadraticTetra.tid
+        cell_types[:] = 24
+
+        offsets = np.arange(start=10, stop=10 * (self.numElmts + 1), step=10, dtype=int)
+
+        if useInitialNodePos:
+            x = np.ascontiguousarray(self.nodePos[:, 0])
+            y = np.ascontiguousarray(self.nodePos[:, 1])
+            z = np.ascontiguousarray(self.nodePos[:, 2])
+
+        # check frameNums and times are valid
+        frameNums = self.__validateFrameNums(frameNums)
+        if times is None:
+            times = frameNums
+
+        # open vtk group file
+        fileNameFull = "{:s}{:s}{:s}".format(self.dataDir, fileName, FILE_POSTFIX)
+        print(fileNameFull)
+        vtgFile = pyevtk.vtk.VtkGroup(fileNameFull)
+
+        for frameNum in frameNums:
+            # write frame vtu file path to vtk group file (this needed modification to
+            # evtk module to write paths not relative to the current working directory)
+            fileNameFull = "{:s}{:s}.{:d}.vtu".format(fileName, FILE_POSTFIX, frameNum)
+            vtgFile.addFile(fileNameFull, times[frameNum], relToCWD=False)
+
+            # open vtu file and write root elements
+            fileNameFull = "{:s}{:s}{:s}.{:d}".format(self.dataDir, fileName, FILE_POSTFIX, frameNum)
+            vtuFile = pyevtk.vtk.VtkFile(fileNameFull, pyevtk.vtk.VtkUnstructuredGrid)
+            vtuFile.openGrid()
+            vtuFile.openPiece(ncells=self.numElmts, npoints=self.numNodes)
+
+            if not useInitialNodePos:
+                x = np.ascontiguousarray(self.nodePosData[:, 0, frameNum])
+                y = np.ascontiguousarray(self.nodePosData[:, 1, frameNum])
+                z = np.ascontiguousarray(self.nodePosData[:, 2, frameNum])
+
+            vtuFile.openElement("Points")
+            vtuFile.addData("points", (x, y, z))
+            vtuFile.closeElement("Points")
+
+            vtuFile.openElement("Cells")
+            # vtuFile.addData("connectivity", self.elmtCon.flatten())
+            vtuFile.addHeader("connectivity", self.elmtCon.dtype.name, self.elmtCon.size, 1)
+            vtuFile.addData("offsets", offsets)
+            vtuFile.addData("types", cell_types)
+            vtuFile.closeElement("Cells")
+
+            # Add headers of cell data
+            vtuFile.openElement("CellData")
+
+            if "misOri" in outputs:
+                # vtuFile.addData("misorientation", self.misOri[:, 4])
+                vtuFile.addHeader("misorientation", self.misOri[:, frameNum].dtype.name, self.misOri[:, 4].size, 1)
+
+            if frameNum > 0:
+
+                if "gammadot" in outputs:
+                    for i in range(self.numSlipSys):
+                        vtuFile.addHeader("gammadot {:d}".format(i + 1),
+                                          self.shearRates[:, i, frameNum - 1].dtype.name,
+                                          self.shearRates[:, i, frameNum - 1].size, 1)
+
+                if "backstress" in outputs:
+                    maxBackstress = np.abs(self.backstress).max(axis=1)
+                    vtuFile.addHeader("backstress max",
+                                      maxBackstress[:, frameNum - 1].dtype.name,
+                                      maxBackstress[:, frameNum - 1].size, 1)
+                    for i in range(self.numSlipSys):
+                        vtuFile.addHeader("backstress {:d}".format(i + 1),
+                                          self.backstress[:, i, frameNum - 1].dtype.name,
+                                          self.backstress[:, i, frameNum - 1].size, 1)
+
+            else:
+
+                if "elStats" in outputs:
+                    for i in range(self.elStats.shape[1]):
+                        vtuFile.addHeader("Element stat - {:}".format(self.meshElStatNames[i]),
+                                          self.elStats[:, i].dtype.name,
+                                          self.elStats[:, i].size, 1)
+
+            vtuFile.closeElement("CellData")
+
+            vtuFile.closePiece()
+            vtuFile.closeGrid()
+
+            # add actual data to file
+            vtuFile.appendData((x, y, z))
+            vtuFile.appendData(self.elmtCon[:, CON_ORDER].flatten()).appendData(offsets).appendData(cell_types)
+            if "misOri" in outputs:
+                vtuFile.appendData(np.ascontiguousarray(self.misOri[:, frameNum]))
+
+            if frameNum > 0:
+
+                if "gammadot" in outputs:
+                    for i in range(self.numSlipSys):
+                        vtuFile.appendData(np.ascontiguousarray(self.shearRates[:, i, frameNum - 1]))
+
+                if "backstress" in outputs:
+                    vtuFile.appendData(np.ascontiguousarray(maxBackstress[:, frameNum - 1]))
+                    for i in range(self.numSlipSys):
+                        vtuFile.appendData(np.ascontiguousarray(self.backstress[:, i, frameNum - 1]))
+
+            else:
+
+                if "elStats" in outputs:
+                    for i in range(self.elStats.shape[1]):
+                        vtuFile.appendData(np.ascontiguousarray(self.elStats[:, i]))
+
+            vtuFile.save()
+
+        vtgFile.save()
 
     def writeVTK(self, fileName, frameNums):
         # constants - taken from ExportVTKFepx.m
@@ -274,89 +422,16 @@ class Mesh(object):
         # close file
         outFile.close()
 
-    def writeVTU(self, fileName, frameNums, times=None, useInitialNodePos=True):
-        # Constants
-        CON_ORDER = [0, 2, 4, 9, 1, 3, 5, 6, 7, 8]  # corners, then midpoints
-        FILE_POSTFIX = "_misorientation"
-
-        # create arrays for element type, conneectivity offset and node positions
-        cell_types = np.empty(self.numElmts, dtype='uint8')
-        # cell_types[:] = evtk.vtk.VtkQuadraticTetra.tid
-        cell_types[:] = 24
-
-        offsets = np.arange(start=10, stop=10 * (self.numElmts + 1), step=10, dtype=int)
-
-        if useInitialNodePos:
-            x = np.ascontiguousarray(self.nodePos[:, 0])
-            y = np.ascontiguousarray(self.nodePos[:, 1])
-            z = np.ascontiguousarray(self.nodePos[:, 2])
-
-        # check frameNums and times are valid
-        frameNums = self.__validateFrameNums(frameNums)
-        if times is None:
-            times = frameNums
-
-        # open vtk group file
-        fileNameFull = "{:s}{:s}{:s}".format(self.dataDir, fileName, FILE_POSTFIX)
-        vtgFile = evtk.vtk.VtkGroup(fileNameFull)
-
-        for frameNum in frameNums:
-            # write frame vtu file path to vtk group file (this needed modification to
-            # evtk module to write paths not relative to the current working directory)
-            fileNameFull = "{:s}{:s}.{:d}.vtu".format(fileName, FILE_POSTFIX, frameNum)
-            vtgFile.addFile(fileNameFull, times[frameNum], relToCWD=False)
-
-            # open vtu file and write root elements
-            fileNameFull = "{:s}{:s}{:s}.{:d}".format(self.dataDir, fileName, FILE_POSTFIX, frameNum)
-            vtuFile = evtk.vtk.VtkFile(fileNameFull, evtk.vtk.VtkUnstructuredGrid)
-            vtuFile.openGrid()
-            vtuFile.openPiece(ncells=self.numElmts, npoints=self.numNodes)
-
-            if not useInitialNodePos:
-                x = np.ascontiguousarray(self.nodePosData[:, 0, frameNum])
-                y = np.ascontiguousarray(self.nodePosData[:, 1, frameNum])
-                z = np.ascontiguousarray(self.nodePosData[:, 2, frameNum])
-
-            vtuFile.openElement("Points")
-            vtuFile.addData("points", (x, y, z))
-            vtuFile.closeElement("Points")
-
-            vtuFile.openElement("Cells")
-            # vtuFile.addData("connectivity", self.elmtCon.flatten())
-            vtuFile.addHeader("connectivity", self.elmtCon.dtype.name, self.elmtCon.size, 1)
-            vtuFile.addData("offsets", offsets)
-            vtuFile.addData("types", cell_types)
-            vtuFile.closeElement("Cells")
-
-            vtuFile.openElement("CellData")
-            # vtuFile.addData("misorientation", self.misOri[:, 4])
-            vtuFile.addHeader("misorientation", self.misOri[:, frameNum].dtype.name, self.misOri[:, 4].size, 1)
-
-            if frameNum > 0:
-                for i in range(self.numSlipSys):
-                    vtuFile.addHeader("gammadot {:d}".format(i + 1),
-                                      self.shearRates[:, i, frameNum - 1].dtype.name,
-                                      self.shearRates[:, i, frameNum - 1].size, 1)
-
-            vtuFile.closeElement("CellData")
-
-            vtuFile.closePiece()
-            vtuFile.closeGrid()
-
-            vtuFile.appendData((x, y, z))
-            vtuFile.appendData(self.elmtCon[:, CON_ORDER].flatten()).appendData(offsets).appendData(cell_types)
-            vtuFile.appendData(np.ascontiguousarray(self.misOri[:, frameNum]))
-
-            if frameNum > 0:
-                for i in range(self.numSlipSys):
-                    vtuFile.appendData(np.ascontiguousarray(self.shearRates[:, i, frameNum - 1]))
-
-            vtuFile.save()
-
-        vtgFile.save()
-
     @staticmethod
     def combineFiles(baseDir, inDirs, outDir):
+        """Combine output files from multiple simulations. If a simulation was run in smaller parts
+
+        Args:
+            baseDir (string): Base directory of whole simulation. No trailing slash
+            inDirs (List(string)): List of simulation directory names to
+                                   combine (baseDir/inDir). No trailing slash
+            outDir (string): Directory to output combined files to (baseDir/outDir)
+        """
         # no trailing slashes on directory names and inDirs is a list
         fileNames = []
         for fileName in os.listdir("{:s}/{:s}".format(baseDir, inDirs[0])):

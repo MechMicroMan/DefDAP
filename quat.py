@@ -79,8 +79,9 @@ class Quat(object):
             return Quat(newQuatCoef)
         raise TypeError()
 
-    # overload % operator for dot product
-    def __mod__(self, right):
+    # # overload % operator for dot product
+    # def __mod__(self, right):
+    def dot(self, right):
         if isinstance(right, type(self)):
             return np.dot(self.quatCoef, right.quatCoef)
         raise TypeError()
@@ -142,7 +143,7 @@ class Quat(object):
             minMisOri = 0   # actually looking for max of this as it is cos of misoriention angle
             for sym in Quat.symEqv(symGroup):   # loop over symmetrically equivelent orienations
                 quatSym = right * sym
-                currentMisOri = abs(self % quatSym)
+                currentMisOri = abs(self.dot(quatSym))
                 if currentMisOri > minMisOri:   # keep if misorientation lower
                     minMisOri = currentMisOri
                     minQuatSym = quatSym
@@ -154,6 +155,69 @@ class Quat(object):
             else:
                 return minMisOri
         raise TypeError("Input must be a quaternion.")
+
+    @staticmethod
+    def calcSymEqvs(quats, symGroup):
+        syms = Quat.symEqv(symGroup)
+        quatComps = np.empty((len(syms), 4, len(quats)))
+
+        # store quat components in array
+        for i, quat in enumerate(quats):
+            quatComps[0, :, i] = quat.quatCoef
+
+        # calculate symmetrical equivalents
+        for i, sym in enumerate(syms[1:], start=1):
+            # quat * sym[i] for all points (* is quaternion product)
+            quatComps[i, 0, :] = (quatComps[0, 0, :] * sym[0] - quatComps[0, 1, :] * sym[1] -
+                                  quatComps[0, 2, :] * sym[2] - quatComps[0, 3, :] * sym[3])
+            quatComps[i, 1, :] = (quatComps[0, 0, :] * sym[1] + quatComps[0, 1, :] * sym[0] +
+                                  quatComps[0, 2, :] * sym[3] - quatComps[0, 3, :] * sym[2])
+            quatComps[i, 2, :] = (quatComps[0, 0, :] * sym[2] + quatComps[0, 2, :] * sym[0] +
+                                  quatComps[0, 3, :] * sym[1] - quatComps[0, 1, :] * sym[3])
+            quatComps[i, 3, :] = (quatComps[0, 0, :] * sym[3] + quatComps[0, 3, :] * sym[0] +
+                                  quatComps[0, 1, :] * sym[2] - quatComps[0, 2, :] * sym[1])
+
+            quatComps[i, :, quatComps[i, 0, :] < 0] = -quatComps[i, :, quatComps[i, 0, :] < 0]
+
+        return quatComps
+
+    @staticmethod
+    def calcAverageOri(quatComps):
+        avOri = np.copy(quatComps[0, :, 0])
+        currMisOris = np.empty(quatComps.shape[0])
+
+        for i in range(1, quatComps.shape[2]):
+            # calculate misorientation between current average and all symmetrical equivalents
+            # Dot product of each symm quat in quatComps with refOri for point i
+            currMisOris[:] = abs(np.einsum("ij,j->i", quatComps[:, :, i], avOri))
+
+            # find min misorientation with current average then add to it
+            maxIdx = np.argmax(currMisOris[:])
+            avOri += quatComps[maxIdx, :, i]
+
+        # Convert components back to a quat and normalise
+        avOri = Quat(avOri)
+        avOri.normalise()
+
+        return avOri
+
+    @staticmethod
+    def calcMisOri(quatComps, refOri):
+        misOris = np.empty((quatComps.shape[0], quatComps.shape[2]))
+
+        # Dot product of each quat in quatComps with refOri
+        misOris[:, :] = abs(np.einsum("ijk,j->ik", quatComps, refOri.quatCoef))
+
+        maxIdxs0 = np.argmax(misOris, axis=0)
+        maxIdxs1 = np.arange(misOris.shape[1])
+
+        minMisOris = misOris[maxIdxs0, maxIdxs1]
+
+        minQuatComps = quatComps[maxIdxs0, :, maxIdxs1].transpose()
+
+        minMisOris[minMisOris > 1] = 1
+
+        return minMisOris, minQuatComps
 
     @staticmethod
     def symEqv(group):

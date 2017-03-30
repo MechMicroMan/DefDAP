@@ -178,7 +178,7 @@ class Map(base.Map):
         # if > boundDef then mark as a grain boundary
         for i in range(self.xDim):
             for j in range(self.yDim - 1):
-                aux = abs(self.quatArray[j, i] % self.quatArray[j + 1, i])
+                aux = abs(self.quatArray[j, i].dot(self.quatArray[j + 1, i]))
                 if aux > 1:
                     aux = 1
 
@@ -190,7 +190,7 @@ class Map(base.Map):
 
         for i in range(self.xDim - 1):
             for j in range(self.yDim):
-                aux = abs(self.quatArray[j, i] % self.quatArray[j, i + 1])
+                aux = abs(self.quatArray[j, i].dot(self.quatArray[j, i + 1]))
                 if aux > 1:
                     aux = 1
 
@@ -459,41 +459,94 @@ class Grain(object):
         return
 
     def calcAverageOri(self):
-        self.refOri = copy.deepcopy(self.quatList[0])  # start average
-        for quat in self.quatList[1:]:
-            # loop over symmetries and find min misorientation for average
-            # add the symetric equivelent of quat with the minimum misorientation (relative to the average)
-            # to the average. Then normalise.
-            self.refOri += self.refOri.misOri(quat, self.crystalSym, returnQuat=1)
-        self.refOri.normalise()
+        quatCompsSym = Quat.calcSymEqvs(self.quatList, self.crystalSym)
+
+        self.refOri = Quat.calcAverageOri(quatCompsSym)
+
+        # self.refOri = copy.deepcopy(self.quatList[0])  # start average
+        # for quat in self.quatList[1:]:
+        #     # loop over symmetries and find min misorientation for average
+        #     # add the symetric equivelent of quat with the minimum misorientation (relative to the average)
+        #     # to the average. Then normalise.
+        #     self.refOri += self.refOri.misOri(quat, self.crystalSym, returnQuat=1)
+        # self.refOri.normalise()
         return
 
     def buildMisOriList(self, calcAxis=False, parallel=False):
+        quatCompsSym = Quat.calcSymEqvs(self.quatList, self.crystalSym)
+
         if self.refOri is None:
-            self.calcAverageOri()
+            self.refOri = Quat.calcAverageOri(quatCompsSym)
 
-        self.misOriList = []
-
-        if calcAxis:
-            self.misOriAxisList = []
-            aveageOriInverse = self.refOri.conjugate
-
-        for quat in self.quatList:
-            # Calculate misOri to average ori. Return closest symmetric equivalent for later use
-            currentMisOri, currentQuatSym = self.refOri.misOri(quat, self.crystalSym, returnQuat=2)
-            self.misOriList.append(currentMisOri)
-
-            if calcAxis:
-                # Calculate misorientation axis
-                Dq = aveageOriInverse * currentQuatSym  # definitely quaternion product?
-                self.misOriAxisList.append((2 * Dq[1:4] * np.arccos(Dq[0])) / np.sqrt(1 - np.power(Dq[0], 2)))
-
-        # remove any misorientation greater than 1
-        misOriArray = np.array(self.misOriList)
-        misOriArray[misOriArray > 1] = 1
+        misOriArray, minQuatComps = Quat.calcMisOri(quatCompsSym, self.refOri)
 
         self.averageMisOri = misOriArray.mean()
         self.misOriList = list(misOriArray)
+
+        if calcAxis:
+            # Now for axis calulation
+            refOriInv = self.refOri.conjugate
+
+            misOriAxis = np.empty((3, minQuatComps.shape[1]))
+            Dq = np.empty((4, minQuatComps.shape[1]))
+
+            # refOriInv * minQuat for all points (* is quaternion product)
+            Dq[0, :] = (refOriInv[0] * minQuatComps[0, :] - refOriInv[1] * minQuatComps[1, :] -
+                        refOriInv[2] * minQuatComps[2, :] - refOriInv[3] * minQuatComps[3, :])
+            Dq[1, :] = (refOriInv[0] * minQuatComps[1, :] + refOriInv[1] * minQuatComps[0, :] +
+                        refOriInv[2] * minQuatComps[3, :] - refOriInv[3] * minQuatComps[2, :])
+            Dq[2, :] = (refOriInv[0] * minQuatComps[2, :] + refOriInv[2] * minQuatComps[0, :] +
+                        refOriInv[3] * minQuatComps[1, :] - refOriInv[1] * minQuatComps[3, :])
+            Dq[3, :] = (refOriInv[0] * minQuatComps[3, :] + refOriInv[3] * minQuatComps[0, :] +
+                        refOriInv[1] * minQuatComps[2, :] - refOriInv[2] * minQuatComps[1, :])
+
+            Dq[:, Dq[0] < 0] = -Dq[:, Dq[0] < 0]
+
+            # numpy broadcasting taking care of different array sizes
+            # intr = np.arccos(Dq[0, :]) / np.sqrt(1 - np.power(Dq[0, :], 2))
+
+            # misOriAxis[0, :] = 2 * Dq[1, :] * intr
+            # misOriAxis[1, :] = 2 * Dq[2, :] * intr
+            # misOriAxis[2, :] = 2 * Dq[3, :] * intr
+
+            misOriAxis[:, :] = (2 * Dq[1:4, :] * np.arccos(Dq[0, :])) / np.sqrt(1 - np.power(Dq[0, :], 2))
+
+            # hack it back into a list. Need to change self.*List to be arrays, it was a bad decision to
+            # make them lists in the beginning
+            self.misOriAxisList = []
+            for row in misOriAxis.transpose():
+                self.misOriAxisList.append(row)
+
+        # if self.refOri is None:
+        #     self.calcAverageOri()
+
+        # self.misOriList = []
+
+        # if calcAxis:
+        #     self.misOriAxisList = []
+        #     aveageOriInverse = self.refOri.conjugate
+
+        #     DqList = []
+        #     minQuatSymList = []
+
+        # for quat in self.quatList:
+        #     # Calculate misOri to average ori. Return closest symmetric equivalent for later use
+        #     currentMisOri, currentQuatSym = self.refOri.misOri(quat, self.crystalSym, returnQuat=2)
+        #     self.misOriList.append(currentMisOri)
+
+        #     if calcAxis:
+        #         # Calculate misorientation axis
+        #         Dq = aveageOriInverse * currentQuatSym  # definitely quaternion product?
+        #         DqList.append(Dq)
+        #         minQuatSymList.append(currentQuatSym)
+        #         self.misOriAxisList.append((2 * Dq[1:4] * np.arccos(Dq[0])) / np.sqrt(1 - np.power(Dq[0], 2)))
+
+        # # remove any misorientation greater than 1
+        # misOriArray = np.array(self.misOriList)
+        # misOriArray[misOriArray > 1] = 1
+
+        # self.averageMisOri = misOriArray.mean()
+        # self.misOriList = list(misOriArray)
 
         if parallel:
             if calcAxis:
@@ -656,7 +709,7 @@ class Grain(object):
         for slipSystemGroup in slipSystems:
             # Take slip plane from first in group
             slipPlaneNorm = slipSystemGroup[0].slipPlane
-            planeLabel = slipSystemGroup[0].slipPlaneLabel
+            # planeLabel = slipSystemGroup[0].slipPlaneLabel
 
             # Calculate intersection of slip plane with plane of screen
             intersectionCrystal = np.cross(screenPlaneNormCrystal, slipPlaneNorm)
