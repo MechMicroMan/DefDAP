@@ -120,14 +120,15 @@ class Map(base.Map):
         return boundaries
 
     def plotMaxShear(self, plotGBs=False, plotSlipTraces=False, plotPercent=True,
-                     updateCurrent=False, highlightGrains=None):
+                     updateCurrent=False, highlightGrains=None, plotColourBar=False):
         if not updateCurrent:
+            # self.fig, self.ax = plt.subplots(figsize=(5.75, 4))
             self.fig, self.ax = plt.subplots()
 
         multiplier = 100 if plotPercent else 1
         img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
                              cmap='viridis', interpolation='None', vmin=0, vmax=10)
-        if not updateCurrent:
+        if plotColourBar:
             plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
 
         if plotGBs:

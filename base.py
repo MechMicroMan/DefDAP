@@ -21,7 +21,7 @@ class Map(object):
         btnAx = self.fig.add_axes([0.8, 0.0, 0.1, 0.07])
         Button(btnAx, 'Save point', color='0.85', hovercolor='0.95')
 
-        # coonect click handler
+        # connect click handler
         self.fig.canvas.mpl_connect('button_press_event', self.clickHomog)
 
     def clickHomog(self, event):
@@ -178,6 +178,7 @@ class SlipSystem(object):
 
         sinGamma = np.sin(gamma)
 
+        # From Randle and Engle
         lMatrix[0, 0] = a
         lMatrix[0, 1] = b * cosGamma
         lMatrix[0, 2] = c * cosBeta

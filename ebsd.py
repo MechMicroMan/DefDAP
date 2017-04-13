@@ -52,12 +52,13 @@ class Map(base.Map):
         self.grainList = None       # (list) list of grains
         self.misOri = None          # (array) map of misorientation
         self.misOriAxis = None      # (list of arrays) map of misorientation axis components
+        self.kam = None             # (array) map of kam
         self.averageSchmidFactor = None     # (array) map of average Schmid factor
         self.slipSystems = None     # (list(list(slipSystems))) slip systems grouped by slip plane
         self.currGrainId = None     # Id of last selected grain
         self.origin = (0, 0)        # Map origin (y, x). Used by linker class where origin is a
                                     # homologue point of the maps
-        self.homogPoints = None
+        self.homogPoints = []
         self.selPoint = None
 
         self.plotDefault = self.plotEulerMap
@@ -88,6 +89,17 @@ class Map(base.Map):
                            ('IB4', 'uint8'),
                            ('IB5', 'uint8'),
                            ('IB6', 'f')])
+        # for ctf files that have been converted using channel 5
+        # CHANGE BACK!!!!!!!
+        # fmt_np = np.dtype([('Phase', 'b'),
+        #                    ('Eulers', [('ph1', 'f'),
+        #                                ('phi', 'f'),
+        #                                ('ph2', 'f')]),
+        #                    ('mad', 'f'),
+        #                    ('IB2', 'uint8'),
+        #                    ('IB3', 'uint8'),
+        #                    ('IB4', 'uint8'),
+        #                    ('IB5', 'uint8')])
         self.binData = np.fromfile(fileName + ".crc", fmt_np, count=-1)
         self.crystalSym = crystalSym
         return
@@ -129,6 +141,53 @@ class Map(base.Map):
             self.highlightGrains(highlightGrains)
 
         return
+
+    def calcKam(self):
+        """Calculates Kernel Average Misorientaion (KAM) for the EBSD map. Crystal symmetric
+           equivalences are not considered. Stores result in self.kam.
+        """
+        quatComps = np.empty((4, self.yDim, self.xDim))
+
+        for i, row in enumerate(self.quatArray):
+            for j, quat in enumerate(row):
+                quatComps[:, i, j] = quat.quatCoef
+
+        self.kam = np.empty((self.yDim, self.xDim))
+
+        # Start with rows. Caluculate misorientation with neigbouring rows.
+        # First and last row only in one direction
+        self.kam[0, :] = abs(np.einsum("ij,ij->j", quatComps[:, 0, :], quatComps[:, 1, :]))
+        self.kam[-1, :] = abs(np.einsum("ij,ij->j", quatComps[:, -1, :], quatComps[:, -2, :]))
+        for i in range(1, self.yDim - 1):
+            self.kam[i, :] = (abs(np.einsum("ij,ij->j", quatComps[:, i, :], quatComps[:, i + 1, :])) +
+                              abs(np.einsum("ij,ij->j", quatComps[:, i, :], quatComps[:, i - 1, :]))) / 2
+
+        self.kam[self.kam > 1] = 1
+
+        # Do the same for columns
+        self.kam[:, 0] += abs(np.einsum("ij,ij->j", quatComps[:, :, 0], quatComps[:, :, 1]))
+        self.kam[:, -1] += abs(np.einsum("ij,ij->j", quatComps[:, :, -1], quatComps[:, :, -2]))
+        for i in range(1, self.xDim - 1):
+            self.kam[:, i] += (abs(np.einsum("ij,ij->j", quatComps[:, :, i], quatComps[:, :, i + 1])) +
+                               abs(np.einsum("ij,ij->j", quatComps[:, :, i], quatComps[:, :, i - 1]))) / 2
+
+        self.kam /= 2
+        self.kam[self.kam > 1] = 1
+
+    def plotKamMap(self, vmin=None, vmax=None, cmap="viridis"):
+        """Plots Kernel Average Misorientaion (KAM) for the EBSD map.
+
+        Args:
+            vmin (float, optional): Minimum of colour scale.
+            vmax (float, optional): Maximum of colour scale.
+            cmap (str, optional): Colourmap to show data with.
+        """
+        self.calcKam()
+        # Convert to degrees and plot
+        kam = 2 * np.arccos(self.kam) * 180 / np.pi
+        plt.figure()
+        plt.imshow(kam, vmin=vmin, vmax=vmax, cmap=cmap)
+        plt.colorbar()
 
     def highlightGrains(self, grainIds):
         outline = np.zeros((self.yDim, self.xDim), dtype=int)
@@ -405,7 +464,7 @@ class Map(base.Map):
             for grain in self.grainList:
                 grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
 
-    def plotAverageGrainSchmidFactorsMap(self):
+    def plotAverageGrainSchmidFactorsMap(self, plotGBs=True):
         self.averageSchmidFactor = np.zeros([self.yDim, self.xDim])
 
         for grain in self.grainList:
@@ -415,9 +474,19 @@ class Map(base.Map):
             for coord in grain.coordList:
                 self.averageSchmidFactor[coord[1], coord[0]] = currentSchmidFactor
 
+        self.averageSchmidFactor[self.averageSchmidFactor == 0] = 0.5
+
         plt.figure()
         plt.imshow(self.averageSchmidFactor, interpolation='none', cmap='gray', vmin=0, vmax=0.5)
-        plt.colorbar()
+        plt.colorbar(label="Schmid factor")
+
+        if plotGBs:
+            # create colourmap for boundaries and plot. colourmap goes transparent white to opaque black
+            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'black'], 256)
+            cmap1._init()
+            cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
+            plt.imshow(-self.boundaries, interpolation='None', vmin=0, vmax=1, cmap=cmap1)
+
         return
 
 
@@ -502,13 +571,13 @@ class Grain(object):
 
             Dq[:, Dq[0] < 0] = -Dq[:, Dq[0] < 0]
 
-            # numpy broadcasting taking care of different array sizes
             # intr = np.arccos(Dq[0, :]) / np.sqrt(1 - np.power(Dq[0, :], 2))
 
             # misOriAxis[0, :] = 2 * Dq[1, :] * intr
             # misOriAxis[1, :] = 2 * Dq[2, :] * intr
             # misOriAxis[2, :] = 2 * Dq[3, :] * intr
 
+            # numpy broadcasting taking care of different array sizes
             misOriAxis[:, :] = (2 * Dq[1:4, :] * np.arccos(Dq[0, :])) / np.sqrt(1 - np.power(Dq[0, :], 2))
 
             # hack it back into a list. Need to change self.*List to be arrays, it was a bad decision to
