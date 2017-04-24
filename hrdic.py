@@ -17,15 +17,18 @@ from . import base
 class Map(base.Map):
 
     def __init__(self, path, fname):
+        # Call base class constructor
+        super(Map, self).__init__()
+
         self.ebsdMap = None
-        self.homogPoints = []
         self.ebsdTransform = None
         self.ebsdShift = (0, 0)
         self.grainList = None
         self.currGrainId = None     # Id of last selected grain
         # ...
         self.ebsdGrainIds = None
-        self.selPoint = None
+        self.patternImPath = None   # Path to BSE image of map
+        self.windowSize = None      # Window size for map
 
         self.plotDefault = self.plotMaxShear
 
@@ -83,9 +86,30 @@ class Map(base.Map):
         self.xDim = int(self.xdim - xMin - xMax)     # need to fix this for no crops
         self.yDim = int(self.ydim - yMin - yMax)
 
-    def crop(self, mapData):
-        return mapData[int(self.cropDists[1, 0]):int(self.ydim - self.cropDists[1, 1]),
-                       int(self.cropDists[0, 0]):int(self.xdim - self.cropDists[0, 1])]
+    def crop(self, mapData, binned=True):
+        if binned:
+            multiplier = 1
+        else:
+            multiplier = self.windowSize
+
+        return mapData[int(self.cropDists[1, 0] * multiplier):int((self.ydim - self.cropDists[1, 1]) * multiplier),
+                       int(self.cropDists[0, 0] * multiplier):int((self.xdim - self.cropDists[0, 1]) * multiplier)]
+
+    def setHomogPoint(self, display=None):
+        if display is None:
+            display = "maxshear"
+
+        # Set plot dafault to display selected image
+        display = display.lower().replace(" ", "")
+        if display == "bse" or display == "pattern":
+            self.plotDefault = self.plotPattern
+            binSize = self.windowSize
+        else:
+            self.plotDefault = self.plotMaxShear
+            binSize = 1
+
+        # Call set homog points from base class setting the bin size
+        super(Map, self).setHomogPoint(binSize=binSize)
 
     def linkEbsdMap(self, ebsdMap):
         self.ebsdMap = ebsdMap
@@ -118,6 +142,26 @@ class Map(base.Map):
         boundaries = -boundaries.astype(int)
 
         return boundaries
+
+    def setPatternPath(self, filePath, windowSize):
+        """Set path of BSE of pattern. filePath is relative to the path set when constructing."""
+
+        self.patternImPath = self.path + filePath
+        self.windowSize = windowSize
+
+    def plotPattern(self, updateCurrent=False, vmin=None, vmax=None):
+        """Plot BSE image of Map. For use with setting homog points"""
+
+        # Check image path is set
+        if self.patternImPath is not None:
+            if not updateCurrent:
+                self.fig, self.ax = plt.subplots()
+
+            bseImage = plt.imread(self.patternImPath)
+            self.ax.imshow(self.crop(bseImage, binned=False), cmap='gray', vmin=vmin, vmax=vmax)
+
+        else:
+            raise Exception("First set path to pattern image.")
 
     def plotMaxShear(self, plotGBs=False, plotSlipTraces=False, plotPercent=True,
                      updateCurrent=False, highlightGrains=None, plotColourBar=False):

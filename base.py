@@ -4,6 +4,11 @@ from matplotlib.widgets import Button
 
 
 class Map(object):
+
+    def __init__(self):
+        self.homogPoints = []
+        self.selPoint = None
+
     def __len__(self):
         return len(self.grainList)
 
@@ -11,21 +16,27 @@ class Map(object):
     def __getitem__(self, key):
         return self.grainList[key]
 
-    def setHomogPoint(self):
+    def setHomogPoint(self, binSize=1):
         self.selPoint = None
 
         self.plotDefault()
-        homogPoints = np.array(self.homogPoints)
-        self.ax.scatter(x=homogPoints[:, 0], y=homogPoints[:, 1], c='y', s=60)
+        # Plot stored homogo points if there are any
+        if len(self.homogPoints) > 0:
+            homogPoints = np.array(self.homogPoints) * binSize
+            self.ax.scatter(x=homogPoints[:, 0], y=homogPoints[:, 1], c='y', s=60)
 
         btnAx = self.fig.add_axes([0.8, 0.0, 0.1, 0.07])
         Button(btnAx, 'Save point', color='0.85', hovercolor='0.95')
 
         # connect click handler
-        self.fig.canvas.mpl_connect('button_press_event', self.clickHomog)
+        self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickHomog(x, binSize=binSize))
 
-    def clickHomog(self, event):
+    def clickHomog(self, event, binSize=1):
         if event.inaxes is not None:
+            # save current zoom state of axis
+            currXLim = self.ax.get_xlim()
+            currYLim = self.ax.get_ylim()
+
             # clear current axis and redraw map
             self.ax.clear()
             self.plotDefault(updateCurrent=True)
@@ -36,12 +47,19 @@ class Map(object):
                 self.ax.scatter(x=self.selPoint[0], y=self.selPoint[1], c='w', s=60, marker='x')
 
             elif (event.inaxes is self.fig.axes[1]) and (self.selPoint is not None):
-                # axis 1 then is a click on the button. Add selected point to list
+                # axis 1 then is a click on the button. Check if a point is selected and add to list
+                self.selPoint = tuple(int(round(x / binSize)) for x in self.selPoint)
                 self.homogPoints.append(self.selPoint)
                 self.selPoint = None
 
-            homogPoints = np.array(self.homogPoints)
-            self.ax.scatter(x=homogPoints[:, 0], y=homogPoints[:, 1], c='y', s=60)
+            # Plot stored homogo points if there are any
+            if len(self.homogPoints) > 0:
+                homogPoints = np.array(self.homogPoints) * binSize
+                self.ax.scatter(x=homogPoints[:, 0], y=homogPoints[:, 1], c='y', s=60)
+
+            # Set zoom state back and redraw axis
+            self.ax.set_xlim(currXLim)
+            self.ax.set_ylim(currYLim)
 
             self.fig.canvas.draw()
 

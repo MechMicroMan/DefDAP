@@ -27,8 +27,6 @@ class Map(base.Map):
         homogPoints (TYPE): Description
         misOri (TYPE): Description
         misOriAxis (TYPE): Description
-        misOx (TYPE): Description
-        misOy (TYPE): Description
         origin (tuple): Description
         plotDefault (TYPE): Description
         quatArray (TYPE): Description
@@ -39,14 +37,15 @@ class Map(base.Map):
         yDim (int): y dimension of map
     """
     def __init__(self, fileName, crystalSym):
+        # Call base class constructor
+        super(Map, self).__init__()
+
         self.crystalSym = None      # symmetry of material e.g. "cubic", "hexagonal"
         self.xDim = None            # (int) dimensions of maps
         self.yDim = None
         self.stepSize = None        # (float) step size
         self.binData = None         # imported binary data
         self.quatArray = None       # (array) array of quaterions for each point of map
-        self.misOx = None           # (array) map of misorientation with single neighbour pixel in positive x dir
-        self.misOy = None
         self.boundaries = None      # (array) map of boundariers. -1 for a boundary, 0 otherwise
         self.grains = None          # (array) map of grains
         self.grainList = None       # (list) list of grains
@@ -58,8 +57,6 @@ class Map(base.Map):
         self.currGrainId = None     # Id of last selected grain
         self.origin = (0, 0)        # Map origin (y, x). Used by linker class where origin is a
                                     # homologue point of the maps
-        self.homogPoints = []
-        self.selPoint = None
 
         self.plotDefault = self.plotEulerMap
 
@@ -229,36 +226,95 @@ class Map(base.Map):
     def findBoundaries(self, boundDef=10):
         self.buildQuatArray()
 
-        self.misOx = np.zeros((self.yDim, self.xDim))
-        self.misOy = np.zeros((self.yDim, self.xDim))
+        syms = Quat.symEqv(self.crystalSym)
+        numSyms = len(syms)
+
+        # array to store quat components or initial and symmetric equivalents
+        quatComps = np.empty((numSyms, 4, self.yDim, self.xDim))
+
+        # populate with initial quat components
+        for i, row in enumerate(self.quatArray):
+            for j, quat in enumerate(row):
+                quatComps[0, :, i, j] = quat.quatCoef
+
+        # loop of over symmetries and apply to initial quat components
+        # (excluding first symmetry as this is the identity transformation)
+        for i, sym in enumerate(syms[1:], start=1):
+            # quat * sym[i] for all points (* is quaternion product)
+            quatComps[i, 0, :, :] = (quatComps[0, 0, :, :] * sym[0] - quatComps[0, 1, :, :] * sym[1] -
+                                     quatComps[0, 2, :, :] * sym[2] - quatComps[0, 3, :, :] * sym[3])
+            quatComps[i, 1, :, :] = (quatComps[0, 0, :, :] * sym[1] + quatComps[0, 1, :, :] * sym[0] +
+                                     quatComps[0, 2, :, :] * sym[3] - quatComps[0, 3, :, :] * sym[2])
+            quatComps[i, 2, :, :] = (quatComps[0, 0, :, :] * sym[2] + quatComps[0, 2, :, :] * sym[0] +
+                                     quatComps[0, 3, :, :] * sym[1] - quatComps[0, 1, :, :] * sym[3])
+            quatComps[i, 3, :, :] = (quatComps[0, 0, :, :] * sym[3] + quatComps[0, 3, :, :] * sym[0] +
+                                     quatComps[0, 1, :, :] * sym[2] - quatComps[0, 2, :, :] * sym[1])
+
+            quatComps[i, :, quatComps[i, 0, :, :] < 0] = -quatComps[i, :, quatComps[i, 0, :, :] < 0]
+
+        # Arrays to store neigbour misorientation in positive x and y direction
+        misOrix = np.zeros((numSyms, self.yDim, self.xDim))
+        misOriy = np.zeros((numSyms, self.yDim, self.xDim))
+
+        # loop over symmetries calculating misorientation to initial
+        for i in range(numSyms):
+            for j in range(self.xDim - 1):
+                misOrix[i, :, j] = abs(np.einsum("ij,ij->j", quatComps[0, :, :, j], quatComps[i, :, :, j + 1]))
+
+            for j in range(self.yDim - 1):
+                misOriy[i, j, :] = abs(np.einsum("ij,ij->j", quatComps[0, :, j, :], quatComps[i, :, j + 1, :]))
+
+        misOrix[misOrix > 1] = 1
+        misOriy[misOriy > 1] = 1
+
+        # find min misorientation (max here as misorientaion is cos of this)
+        misOrix = np.max(misOrix, axis=0)
+        misOriy = np.max(misOriy, axis=0)
+
+        # convert to misorientation in degrees
+        misOrix = 360 * np.arccos(misOrix) / np.pi
+        misOriy = 360 * np.arccos(misOriy) / np.pi
+
+        # set boundary locations where misOrix or misOriy are greater than set value
         self.boundaries = np.zeros((self.yDim, self.xDim), dtype=int)
 
-        # sweep in positive x and y dirs calculating misorientation with neighbour
-        # if > boundDef then mark as a grain boundary
         for i in range(self.xDim):
-            for j in range(self.yDim - 1):
-                aux = abs(self.quatArray[j, i].dot(self.quatArray[j + 1, i]))
-                if aux > 1:
-                    aux = 1
-
-                self.misOx[j, i] = 360 * np.arccos(aux) / np.pi
-
-                if self.misOx[j, i] > boundDef:
-                    self.misOx[j, i] = 0.0
-                    self.boundaries[j, i] = -1
-
-        for i in range(self.xDim - 1):
             for j in range(self.yDim):
-                aux = abs(self.quatArray[j, i].dot(self.quatArray[j, i + 1]))
-                if aux > 1:
-                    aux = 1
-
-                self.misOy[j, i] = 360 * np.arccos(aux) / np.pi
-
-                if self.misOy[j, i] > boundDef:
-                    self.misOy[j, i] = 0.0
+                if (misOrix[j, i] > boundDef) or (misOriy[j, i] > boundDef):
                     self.boundaries[j, i] = -1
+
         return
+
+        # self.misOx = np.zeros((self.yDim, self.xDim))
+        # self.misOy = np.zeros((self.yDim, self.xDim))
+        # self.boundaries = np.zeros((self.yDim, self.xDim), dtype=int)
+
+        # # sweep in positive x and y dirs calculating misorientation with neighbour
+        # # if > boundDef then mark as a grain boundary
+        # for i in range(self.xDim):
+        #     for j in range(self.yDim - 1):
+        #         aux = abs(self.quatArray[j, i].dot(self.quatArray[j + 1, i]))
+        #         if aux > 1:
+        #             aux = 1
+
+        #         self.misOx[j, i] = 360 * np.arccos(aux) / np.pi
+
+        #         if self.misOx[j, i] > boundDef:
+        #             self.misOx[j, i] = 0.0
+        #             self.boundaries[j, i] = -1
+
+        # for i in range(self.xDim - 1):
+        #     for j in range(self.yDim):
+        #         aux = abs(self.quatArray[j, i].dot(self.quatArray[j, i + 1]))
+        #         if aux > 1:
+        #             aux = 1
+
+        #         self.misOy[j, i] = 360 * np.arccos(aux) / np.pi
+
+        #         if self.misOy[j, i] > boundDef:
+        #             self.misOy[j, i] = 0.0
+        #             self.boundaries[j, i] = -1
+        # return
 
     def plotBoundaryMap(self):
         plt.figure()
