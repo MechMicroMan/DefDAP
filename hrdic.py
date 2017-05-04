@@ -75,15 +75,15 @@ class Map(base.Map):
 
     def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None):
         if xMin is not None:
-            self.cropDists[0, 0] = xMin
+            self.cropDists[0, 0] = int(xMin)
         if xMax is not None:
-            self.cropDists[0, 1] = xMax
+            self.cropDists[0, 1] = int(xMax)
         if yMin is not None:
-            self.cropDists[1, 0] = yMin
+            self.cropDists[1, 0] = int(yMin)
         if yMax is not None:
-            self.cropDists[1, 1] = yMax
+            self.cropDists[1, 1] = int(yMax)
 
-        self.xDim = int(self.xdim - xMin - xMax)     # need to fix this for no crops
+        self.xDim = int(self.xdim - xMin - xMax)
         self.yDim = int(self.ydim - yMin - yMax)
 
     def crop(self, mapData, binned=True):
@@ -124,20 +124,34 @@ class Map(base.Map):
 
         self.ebsdShift = (xShift, yShift)
 
-    def warpToDicFrame(self, mapData):
+    def warpToDicFrame(self, mapData, cropImage=True):
+        # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
-        warpedMap = tf.warp(mapData, self.ebsdTransform,
-                            output_shape=(self.yDim + self.ebsdShift[1], self.xDim + self.ebsdShift[0]))
+        if cropImage:
+            # crop to size of DIC map
+            outputShape = (self.yDim + self.ebsdShift[1], self.xDim + self.ebsdShift[0])
+        else:
+            # output the entire warped image
+            scaleFactor = self.ebsdTransform.scale
+            outputShape = (int(mapData.shape[0] / scaleFactor[0]),
+                           int(mapData.shape[1] / scaleFactor[1]))
 
+        # warp the map
+        warpedMap = tf.warp(mapData, self.ebsdTransform, output_shape=outputShape)
+
+        # return map with shift
         return warpedMap[self.ebsdShift[1]:, self.ebsdShift[0]:]
 
     @property
     def boundaries(self):
-        boundaries = self.warpToDicFrame(-self.ebsdMap.boundaries.astype(float)) > 0.1
+        boundaries = self.warpToDicFrame(-self.ebsdMap.boundaries.astype(float), cropImage=False) > 0.1
 
         boundaries = mph.skeletonize(boundaries)
         mph.remove_small_objects(boundaries, min_size=10, in_place=True, connectivity=2)
+
+        boundaries = boundaries[:self.yDim + self.ebsdShift[1],
+                                :self.xDim + self.ebsdShift[0]]
 
         boundaries = -boundaries.astype(int)
 
