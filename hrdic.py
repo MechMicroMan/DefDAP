@@ -114,6 +114,7 @@ class Map(base.Map):
     def linkEbsdMap(self, ebsdMap):
         self.ebsdMap = ebsdMap
         self.ebsdTransform = tf.AffineTransform()
+        # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
     def setEbsdShift(self, xShift=None, yShift=None):
@@ -126,22 +127,28 @@ class Map(base.Map):
 
     def warpToDicFrame(self, mapData, cropImage=True):
         # calculate transform from EBSD to DIC frame
-        self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
+        # self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
         if cropImage:
             # crop to size of DIC map
             outputShape = (self.yDim + self.ebsdShift[1], self.xDim + self.ebsdShift[0])
+            # warp the map
+            warpedMap = tf.warp(mapData, self.ebsdTransform, output_shape=outputShape)
+            # return map with shift
+            return warpedMap[self.ebsdShift[1]:, self.ebsdShift[0]:]
         else:
-            # output the entire warped image
-            scaleFactor = self.ebsdTransform.scale
-            outputShape = (int(mapData.shape[0] / scaleFactor[0]),
-                           int(mapData.shape[1] / scaleFactor[1]))
+            # copy ebsd transform and change translation to give an extra 5% border
+            # to show the entire image after rotation/shearing
+            tempEbsdTransform = tf.AffineTransform(matrix=np.copy(self.ebsdTransform.params))
+            tempEbsdTransform.params[0:2, 2] = -0.05 * np.array(mapData.shape)
 
-        # warp the map
-        warpedMap = tf.warp(mapData, self.ebsdTransform, output_shape=outputShape)
+            # output the entire warped image with 5% border
+            outputShape = np.array(mapData.shape) * 1.1 / tempEbsdTransform.scale
 
-        # return map with shift
-        return warpedMap[self.ebsdShift[1]:, self.ebsdShift[0]:]
+            # warp the map
+            warpedMap = tf.warp(mapData, tempEbsdTransform, output_shape=outputShape.astype(int))
+
+            return warpedMap
 
     @property
     def boundaries(self):
@@ -150,8 +157,17 @@ class Map(base.Map):
         boundaries = mph.skeletonize(boundaries)
         mph.remove_small_objects(boundaries, min_size=10, in_place=True, connectivity=2)
 
-        boundaries = boundaries[:self.yDim + self.ebsdShift[1],
-                                :self.xDim + self.ebsdShift[0]]
+        # need to apply the translation of ebsd transform and remove 5% border
+        crop = np.copy(self.ebsdTransform.params[0:2, 2])
+        crop += 0.05 * np.array(self.ebsdMap.boundaries.shape)
+        # the crop is defined in EBSD coords so need to transform it
+        transformMatrix = np.copy(self.ebsdTransform.params[0:2, 0:2])
+        crop = np.matmul(np.linalg.inv(transformMatrix), crop)
+
+        crop = crop.round().astype(int) + np.array(self.ebsdShift)
+
+        boundaries = boundaries[crop[1]:crop[1] + self.yDim + self.ebsdShift[1],
+                                crop[0]:crop[0] + self.xDim + self.ebsdShift[0]]
 
         boundaries = -boundaries.astype(int)
 
@@ -231,8 +247,9 @@ class Map(base.Map):
             colours = ["white", "green", "red", "black"]
 
             for i, colour in enumerate(colours[0:numSS]):
-                self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1], scale=scale, pivot="middle",
-                               color=colour, headwidth=1, headlength=0, width=0.002)
+                self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1],
+                               scale=scale, pivot="middle", color=colour, headwidth=1,
+                               headlength=0, width=0.002)
 
         return
 
@@ -292,7 +309,9 @@ class Map(base.Map):
                     self.grainFig, self.grainAx = plt.subplots()
                 self.grainList[self.currGrainId].calcSlipTraces()
                 self.grainAx.clear()
-                self.grainList[self.currGrainId].plotMaxShear(plotSlipTraces=True, plotShearBands=True, ax=self.grainAx)
+                self.grainList[self.currGrainId].plotMaxShear(plotSlipTraces=True,
+                                                              plotShearBands=True,
+                                                              ax=self.grainAx)
                 self.grainFig.canvas.draw()
 
     def findGrains(self, minGrainSize=10):
@@ -382,12 +401,14 @@ class Map(base.Map):
 
                 for (s, t) in moves:
                     if self.grains[t, s] == 0:
-                        currentGrain.addPoint((s, t), self.max_shear[y + self.cropDists[1, 0], x + self.cropDists[0, 0]])
+                        currentGrain.addPoint((s, t), self.max_shear[y + self.cropDists[1, 0],
+                                                                     x + self.cropDists[0, 0]])
                         newedge.append((s, t))
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
                     elif self.grains[t, s] == -1 and (s > x or t > y):
-                        currentGrain.addPoint((s, t), self.max_shear[y + self.cropDists[1, 0], x + self.cropDists[0, 0]])
+                        currentGrain.addPoint((s, t), self.max_shear[y + self.cropDists[1, 0],
+                                                                     x + self.cropDists[0, 0]])
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
 
@@ -439,7 +460,8 @@ class Grain(object):
         plt.colorbar()
         return
 
-    def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False, vmin=None, vmax=None, cmap="viridis", ax=None):
+    def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False,
+                     vmin=None, vmax=None, cmap="viridis", ax=None):
         multiplier = 100 if plotPercent else 1
         x0, y0, xmax, ymax = self.extremeCoords()
 
