@@ -58,10 +58,14 @@ class Map(base.Map):
         self.origin = (0, 0)        # Map origin (y, x). Used by linker class where origin is a
                                     # homologue point of the maps
 
-        self.plotDefault = self.plotEulerMap
+        self.plotHomog = self.plotEulerMap
+        self.highlightAlpha = 1
 
         self.loadData(fileName, crystalSym)
         return
+
+    def plotDefault(self, *args, **kwargs):
+        self.plotEulerMap(*args, **kwargs)
 
     def loadData(self, fileName, crystalSym):
         # open meta data file and read in x and y dimensions
@@ -109,7 +113,7 @@ class Map(base.Map):
         plt.colorbar()
         return
 
-    def plotEulerMap(self, updateCurrent=False, highlightGrains=None):
+    def plotEulerMap(self, updateCurrent=False, highlightGrains=None, highlightColours=None):
         """Summary
 
         Args:
@@ -135,7 +139,7 @@ class Map(base.Map):
         self.ax.imshow(self.cacheEulerMap, aspect='equal')
 
         if highlightGrains is not None:
-            self.highlightGrains(highlightGrains)
+            self.highlightGrains(highlightGrains, highlightColours)
 
         return
 
@@ -185,27 +189,6 @@ class Map(base.Map):
         plt.figure()
         plt.imshow(kam, vmin=vmin, vmax=vmax, cmap=cmap)
         plt.colorbar()
-
-    def highlightGrains(self, grainIds):
-        outline = np.zeros((self.yDim, self.xDim), dtype=int)
-        for grainId in grainIds:
-            # outline of highlighted grain
-            grainOutline = self.grainList[grainId].grainOutline(bg=0, fg=1)
-            x0, y0, xmax, ymax = self.grainList[grainId].extremeCoords
-
-            # use logical of same are in entire area to ensure neigbouring grains display correctly
-            grainOutline = np.logical_or(outline[y0:ymax + 1, x0:xmax + 1], grainOutline).astype(int)
-            outline[y0:ymax + 1, x0:xmax + 1] = grainOutline
-
-        # Custom colour map where 0 is tranparent white for bg and 255 is opaque white for fg
-        cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'white'], 256)
-        cmap1._init()
-        cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
-
-        # plot highlighted grain overlay
-        self.ax.imshow(outline, interpolation='none', vmin=0, vmax=1, cmap=cmap1)
-
-        return
 
     def checkDataLoaded(self):
         if self.binData is None:
@@ -377,7 +360,7 @@ class Map(base.Map):
         if event.inaxes is not None:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
-            print(self.currGrainId)
+            print("Grain ID: {}".format(self.currGrainId))
 
             # clear current axis and redraw euler map with highlighted grain overlay
             self.ax.clear()
@@ -463,7 +446,7 @@ class Map(base.Map):
 
         return
 
-    def plotMisOriMap(self, component=0, plotGBs=False, vMin=None, vMax=None, cmap="viridis", cBarLabel="ROD (degrees)"):
+    def plotMisOriMap(self, component=0, plotGBs=False, vmin=None, vmax=None, cmap="viridis", cBarLabel="ROD (degrees)"):
         self.misOri = np.ones([self.yDim, self.xDim])
 
         plt.figure()
@@ -473,14 +456,14 @@ class Map(base.Map):
                 for coord, misOriAxis in zip(grain.coordList, np.array(grain.misOriAxisList)):
                     self.misOri[coord[1], coord[0]] = misOriAxis[component - 1]
 
-            plt.imshow(self.misOri * 180 / np.pi, interpolation='None', vmin=vMin, vmax=vMax, cmap=cmap)
+            plt.imshow(self.misOri * 180 / np.pi, interpolation='None', vmin=vmin, vmax=vmax, cmap=cmap)
 
         else:
             for grain in self.grainList:
                 for coord, misOri in zip(grain.coordList, grain.misOriList):
                     self.misOri[coord[1], coord[0]] = misOri
 
-            plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='None', vmin=vMin, vmax=vMax, cmap=cmap)
+            plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='None', vmin=vmin, vmax=vmax, cmap=cmap)
 
         plt.colorbar(label=cBarLabel)
 
@@ -711,7 +694,8 @@ class Grain(object):
     # {1-3} = misOri axis {1-3}
     # 4 = all
     # 5 = all axis
-    def plotMisOri(self, component=0, vMin=None, vMax=None, vRange=[None, None, None], cmap=["viridis", "bwr"], plotSlipTraces=False):
+    def plotMisOri(self, component=0, vmin=None, vmax=None, vRange=[None, None, None],
+                   cmap=["viridis", "bwr"], plotSlipTraces=False):
         component = int(component)
 
         x0, y0, xmax, ymax = self.extremeCoords
@@ -728,7 +712,7 @@ class Grain(object):
 
             f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
 
-            img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vMin, vmax=vMax)
+            img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vmin, vmax=vmax)
             plt.colorbar(img, ax=ax1)
             vmin = None if vRange[0] is None else -vRange[0]
             img = ax2.imshow(grainMisOri[1], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[0])
@@ -754,7 +738,7 @@ class Grain(object):
                 grainMisOri[coord[1] - y0, coord[0] - x0] = misOri
 
             plt.figure()
-            plt.imshow(grainMisOri, interpolation='none', vmin=vMin, vmax=vMax, cmap=cmap[0])
+            plt.imshow(grainMisOri, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap[0])
 
             plt.colorbar(label="ROD (degrees)")
             plt.xticks([])

@@ -30,7 +30,8 @@ class Map(base.Map):
         self.patternImPath = None   # Path to BSE image of map
         self.windowSize = None      # Window size for map
 
-        self.plotDefault = self.plotMaxShear
+        self.plotHomog = self.plotMaxShear
+        self.highlightAlpha = 0.6
 
         self.path = path
         self.fname = fname
@@ -63,6 +64,9 @@ class Map(base.Map):
         self.mapshape = np.shape(self.max_shear)
 
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
+
+    def plotDefault(self, *args, **kwargs):
+        self.plotMaxShear(plotGBs=True, *args, **kwargs)
 
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (int(self.ydim), int(self.xdim)))
@@ -102,10 +106,10 @@ class Map(base.Map):
         # Set plot dafault to display selected image
         display = display.lower().replace(" ", "")
         if display == "bse" or display == "pattern":
-            self.plotDefault = self.plotPattern
+            self.plotHomog = self.plotPattern
             binSize = self.windowSize
         else:
-            self.plotDefault = self.plotMaxShear
+            self.plotHomog = self.plotMaxShear
             binSize = 1
 
         # Call set homog points from base class setting the bin size
@@ -142,8 +146,8 @@ class Map(base.Map):
             tempEbsdTransform = tf.AffineTransform(matrix=np.copy(self.ebsdTransform.params))
             tempEbsdTransform.params[0:2, 2] = -0.05 * np.array(mapData.shape)
 
-            # output the entire warped image with 5% border
-            outputShape = np.array(mapData.shape) * 1.1 / tempEbsdTransform.scale
+            # output the entire warped image with 5% border (add some extra to fix a bug)
+            outputShape = np.array(mapData.shape) * 1.3 / tempEbsdTransform.scale
 
             # warp the map
             warpedMap = tf.warp(mapData, tempEbsdTransform, output_shape=outputShape.astype(int))
@@ -194,14 +198,15 @@ class Map(base.Map):
             raise Exception("First set path to pattern image.")
 
     def plotMaxShear(self, plotGBs=False, plotSlipTraces=False, plotPercent=True,
-                     updateCurrent=False, highlightGrains=None, plotColourBar=False):
+                     updateCurrent=False, highlightGrains=None, highlightColours=None,
+                     plotColourBar=False, vmin=None, vmax=None):
         if not updateCurrent:
             # self.fig, self.ax = plt.subplots(figsize=(5.75, 4))
             self.fig, self.ax = plt.subplots()
 
         multiplier = 100 if plotPercent else 1
         img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
-                             cmap='viridis', interpolation='None', vmin=0, vmax=10)
+                             cmap='viridis', interpolation='None', vmin=vmin, vmax=vmax)
         if plotColourBar:
             plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
 
@@ -213,7 +218,7 @@ class Map(base.Map):
             self.ax.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
 
         if highlightGrains is not None:
-            self.highlightGrains(highlightGrains)
+            self.highlightGrains(highlightGrains, highlightColours)
 
         # plot slip traces
         if plotSlipTraces:
@@ -228,7 +233,7 @@ class Map(base.Map):
                     continue
 
                 # x0, y0, xmax, ymax
-                grainSizeData[i, 0], grainSizeData[i, 1], grainSizeData[i, 2], grainSizeData[i, 3] = grain.extremeCoords()
+                grainSizeData[i, 0], grainSizeData[i, 1], grainSizeData[i, 2], grainSizeData[i, 3] = grain.extremeCoords
 
                 for j, slipTrace in enumerate(grain.slipTraces()):
                     slipTraceData[i, j, 0:2] = slipTrace[0:2]
@@ -250,27 +255,6 @@ class Map(base.Map):
                 self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1],
                                scale=scale, pivot="middle", color=colour, headwidth=1,
                                headlength=0, width=0.002)
-
-        return
-
-    def highlightGrains(self, grainIds):
-        outline = np.zeros((self.yDim, self.xDim), dtype=int)
-        for grainId in grainIds:
-            # outline of highlighted grain
-            grainOutline = self.grainList[grainId].grainOutline(bg=0, fg=1)
-            x0, y0, xmax, ymax = self.grainList[grainId].extremeCoords()
-
-            # use logical of same are in entire area to ensure neigbouring grains display correctly
-            grainOutline = np.logical_or(outline[y0:ymax + 1, x0:xmax + 1], grainOutline).astype(int)
-            outline[y0:ymax + 1, x0:xmax + 1] = grainOutline
-
-        # Custom colour map where 0 is tranparent white for bg and 255 is opaque white for fg
-        cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['green', 'green'], 256)
-        cmap1._init()
-        cmap1._lut[:, -1] = np.linspace(0, 0.6, cmap1.N + 3)
-
-        # plot highlighted grain overlay
-        self.ax.imshow(outline, interpolation='none', vmin=0, vmax=1, cmap=cmap1)
 
         return
 
@@ -297,11 +281,12 @@ class Map(base.Map):
         if event.inaxes is not None:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
-            print(self.currGrainId)
+            print("Grain ID: {}".format(self.currGrainId))
 
             # clear current axis and redraw map with highlighted grain overlay
             self.ax.clear()
-            self.plotMaxShear(plotGBs=True, updateCurrent=True, highlightGrains=[self.currGrainId])
+            self.plotMaxShear(plotGBs=True, updateCurrent=True, highlightGrains=[self.currGrainId],
+                              highlightColours=['green'])
             self.fig.canvas.draw()
 
             if displaySelected:
@@ -435,6 +420,7 @@ class Grain(object):
         self.maxShearList.append(maxShear)
         return
 
+    @property
     def extremeCoords(self):
         unzippedCoordlist = list(zip(*self.coordList))
         x0 = min(unzippedCoordlist[0])
@@ -444,7 +430,7 @@ class Grain(object):
         return x0, y0, xmax, ymax
 
     def grainOutline(self, bg=np.nan, fg=0):
-        x0, y0, xmax, ymax = self.extremeCoords()
+        x0, y0, xmax, ymax = self.extremeCoords
 
         # initialise array with nans so area not in grain displays white
         outline = np.full((ymax - y0 + 1, xmax - x0 + 1), bg, dtype=int)
@@ -463,7 +449,7 @@ class Grain(object):
     def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False,
                      vmin=None, vmax=None, cmap="viridis", ax=None):
         multiplier = 100 if plotPercent else 1
-        x0, y0, xmax, ymax = self.extremeCoords()
+        x0, y0, xmax, ymax = self.extremeCoords
 
         # initialise array with nans so area not in grain displays white
         grainMaxShear = np.full((ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
@@ -488,7 +474,8 @@ class Grain(object):
             colours = ["white", "green", "red", "black"]
             xPos = int((xmax - x0) / 2)
             yPos = int((ymax - y0) / 2)
-            for slipTrace, colour in zip(self.slipTraces(), colours):
+            for i, slipTrace in enumerate(self.slipTraces()):
+                colour = colours[len(colours) - 1] if i >= len(colours) else colours[i]
                 if ax is None:
                     plt.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle",
                                color=colour, headwidth=1, headlength=0)
