@@ -585,6 +585,9 @@ class Grain(object):
                 imageTemp.append(j)
         image = np.reshape(imageTemp,(np.shape(image)))
 
+        plt.imshow(image,vmax=0.05)
+
+
     #     # calculate the fft
     #     acorr=(np.fft.fft2(image)*np.conjugate(np.fft.fft2(image)))
     #     ashift=np.fft.fftshift(acorr)
