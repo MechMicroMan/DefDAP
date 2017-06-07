@@ -486,7 +486,7 @@ class Grain(object):
         if plotShearBands:
             grainMaxShear = np.nan_to_num(grainMaxShear)
 
-            sin_map = tf.radon(grainMaxShear)
+            sin_map = tf.radon(grainMaxShear, circle=False)
             profile = np.max(sin_map, axis=0)
 
             x = np.arange(180)
