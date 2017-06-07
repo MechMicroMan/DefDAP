@@ -10,8 +10,8 @@ from scipy.stats import mode
 
 import peakutils
 
-from .quat import Quat
-from . import base
+from quat import Quat
+import base
 
 
 class Map(base.Map):
@@ -30,8 +30,7 @@ class Map(base.Map):
         self.patternImPath = None   # Path to BSE image of map
         self.windowSize = None      # Window size for map
 
-        self.plotHomog = self.plotMaxShear
-        self.highlightAlpha = 0.6
+        self.plotDefault = self.plotMaxShear
 
         self.path = path
         self.fname = fname
@@ -64,9 +63,6 @@ class Map(base.Map):
         self.mapshape = np.shape(self.max_shear)
 
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
-
-    def plotDefault(self, *args, **kwargs):
-        self.plotMaxShear(plotGBs=True, *args, **kwargs)
 
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (int(self.ydim), int(self.xdim)))
@@ -106,10 +102,10 @@ class Map(base.Map):
         # Set plot dafault to display selected image
         display = display.lower().replace(" ", "")
         if display == "bse" or display == "pattern":
-            self.plotHomog = self.plotPattern
+            self.plotDefault = self.plotPattern
             binSize = self.windowSize
         else:
-            self.plotHomog = self.plotMaxShear
+            self.plotDefault = self.plotMaxShear
             binSize = 1
 
         # Call set homog points from base class setting the bin size
@@ -146,8 +142,8 @@ class Map(base.Map):
             tempEbsdTransform = tf.AffineTransform(matrix=np.copy(self.ebsdTransform.params))
             tempEbsdTransform.params[0:2, 2] = -0.05 * np.array(mapData.shape)
 
-            # output the entire warped image with 5% border (add some extra to fix a bug)
-            outputShape = np.array(mapData.shape) * 1.3 / tempEbsdTransform.scale
+            # output the entire warped image with 5% border
+            outputShape = np.array(mapData.shape) * 1.1 / tempEbsdTransform.scale
 
             # warp the map
             warpedMap = tf.warp(mapData, tempEbsdTransform, output_shape=outputShape.astype(int))
@@ -197,18 +193,26 @@ class Map(base.Map):
         else:
             raise Exception("First set path to pattern image.")
 
-    def plotMaxShear(self, plotGBs=False, plotSlipTraces=False, plotPercent=True,
-                     updateCurrent=False, highlightGrains=None, highlightColours=None,
-                     plotColourBar=False, vmin=None, vmax=None):
+    def plotMaxShear(self, plotGBs=False, plotSlipTraces=False, plotPercent=True, vMax=0.5,
+                     updateCurrent=False, highlightGrains=None, plotColourBar=False,
+                     saveFig=False,saveFile=None,dpi=None,title=None,plotAxis="on"):
+        
         if not updateCurrent:
             # self.fig, self.ax = plt.subplots(figsize=(5.75, 4))
             self.fig, self.ax = plt.subplots()
 
         multiplier = 100 if plotPercent else 1
-        img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
-                             cmap='viridis', interpolation='None', vmin=vmin, vmax=vmax)
+        if plotPercent:
+            img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
+                             cmap='viridis', interpolation='None', vmin=0, vmax=10)
+        else:
+            img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
+                             cmap='viridis', interpolation='None', vmin=0, vmax=vMax)
         if plotColourBar:
-            plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
+            if plotPercent:
+                plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)", shrink = 0.75)
+            else:
+               plt.colorbar(img, ax=self.ax, label="HRDIC $\epsilon_{eff}$ [ ]", shrink = 0.75)
 
         if plotGBs:
             cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'white'], 256)
@@ -218,7 +222,7 @@ class Map(base.Map):
             self.ax.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
 
         if highlightGrains is not None:
-            self.highlightGrains(highlightGrains, highlightColours)
+            self.highlightGrains(highlightGrains)
 
         # plot slip traces
         if plotSlipTraces:
@@ -233,7 +237,7 @@ class Map(base.Map):
                     continue
 
                 # x0, y0, xmax, ymax
-                grainSizeData[i, 0], grainSizeData[i, 1], grainSizeData[i, 2], grainSizeData[i, 3] = grain.extremeCoords
+                grainSizeData[i, 0], grainSizeData[i, 1], grainSizeData[i, 2], grainSizeData[i, 3] = grain.extremeCoords()
 
                 for j, slipTrace in enumerate(grain.slipTraces()):
                     slipTraceData[i, j, 0:2] = slipTrace[0:2]
@@ -255,6 +259,31 @@ class Map(base.Map):
                 self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1],
                                scale=scale, pivot="middle", color=colour, headwidth=1,
                                headlength=0, width=0.002)
+        if saveFig:
+            plt.title(title)
+            plt.axis(plotAxis)
+            plt.savefig(saveFile,dpi=dpi,bbox_inches='tight')
+            
+        return
+
+    def highlightGrains(self, grainIds):
+        outline = np.zeros((self.yDim, self.xDim), dtype=int)
+        for grainId in grainIds:
+            # outline of highlighted grain
+            grainOutline = self.grainList[grainId].grainOutline(bg=0, fg=1)
+            x0, y0, xmax, ymax = self.grainList[grainId].extremeCoords()
+
+            # use logical of same are in entire area to ensure neigbouring grains display correctly
+            grainOutline = np.logical_or(outline[y0:ymax + 1, x0:xmax + 1], grainOutline).astype(int)
+            outline[y0:ymax + 1, x0:xmax + 1] = grainOutline
+
+        # Custom colour map where 0 is tranparent white for bg and 255 is opaque white for fg
+        cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['green', 'green'], 256)
+        cmap1._init()
+        cmap1._lut[:, -1] = np.linspace(0, 0.6, cmap1.N + 3)
+
+        # plot highlighted grain overlay
+        self.ax.imshow(outline, interpolation='none', vmin=0, vmax=1, cmap=cmap1)
 
         return
 
@@ -281,12 +310,11 @@ class Map(base.Map):
         if event.inaxes is not None:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
-            print("Grain ID: {}".format(self.currGrainId))
+            print(self.currGrainId)
 
             # clear current axis and redraw map with highlighted grain overlay
             self.ax.clear()
-            self.plotMaxShear(plotGBs=True, updateCurrent=True, highlightGrains=[self.currGrainId],
-                              highlightColours=['green'])
+            self.plotMaxShear(plotGBs=True, updateCurrent=True, highlightGrains=[self.currGrainId])
             self.fig.canvas.draw()
 
             if displaySelected:
@@ -420,7 +448,6 @@ class Grain(object):
         self.maxShearList.append(maxShear)
         return
 
-    @property
     def extremeCoords(self):
         unzippedCoordlist = list(zip(*self.coordList))
         x0 = min(unzippedCoordlist[0])
@@ -430,7 +457,7 @@ class Grain(object):
         return x0, y0, xmax, ymax
 
     def grainOutline(self, bg=np.nan, fg=0):
-        x0, y0, xmax, ymax = self.extremeCoords
+        x0, y0, xmax, ymax = self.extremeCoords()
 
         # initialise array with nans so area not in grain displays white
         outline = np.full((ymax - y0 + 1, xmax - x0 + 1), bg, dtype=int)
@@ -447,9 +474,11 @@ class Grain(object):
         return
 
     def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False,
-                     vmin=None, vmax=None, cmap="viridis", ax=None):
+                     vmin=None, vmax=None, cmap="viridis", ax=None,
+                     saveFig=False,saveFile=None,dpi=None,title=None,plotAxis="on"):
+        
         multiplier = 100 if plotPercent else 1
-        x0, y0, xmax, ymax = self.extremeCoords
+        x0, y0, xmax, ymax = self.extremeCoords()
 
         # initialise array with nans so area not in grain displays white
         grainMaxShear = np.full((ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
@@ -460,7 +489,10 @@ class Grain(object):
         if ax is None:
             plt.figure()
             plt.imshow(grainMaxShear * multiplier, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
-            plt.colorbar(label="Effective shear strain (%)")
+            if plotPercent:
+                plt.colorbar(label="Effective shear strain (%)", shrink = 0.75)
+            else:
+               plt.colorbar(label="HRDIC $\epsilon_{eff}$ [ ]", shrink = 0.75)
             plt.xticks([])
             plt.yticks([])
         else:
@@ -474,8 +506,7 @@ class Grain(object):
             colours = ["white", "green", "red", "black"]
             xPos = int((xmax - x0) / 2)
             yPos = int((ymax - y0) / 2)
-            for i, slipTrace in enumerate(self.slipTraces()):
-                colour = colours[len(colours) - 1] if i >= len(colours) else colours[i]
+            for slipTrace, colour in zip(self.slipTraces(), colours):
                 if ax is None:
                     plt.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle",
                                color=colour, headwidth=1, headlength=0)
@@ -509,6 +540,10 @@ class Grain(object):
             else:
                 ax.quiver(xPos, yPos, shearBandVectors[0], shearBandVectors[1], scale=1, pivot="middle",
                           color='yellow', headwidth=1, headlength=0)
+        if saveFig:
+            plt.title(title)
+            plt.axis(plotAxis)
+            plt.savefig(saveFile,dpi=dpi,bbox_inches='tight')                     
 
         return
 
@@ -528,3 +563,86 @@ class Grain(object):
     #         # transformRotation = Quat(-DicMap.ebsdTransform.rotation, 0, 0)
     #         transformRotation = Quat(0.1329602509925417, 0, 0)
     #         grainAvOri = grainAvOri * transformRotation
+
+    
+    def findSlipBands(self,c_range=[], cropXMin=0,cropXMax=-1,cropYMin=0,cropYMax=-1,strainMin=0):
+
+        x0, y0, xmax, ymax = self.extremeCoords()
+
+        # initialise array with nans so area not in grain displays white
+        grainMaxShear = np.full((ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
+
+        for coord, maxShear in zip(self.coordList, self.maxShearList):
+            grainMaxShear[coord[1] - y0, coord[0] - x0] = maxShear  
+
+        image = np.nan_to_num(grainMaxShear[cropXMin:cropXMax,cropYMin:cropYMax])
+
+        imageTemp = []
+        for i in image:
+            for j in i:
+                if j < strainMin:
+                    j = 0
+                imageTemp.append(j)
+        image = np.reshape(imageTemp,(np.shape(image)))
+
+    #     # calculate the fft
+    #     acorr=(np.fft.fft2(image)*np.conjugate(np.fft.fft2(image)))
+    #     ashift=np.fft.fftshift(acorr)
+    #     corr_map=np.log(np.fft.fftshift((np.abs(np.fft.ifft2(ashift)))))
+    #     if c_range==[]:
+    #         plt.imshow(corr_map, interpolation='nearest', cmap='viridis');
+    #     else:
+    #         plt.imshow(corr_map, interpolation='nearest', cmap='viridis',
+    #                    vmin=c_range[0], vmax=c_range[1]);
+
+
+    #      # run an fft filter
+    #     strain_map_fft=np.fft.fft2(image)
+    #     cut=0
+    #     lcut=int(np.shape(strain_map_fft)[0]/2-cut)
+    #     rcut=int(np.shape(strain_map_fft)[0]/2+cut)
+    #     tcut=int(np.shape(strain_map_fft)[1]/2-cut)
+    #     bcut=int(np.shape(strain_map_fft)[1]/2+cut)
+    #     strain_map_fft[lcut:rcut,tcut:bcut]=0
+
+    #     plt.imshow((np.abs(strain_map_fft)),cmap='viridis',vmax=10)
+
+    #     filt_image=np.abs(np.fft.ifft2(strain_map_fft))
+    #     plt.imshow(filt_image,cmap='viridis', vmax=0.03)
+    #     plt.colorbar()
+
+    
+        # run the Hough transform
+        from skimage.transform import (hough_line, hough_line_peaks, probabilistic_hough_line)
+        from matplotlib import cm
+        h, theta, d = hough_line(image)
+
+        # Generating figure 1
+        fig, axes = plt.subplots(1, 3, figsize=(15, 6),
+                                 subplot_kw={'adjustable': 'box-forced'})
+        ax = axes.ravel()
+
+        ax[0].imshow(image, cmap=cm.gray)
+        ax[0].set_title('Input image')
+        ax[0].set_axis_off()
+
+        ax[1].imshow(np.log(1 + h),
+                     extent=[np.rad2deg(theta[-1]), np.rad2deg(theta[0]), d[-1], d[0]],
+                     cmap=cm.gray, aspect=1/1.5)
+        ax[1].set_title('Hough transform')
+        ax[1].set_xlabel('Angles (degrees)')
+        ax[1].set_ylabel('Distance (pixels)')
+        ax[1].axis('image')
+
+        ax[2].imshow(image, cmap=cm.gray)
+        for _, angle, dist in zip(*hough_line_peaks(h, theta, d)):
+            y0 = (dist - 0 * np.cos(angle)) / np.sin(angle)
+            y1 = (dist - image.shape[1] * np.cos(angle)) / np.sin(angle)
+            ax[2].plot((0, image.shape[1]), (y0, y1), '-r')
+        ax[2].set_xlim((0, image.shape[1]))
+        ax[2].set_ylim((image.shape[0], 0))
+        ax[2].set_axis_off()
+        ax[2].set_title('Detected lines')
+
+        plt.tight_layout()
+        plt.show()
