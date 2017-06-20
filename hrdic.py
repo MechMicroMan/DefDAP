@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
 
 from skimage import transform as tf
 from skimage import morphology as mph
@@ -10,8 +9,7 @@ from scipy.stats import mode
 
 import peakutils
 
-from .quat import Quat
-from . import base
+import base
 
 
 class Map(base.Map):

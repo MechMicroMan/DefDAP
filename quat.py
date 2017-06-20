@@ -12,9 +12,9 @@ class Quat(object):
             ph2 = args[2]
 
             self.quatCoef[0] = np.cos(phi / 2.0) * np.cos((ph1 + ph2) / 2.0)
-            self.quatCoef[1] = np.sin(phi / 2.0) * np.cos((ph1 - ph2) / 2.0)
-            self.quatCoef[2] = np.sin(phi / 2.0) * np.sin((ph1 - ph2) / 2.0)
-            self.quatCoef[3] = np.cos(phi / 2.0) * np.sin((ph1 + ph2) / 2.0)
+            self.quatCoef[1] = -np.sin(phi / 2.0) * np.cos((ph1 - ph2) / 2.0)
+            self.quatCoef[2] = -np.sin(phi / 2.0) * np.sin((ph1 - ph2) / 2.0)
+            self.quatCoef[3] = -np.cos(phi / 2.0) * np.sin((ph1 + ph2) / 2.0)
         # construt with array of quat coefficients
         elif len(args) == 1:
             self.quatCoef = args[0]
@@ -31,27 +31,40 @@ class Quat(object):
     def eulerAngles(self):
         # See Melcher, a. Unser, A. Reichhardt, M. Nestler, B. Conversion of EBSD data by a
         # quaternion based algorithm to be used for grain structure simulations
+        # or
+        # Rowenhorst, D et al. Consistent representations of and conversions between 3D rotations
 
         eulers = np.empty(3, dtype=float)
 
-        chi = np.sqrt((self.quatCoef[0]**2 + self.quatCoef[3]**2) * (self.quatCoef[1]**2 + self.quatCoef[2]**2))
+        q03 = self.quatCoef[0]**2 + self.quatCoef[3]**2
+        q12 = self.quatCoef[1]**2 + self.quatCoef[2]**2
+        chi = np.sqrt(q03 * q12)
 
-        cosPh1 = (self.quatCoef[0] * self.quatCoef[1] - self.quatCoef[2] * self.quatCoef[3]) / (2 * chi)
-        sinPh1 = (self.quatCoef[0] * self.quatCoef[2] + self.quatCoef[1] * self.quatCoef[3]) / (2 * chi)
+        if (chi == 0 and q12 == 0):
+            eulers[0] = np.arctan2(-2 * self.quatCoef[0] * self.quatCoef[3],
+                                   self.quatCoef[0]**2 - self.quatCoef[3]**2)
+            eulers[1] = 0
+            eulers[2] = 0
 
-        cosPhi = self.quatCoef[0]**2 + self.quatCoef[3]**2 - self.quatCoef[1]**2 - self.quatCoef[2]**2
-        sinPhi = 2 * chi
+        elif (chi == 0 and q03 == 0):
+            eulers[0] = np.arctan2(2 * self.quatCoef[1] * self.quatCoef[2],
+                                   self.quatCoef[1]**2 - self.quatCoef[2]**2)
+            eulers[1] = np.pi
+            eulers[2] = 0
 
-        cosPh2 = (self.quatCoef[0] * self.quatCoef[1] + self.quatCoef[2] * self.quatCoef[3]) / (2 * chi)
-        sinPh2 = (self.quatCoef[1] * self.quatCoef[3] - self.quatCoef[0] * self.quatCoef[2]) / (2 * chi)
+        else:
+            cosPh1 = (-self.quatCoef[0] * self.quatCoef[1] - self.quatCoef[2] * self.quatCoef[3]) / chi
+            sinPh1 = (-self.quatCoef[0] * self.quatCoef[2] + self.quatCoef[1] * self.quatCoef[3]) / chi
 
-        # eulers[0] = np.arctan(sinPh1/cosPh1)
-        # eulers[1] = np.arctan(sinPhi/cosPhi)
-        # eulers[2] = np.arctan(sinPh2/cosPh2)
+            cosPhi = self.quatCoef[0]**2 + self.quatCoef[3]**2 - self.quatCoef[1]**2 - self.quatCoef[2]**2
+            sinPhi = 2 * chi
 
-        eulers[0] = np.arctan2(sinPh1, cosPh1)
-        eulers[1] = np.arctan2(sinPhi, cosPhi)
-        eulers[2] = np.arctan2(sinPh2, cosPh2)
+            cosPh2 = (-self.quatCoef[0] * self.quatCoef[1] + self.quatCoef[2] * self.quatCoef[3]) / chi
+            sinPh2 = (self.quatCoef[1] * self.quatCoef[3] + self.quatCoef[0] * self.quatCoef[2]) / chi
+
+            eulers[0] = np.arctan2(sinPh1, cosPh1)
+            eulers[1] = np.arctan2(sinPhi, cosPhi)
+            eulers[2] = np.arctan2(sinPh2, cosPh2)
 
         if eulers[0] < 0:
             eulers[0] += 2 * np.pi
@@ -130,9 +143,10 @@ class Quat(object):
         Returns:
             numpy.ndarray: Transformed vector
         """
+
         if isinstance(vector, np.ndarray) and vector.shape == (3,):
             vectorQuat = Quat(0, vector[0], vector[1], vector[2])
-            vectorQuatTransformed = (self.conjugate * vectorQuat) * self
+            vectorQuatTransformed = (self * vectorQuat) * self.conjugate
             vectorTransformed = vectorQuatTransformed.quatCoef[1:4]
             return vectorTransformed
 
@@ -142,7 +156,7 @@ class Quat(object):
         if isinstance(right, type(self)):
             minMisOri = 0   # actually looking for max of this as it is cos of misoriention angle
             for sym in Quat.symEqv(symGroup):   # loop over symmetrically equivelent orienations
-                quatSym = right * sym
+                quatSym = sym * right
                 currentMisOri = abs(self.dot(quatSym))
                 if currentMisOri > minMisOri:   # keep if misorientation lower
                     minMisOri = currentMisOri
@@ -167,16 +181,17 @@ class Quat(object):
 
         # calculate symmetrical equivalents
         for i, sym in enumerate(syms[1:], start=1):
-            # quat * sym[i] for all points (* is quaternion product)
+            # sym[i] * quat for all points (* is quaternion product)
             quatComps[i, 0, :] = (quatComps[0, 0, :] * sym[0] - quatComps[0, 1, :] * sym[1] -
                                   quatComps[0, 2, :] * sym[2] - quatComps[0, 3, :] * sym[3])
-            quatComps[i, 1, :] = (quatComps[0, 0, :] * sym[1] + quatComps[0, 1, :] * sym[0] +
-                                  quatComps[0, 2, :] * sym[3] - quatComps[0, 3, :] * sym[2])
-            quatComps[i, 2, :] = (quatComps[0, 0, :] * sym[2] + quatComps[0, 2, :] * sym[0] +
-                                  quatComps[0, 3, :] * sym[1] - quatComps[0, 1, :] * sym[3])
-            quatComps[i, 3, :] = (quatComps[0, 0, :] * sym[3] + quatComps[0, 3, :] * sym[0] +
-                                  quatComps[0, 1, :] * sym[2] - quatComps[0, 2, :] * sym[1])
+            quatComps[i, 1, :] = (quatComps[0, 0, :] * sym[1] + quatComps[0, 1, :] * sym[0] -
+                                  quatComps[0, 2, :] * sym[3] + quatComps[0, 3, :] * sym[2])
+            quatComps[i, 2, :] = (quatComps[0, 0, :] * sym[2] + quatComps[0, 2, :] * sym[0] -
+                                  quatComps[0, 3, :] * sym[1] + quatComps[0, 1, :] * sym[3])
+            quatComps[i, 3, :] = (quatComps[0, 0, :] * sym[3] + quatComps[0, 3, :] * sym[0] -
+                                  quatComps[0, 1, :] * sym[2] + quatComps[0, 2, :] * sym[1])
 
+            # swap into positve hemisphere if required
             quatComps[i, :, quatComps[i, 0, :] < 0] = -quatComps[i, :, quatComps[i, 0, :] < 0]
 
         return quatComps
