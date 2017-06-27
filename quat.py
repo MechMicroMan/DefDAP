@@ -33,34 +33,36 @@ class Quat(object):
         # quaternion based algorithm to be used for grain structure simulations
         # or
         # Rowenhorst, D et al. Consistent representations of and conversions between 3D rotations
+        # P = +1
 
         eulers = np.empty(3, dtype=float)
 
-        q03 = self.quatCoef[0]**2 + self.quatCoef[3]**2
-        q12 = self.quatCoef[1]**2 + self.quatCoef[2]**2
+        q = self.quatCoef
+        q03 = q[0]**2 + q[3]**2
+        q12 = q[1]**2 + q[2]**2
         chi = np.sqrt(q03 * q12)
 
         if (chi == 0 and q12 == 0):
-            eulers[0] = np.arctan2(-2 * self.quatCoef[0] * self.quatCoef[3],
-                                   self.quatCoef[0]**2 - self.quatCoef[3]**2)
+            eulers[0] = np.arctan2(-2 * q[0] * q[3],
+                                   q[0]**2 - q[3]**2)
             eulers[1] = 0
             eulers[2] = 0
 
         elif (chi == 0 and q03 == 0):
-            eulers[0] = np.arctan2(2 * self.quatCoef[1] * self.quatCoef[2],
-                                   self.quatCoef[1]**2 - self.quatCoef[2]**2)
+            eulers[0] = np.arctan2(2 * q[1] * q[2],
+                                   q[1]**2 - q[2]**2)
             eulers[1] = np.pi
             eulers[2] = 0
 
         else:
-            cosPh1 = (-self.quatCoef[0] * self.quatCoef[1] - self.quatCoef[2] * self.quatCoef[3]) / chi
-            sinPh1 = (-self.quatCoef[0] * self.quatCoef[2] + self.quatCoef[1] * self.quatCoef[3]) / chi
+            cosPh1 = (-q[0] * q[1] - q[2] * q[3]) / chi
+            sinPh1 = (-q[0] * q[2] + q[1] * q[3]) / chi
 
-            cosPhi = self.quatCoef[0]**2 + self.quatCoef[3]**2 - self.quatCoef[1]**2 - self.quatCoef[2]**2
+            cosPhi = q[0]**2 + q[3]**2 - q[1]**2 - q[2]**2
             sinPhi = 2 * chi
 
-            cosPh2 = (-self.quatCoef[0] * self.quatCoef[1] + self.quatCoef[2] * self.quatCoef[3]) / chi
-            sinPh2 = (self.quatCoef[1] * self.quatCoef[3] + self.quatCoef[0] * self.quatCoef[2]) / chi
+            cosPh2 = (-q[0] * q[1] + q[2] * q[3]) / chi
+            sinPh2 = (q[1] * q[3] + q[0] * q[2]) / chi
 
             eulers[0] = np.arctan2(sinPh1, cosPh1)
             eulers[1] = np.arctan2(sinPhi, cosPhi)
@@ -72,6 +74,26 @@ class Quat(object):
             eulers[2] += 2 * np.pi
 
         return eulers
+
+    def rotMatrix(self):
+        rotMatrix = np.empty((3, 3), dtype=float)
+
+        q = self.quatCoef
+        qbar = q[0]**2 - q[1]**2 - q[2]**2 - q[3]**2
+
+        rotMatrix[0, 0] = qbar + 2 * q[1]**2
+        rotMatrix[0, 1] = 2 * (q[1] * q[2] - q[0] * q[3])
+        rotMatrix[0, 2] = 2 * (q[1] * q[3] + q[0] * q[2])
+
+        rotMatrix[1, 0] = 2 * (q[1] * q[2] + q[0] * q[3])
+        rotMatrix[1, 1] = qbar + 2 * q[2]**2
+        rotMatrix[1, 2] = 2 * (q[2] * q[3] - q[0] * q[1])
+
+        rotMatrix[2, 0] = 2 * (q[1] * q[3] - q[0] * q[2])
+        rotMatrix[2, 1] = 2 * (q[2] * q[3] + q[0] * q[1])
+        rotMatrix[2, 2] = qbar + 2 * q[3]**2
+
+        return rotMatrix
 
     # show components when the quat is printed
     def __repr__(self):
@@ -236,32 +258,33 @@ class Quat(object):
 
     @staticmethod
     def symEqv(group):
+        overRoot2 = np.sqrt(2) / 2
         qsym = []
         qsym.append(Quat(np.array([1.0, 0.0, 0.0, 0.0])))
 
         # from Pete Bate's fspl_orir.f90 code
         # cubic tetrads(100)
-        qsym.append(Quat(np.array([0.7071068, 0.7071068, 0.0, 0.0])))
+        qsym.append(Quat(np.array([overRoot2, overRoot2, 0.0, 0.0])))
         qsym.append(Quat(np.array([0.0, 1.0, 0.0, 0.0])))
-        qsym.append(Quat(np.array([0.7071068, -0.7071068, 0.0, 0.0])))
+        qsym.append(Quat(np.array([overRoot2, -overRoot2, 0.0, 0.0])))
 
-        qsym.append(Quat(np.array([0.7071068, 0.0, 0.7071068, 0.0])))
+        qsym.append(Quat(np.array([overRoot2, 0.0, overRoot2, 0.0])))
         qsym.append(Quat(np.array([0.0, 0.0, 1.0, 0.0])))
-        qsym.append(Quat(np.array([0.7071068, 0.0, -0.7071068, 0.0])))
+        qsym.append(Quat(np.array([overRoot2, 0.0, -overRoot2, 0.0])))
 
-        qsym.append(Quat(np.array([0.7071068, 0.0, 0.0, 0.7071068])))
+        qsym.append(Quat(np.array([overRoot2, 0.0, 0.0, overRoot2])))
         qsym.append(Quat(np.array([0.0, 0.0, 0.0, 1.0])))
-        qsym.append(Quat(np.array([0.7071068, 0.0, 0.0, -0.7071068])))
+        qsym.append(Quat(np.array([overRoot2, 0.0, 0.0, -overRoot2])))
 
         # cubic dyads (110)
-        qsym.append(Quat(np.array([0.0, 0.7071068, 0.7071068, 0.0])))
-        qsym.append(Quat(np.array([0.0, -0.7071068, 0.7071068, 0.0])))
+        qsym.append(Quat(np.array([0.0, overRoot2, overRoot2, 0.0])))
+        qsym.append(Quat(np.array([0.0, -overRoot2, overRoot2, 0.0])))
 
-        qsym.append(Quat(np.array([0.0, 0.7071068, 0.0, 0.7071068])))
-        qsym.append(Quat(np.array([0.0, -0.7071068, 0.0, 0.7071068])))
+        qsym.append(Quat(np.array([0.0, overRoot2, 0.0, overRoot2])))
+        qsym.append(Quat(np.array([0.0, -overRoot2, 0.0, overRoot2])))
 
-        qsym.append(Quat(np.array([0.0, 0.0, 0.7071068, 0.7071068])))
-        qsym.append(Quat(np.array([0.0, 0.0, -0.7071068, 0.7071068])))
+        qsym.append(Quat(np.array([0.0, 0.0, overRoot2, overRoot2])))
+        qsym.append(Quat(np.array([0.0, 0.0, -overRoot2, overRoot2])))
 
         # cubic triads (111)
         qsym.append(Quat(np.array([0.5, 0.5, 0.5, 0.5])))

@@ -5,8 +5,8 @@ from matplotlib.widgets import Button
 
 import copy
 
-from quat import Quat
-import base
+from .quat import Quat
+from . import base
 
 
 class Map(base.Map):

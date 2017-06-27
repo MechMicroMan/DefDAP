@@ -9,7 +9,7 @@ from scipy.stats import mode
 
 import peakutils
 
-import base
+from . import base
 
 
 class Map(base.Map):
