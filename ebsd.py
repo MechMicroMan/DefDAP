@@ -3,9 +3,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
-# import parallel module. comment out if not using parallel
-import ipyparallel as ipp
-
 import copy
 
 from .quat import Quat
@@ -30,7 +27,6 @@ class Map(base.Map):
         origin (tuple): Description
         plotDefault (TYPE): Description
         quatArray (TYPE): Description
-        selPoint (TYPE): Description
         slipSystems (TYPE): Description
         stepSize (TYPE): Description
         xDim (int): x dimension of map
@@ -212,7 +208,7 @@ class Map(base.Map):
         syms = Quat.symEqv(self.crystalSym)
         numSyms = len(syms)
 
-        # array to store quat components or initial and symmetric equivalents
+        # array to store quat components of initial and symmetric equivalents
         quatComps = np.empty((numSyms, 4, self.yDim, self.xDim))
 
         # populate with initial quat components
@@ -223,16 +219,17 @@ class Map(base.Map):
         # loop of over symmetries and apply to initial quat components
         # (excluding first symmetry as this is the identity transformation)
         for i, sym in enumerate(syms[1:], start=1):
-            # quat * sym[i] for all points (* is quaternion product)
+            # sym[i] * quat for all points (* is quaternion product)
             quatComps[i, 0, :, :] = (quatComps[0, 0, :, :] * sym[0] - quatComps[0, 1, :, :] * sym[1] -
                                      quatComps[0, 2, :, :] * sym[2] - quatComps[0, 3, :, :] * sym[3])
-            quatComps[i, 1, :, :] = (quatComps[0, 0, :, :] * sym[1] + quatComps[0, 1, :, :] * sym[0] +
-                                     quatComps[0, 2, :, :] * sym[3] - quatComps[0, 3, :, :] * sym[2])
-            quatComps[i, 2, :, :] = (quatComps[0, 0, :, :] * sym[2] + quatComps[0, 2, :, :] * sym[0] +
-                                     quatComps[0, 3, :, :] * sym[1] - quatComps[0, 1, :, :] * sym[3])
-            quatComps[i, 3, :, :] = (quatComps[0, 0, :, :] * sym[3] + quatComps[0, 3, :, :] * sym[0] +
-                                     quatComps[0, 1, :, :] * sym[2] - quatComps[0, 2, :, :] * sym[1])
+            quatComps[i, 1, :, :] = (quatComps[0, 0, :, :] * sym[1] + quatComps[0, 1, :, :] * sym[0] -
+                                     quatComps[0, 2, :, :] * sym[3] + quatComps[0, 3, :, :] * sym[2])
+            quatComps[i, 2, :, :] = (quatComps[0, 0, :, :] * sym[2] + quatComps[0, 2, :, :] * sym[0] -
+                                     quatComps[0, 3, :, :] * sym[1] + quatComps[0, 1, :, :] * sym[3])
+            quatComps[i, 3, :, :] = (quatComps[0, 0, :, :] * sym[3] + quatComps[0, 3, :, :] * sym[0] -
+                                     quatComps[0, 1, :, :] * sym[2] + quatComps[0, 2, :, :] * sym[1])
 
+            # swap into positve hemisphere if required
             quatComps[i, :, quatComps[i, 0, :, :] < 0] = -quatComps[i, :, quatComps[i, 0, :, :] < 0]
 
         # Arrays to store neigbour misorientation in positive x and y direction
@@ -267,37 +264,6 @@ class Map(base.Map):
                     self.boundaries[j, i] = -1
 
         return
-
-        # self.misOx = np.zeros((self.yDim, self.xDim))
-        # self.misOy = np.zeros((self.yDim, self.xDim))
-        # self.boundaries = np.zeros((self.yDim, self.xDim), dtype=int)
-
-        # # sweep in positive x and y dirs calculating misorientation with neighbour
-        # # if > boundDef then mark as a grain boundary
-        # for i in range(self.xDim):
-        #     for j in range(self.yDim - 1):
-        #         aux = abs(self.quatArray[j, i].dot(self.quatArray[j + 1, i]))
-        #         if aux > 1:
-        #             aux = 1
-
-        #         self.misOx[j, i] = 360 * np.arccos(aux) / np.pi
-
-        #         if self.misOx[j, i] > boundDef:
-        #             self.misOx[j, i] = 0.0
-        #             self.boundaries[j, i] = -1
-
-        # for i in range(self.xDim - 1):
-        #     for j in range(self.yDim):
-        #         aux = abs(self.quatArray[j, i].dot(self.quatArray[j, i + 1]))
-        #         if aux > 1:
-        #             aux = 1
-
-        #         self.misOy[j, i] = 360 * np.arccos(aux) / np.pi
-
-        #         if self.misOy[j, i] > boundDef:
-        #             self.misOy[j, i] = 0.0
-        #             self.boundaries[j, i] = -1
-        # return
 
     def plotBoundaryMap(self):
         plt.figure()
@@ -416,37 +382,14 @@ class Map(base.Map):
             grain.calcAverageOri()
         return
 
-    def calcGrainMisOri(self, calcAxis=False, parallel=False):
-        if parallel:
-            paraClient = ipp.Client()
-
-            # create a load balanced view
-            # lview = paraClient.load_balanced_view()
-            # lview.block = True
-
-            # create a direct view
-            dview = paraClient[:]
-
-            # calculate misorientaion on grains then reasign grain list with new grains from calculation
-            grainData = dview.map_sync(
-                lambda grain:
-                    grain.buildMisOriList(calcAxis=calcAxis, parallel=True), self.grainList)
-
-            # unpack returned data
-            if calcAxis:
-                for grain, grainDat in zip(self.grainList, grainData):
-                    grain.refOri, grain.misOriList, grain.averageMisOri, grain.misOriAxisList = grainDat
-            else:
-                for grain, grainDat in zip(self.grainList, grainData):
-                    grain.refOri, grain.misOriList, grain.averageMisOri = grainDat
-
-        else:
-            for grain in self.grainList:
-                grain.buildMisOriList(calcAxis=calcAxis)
+    def calcGrainMisOri(self, calcAxis=False):
+        for grain in self.grainList:
+            grain.buildMisOriList(calcAxis=calcAxis)
 
         return
 
-    def plotMisOriMap(self, component=0, plotGBs=False, vmin=None, vmax=None, cmap="viridis", cBarLabel="ROD (degrees)"):
+    def plotMisOriMap(self, component=0, plotGBs=False, vmin=None, vmax=None,
+                      cmap="viridis", cBarLabel="ROD (degrees)"):
         self.misOri = np.ones([self.yDim, self.xDim])
 
         plt.figure()
@@ -463,7 +406,8 @@ class Map(base.Map):
                 for coord, misOri in zip(grain.coordList, grain.misOriList):
                     self.misOri[coord[1], coord[0]] = misOri
 
-            plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='None', vmin=vmin, vmax=vmax, cmap=cmap)
+            plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='None',
+                       vmin=vmin, vmax=vmax, cmap=cmap)
 
         plt.colorbar(label=cBarLabel)
 
@@ -483,25 +427,9 @@ class Map(base.Map):
             for grain in self.grainList:
                 grain.slipSystems = self.slipSystems
 
-    def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None, parallel=False):
-        if parallel:
-            paraClient = ipp.Client()
-
-            # create a direct view
-            dview = paraClient[:]
-
-            # calculate misorientaion on grains then reasign grain list with new grains from calculation
-            grainData = dview.map_sync(
-                lambda grain:
-                    grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems, parallel=True), self.grainList)
-
-            # unpack returned data
-            for grain, grainDat in zip(self.grainList, grainData):
-                grain.refOri, grain.averageSchmidFactors = grainDat
-
-        else:
-            for grain in self.grainList:
-                grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
+    def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
+        for grain in self.grainList:
+            grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
 
     def plotAverageGrainSchmidFactorsMap(self, plotGBs=True):
         self.averageSchmidFactor = np.zeros([self.yDim, self.xDim])
@@ -542,23 +470,13 @@ class Grain(object):
         self.refOri = None                      # (quat) average ori of grain
         self.averageMisOri = None               # average misOri of grain
 
-        self.averageSchmidFactors = None        # list of list Schmid factors for each systems (grouped by slip plane)
+        self.averageSchmidFactors = None        # list of list Schmid factors (grouped by slip plane)
         self.slipTraces = None                  # list of slip traces
 
         return
 
     def __len__(self):
         return len(self.quatList)
-
-    # Define what to pickel to improve parallel performance
-    def __getstate__(self):
-        varDict = {
-            "crystalSym": self.crystalSym,
-            "slipSystems": self.slipSystems,
-            "quatList": self.quatList,
-            "refOri": self.refOri
-        }
-        return varDict
 
     # quat is a quaterion and coord is a tuple (x, y)
     def addPoint(self, quat, coord):
@@ -580,7 +498,7 @@ class Grain(object):
         # self.refOri.normalise()
         return
 
-    def buildMisOriList(self, calcAxis=False, parallel=False):
+    def buildMisOriList(self, calcAxis=False):
         quatCompsSym = Quat.calcSymEqvs(self.quatList, self.crystalSym)
 
         if self.refOri is None:
@@ -599,14 +517,18 @@ class Grain(object):
             Dq = np.empty((4, minQuatComps.shape[1]))
 
             # refOriInv * minQuat for all points (* is quaternion product)
+            # change to minQuat * refOriInv
             Dq[0, :] = (refOriInv[0] * minQuatComps[0, :] - refOriInv[1] * minQuatComps[1, :] -
                         refOriInv[2] * minQuatComps[2, :] - refOriInv[3] * minQuatComps[3, :])
-            Dq[1, :] = (refOriInv[0] * minQuatComps[1, :] + refOriInv[1] * minQuatComps[0, :] +
-                        refOriInv[2] * minQuatComps[3, :] - refOriInv[3] * minQuatComps[2, :])
-            Dq[2, :] = (refOriInv[0] * minQuatComps[2, :] + refOriInv[2] * minQuatComps[0, :] +
-                        refOriInv[3] * minQuatComps[1, :] - refOriInv[1] * minQuatComps[3, :])
-            Dq[3, :] = (refOriInv[0] * minQuatComps[3, :] + refOriInv[3] * minQuatComps[0, :] +
-                        refOriInv[1] * minQuatComps[2, :] - refOriInv[2] * minQuatComps[1, :])
+
+            Dq[1, :] = (refOriInv[1] * minQuatComps[1, :] + refOriInv[0] * minQuatComps[1, :] +
+                        refOriInv[3] * minQuatComps[2, :] - refOriInv[2] * minQuatComps[3, :])
+
+            Dq[2, :] = (refOriInv[2] * minQuatComps[0, :] + refOriInv[0] * minQuatComps[2, :] +
+                        refOriInv[1] * minQuatComps[3, :] - refOriInv[3] * minQuatComps[1, :])
+
+            Dq[3, :] = (refOriInv[3] * minQuatComps[0, :] + refOriInv[0] * minQuatComps[3, :] +
+                        refOriInv[2] * minQuatComps[1, :] - refOriInv[1] * minQuatComps[2, :])
 
             Dq[:, Dq[0] < 0] = -Dq[:, Dq[0] < 0]
 
@@ -624,6 +546,8 @@ class Grain(object):
             self.misOriAxisList = []
             for row in misOriAxis.transpose():
                 self.misOriAxisList.append(row)
+
+        return
 
         # if self.refOri is None:
         #     self.calcAverageOri()
@@ -656,12 +580,6 @@ class Grain(object):
         # self.averageMisOri = misOriArray.mean()
         # self.misOriList = list(misOriArray)
 
-        if parallel:
-            if calcAxis:
-                return self.refOri, self.misOriList, self.averageMisOri, self.misOriAxisList
-            else:
-                return self.refOri, self.misOriList, self.averageMisOri
-
     @property
     def extremeCoords(self):
         unzippedCoordlist = list(zip(*self.coordList))
@@ -688,6 +606,12 @@ class Grain(object):
         plt.colorbar()
 
         return
+
+    def plotRefOri(self, direction=np.array([0, 0, 1]), marker='+'):
+        Quat.plotIPF([self.refOri], direction, self.crystalSym, marker=marker)
+
+    def plotOriSpread(self, direction=np.array([0, 0, 1]), marker='.'):
+        Quat.plotIPF(self.quatList, direction, self.crystalSym, marker=marker)
 
     # component
     # 0 = misOri
@@ -755,7 +679,7 @@ class Grain(object):
         return
 
     # define load axis as unit vector
-    def calcAverageSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None, parallel=False):
+    def calcAverageSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
         if slipSystems is None:
             slipSystems = self.slipSystems
         if self.refOri is None:
@@ -780,13 +704,16 @@ class Grain(object):
                                    np.dot(loadVectorCrystal, slipSystem.slipDir))
                 self.averageSchmidFactors[i].append(schmidFactor)
 
+        return
+
         # This was to check consistancy with Channel5. Channel5 calculates Schmid factor taking into
         # account symmetry, so max of all slip systems of a certain type is returned.
         # Calculate with symmetries
         # schmidFactors = np.zeros((len(Quat.symEqv(self.crystalSym)), len(slipSystems)))
 
         # # calculated Schmid factor of average ori with all slip systems
-        # for i, sym in enumerate(Quat.symEqv(self.crystalSym)):   # loop over symmetrically equivelent orienations
+        # # loop over symmetrically equivelent orienations
+        # for i, sym in enumerate(Quat.symEqv(self.crystalSym)):
         #     quatSym = grainAvOri * sym
         #     loadVectorCrystal = quatSym.transformVector(loadVector)
 
@@ -796,10 +723,6 @@ class Grain(object):
         #                                   np.dot(loadVectorCrystal, slipSystem.slipDir))
 
         # self.averageSchmidFactors = list(schmidFactors.max(axis=0))
-
-        # For paraellel return data from worker core to master to reassemble into master copy of grains
-        if parallel:
-            return self.refOri, self.averageSchmidFactors
 
     def calcSlipTraces(self, slipSystems=None):
         if slipSystems is None:

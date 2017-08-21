@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
 
 from skimage import transform as tf
 from skimage import morphology as mph
@@ -10,7 +9,6 @@ from scipy.stats import mode
 
 import peakutils
 
-from .quat import Quat
 from . import base
 
 
@@ -486,7 +484,7 @@ class Grain(object):
         if plotShearBands:
             grainMaxShear = np.nan_to_num(grainMaxShear)
 
-            sin_map = tf.radon(grainMaxShear)
+            sin_map = tf.radon(grainMaxShear, circle=False)
             profile = np.max(sin_map, axis=0)
 
             x = np.arange(180)
