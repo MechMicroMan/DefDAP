@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 # be careful with deep and shallow copies
@@ -255,6 +256,144 @@ class Quat(object):
         minMisOris[minMisOris > 1] = 1
 
         return minMisOris, minQuatComps
+
+    @staticmethod
+    def stereoProject(x, y, z, returnAngles=False):
+        mod = np.sqrt(x**2 + y**2 + z**2)
+        x = x / mod
+        y = y / mod
+        z = z / mod
+
+        alpha = np.arccos(z)
+        beta = np.arctan2(y, x)
+
+        xp = np.tan(alpha / 2) * np.sin(beta)
+        yp = -np.tan(alpha / 2) * np.cos(beta)
+
+        return xp, yp
+
+    @staticmethod
+    def plotPoleAxis(plotType, symGroup):
+        if plotType == "IPF" and symGroup == "cubic":
+            res = 100
+            s = np.linspace(0, 1, res)
+            t = np.linspace(0, -1, res)
+
+            # line between [001] and [-111]
+            xp, yp = Quat.stereoProject(t, s, np.ones(res))
+            plt.plot(xp, yp, 'k', lw=2)
+            plt.text(xp[0], yp[0] - 0.005, '001', va='top', ha='center')
+
+            # line between [001] and [011]
+            xp, yp = Quat.stereoProject(np.zeros(res), s, np.ones(res))
+            plt.plot(xp, yp, 'k', lw=2)
+            plt.text(xp[res - 1], yp[res - 1] - 0.005, '011', va='top', ha='center')
+
+            # line between [011] and [-111]
+            xp, yp = Quat.stereoProject(t, np.ones(res), np.ones(res))
+            plt.plot(xp, yp, 'k', lw=2)
+            plt.text(xp[res - 1], yp[res - 1] + 0.005, '-111', va='bottom', ha='center')
+
+            plt.axis('equal')
+            plt.axis('off')
+
+        elif plotType == "PF":
+            return
+
+    @staticmethod
+    def plotIPF(quats, direction, symGroup, **kwargs):
+        plotParams = {'marker': '+', 'c': 'r'}
+        plotParams.update(kwargs)
+
+        if symGroup == "hexagonal":
+            raise(Exception("Have fun with that"))
+
+        # Plot IPF axis
+        plt.figure()
+        Quat.plotPoleAxis("IPF", symGroup)
+
+        # get array of symmetry operations. shape - (numSym, 4, numQuats)
+        quatCompsSym = Quat.calcSymEqvs(quats, symGroup)
+
+        # array to store crytal directions for all orientations and symmetries
+        directionCrystal = np.empty((3, quatCompsSym.shape[0], quatCompsSym.shape[2]))
+
+        # temp variables to use bleow
+        quatDotVec = (quatCompsSym[:, 1, :] * direction[0] +
+                      quatCompsSym[:, 2, :] * direction[1] +
+                      quatCompsSym[:, 3, :] * direction[2])
+        temp = (np.square(quatCompsSym[:, 0, :]) - np.square(quatCompsSym[:, 1, :]) -
+                np.square(quatCompsSym[:, 2, :]) - np.square(quatCompsSym[:, 3, :]))
+
+        # transform the pole direction to crystal coords for all orientations and symmetries
+        # (quatCompsSym * vectorQuat) * quatCompsSym.conjugate
+        directionCrystal[0, :, :] = (2 * quatDotVec * quatCompsSym[:, 1, :] +
+                                     temp * direction[0] +
+                                     2 * quatCompsSym[:, 0, :] * (quatCompsSym[:, 2, :] * direction[2] -
+                                                                  quatCompsSym[:, 3, :] * direction[1]))
+        directionCrystal[1, :, :] = (2 * quatDotVec * quatCompsSym[:, 2, :] +
+                                     temp * direction[1] +
+                                     2 * quatCompsSym[:, 0, :] * (quatCompsSym[:, 3, :] * direction[0] -
+                                                                  quatCompsSym[:, 1, :] * direction[2]))
+        directionCrystal[2, :, :] = (2 * quatDotVec * quatCompsSym[:, 3, :] +
+                                     temp * direction[2] +
+                                     2 * quatCompsSym[:, 0, :] * (quatCompsSym[:, 1, :] * direction[1] -
+                                                                  quatCompsSym[:, 2, :] * direction[0]))
+
+        # normalise vectors
+        directionCrystal /= np.sqrt(np.einsum('ijk,ijk->jk', directionCrystal, directionCrystal))
+
+        # move all vectors into north hemisphere
+        directionCrystal[:, directionCrystal[2, :, :] < 0] *= -1
+
+        # convert to spherical coordinates
+        PFCoordsSph = np.empty((2, quatCompsSym.shape[0], quatCompsSym.shape[2]))
+        PFCoordsSph[0, :, :] = np.arccos(directionCrystal[2, :, :])  # alpha - angle with z axis
+        PFCoordsSph[1, :, :] = np.arctan2(directionCrystal[1, :, :], directionCrystal[0, :, :])  # beta - angle around z axis
+
+        # find the poles in the fundamental triangle
+        if symGroup == "cubic":
+            # first beta should be between 0 and 45 deg leaving 3 symmetric equivalents per orientation
+            trialPoles = np.logical_and(PFCoordsSph[1, :, :] >= 0,
+                                        PFCoordsSph[1, :, :] <= np.pi / 4)
+
+            # if less than 3 left need to expand search slighly to catch edge cases
+            if np.sum(np.sum(trialPoles, axis=0) < 3) > 0:
+                deltaBeta = 1e-8
+                trialPoles = np.logical_and(PFCoordsSph[1, :, :] >= 0 - deltaBeta,
+                                            PFCoordsSph[1, :, :] <= np.pi / 4 + deltaBeta)
+
+            # create array to store final projected coordinates
+            PFCoordsPjt = np.empty((2, quatCompsSym.shape[2]))
+
+            # now of symmetric equivalents left we want the one with minimum beta
+            # loop over different orientations
+            for i in range(trialPoles.shape[1]):
+                # create array of indexes of poles kept in previous step
+                trialPoleIdxs = np.arange(trialPoles.shape[0])[trialPoles[:, i]]
+
+                # find pole with minimum beta of those kept in previous step
+                # then use trialPoleIdxs to get its index in original arrays
+                poleIdx = trialPoleIdxs[np.argmin(PFCoordsSph[0, trialPoles[:, i], i])]
+
+                # add to final array of poles
+                PFCoordsPjt[:, i] = PFCoordsSph[:, poleIdx, i]
+
+        # project onto equatorial plane
+        temp = np.tan(PFCoordsPjt[0, :] / 2)
+        PFCoordsPjt[0, :] = temp * np.cos(PFCoordsPjt[1, :])
+        PFCoordsPjt[1, :] = temp * np.sin(PFCoordsPjt[1, :])
+
+        # plot poles
+        plt.scatter(PFCoordsPjt[0, :], PFCoordsPjt[1, :], **plotParams)
+
+        # unset variables
+        quatCompsSym = None
+        quatDotVec = None
+        temp = None
+        PFCoordsSph = None
+        PFCoordsPjt = None
+        directionCrystal = None
 
     @staticmethod
     def symEqv(group):

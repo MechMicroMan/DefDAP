@@ -27,7 +27,6 @@ class Map(base.Map):
         origin (tuple): Description
         plotDefault (TYPE): Description
         quatArray (TYPE): Description
-        selPoint (TYPE): Description
         slipSystems (TYPE): Description
         stepSize (TYPE): Description
         xDim (int): x dimension of map
@@ -389,7 +388,8 @@ class Map(base.Map):
 
         return
 
-    def plotMisOriMap(self, component=0, plotGBs=False, vmin=None, vmax=None, cmap="viridis", cBarLabel="ROD (degrees)"):
+    def plotMisOriMap(self, component=0, plotGBs=False, vmin=None, vmax=None,
+                      cmap="viridis", cBarLabel="ROD (degrees)"):
         self.misOri = np.ones([self.yDim, self.xDim])
 
         plt.figure()
@@ -406,7 +406,8 @@ class Map(base.Map):
                 for coord, misOri in zip(grain.coordList, grain.misOriList):
                     self.misOri[coord[1], coord[0]] = misOri
 
-            plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='None', vmin=vmin, vmax=vmax, cmap=cmap)
+            plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='None',
+                       vmin=vmin, vmax=vmax, cmap=cmap)
 
         plt.colorbar(label=cBarLabel)
 
@@ -469,7 +470,7 @@ class Grain(object):
         self.refOri = None                      # (quat) average ori of grain
         self.averageMisOri = None               # average misOri of grain
 
-        self.averageSchmidFactors = None        # list of list Schmid factors for each systems (grouped by slip plane)
+        self.averageSchmidFactors = None        # list of list Schmid factors (grouped by slip plane)
         self.slipTraces = None                  # list of slip traces
 
         return
@@ -606,6 +607,12 @@ class Grain(object):
 
         return
 
+    def plotRefOri(self, direction=np.array([0, 0, 1]), marker='+'):
+        Quat.plotIPF([self.refOri], direction, self.crystalSym, marker=marker)
+
+    def plotOriSpread(self, direction=np.array([0, 0, 1]), marker='.'):
+        Quat.plotIPF(self.quatList, direction, self.crystalSym, marker=marker)
+
     # component
     # 0 = misOri
     # {1-3} = misOri axis {1-3}
@@ -705,7 +712,8 @@ class Grain(object):
         # schmidFactors = np.zeros((len(Quat.symEqv(self.crystalSym)), len(slipSystems)))
 
         # # calculated Schmid factor of average ori with all slip systems
-        # for i, sym in enumerate(Quat.symEqv(self.crystalSym)):   # loop over symmetrically equivelent orienations
+        # # loop over symmetrically equivelent orienations
+        # for i, sym in enumerate(Quat.symEqv(self.crystalSym)):
         #     quatSym = grainAvOri * sym
         #     loadVectorCrystal = quatSym.transformVector(loadVector)
 
