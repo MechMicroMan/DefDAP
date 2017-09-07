@@ -29,6 +29,9 @@ class Quat(object):
         if (self.quatCoef[0] < 0):
             self.quatCoef = self.quatCoef * -1
 
+        # overload static method with instance method of same name
+        self.plotIPF = self._plotIPF
+
     def eulerAngles(self):
         # See Melcher, a. Unser, A. Reichhardt, M. Nestler, B. Conversion of EBSD data by a
         # quaternion based algorithm to be used for grain structure simulations
@@ -102,6 +105,9 @@ class Quat(object):
 
     def __str__(self):
         return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
+
+    def _plotIPF(self, direction, symGroup, **kwargs):
+        Quat.plotIPF([self], direction, symGroup, **kwargs)
 
     # overload * operator for quaterion product and vector product
     def __mul__(self, right):
@@ -386,6 +392,7 @@ class Quat(object):
 
         # plot poles
         plt.scatter(PFCoordsPjt[0, :], PFCoordsPjt[1, :], **plotParams)
+        plt.show()
 
         # unset variables
         quatCompsSym = None
