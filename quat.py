@@ -303,8 +303,8 @@ class Quat(object):
             plt.axis('equal')
             plt.axis('off')
 
-        elif plotType == "PF":
-            return
+        else:
+            print("Only works for cubic")
 
     @staticmethod
     def plotIPF(quats, direction, symGroup, **kwargs):
@@ -354,8 +354,10 @@ class Quat(object):
 
         # convert to spherical coordinates
         PFCoordsSph = np.empty((2, quatCompsSym.shape[0], quatCompsSym.shape[2]))
-        PFCoordsSph[0, :, :] = np.arccos(directionCrystal[2, :, :])  # alpha - angle with z axis
-        PFCoordsSph[1, :, :] = np.arctan2(directionCrystal[1, :, :], directionCrystal[0, :, :])  # beta - angle around z axis
+        # alpha - angle with z axis
+        PFCoordsSph[0, :, :] = np.arccos(directionCrystal[2, :, :])
+        # beta - angle around z axis
+        PFCoordsSph[1, :, :] = np.arctan2(directionCrystal[1, :, :], directionCrystal[0, :, :])
 
         # find the poles in the fundamental triangle
         if symGroup == "cubic":
@@ -384,6 +386,8 @@ class Quat(object):
 
                 # add to final array of poles
                 PFCoordsPjt[:, i] = PFCoordsSph[:, poleIdx, i]
+        else:
+            print("Only works for cubic")
 
         # project onto equatorial plane
         temp = np.tan(PFCoordsPjt[0, :] / 2)
