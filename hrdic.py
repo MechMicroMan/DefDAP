@@ -50,12 +50,14 @@ class Map(base.Map):
         self.xDim = self.xdim
         self.yDim = self.ydim
 
-        self.x_map = self._map(self.xd)  # u (displacement component along x)
-        self.y_map = self._map(self.yd)  # v (displacement component along x)
-        self.f11 = self._grad(self.x_map)[1]  # f11
-        self.f22 = self._grad(self.y_map)[0]  # f22
-        self.f12 = self._grad(self.x_map)[0]  # f12
-        self.f21 = self._grad(self.y_map)[1]  # f21
+        self.x_map = self._map(self.xd)     # u (displacement component along x)
+        self.y_map = self._map(self.yd)     # v (displacement component along x)
+        xDispGrad = self._grad(self.x_map)
+        yDispGrad = self._grad(self.y_map)
+        self.f11 = xDispGrad[1] + 1     # f11
+        self.f22 = yDispGrad[0] + 1     # f22
+        self.f12 = xDispGrad[0]         # f12
+        self.f21 = yDispGrad[1]         # f21
 
         self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
                                  ((self.f12 + self.f21) / 2.)**2)  # max shear component

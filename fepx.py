@@ -139,7 +139,8 @@ class Mesh(object):
             elmtCon = np.genfromtxt(meshFile,
                                     dtype=int,
                                     max_rows=numElmts)
-            self.surfaces.append(Surface(self,
+            self.surfaces.append(Surface(i,
+                                         self,
                                          numElmts,
                                          np.ascontiguousarray(elmtCon[:, 0]),
                                          np.ascontiguousarray(elmtCon[:, 1:])))
@@ -375,12 +376,14 @@ class Mesh(object):
         self.simData['angle'][:, 2, :] *= -1
         self.simData['angle'][:, 2, :] += np.pi / 2
 
-        # construct quat array
-        oriData = np.empty([self.simData['angle'].shape[0], self.simData['angle'].shape[2]], dtype=Quat)
+        oriData = Quat.createManyQuats(np.swapaxes(self.simData['angle'], 0, 1))
 
-        for i in range(self.numFrames + 1):
-            for j, eulers in enumerate(self.simData['angle'][..., i]):
-                oriData[j, i] = Quat(eulers[0], eulers[1], eulers[2])
+        # # construct quat array
+        # oriData = np.empty([self.simData['angle'].shape[0], self.simData['angle'].shape[2]], dtype=Quat)
+
+        # for i in range(self.numFrames + 1):
+        #     for j, eulers in enumerate(self.simData['angle'][..., i]):
+        #         oriData[j, i] = Quat(eulers[0], eulers[1], eulers[2])
 
         self.createSimData("ori", oriData)
 
@@ -461,6 +464,12 @@ class Mesh(object):
                                 "2dmeshd",
                                 "2dmeshv-x", "2dmeshv-y", "2dmeshv-z",
                                 "2dmeshn-x", "2dmeshn-y", "2dmeshn-z"]
+
+    def calcMeshSize(self):
+        maxNodePos = self.nodePos.max(axis=0)
+        minNodePos = self.nodePos.min(axis=0)
+        meshSize = np.abs(maxNodePos - minNodePos)
+        return meshSize
 
     def constructVtkMesh(self):
         """Create VTK mesh using initial (undeformaed) node positions
@@ -575,6 +584,15 @@ class Mesh(object):
         self.simData['maxMisOri'][:, frameNums] = np.arccos(self.simData['maxMisOri'][:, frameNums]) * 360 / np.pi
 
     def calcGrainAverage(self, inDataKey, outDataKey=None):
+        """Calculate grain avergae of elemnet data.
+
+        Args:
+            inDataKey (str): Data key of input data
+            outDataKey (None, optional): Data key to save data to. If none given then the data is returned from the function
+
+        Returns:
+            Array: Grain average data or nothing if outDataKey specified.
+        """
         # validate input data
         self._validateSimDataKey(inDataKey, fieldType="element")
 
@@ -847,7 +865,8 @@ class Mesh(object):
 
 class Surface(object):
 
-    def __init__(self, mesh, numElmts, elmtIDs, elmtCon):
+    def __init__(self, surfNum, mesh, numElmts, elmtIDs, elmtCon):
+        self.surfNum = surfNum          # Number of surface in mesh (0 based)
         self.mesh = mesh
         self.numElmts = numElmts
         self.elmtIDs = elmtIDs          # Mesh global element IDs
@@ -986,6 +1005,13 @@ class Surface(object):
 
         return axes
 
+    def plotStressStrain(self):
+        fileName = "{:s}post.force{:d}".format(self.mesh.dataDir, self.surfNum + 1)
+        forceData = np.loadtxt(fileName, skiprows=2)
+
+
+
+
     def plotGBs(self, surfaceNormal, colour=None, linewidth=None, ax=None):
         lc = LineCollection(self.mesh.nodePos[:, self._2dAxes(surfaceNormal)][self.grainEdges],
                             colors=colour,
@@ -1029,8 +1055,10 @@ class Surface(object):
         # if input fig is provided then update it else create a new one
         if inputFig is None:
             fig, ax = plt.subplots()
+            newAx = True
         else:
             fig, ax, img = inputFig
+            newAx = False
 
         if simMetaData['elmtData'] or simMetaData['grainData']:
             if simMetaData['elmtData']:
@@ -1078,6 +1106,7 @@ class Surface(object):
                 if plotType == "contour":
                     contours = np.linspace(vmin, vmax, 9)
                     img = ax.contourf(gX, gY, gData, contours, cmap=cmap, vmin=vmin, vmax=vmax)
+                    # img = None
                 else:
                     img = ax.imshow(gData.transpose(), origin='lower', cmap=cmap, vmin=vmin, vmax=vmax,
                                     extent=extent, interpolation='nearest')
@@ -1085,7 +1114,12 @@ class Surface(object):
                 fig.colorbar(img, label=label)
             else:
                 if plotType == "contour":
-                    img.set_data(gData)
+                    ax.cla()
+                    contours = np.linspace(vmin, vmax, 9)
+                    img = ax.contourf(gX, gY, gData, contours, cmap=cmap, vmin=vmin, vmax=vmax)
+                    # img = None
+                    fig.colorbar(img, label=label)
+                    newAx = True
                 else:
                     img.set_data(gData.transpose())
 
@@ -1094,7 +1128,7 @@ class Surface(object):
         if plotMesh:
             self.plotMesh(surfaceNormal, ax=ax, colour="white", linewidth=0.2)
 
-        if inputFig is None:
+        if newAx:
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_xlim((extent[0], extent[1]))

@@ -199,6 +199,35 @@ class Quat(object):
                 return minMisOri
         raise TypeError("Input must be a quaternion.")
 
+# Static methods
+
+    @staticmethod
+    def createManyQuats(eulerArray):
+        """Create a an array of quats from an array of Euler angles
+
+        Args:
+            eulerArray (array): Size 3 x n x ... x m
+        """
+        ph1 = eulerArray[0]
+        phi = eulerArray[1]
+        ph2 = eulerArray[2]
+        oriShape = eulerArray.shape[1:]
+
+        quatComps = np.zeros((4,) + oriShape, dtype=float)
+
+        quatComps[0] = np.cos(phi / 2.0) * np.cos((ph1 + ph2) / 2.0)
+        quatComps[1] = -np.sin(phi / 2.0) * np.cos((ph1 - ph2) / 2.0)
+        quatComps[2] = -np.sin(phi / 2.0) * np.sin((ph1 - ph2) / 2.0)
+        quatComps[3] = -np.cos(phi / 2.0) * np.sin((ph1 + ph2) / 2.0)
+
+        quats = np.empty(oriShape, dtype=Quat)
+
+        for idx in np.ndindex(oriShape):
+            quats[idx] = Quat(quatComps[(slice(None),) + idx])
+            # quatComps[(slice(None),) + idx] is equivalent to quatComps[:, idx[0], ..., idx[n]]
+
+        return quats
+
     @staticmethod
     def calcSymEqvs(quats, symGroup):
         syms = Quat.symEqv(symGroup)

@@ -10,6 +10,8 @@ class Map(object):
         self.homogPoints = []
         self.selPoint = None
 
+        self.proxigramArray = None
+
     def __len__(self):
         return len(self.grainList)
 
@@ -169,6 +171,60 @@ class Map(object):
             self.plotDefault(updateCurrent=True, highlightGrains=highlightGrains,
                              highlightColours=highlightColours)
             self.fig.canvas.draw()
+
+    @property
+    def proxigram(self):
+        self.calcProxigram(forceCalc=False)
+
+        return self.proxigramArray
+
+    def calcProxigram(self, numTrials=500, forceCalc=True):
+        if self.proxigramArray is not None and not forceCalc:
+            return
+
+        proxBoundaries = np.copy(self.boundaries)
+
+        # ebsd boundary arrays have extra boundary along right and bottom edge so they need to be removed
+        # rigth edge
+        if np.all(proxBoundaries[:, -1] == -1):
+            proxBoundaries[:, -1] = proxBoundaries[:, -2]
+        # bottom edge
+        if np.all(proxBoundaries[-1, :] == -1):
+            proxBoundaries[-1, :] = proxBoundaries[-2, :]
+
+        # create list of position of each boundary point
+        indexBoundaries = []
+        for index, value in np.ndenumerate(proxBoundaries):
+            if value == -1:
+                indexBoundaries.append(index)
+
+        # array of x and y coordinate of each pixel in the map
+        coords = np.zeros((2, proxBoundaries.shape[0], proxBoundaries.shape[1]))
+        for index, value in np.ndenumerate(proxBoundaries):
+            coords[0, index[0], index[1]] = index[0]
+            coords[1, index[0], index[1]] = index[1]
+
+        # array to store trial distance from each boundary point
+        trialDistances = np.ones((numTrials + 1, proxBoundaries.shape[0], proxBoundaries.shape[1])) * 1000
+
+        # loop over each boundary point (p) and calcuale distance from p to all points in the map
+        # store minimum once numTrails have been made and start a new batch of trials
+        print("Calculating proxigram ", end='')
+        numBoundaryPoints = len(indexBoundaries)
+        j = 1
+        for i, indexBoundary in enumerate(indexBoundaries):
+            trialDistances[j] = np.sqrt((coords[0] - indexBoundary[0])**2 + (coords[1] - indexBoundary[1])**2)
+
+            if j == numTrials:
+                trialDistances[0] = trialDistances.min(axis=0)
+                j = 0
+                print("{:.1f}% ".format(i / numBoundaryPoints * 100), end='')
+            j += 1
+
+        # find final minimum distances to a boundary
+        self.proxigramArray = trialDistances.min(axis=0)
+
+        trialDistances = None
 
 
 class SlipSystem(object):
