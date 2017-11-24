@@ -115,9 +115,13 @@ class Map(base.Map):
         # Call set homog points from base class setting the bin size
         super(Map, self).setHomogPoint(binSize=binSize)
 
-    def linkEbsdMap(self, ebsdMap):
+    def linkEbsdMap(self, ebsdMap, transformType="affine"):
         self.ebsdMap = ebsdMap
-        self.ebsdTransform = tf.AffineTransform()
+        if transformType == "piecewiseAffine":
+            self.ebsdTransform = tf.PiecewiseAffineTransform()
+        else:
+            self.ebsdTransform = tf.AffineTransform()
+
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
@@ -133,7 +137,7 @@ class Map(base.Map):
         # calculate transform from EBSD to DIC frame
         # self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
-        if cropImage:
+        if cropImage or type(self.ebsdTransform) is tf.PiecewiseAffineTransform:
             # crop to size of DIC map
             outputShape = (self.yDim + self.ebsdShift[1], self.xDim + self.ebsdShift[0])
             # warp the map
@@ -156,29 +160,32 @@ class Map(base.Map):
 
     @property
     def boundaries(self):
+        # image is returned cropped if a piecewise transform is being used
         boundaries = self.warpToDicFrame(-self.ebsdMap.boundaries.astype(float), cropImage=False) > 0.1
 
         boundaries = mph.skeletonize(boundaries)
         mph.remove_small_objects(boundaries, min_size=10, in_place=True, connectivity=2)
 
-        # need to apply the translation of ebsd transform and remove 5% border
-        crop = np.copy(self.ebsdTransform.params[0:2, 2])
-        crop += 0.05 * np.array(self.ebsdMap.boundaries.shape)
-        # the crop is defined in EBSD coords so need to transform it
-        transformMatrix = np.copy(self.ebsdTransform.params[0:2, 0:2])
-        crop = np.matmul(np.linalg.inv(transformMatrix), crop)
+        # crop image if not using a piecewise transform
+        if type(self.ebsdTransform) is tf.AffineTransform:
+            # need to apply the translation of ebsd transform and remove 5% border
+            crop = np.copy(self.ebsdTransform.params[0:2, 2])
+            crop += 0.05 * np.array(self.ebsdMap.boundaries.shape)
+            # the crop is defined in EBSD coords so need to transform it
+            transformMatrix = np.copy(self.ebsdTransform.params[0:2, 0:2])
+            crop = np.matmul(np.linalg.inv(transformMatrix), crop)
 
-        crop = crop.round().astype(int) + np.array(self.ebsdShift)
+            crop = crop.round().astype(int) + np.array(self.ebsdShift)
 
-        boundaries = boundaries[crop[1]:crop[1] + self.yDim + self.ebsdShift[1],
-                                crop[0]:crop[0] + self.xDim + self.ebsdShift[0]]
+            boundaries = boundaries[crop[1]:crop[1] + self.yDim + self.ebsdShift[1],
+                                    crop[0]:crop[0] + self.xDim + self.ebsdShift[0]]
 
         boundaries = -boundaries.astype(int)
 
         return boundaries
 
     def setPatternPath(self, filePath, windowSize):
-        """Set path of BSE of pattern. filePath is relative to the path set when constructing."""
+        """Set path of BSE image of pattern. filePath is relative to the path set when constructing."""
 
         self.patternImPath = self.path + filePath
         self.windowSize = windowSize
@@ -406,7 +413,7 @@ class Map(base.Map):
 class Grain(object):
     def __init__(self, dicMap):
         self.dicMap = dicMap       # dic map this grain is a member of
-        self.coordList = []         # list of coords stored as tuples (x, y)
+        self.coordList = []         # list of coords stored as tuples (x, y). These are corrds in a cropped image
         self.maxShearList = []
         self.ebsdGrain = None
         return
