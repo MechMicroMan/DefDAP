@@ -521,7 +521,7 @@ class Grain(object):
             Dq[0, :] = (refOriInv[0] * minQuatComps[0, :] - refOriInv[1] * minQuatComps[1, :] -
                         refOriInv[2] * minQuatComps[2, :] - refOriInv[3] * minQuatComps[3, :])
 
-            Dq[1, :] = (refOriInv[1] * minQuatComps[1, :] + refOriInv[0] * minQuatComps[1, :] +
+            Dq[1, :] = (refOriInv[1] * minQuatComps[0, :] + refOriInv[0] * minQuatComps[1, :] +
                         refOriInv[3] * minQuatComps[2, :] - refOriInv[2] * minQuatComps[3, :])
 
             Dq[2, :] = (refOriInv[2] * minQuatComps[0, :] + refOriInv[0] * minQuatComps[2, :] +
@@ -769,6 +769,7 @@ class Linker(object):
                       map stored in same order of maps)
         numMaps (TYPE): Number of linked maps
     """
+
     def __init__(self, maps):
         self.ebsdMaps = maps
         self.numMaps = len(maps)
