@@ -32,6 +32,25 @@ class Quat(object):
         # overload static method with instance method of same name
         self.plotIPF = self._plotIPF
 
+    @classmethod
+    def fromAxisAngle(cls, axis, angle):
+        """Create a quat object from an as angle pair
+
+        Args:
+            axis (np.array size 3): Axis of rotation
+            angle (float): Rotation arround axis
+
+        Returns:
+            TYPE: Initialised Quat object
+        """
+        # calculate quat coefficients
+        quatCoef = np.zeros(4, dtype=float)
+        quatCoef[0] = np.cos(angle / 2)
+        quatCoef[1:4] = np.sin(angle / 2) * axis
+
+        # call constructor
+        return cls(quatCoef)
+
     def eulerAngles(self):
         # See Melcher, a. Unser, A. Reichhardt, M. Nestler, B. Conversion of EBSD data by a
         # quaternion based algorithm to be used for grain structure simulations
