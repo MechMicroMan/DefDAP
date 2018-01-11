@@ -1,43 +1,5 @@
-# # bug fix for numpy.genfromtxt in python 3
-# # from https://github.com/numpy/numpy/issues/3184
-# import functools
-# import io
-# import numpy as np
-# import sys
-
-# genfromtxt_old = np.genfromtxt
-# @functools.wraps(genfromtxt_old)
-# def genfromtxt_py3_fixed(f, encoding="utf-8", *args, **kwargs):
-#   if isinstance(f, io.TextIOBase):
-#     if hasattr(f, "buffer") and hasattr(f.buffer, "raw") and \
-#     isinstance(f.buffer.raw, io.FileIO):
-#       # Best case: get underlying FileIO stream (binary!) and use that
-#       fb = f.buffer.raw
-#       # Reset cursor on the underlying object to match that on wrapper
-#       fb.seek(f.tell())
-#       result = genfromtxt_old(fb, *args, **kwargs)
-#       # Reset cursor on wrapper to match that of the underlying object
-#       f.seek(fb.tell())
-#     else:
-#       # Not very good but works: Put entire contents into BytesIO object,
-#       # otherwise same ideas as above
-#       old_cursor_pos = f.tell()
-#       fb = io.BytesIO(bytes(f.read(), encoding=encoding))
-#       result = genfromtxt_old(fb, *args, **kwargs)
-#       f.seek(old_cursor_pos + fb.tell())
-#   else:
-#     result = genfromtxt_old(f, *args, **kwargs)
-#   return result
-
-# if sys.version_info >= (3,):
-#   np.genfromtxt = genfromtxt_py3_fixed
-
-# This causes other problems so just use in python 2
-
-
 import os
 import fnmatch
-import copy
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -49,8 +11,8 @@ from IPython.display import clear_output
 
 import pyevtk.vtk
 
-import vtk
-from vtk.util import numpy_support as vnp
+# import vtk
+# from vtk.util import numpy_support as vnp
 
 from .quat import Quat
 
@@ -69,7 +31,7 @@ class Mesh(object):
     # numGrains(int) - number of grains in mesh
     # elmtGrain[numElmts](int) - Grain ID of each element - grain ID is 1 based
     # elmtPhase[numElmts](int) - Phase ID of each element - phase ID is 1 based
-    # grainOris[numGrains, 3](float) - Initial Euler angles of each grain (Kocks, degrees). col-major
+    # grainOris[numGrains, 3](float) - Initial Euler angles of each grain (Bunge, radians). col-major
 
     ### SIMULATION DATA ###
     # numFrames(int) - Number of load steps output
@@ -108,15 +70,17 @@ class Mesh(object):
         GRAIN_FILE_EX = "grain"
         ORI_FILE_EX = "ori"
 
+        self.meshName = name
         self.meshDir = meshDir if meshDir[-1] == "/" else "{:s}{:s}".format(meshDir, "/")
         self.dataDir = dataDir if dataDir[-1] == "/" else "{:s}{:s}".format(dataDir, "/")
 
         # open mesh file
         fileName = "{:s}{:s}.{:s}".format(self.meshDir, name, MESH_FILE_EX)
-        meshFile = open(fileName, "r")
+        meshFile = open(fileName, "rb")
 
         # read header
         header = meshFile.readline()
+
         self.numElmts, self.numNodes, self.elType = (int(x) for x in header.split())
 
         # read element connectivity data
@@ -150,7 +114,7 @@ class Mesh(object):
 
         # open grain file
         fileName = "{:s}{:s}.{:s}".format(self.meshDir, name, GRAIN_FILE_EX)
-        grainFile = open(fileName, "r")
+        grainFile = open(fileName, "rb")
 
         # read header
         header = grainFile.readline()
@@ -165,19 +129,19 @@ class Mesh(object):
         # close grain file
         grainFile.close()
 
-        # open ori file
+        # open ori file and read orientation of each grain (Kocks Euler angles in degrees)
         fileName = "{:s}{:s}.{:s}".format(self.meshDir, name, ORI_FILE_EX)
-        oriFile = open(fileName, "r")
-
-        # read orientation of each grain (Kocks Euler angles)
-        self.grainOris = np.asfortranarray(np.genfromtxt(oriFile,
+        self.grainOris = np.asfortranarray(np.genfromtxt(fileName,
                                                          dtype=float,
                                                          skip_header=2,
                                                          max_rows=self.numGrains,
                                                          usecols=[0, 1, 2]))
 
-        # close ori file
-        oriFile.close()
+        # convert to Bunge Euler angles in radians
+        self.grainOris *= (np.pi / 180)
+        self.grainOris[:, 0] += np.pi / 2
+        self.grainOris[:, 2] *= -1
+        self.grainOris[:, 2] += np.pi / 2
 
         # create empty dictionary for storing simulaton data
         self.simData = {}
@@ -501,7 +465,7 @@ class Mesh(object):
         return uGrid
 
     def calcGradient(self, inDataKey, outDataKey):
-        """Calculated gradient of simulation data wrt initial coordinates
+        """Calculate gradient of simulation data wrt initial coordinates
 
         Args:
             inDataKey (string): Sim data key to caluclate gradient of
@@ -546,6 +510,62 @@ class Mesh(object):
             vtkData = None
 
         self.createSimData(outDataKey, gradient)
+
+
+
+
+    def nodeToElmtData(self, inDataKey, outDataKey):
+        """Convert node data to element data using VTK framework
+
+        Args:
+            inDataKey (string): Sim data key to convert
+            outDataKey (string): Sim data key to store result
+        """
+
+        # validate input data
+        self._validateSimDataKey(inDataKey, fieldType="node")
+
+        # create array to store element data
+        simMetaData = self.simMetaData(inDataKey)
+        inDataShape = simMetaData['shape']
+        if simMetaData['numComponents'] == 1:
+            elmtData = np.empty((self.numElmts, inDataShape[-1]))
+        else:
+            print("Currenly works for data with 1 component.")
+            return
+
+        # create VTK mesh
+        uGrid = self.constructVtkMesh()
+
+        numFrames = self.simData[inDataKey].shape[-1]
+        for i in range(numFrames):
+            # add point data to unstructured grid
+            vtkData = vnp.numpy_to_vtk(np.ascontiguousarray(self.simData[inDataKey][..., i]))
+            vtkData.SetName(inDataKey)
+            uGrid.GetPointData().AddArray(vtkData);
+
+            # apply point to cell data fiter
+            conversionFilter = vtk.vtkPointDataToCellData()
+            conversionFilter.SetInputDataObject(uGrid)
+            conversionFilter.Update()
+
+            # collect output
+            elmtData[:, i] = vnp.vtk_to_numpy(
+                conversionFilter.GetOutput().GetCellData().GetArray(inDataKey)
+            )
+
+            # Garbage collection before next frame
+            conversionFilter = None
+            uGrid.GetPointData().RemoveArray(inDataKey);
+            uGrid.GetCellData().RemoveArray(inDataKey);
+            vtkData = None
+
+        self.createSimData(outDataKey, elmtData)
+
+
+
+
+
 
     def calcMisori(self, frameNums):
         frameNums = self._validateFrameNums(frameNums)
@@ -1005,12 +1025,57 @@ class Surface(object):
 
         return axes
 
-    def plotStressStrain(self):
+    def plotStressStrain(self, revIncs=None):
+        revIncs = (180,)
+        meshDims = (1, 1, 0.2)
+        velocity = -1e-2
+
+        if self.surfNum < 2:
+            # z surface
+            areaInitial = meshDims[0] * meshDims[1]
+            lengthInitial = meshDims[2]
+            forceComp = 2
+        elif self.surfNum < 4:
+            # x surface
+            areaInitial = meshDims[1] * meshDims[2]
+            lengthInitial = meshDims[0]
+            forceComp = 0
+        elif self.surfNum < 6:
+            # y surface
+            areaInitial = meshDims[0] * meshDims[2]
+            lengthInitial = meshDims[1]
+            forceComp = 1
+
+        # For surfaces x0, y0, z0 need use negetive force due to coord pointing into sim volume
+        if self.surfNum % 2 == 0:
+            factor = -1
+        else:
+            factor = 1
+
         fileName = "{:s}post.force{:d}".format(self.mesh.dataDir, self.surfNum + 1)
-        forceData = np.loadtxt(fileName, skiprows=2)
+        mechData = np.loadtxt(fileName, comments='%')
+
+        force = factor * np.insert(mechData[:, 2:5], 0, np.zeros(3), axis=0)  # force in x, y, z directon
+        area = np.insert(mechData[:, 5], 0, areaInitial)
+        time = np.insert(mechData[:, 6], 0, 0)
+
+        length = lengthInitial + velocity * time
+        if revIncs is not None:
+            revFactor = -1
+            for revInc in revIncs:
+                length[revInc + 1:] = length[revInc] + revFactor * velocity * (time[revInc + 1:] - time[revInc])
+                revFactor *= -1
 
 
+        strainEng = (length - lengthInitial) / lengthInitial
+        strainTrue = np.log(1 + strainEng)
 
+        stressEng = force[:, forceComp] / areaInitial
+        stressTrue = force[:, forceComp] / area
+
+        plt.plot(strainTrue, stressTrue)
+        plt.xlabel("True Strain")
+        plt.ylabel("True Stress (MPa)")
 
     def plotGBs(self, surfaceNormal, colour=None, linewidth=None, ax=None):
         lc = LineCollection(self.mesh.nodePos[:, self._2dAxes(surfaceNormal)][self.grainEdges],

@@ -34,14 +34,14 @@ class Quat(object):
 
     @classmethod
     def fromAxisAngle(cls, axis, angle):
-        """Create a quat object from an as angle pair
+        """Create a quat object from an axis angle pair
 
         Args:
             axis (np.array size 3): Axis of rotation
             angle (float): Rotation arround axis
 
         Returns:
-            TYPE: Initialised Quat object
+            Quat: Initialised Quat object
         """
         # calculate quat coefficients
         quatCoef = np.zeros(4, dtype=float)

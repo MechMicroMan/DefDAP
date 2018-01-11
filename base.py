@@ -10,7 +10,7 @@ class Map(object):
         self.homogPoints = []
         self.selPoint = None
 
-        self.proxigramArray = None
+        self.proxigramArr = None
 
     def __len__(self):
         return len(self.grainList)
@@ -176,15 +176,16 @@ class Map(object):
     def proxigram(self):
         self.calcProxigram(forceCalc=False)
 
-        return self.proxigramArray
+        return self.proxigramArr
 
     def calcProxigram(self, numTrials=500, forceCalc=True):
-        if self.proxigramArray is not None and not forceCalc:
+        if self.proxigramArr is not None and not forceCalc:
             return
 
         proxBoundaries = np.copy(self.boundaries)
+        proxShape = proxBoundaries.shape
 
-        # ebsd boundary arrays have extra boundary along right and bottom edge so they need to be removed
+        # ebsd boundary arrays have extra boundary along right and bottom edge. These need to be removed
         # rigth edge
         if np.all(proxBoundaries[:, -1] == -1):
             proxBoundaries[:, -1] = proxBoundaries[:, -2]
@@ -192,20 +193,20 @@ class Map(object):
         if np.all(proxBoundaries[-1, :] == -1):
             proxBoundaries[-1, :] = proxBoundaries[-2, :]
 
-        # create list of position of each boundary point
+        # create list of positions of each boundary point
         indexBoundaries = []
         for index, value in np.ndenumerate(proxBoundaries):
             if value == -1:
                 indexBoundaries.append(index)
+        # add 0.5 to boundary coordiantes as they are placed on the bottom right edge pixels of grains
+        indexBoundaries = np.array(indexBoundaries) + 0.5
 
         # array of x and y coordinate of each pixel in the map
-        coords = np.zeros((2, proxBoundaries.shape[0], proxBoundaries.shape[1]))
-        for index, value in np.ndenumerate(proxBoundaries):
-            coords[0, index[0], index[1]] = index[0]
-            coords[1, index[0], index[1]] = index[1]
+        coords = np.zeros((2, proxShape[0], proxShape[1]), dtype=float)
+        coords[0], coords[1] = np.meshgrid(range(proxShape[0]), range(proxShape[1]), indexing='ij')
 
         # array to store trial distance from each boundary point
-        trialDistances = np.ones((numTrials + 1, proxBoundaries.shape[0], proxBoundaries.shape[1])) * 1000
+        trialDistances = np.full((numTrials + 1, proxShape[0], proxShape[1]), 1000, dtype=float)
 
         # loop over each boundary point (p) and calcuale distance from p to all points in the map
         # store minimum once numTrails have been made and start a new batch of trials
@@ -216,13 +217,14 @@ class Map(object):
             trialDistances[j] = np.sqrt((coords[0] - indexBoundary[0])**2 + (coords[1] - indexBoundary[1])**2)
 
             if j == numTrials:
+                # find current minimum distances and store
                 trialDistances[0] = trialDistances.min(axis=0)
                 j = 0
                 print("{:.1f}% ".format(i / numBoundaryPoints * 100), end='')
             j += 1
 
         # find final minimum distances to a boundary
-        self.proxigramArray = trialDistances.min(axis=0)
+        self.proxigramArr = trialDistances.min(axis=0)
 
         trialDistances = None
 
