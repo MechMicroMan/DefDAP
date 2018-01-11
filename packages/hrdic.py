@@ -215,9 +215,11 @@ class Map(base.Map):
             cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
 
             if dilateBoundaries:
-                boundariesImage = mph.binary_dilation(boundariesImage)
+                boundariesImage = mph.binary_dilation(self.boundaries)
+            else:
+                boundariesImage = -self.boundaries
 
-            self.ax.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
+            self.ax.imshow(boundariesImage, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
 
         if highlightGrains is not None:
             self.highlightGrains(highlightGrains, highlightColours)
@@ -260,7 +262,7 @@ class Map(base.Map):
 
         return
 
-    def locateGrainID(self, clickEvent=None, displaySelected=False, vmin=None, vmax=None, dilateBoundaries='false'):
+    def locateGrainID(self, clickEvent=None, displaySelected=False, vmin=None, vmax=None, dilateBoundaries=False):
         if (self.grainList is not None) and (self.grainList != []):
             # reset current selected grain and plot max shear map with click handler
             self.currGrainId = None
