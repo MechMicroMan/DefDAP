@@ -39,3 +39,7 @@ Thumbs.db
 # My files #
 irradiated_new.ipynb
 newata/
+.ipynb_checkpoints
+DataAnalysisUtilities.sublime-project
+DataAnalysisUtilities.sublime-workspace
+__pycache__
