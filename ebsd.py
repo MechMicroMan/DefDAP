@@ -388,7 +388,7 @@ class Map(base.Map):
 
         return
 
-    def plotMisOriMap(self, component=0, plotGBs=False, vmin=None, vmax=None,
+    def plotMisOriMap(self, component=0, plotGBs=False, boundaryColour='black', vmin=None, vmax=None,
                       cmap="viridis", cBarLabel="ROD (degrees)"):
         self.misOri = np.ones([self.yDim, self.xDim])
 
@@ -413,7 +413,7 @@ class Map(base.Map):
 
         if plotGBs:
             # create colourmap for boundaries and plot. colourmap goes transparent white to opaque black
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'black'], 256)
+            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', boundaryColour], 256)
             cmap1._init()
             cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
             plt.imshow(-self.boundaries, interpolation='None', vmin=0, vmax=1, cmap=cmap1)
