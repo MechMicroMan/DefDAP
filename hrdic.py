@@ -21,7 +21,6 @@ class Map(base.Map):
 
         self.ebsdMap = None
         self.ebsdTransform = None
-        self.ebsdShift = (0, 0)
         self.grainList = None
         self.currGrainId = None     # Id of last selected grain
         # ...
@@ -126,25 +125,17 @@ class Map(base.Map):
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
-    def setEbsdShift(self, xShift=None, yShift=None):
-        if xShift is None:
-            xShift = self.ebsdShift[0]
-        if yShift is None:
-            yShift = self.ebsdShift[1]
-
-        self.ebsdShift = (xShift, yShift)
-
     def warpToDicFrame(self, mapData, cropImage=True):
         # calculate transform from EBSD to DIC frame
         # self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
         if cropImage or type(self.ebsdTransform) is tf.PiecewiseAffineTransform:
             # crop to size of DIC map
-            outputShape = (self.yDim + self.ebsdShift[1], self.xDim + self.ebsdShift[0])
+            outputShape = (self.yDim, self.xDim)
             # warp the map
             warpedMap = tf.warp(mapData, self.ebsdTransform, output_shape=outputShape)
-            # return map with shift
-            return warpedMap[self.ebsdShift[1]:, self.ebsdShift[0]:]
+            # return map
+            return warpedMap
         else:
             # copy ebsd transform and change translation to give an extra 5% border
             # to show the entire image after rotation/shearing
@@ -176,10 +167,10 @@ class Map(base.Map):
             transformMatrix = np.copy(self.ebsdTransform.params[0:2, 0:2])
             crop = np.matmul(np.linalg.inv(transformMatrix), crop)
 
-            crop = crop.round().astype(int) + np.array(self.ebsdShift)
+            crop = crop.round().astype(int)
 
-            boundaries = boundaries[crop[1]:crop[1] + self.yDim + self.ebsdShift[1],
-                                    crop[0]:crop[0] + self.xDim + self.ebsdShift[0]]
+            boundaries = boundaries[crop[1]:crop[1] + self.yDim,
+                                    crop[0]:crop[0] + self.xDim]
 
         boundaries = -boundaries.astype(int)
 
@@ -437,13 +428,8 @@ class Map(base.Map):
             unknownPoints = np.where(self.grains == 0)
 
         # Now link grains to those in ebsd Map
-        # Warp DIC grain map to EBSD frame, accounting for shift (only positive)
+        # Warp DIC grain map to EBSD frame
         dicGrains = self.grains
-        if self.ebsdShift[1] != 0:
-            dicGrains = np.vstack([np.zeros((self.ebsdShift[1], dicGrains.shape[1])), dicGrains])
-        if self.ebsdShift[0] != 0:
-            dicGrains = np.hstack([np.zeros((dicGrains.shape[0], self.ebsdShift[0])), dicGrains])
-
         warpedDicGrains = tf.warp(dicGrains.astype(float), self.ebsdTransform.inverse,
                                   output_shape=(self.ebsdMap.yDim, self.ebsdMap.xDim), order=0).astype(int)
 
