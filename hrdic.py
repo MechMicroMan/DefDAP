@@ -219,11 +219,7 @@ class Map(base.Map):
             plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
 
         if plotGBs:
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'white'], 256)
-            cmap1._init()
-            cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
-
-            self.ax.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
+            self.plotGBs(ax=self.ax)
 
         if highlightGrains is not None:
             self.highlightGrains(highlightGrains, highlightColours)
@@ -294,11 +290,7 @@ class Map(base.Map):
                 plt.colorbar(label="Effective shear strain (%)")
 
         if plotGBs:
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'white'], 256)
-            cmap1._init()
-            cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
-
-            plt.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
+            self.plotGBs()
 
     def calcGrainAv(self, mapData):
         """Calculate grain average of any DIC map data.
@@ -346,11 +338,7 @@ class Map(base.Map):
             plt.colorbar(label=clabel)
 
         if plotGBs:
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'white'], 256)
-            cmap1._init()
-            cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
-
-            plt.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
+            self.plotGBs()
 
     def plotGrainAvIPF(self, mapData, direction, plotColourBar=True, vmin=None, vmax=None, clabel=''):
         """Plot IPF of grain reference (average) orientations with points coloured
@@ -648,12 +636,12 @@ class Grain(object):
 
         return grainData
 
-    def grainMapData(self, mapData, fillValue=np.nan):
+    def grainMapData(self, mapData, bg=np.nan):
         """Creates a map of this grain only from the given map data
 
         Args:
             mapData (np.array): Array of map data. This must be cropped!
-            fillValue (float, optional): Value to fill the backgraound with. Must be same dtype as input.
+            bg (float, optional): Value to fill the backgraound with. Must be same dtype as input.
 
         Returns:
             np.array: Map of this grains data
@@ -661,7 +649,7 @@ class Grain(object):
         grainData = self.grainData(mapData)
         x0, y0, xmax, ymax = self.extremeCoords
 
-        grainMapData = np.full((ymax - y0 + 1, xmax - x0 + 1), fillValue, dtype=mapData.dtype)
+        grainMapData = np.full((ymax - y0 + 1, xmax - x0 + 1), bg, dtype=mapData.dtype)
 
         for coord, data in zip(self.coordList, grainData):
             grainMapData[coord[1] - y0, coord[0] - x0] = data
