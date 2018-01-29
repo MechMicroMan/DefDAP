@@ -1,6 +1,7 @@
 import numpy as np
 
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
 
@@ -18,6 +19,17 @@ class Map(object):
     # allow array like getting of grains
     def __getitem__(self, key):
         return self.grainList[key]
+
+    def plotGBs(self, ax=None, colour='white'):
+        # create colourmap for boundaries and plot. colourmap goes transparent white to opaque white/colour
+        cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', colour], 256)
+        cmap1._init()
+        cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
+
+        if ax is not None:
+            ax.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
+        else:
+            plt.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
 
     def setHomogPoint(self, binSize=1):
         self.selPoint = None

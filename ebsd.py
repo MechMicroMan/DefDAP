@@ -32,6 +32,7 @@ class Map(base.Map):
         xDim (int): x dimension of map
         yDim (int): y dimension of map
     """
+
     def __init__(self, fileName, crystalSym):
         # Call base class constructor
         super(Map, self).__init__()
@@ -412,11 +413,7 @@ class Map(base.Map):
         plt.colorbar(label=cBarLabel)
 
         if plotGBs:
-            # create colourmap for boundaries and plot. colourmap goes transparent white to opaque black
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'black'], 256)
-            cmap1._init()
-            cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
-            plt.imshow(-self.boundaries, interpolation='None', vmin=0, vmax=1, cmap=cmap1)
+            self.plotGBs()
 
         return
 
@@ -448,11 +445,7 @@ class Map(base.Map):
         plt.colorbar(label="Schmid factor")
 
         if plotGBs:
-            # create colourmap for boundaries and plot. colourmap goes transparent white to opaque black
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'black'], 256)
-            cmap1._init()
-            cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
-            plt.imshow(-self.boundaries, interpolation='None', vmin=0, vmax=1, cmap=cmap1)
+            self.plotGBs()
 
         return
 
