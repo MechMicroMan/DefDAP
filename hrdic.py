@@ -20,7 +20,8 @@ class Map(base.Map):
         super(Map, self).__init__()
 
         self.ebsdMap = None
-        self.ebsdTransform = None
+        self.ebsdTransform = None       # Transform from EBSD to DIC coordinates
+        self.ebsdTransformInv = None    # Transform from DIC to EBSD coordinates
         self.grainList = None
         self.currGrainId = None     # Id of last selected grain
         # ...
@@ -127,29 +128,35 @@ class Map(base.Map):
             binSize = 1
 
         # Call set homog points from base class setting the bin size
-        super(Map, self).setHomogPoint(binSize=binSize)
+        super(type(self), self).setHomogPoint(binSize=binSize)
 
-    def linkEbsdMap(self, ebsdMap, transformType="affine"):
+    def linkEbsdMap(self, ebsdMap, transformType="affine", order=2):
         self.ebsdMap = ebsdMap
         if transformType == "piecewiseAffine":
             self.ebsdTransform = tf.PiecewiseAffineTransform()
+            self.ebsdTransformInv = self.ebsdTransform.inverse
+        elif transformType == "polynomial":
+            self.ebsdTransform = tf.PolynomialTransform()
+            # You can't calculate the inverse of a polynomial transform so have to estimate
+            # by swapping source and destination homog points
+            self.ebsdTransformInv = tf.PolynomialTransform()
+            self.ebsdTransformInv.estimate(np.array(self.ebsdMap.homogPoints), np.array(self.homogPoints), order=order)
+            # calculate transform from EBSD to DIC frame
+            self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints), order=order)
+            return
         else:
             self.ebsdTransform = tf.AffineTransform()
+            self.ebsdTransformInv = self.ebsdTransform.inverse
 
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
     def warpToDicFrame(self, mapData, cropImage=True):
-        # calculate transform from EBSD to DIC frame
-        # self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
-
-        if cropImage or type(self.ebsdTransform) is tf.PiecewiseAffineTransform:
+        if (cropImage or type(self.ebsdTransform) is not tf.AffineTransform):
             # crop to size of DIC map
             outputShape = (self.yDim, self.xDim)
             # warp the map
             warpedMap = tf.warp(mapData, self.ebsdTransform, output_shape=outputShape)
-            # return map
-            return warpedMap
         else:
             # copy ebsd transform and change translation to give an extra 5% border
             # to show the entire image after rotation/shearing
@@ -162,7 +169,8 @@ class Map(base.Map):
             # warp the map
             warpedMap = tf.warp(mapData, tempEbsdTransform, output_shape=outputShape.astype(int))
 
-            return warpedMap
+        # return map
+        return warpedMap
 
     @property
     def boundaries(self):
@@ -172,7 +180,7 @@ class Map(base.Map):
         boundaries = mph.skeletonize(boundaries)
         mph.remove_small_objects(boundaries, min_size=10, in_place=True, connectivity=2)
 
-        # crop image if not using a piecewise transform
+        # crop image if it is a simple affine transform
         if type(self.ebsdTransform) is tf.AffineTransform:
             # need to apply the translation of ebsd transform and remove 5% border
             crop = np.copy(self.ebsdTransform.params[0:2, 2])
@@ -180,7 +188,6 @@ class Map(base.Map):
             # the crop is defined in EBSD coords so need to transform it
             transformMatrix = np.copy(self.ebsdTransform.params[0:2, 0:2])
             crop = np.matmul(np.linalg.inv(transformMatrix), crop)
-
             crop = crop.round().astype(int)
 
             boundaries = boundaries[crop[1]:crop[1] + self.yDim,
@@ -444,7 +451,7 @@ class Map(base.Map):
         # Now link grains to those in ebsd Map
         # Warp DIC grain map to EBSD frame
         dicGrains = self.grains
-        warpedDicGrains = tf.warp(dicGrains.astype(float), self.ebsdTransform.inverse,
+        warpedDicGrains = tf.warp(dicGrains.astype(float), self.ebsdTransformInv,
                                   output_shape=(self.ebsdMap.yDim, self.ebsdMap.xDim), order=0).astype(int)
 
         # Initalise list to store ID of corresponding grain in EBSD map. Also stored in grain objects
