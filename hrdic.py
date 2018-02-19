@@ -41,10 +41,10 @@ class Map(base.Map):
         self.yd = self.data[:, 3]  # y displacement
 
         # Calculate size of map
-        self.xdim = ((self.xc.max() - self.xc.min()) /
-                     min(abs((np.diff(self.xc)))) + 1)  # size of map along x
-        self.ydim = ((self.yc.max() - self.yc.min()) /
-                     max(abs((np.diff(self.yc)))) + 1)  # size of map along y
+        self.xdim = int((self.xc.max() - self.xc.min()) /
+                        min(abs((np.diff(self.xc)))) + 1)  # size of map along x
+        self.ydim = int((self.yc.max() - self.yc.min()) /
+                        max(abs((np.diff(self.yc)))) + 1)  # size of map along y
 
         # *dim are full size of data. *Dim are size after cropping
         self.xDim = self.xdim
@@ -69,7 +69,7 @@ class Map(base.Map):
         self.plotMaxShear(plotGBs=True, *args, **kwargs)
 
     def _map(self, data_col):
-        data_map = np.reshape(np.array(data_col), (int(self.ydim), int(self.xdim)))
+        data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))
         return data_map
 
     def _grad(self, data_map):
