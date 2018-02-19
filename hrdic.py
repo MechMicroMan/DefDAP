@@ -77,18 +77,32 @@ class Map(base.Map):
         data_grad = np.gradient(data_map, grad_step, grad_step)
         return data_grad
 
-    def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None):
+    def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
+        # changes in homog points
+        dx = 0
+        dy = 0
+
+        # update crop distances
         if xMin is not None:
+            if updateHomogPoints:
+                dx = self.cropDists[0, 0] - int(xMin)
             self.cropDists[0, 0] = int(xMin)
         if xMax is not None:
             self.cropDists[0, 1] = int(xMax)
         if yMin is not None:
+            if updateHomogPoints:
+                dy = self.cropDists[1, 0] - int(yMin)
             self.cropDists[1, 0] = int(yMin)
         if yMax is not None:
             self.cropDists[1, 1] = int(yMax)
 
-        self.xDim = int(self.xdim - xMin - xMax)
-        self.yDim = int(self.ydim - yMin - yMax)
+        # update homogo points if required
+        if updateHomogPoints and (dx != 0 or dy != 0):
+            self.updateHomogPoint(homogID=-1, delta=(dx, dy))
+
+        # set new cropped dimensions
+        self.xDim = self.xdim - self.cropDists[0, 0] - self.cropDists[0, 1]
+        self.yDim = self.ydim - self.cropDists[1, 0] - self.cropDists[1, 1]
 
     def crop(self, mapData, binned=True):
         if binned:
