@@ -29,7 +29,7 @@ class Quat(object):
         if (self.quatCoef[0] < 0):
             self.quatCoef = self.quatCoef * -1
 
-        # overload static method with instance method of same name
+        # overload static method with instance method of same name in object
         self.plotIPF = self._plotIPF
 
     @classmethod
@@ -38,11 +38,13 @@ class Quat(object):
 
         Args:
             axis (np.array size 3): Axis of rotation
-            angle (float): Rotation arround axis
+            angle (float): Rotation arround axis (radians)
 
         Returns:
             Quat: Initialised Quat object
         """
+        # normalise the axis vector
+        axis = axis / np.sqrt(np.dot(axis, axis))
         # calculate quat coefficients
         quatCoef = np.zeros(4, dtype=float)
         quatCoef[0] = np.cos(angle / 2)
@@ -360,7 +362,7 @@ class Quat(object):
         plotParams.update(kwargs)
 
         if symGroup == "hexagonal":
-            raise(Exception("Have fun with that"))
+            raise Exception("Have fun with that")
 
         # Plot IPF axis
         plt.figure()
@@ -422,7 +424,7 @@ class Quat(object):
             # create array to store final projected coordinates
             PFCoordsPjt = np.empty((2, quatCompsSym.shape[2]))
 
-            # now of symmetric equivalents left we want the one with minimum beta
+            # now of symmetric equivalents left we want the one with minimum alpha
             # loop over different orientations
             for i in range(trialPoles.shape[1]):
                 # create array of indexes of poles kept in previous step

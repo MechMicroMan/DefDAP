@@ -20,7 +20,8 @@ class Map(base.Map):
         super(Map, self).__init__()
 
         self.ebsdMap = None
-        self.ebsdTransform = None
+        self.ebsdTransform = None       # Transform from EBSD to DIC coordinates
+        self.ebsdTransformInv = None    # Transform from DIC to EBSD coordinates
         self.grainList = None
         self.currGrainId = None     # Id of last selected grain
         # ...
@@ -41,10 +42,10 @@ class Map(base.Map):
         self.yd = self.data[:, 3]  # y displacement
 
         # Calculate size of map
-        self.xdim = ((self.xc.max() - self.xc.min()) /
-                     min(abs((np.diff(self.xc)))) + 1)  # size of map along x
-        self.ydim = ((self.yc.max() - self.yc.min()) /
-                     max(abs((np.diff(self.yc)))) + 1)  # size of map along y
+        self.xdim = int((self.xc.max() - self.xc.min()) /
+                        min(abs((np.diff(self.xc)))) + 1)  # size of map along x
+        self.ydim = int((self.yc.max() - self.yc.min()) /
+                        max(abs((np.diff(self.yc)))) + 1)  # size of map along y
 
         # *dim are full size of data. *Dim are size after cropping
         self.xDim = self.xdim
@@ -69,7 +70,7 @@ class Map(base.Map):
         self.plotMaxShear(plotGBs=True, *args, **kwargs)
 
     def _map(self, data_col):
-        data_map = np.reshape(np.array(data_col), (int(self.ydim), int(self.xdim)))
+        data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))
         return data_map
 
     def _grad(self, data_map):
@@ -77,18 +78,32 @@ class Map(base.Map):
         data_grad = np.gradient(data_map, grad_step, grad_step)
         return data_grad
 
-    def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None):
+    def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
+        # changes in homog points
+        dx = 0
+        dy = 0
+
+        # update crop distances
         if xMin is not None:
+            if updateHomogPoints:
+                dx = self.cropDists[0, 0] - int(xMin)
             self.cropDists[0, 0] = int(xMin)
         if xMax is not None:
             self.cropDists[0, 1] = int(xMax)
         if yMin is not None:
+            if updateHomogPoints:
+                dy = self.cropDists[1, 0] - int(yMin)
             self.cropDists[1, 0] = int(yMin)
         if yMax is not None:
             self.cropDists[1, 1] = int(yMax)
 
-        self.xDim = int(self.xdim - xMin - xMax)
-        self.yDim = int(self.ydim - yMin - yMax)
+        # update homogo points if required
+        if updateHomogPoints and (dx != 0 or dy != 0):
+            self.updateHomogPoint(homogID=-1, delta=(dx, dy))
+
+        # set new cropped dimensions
+        self.xDim = self.xdim - self.cropDists[0, 0] - self.cropDists[0, 1]
+        self.yDim = self.ydim - self.cropDists[1, 0] - self.cropDists[1, 1]
 
     def crop(self, mapData, binned=True):
         if binned:
@@ -113,29 +128,35 @@ class Map(base.Map):
             binSize = 1
 
         # Call set homog points from base class setting the bin size
-        super(Map, self).setHomogPoint(binSize=binSize)
+        super(type(self), self).setHomogPoint(binSize=binSize)
 
-    def linkEbsdMap(self, ebsdMap, transformType="affine"):
+    def linkEbsdMap(self, ebsdMap, transformType="affine", order=2):
         self.ebsdMap = ebsdMap
         if transformType == "piecewiseAffine":
             self.ebsdTransform = tf.PiecewiseAffineTransform()
+            self.ebsdTransformInv = self.ebsdTransform.inverse
+        elif transformType == "polynomial":
+            self.ebsdTransform = tf.PolynomialTransform()
+            # You can't calculate the inverse of a polynomial transform so have to estimate
+            # by swapping source and destination homog points
+            self.ebsdTransformInv = tf.PolynomialTransform()
+            self.ebsdTransformInv.estimate(np.array(self.ebsdMap.homogPoints), np.array(self.homogPoints), order=order)
+            # calculate transform from EBSD to DIC frame
+            self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints), order=order)
+            return
         else:
             self.ebsdTransform = tf.AffineTransform()
+            self.ebsdTransformInv = self.ebsdTransform.inverse
 
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
     def warpToDicFrame(self, mapData, cropImage=True):
-        # calculate transform from EBSD to DIC frame
-        # self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
-
-        if cropImage or type(self.ebsdTransform) is tf.PiecewiseAffineTransform:
+        if (cropImage or type(self.ebsdTransform) is not tf.AffineTransform):
             # crop to size of DIC map
             outputShape = (self.yDim, self.xDim)
             # warp the map
             warpedMap = tf.warp(mapData, self.ebsdTransform, output_shape=outputShape)
-            # return map
-            return warpedMap
         else:
             # copy ebsd transform and change translation to give an extra 5% border
             # to show the entire image after rotation/shearing
@@ -148,7 +169,8 @@ class Map(base.Map):
             # warp the map
             warpedMap = tf.warp(mapData, tempEbsdTransform, output_shape=outputShape.astype(int))
 
-            return warpedMap
+        # return map
+        return warpedMap
 
     @property
     def boundaries(self):
@@ -158,7 +180,7 @@ class Map(base.Map):
         boundaries = mph.skeletonize(boundaries)
         mph.remove_small_objects(boundaries, min_size=10, in_place=True, connectivity=2)
 
-        # crop image if not using a piecewise transform
+        # crop image if it is a simple affine transform
         if type(self.ebsdTransform) is tf.AffineTransform:
             # need to apply the translation of ebsd transform and remove 5% border
             crop = np.copy(self.ebsdTransform.params[0:2, 2])
@@ -166,7 +188,6 @@ class Map(base.Map):
             # the crop is defined in EBSD coords so need to transform it
             transformMatrix = np.copy(self.ebsdTransform.params[0:2, 0:2])
             crop = np.matmul(np.linalg.inv(transformMatrix), crop)
-
             crop = crop.round().astype(int)
 
             boundaries = boundaries[crop[1]:crop[1] + self.yDim,
@@ -430,7 +451,7 @@ class Map(base.Map):
         # Now link grains to those in ebsd Map
         # Warp DIC grain map to EBSD frame
         dicGrains = self.grains
-        warpedDicGrains = tf.warp(dicGrains.astype(float), self.ebsdTransform.inverse,
+        warpedDicGrains = tf.warp(dicGrains.astype(float), self.ebsdTransformInv,
                                   output_shape=(self.ebsdMap.yDim, self.ebsdMap.xDim), order=0).astype(int)
 
         # Initalise list to store ID of corresponding grain in EBSD map. Also stored in grain objects
@@ -641,6 +662,33 @@ class Grain(object):
             grainMapData[coord[1] - y0, coord[0] - x0] = data
 
         return grainMapData
+
+    def grainMapDataCoarse(self, mapData, kernelSize=2):
+        grainMapData = self.grainMapData(mapData)
+        grainMapDataCoarse = np.full_like(grainMapData, np.nan)
+
+        for i, j in np.ndindex(grainMapData.shape):
+            if np.isnan(grainMapData[i, j]):
+                grainMapDataCoarse[i, j] = np.nan
+            else:
+                coarseValue = 0
+
+                yLow = i - kernelSize if i - kernelSize >= 0 else 0
+                yHigh = i + kernelSize + 1 if i + kernelSize + 1 <= grainMapData.shape[0] else grainMapData.shape[0]
+
+                xLow = j - kernelSize if j - kernelSize >= 0 else 0
+                xHigh = j + kernelSize + 1 if j + kernelSize + 1 <= grainMapData.shape[1] else grainMapData.shape[1]
+
+                numPoints = 0
+                for k in range(yLow, yHigh):
+                    for l in range(xLow, xHigh):
+                        if not np.isnan(grainMapData[k, l]):
+                            coarseValue += grainMapData[k, l]
+                            numPoints += 1
+
+                grainMapDataCoarse[i, j] = coarseValue / numPoints if numPoints > 0 else np.nan
+
+        return grainMapDataCoarse
 
     def plotGrainData(self, mapData, vmin=None, vmax=None, clabel='', cmap='viridis'):
         """Plot a map of this grain only from the given map data.

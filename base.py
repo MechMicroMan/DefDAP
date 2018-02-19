@@ -78,6 +78,42 @@ class Map(object):
 
             self.fig.canvas.draw()
 
+    def updateHomogPoint(self, homogID, newPoint=None, delta=None):
+        """Update a homog by either over wrting it with a new point or
+        incrementing the current values.
+
+        Args:
+            homogID (int): ID (place in list) of point to update or -1 for all
+            newPoint (tuple, optional): New point
+            delta (tuple, optional): Increments to current point (dx, dy)
+        """
+        if type(homogID) is not int:
+            raise Exception("homogID must be an integer.")
+        if homogID >= len(self.homogPoints):
+            raise Exception("homogID is out of range.")
+
+        # Update all points
+        if homogID < 0:
+            for i in range(len(self.homogPoints)):
+                self.updateHomogPoint(homogID=i, delta=delta)
+        # Update a single point
+        else:
+            # overwrite point
+            if newPoint is not None:
+                if type(newPoint) is not tuple and len(newPoint) != 2:
+                    raise Exception("newPoint must be a 2 component tuple")
+
+            # increment current point
+            elif delta is not None:
+                if type(delta) is not tuple and len(delta) != 2:
+                    raise Exception("delta must be a 2 component tuple")
+                newPoint = list(self.homogPoints[homogID])
+                newPoint[0] += delta[0]
+                newPoint[1] += delta[1]
+                newPoint = tuple(newPoint)
+
+            self.homogPoints[homogID] = newPoint
+
     def highlightGrains(self, grainIds, grainColours):
         if grainColours is None:
             grainColours = ['white']
