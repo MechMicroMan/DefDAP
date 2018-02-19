@@ -663,6 +663,33 @@ class Grain(object):
 
         return grainMapData
 
+    def grainMapDataCoarse(self, mapData, kernelSize=2):
+        grainMapData = self.grainMapData(mapData)
+        grainMapDataCoarse = np.full_like(grainMapData, np.nan)
+
+        for i, j in np.ndindex(grainMapData.shape):
+            if np.isnan(grainMapData[i, j]):
+                grainMapDataCoarse[i, j] = np.nan
+            else:
+                coarseValue = 0
+
+                yLow = i - kernelSize if i - kernelSize >= 0 else 0
+                yHigh = i + kernelSize + 1 if i + kernelSize + 1 <= grainMapData.shape[0] else grainMapData.shape[0]
+
+                xLow = j - kernelSize if j - kernelSize >= 0 else 0
+                xHigh = j + kernelSize + 1 if j + kernelSize + 1 <= grainMapData.shape[1] else grainMapData.shape[1]
+
+                numPoints = 0
+                for k in range(yLow, yHigh):
+                    for l in range(xLow, xHigh):
+                        if not np.isnan(grainMapData[k, l]):
+                            coarseValue += grainMapData[k, l]
+                            numPoints += 1
+
+                grainMapDataCoarse[i, j] = coarseValue / numPoints if numPoints > 0 else np.nan
+
+        return grainMapDataCoarse
+
     def plotGrainData(self, mapData, vmin=None, vmax=None, clabel='', cmap='viridis'):
         """Plot a map of this grain only from the given map data.
 
