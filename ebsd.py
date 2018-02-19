@@ -196,11 +196,14 @@ class Map(base.Map):
         self.checkDataLoaded()
 
         if self.quatArray is None:
-            self.quatArray = np.empty([self.yDim, self.xDim], dtype=Quat)
-            for j in range(self.yDim):
-                for i in range(self.xDim):
-                    eulers = self.binData[j * self.xDim + i][('Eulers')]
-                    self.quatArray[j, i] = Quat(eulers[0], eulers[1], eulers[2])
+            eulerArray = self.binData[('Eulers')]
+            # reshape to map dimensions
+            eulerArray = eulerArray.reshape((self.yDim, self.xDim))
+            # this flattens the structures the Euler angles are stored into a normal array
+            eulerArray = np.array(eulerArray.tolist())
+            eulerArray = eulerArray.transpose((2, 0, 1))
+            # create the array of quat objects
+            self.quatArray = Quat.createManyQuats(eulerArray)
         return
 
     def findBoundaries(self, boundDef=10):
