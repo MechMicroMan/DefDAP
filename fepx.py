@@ -11,8 +11,8 @@ from IPython.display import clear_output
 
 import pyevtk.vtk
 
-# import vtk
-# from vtk.util import numpy_support as vnp
+import vtk
+from vtk.util import numpy_support as vnp
 
 from .quat import Quat
 
@@ -65,7 +65,7 @@ class Mesh(object):
         "angle",
     )
 
-    def __init__(self, name, meshDir="./", dataDir="./"):
+    def __init__(self, name, meshDir="./", dataDir="./", grainFilename=None):
         MESH_FILE_EX = "mesh"
         GRAIN_FILE_EX = "grain"
         ORI_FILE_EX = "ori"
@@ -73,6 +73,8 @@ class Mesh(object):
         self.meshName = name
         self.meshDir = meshDir if meshDir[-1] == "/" else "{:s}{:s}".format(meshDir, "/")
         self.dataDir = dataDir if dataDir[-1] == "/" else "{:s}{:s}".format(dataDir, "/")
+        if grainFilename is None:
+            grainFilename = name
 
         # open mesh file
         fileName = "{:s}{:s}.{:s}".format(self.meshDir, name, MESH_FILE_EX)
@@ -113,7 +115,7 @@ class Mesh(object):
         meshFile.close()
 
         # open grain file
-        fileName = "{:s}{:s}.{:s}".format(self.meshDir, name, GRAIN_FILE_EX)
+        fileName = "{:s}{:s}.{:s}".format(self.meshDir, grainFilename, GRAIN_FILE_EX)
         grainFile = open(fileName, "rb")
 
         # read header
@@ -1025,7 +1027,7 @@ class Surface(object):
 
         return axes
 
-    def plotStressStrain(self, revIncs=None):
+    def plotStressStrain(self, revIncs=None, *args, **kwargs):
         revIncs = (180,)
         meshDims = (1, 1, 0.2)
         velocity = -1e-2
@@ -1066,14 +1068,13 @@ class Surface(object):
                 length[revInc + 1:] = length[revInc] + revFactor * velocity * (time[revInc + 1:] - time[revInc])
                 revFactor *= -1
 
-
         strainEng = (length - lengthInitial) / lengthInitial
         strainTrue = np.log(1 + strainEng)
 
         stressEng = force[:, forceComp] / areaInitial
         stressTrue = force[:, forceComp] / area
 
-        plt.plot(strainTrue, stressTrue)
+        plt.plot(strainTrue, stressTrue, *args, **kwargs)
         plt.xlabel("True Strain")
         plt.ylabel("True Stress (MPa)")
 

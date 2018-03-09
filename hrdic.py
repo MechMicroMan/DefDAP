@@ -217,7 +217,7 @@ class Map(base.Map):
         else:
             raise Exception("First set path to pattern image.")
 
-    def plotMaxShear(self, plotGBs=False, plotSlipTraces=False, plotPercent=True,
+    def plotMaxShear(self, plotGBs=False, plotSlipTraces=False, plotPercent=False,
                      updateCurrent=False, highlightGrains=None, highlightColours=None,
                      plotColourBar=False, vmin=None, vmax=None):
         if not updateCurrent:
@@ -378,14 +378,17 @@ class Map(base.Map):
         if plotColourBar:
             plt.colorbar(label=clabel)
 
-    def locateGrainID(self, clickEvent=None, displaySelected=False):
+    def locateGrainID(self, clickEvent=None, displaySelected=False, **kwargs):
         if (self.grainList is not None) and (self.grainList != []):
             # reset current selected grain and plot max shear map with click handler
             self.currGrainId = None
-            self.plotMaxShear(plotGBs=True)
+            self.plotMaxShear(plotGBs=True, **kwargs)
             if clickEvent is None:
                 # default click handler which highlights grain and prints id
-                self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickGrainId(x, displaySelected))
+                self.fig.canvas.mpl_connect(
+                    'button_press_event',
+                    lambda x: self.clickGrainId(x, displaySelected, **kwargs)
+                )
             else:
                 # click handler loaded in as parameter. Pass current map object to it.
                 self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
@@ -397,7 +400,7 @@ class Map(base.Map):
         else:
             raise Exception("Grain list empty")
 
-    def clickGrainId(self, event, displaySelected):
+    def clickGrainId(self, event, displaySelected, **kwargs):
         if event.inaxes is not None:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
@@ -406,7 +409,7 @@ class Map(base.Map):
             # clear current axis and redraw map with highlighted grain overlay
             self.ax.clear()
             self.plotMaxShear(plotGBs=True, updateCurrent=True, highlightGrains=[self.currGrainId],
-                              highlightColours=['green'])
+                              highlightColours=['green'], **kwargs)
             self.fig.canvas.draw()
 
             if displaySelected:
@@ -524,7 +527,6 @@ class Grain(object):
         self.coordList = []         # list of coords stored as tuples (x, y). These are corrds in a cropped image
         self.maxShearList = []
         self.ebsdGrain = None
-        return
 
     def __len__(self):
         return len(self.coordList)
@@ -533,7 +535,6 @@ class Grain(object):
     def addPoint(self, coord, maxShear):
         self.coordList.append(coord)
         self.maxShearList.append(maxShear)
-        return
 
     @property
     def extremeCoords(self):
@@ -543,6 +544,14 @@ class Grain(object):
         xmax = max(unzippedCoordlist[0])
         ymax = max(unzippedCoordlist[1])
         return x0, y0, xmax, ymax
+
+    @property
+    def centreCoords(self):
+        x0, y0, xmax, ymax = self.extremeCoords
+        xCentre = int((xmax - x0) / 2)
+        yCentre = int((ymax - y0) / 2)
+
+        return xCentre, yCentre
 
     def grainOutline(self, bg=np.nan, fg=0):
         x0, y0, xmax, ymax = self.extremeCoords
@@ -583,49 +592,106 @@ class Grain(object):
             # ax.colorbar()
 
         if plotSlipTraces:
-            if self.slipTraces() is None:
-                raise Exception("First calculate slip traces")
-
-            colours = ["white", "green", "red", "black"]
-            xPos = int((xmax - x0) / 2)
-            yPos = int((ymax - y0) / 2)
-            for i, slipTrace in enumerate(self.slipTraces()):
-                colour = colours[len(colours) - 1] if i >= len(colours) else colours[i]
-                if ax is None:
-                    plt.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle",
-                               color=colour, headwidth=1, headlength=0)
-                else:
-                    ax.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle",
-                              color=colour, headwidth=1, headlength=0)
+            self.plotSlipTraces(ax=ax)
 
         if plotShearBands:
-            grainMaxShear = np.nan_to_num(grainMaxShear)
+            self.plotShearBands(grainMaxShear, ax=ax)
 
-            sin_map = tf.radon(grainMaxShear, circle=False)
-            profile = np.max(sin_map, axis=0)
+    @property
+    def slipTraces(self):
+        if self.ebsdGrain.slipTraces is None:
+            self.calcSlipTraces()
 
-            x = np.arange(180)
-            y = profile
+        return self.ebsdGrain.slipTraces
 
-            indexes = peakutils.indexes(y, thres=0.5, min_dist=30)
-            peaks = peakutils.interpolate(x, y, ind=indexes)
-            print("Number of bands detected: {:}".format(len(peaks)))
+    def calcSlipTraces(self, slipSystems=None):
+        self.ebsdGrain.calcSlipTraces(slipSystems=slipSystems)
 
-            shearBandAngles = peaks
-            shearBandAngles = -shearBandAngles * np.pi / 180
-            shearBandVectors = np.array((np.sin(shearBandAngles), np.cos(shearBandAngles)))
+    def plotSlipTraces(self, colours=None, ax=None):
+        if colours is None:
+            colours = ["white", "green", "red", "black"]
 
-            xPos = int((xmax - x0) / 2)
-            yPos = int((ymax - y0) / 2)
+        xPos, yPos = self.centreCoords
 
+        for i, slipTraceAngle in enumerate(self.slipTraces):
+            # slipTraceAngle -= np.pi
+            slipTrace = np.array((-np.sin(slipTraceAngle), np.cos(slipTraceAngle)))
+            colour = colours[len(colours) - 1] if i >= len(colours) else colours[i]
             if ax is None:
-                plt.quiver(xPos, yPos, shearBandVectors[0], shearBandVectors[1], scale=1, pivot="middle",
-                           color='yellow', headwidth=1, headlength=0)
+                plt.quiver(
+                    xPos, yPos,
+                    slipTrace[0], slipTrace[1],
+                    scale=1, pivot="middle",
+                    color=colour, headwidth=1,
+                    headlength=0
+                )
             else:
-                ax.quiver(xPos, yPos, shearBandVectors[0], shearBandVectors[1], scale=1, pivot="middle",
-                          color='yellow', headwidth=1, headlength=0)
+                ax.quiver(
+                    xPos, yPos,
+                    slipTrace[0], slipTrace[1],
+                    scale=1, pivot="middle",
+                    color=colour, headwidth=1,
+                    headlength=0
+                )
 
-        return
+    def calcShearBands(self, grainMapData, thres=0.3, min_dist=30):
+        """Use Radon transform to detect shear band angles
+
+        Args:
+            grainMapData (numpy.array): Data to find bands in
+            thres (float, optional): Normalised threshold for peaks
+            min_dist (int, optional): Minimum angle between bands
+
+        Returns:
+            list(float): Detected shear band angles
+        """
+        grainMapData = np.nan_to_num(grainMapData)
+
+        if grainMapData.min() < 0:
+            print("Negeative values in data, taking absolute value.")
+            # grainMapData = grainMapData**2
+            grainMapData = np.abs(grainMapData)
+
+        sin_map = tf.radon(grainMapData, circle=False)
+        profile = np.max(sin_map, axis=0)
+
+        x = np.arange(180)
+
+        indexes = peakutils.indexes(profile, thres=thres, min_dist=min_dist)
+        peaks = x[indexes]
+        # peaks = peakutils.interpolate(x, profile, ind=indexes)
+        print("Number of bands detected: {:}".format(len(peaks)))
+
+        shearBandAngles = peaks
+        shearBandAngles = shearBandAngles * np.pi / 180
+
+        return shearBandAngles
+
+    def plotShearBands(self, grainMapData, ax=None, thres=0.3, min_dist=30, shearBandAngles=None):
+        if shearBandAngles is None:
+            shearBandAngles = self.calcShearBands(grainMapData, thres=thres, min_dist=min_dist)
+        shearBandVectors = np.array((-np.sin(shearBandAngles), np.cos(shearBandAngles)))
+
+        xPos, yPos = self.centreCoords
+
+        if ax is None:
+            plt.quiver(
+                xPos, yPos,
+                shearBandVectors[0], shearBandVectors[1],
+                scale=1, pivot="middle",
+                color='yellow', headwidth=1,
+                headlength=0
+            )
+        else:
+            ax.quiver(
+                xPos, yPos,
+                shearBandVectors[0], shearBandVectors[1],
+                scale=1, pivot="middle",
+                color='yellow', headwidth=1,
+                headlength=0
+            )
+
+        return shearBandAngles
 
     def grainData(self, mapData):
         """Takes this grains data from the given map data
@@ -709,19 +775,4 @@ class Grain(object):
         plt.xticks([])
         plt.yticks([])
 
-    def slipTraces(self, correctAvOri=False):
-        if correctAvOri:
-            # need to correct slip traces due to warping of map
-            return self.ebsdGrain.slipTraces
-        else:
-            return self.ebsdGrain.slipTraces
-
-    def calcSlipTraces(self, slipSystems=None):
-        self.ebsdGrain.calcSlipTraces(slipSystems=slipSystems)
-
-    # def calcSlipTraces(self, correctAvOri=False):
-
-    #     if correctAvOri:
-    #         # transformRotation = Quat(-DicMap.ebsdTransform.rotation, 0, 0)
-    #         transformRotation = Quat(0.1329602509925417, 0, 0)
-    #         grainAvOri = grainAvOri * transformRotation
+        return grainMapData
