@@ -416,15 +416,7 @@ class Map(base.Map):
         plt.colorbar(label=cBarLabel)
 
         if plotGBs:
-<<<<<<< HEAD:packages/ebsd.py
-            # create colourmap for boundaries and plot. colourmap goes transparent white to opaque black
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', boundaryColour], 256)
-            cmap1._init()
-            cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
-            plt.imshow(-self.boundaries, interpolation='None', vmin=0, vmax=1, cmap=cmap1)
-=======
-            self.plotGBs()
->>>>>>> master:ebsd.py
+            self.plotGBs(colour=boundaryColour)
 
         return
 

@@ -232,20 +232,7 @@ class Map(base.Map):
             plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
 
         if plotGBs:
-<<<<<<< HEAD:packages/hrdic.py
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', boundaryColour], 256)
-            cmap1._init()
-            cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
-
-            if dilateBoundaries:
-                boundariesImage = mph.binary_dilation(self.boundaries)
-            else:
-                boundariesImage = -self.boundaries
-
-            self.ax.imshow(boundariesImage, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
-=======
-            self.plotGBs(ax=self.ax)
->>>>>>> master:hrdic.py
+            self.plotGBs(ax=self.ax, colour=boundaryColour)
 
         if highlightGrains is not None:
             self.highlightGrains(highlightGrains, highlightColours)
@@ -288,9 +275,6 @@ class Map(base.Map):
 
         return
 
-<<<<<<< HEAD:packages/hrdic.py
-    def locateGrainID(self, clickEvent=None, displaySelected=False, vmin=None, vmax=None, dilateBoundaries=False):
-=======
     def plotGrainAvMaxShear(self, plotGBs=False, plotColourBar=True, vmin=None, vmax=None, clabel=''):
         """Plot grain map with grains filled with average value of max shear.
         This uses the max shear values stored in grain objects, to plot other data
@@ -396,7 +380,6 @@ class Map(base.Map):
             plt.colorbar(label=clabel)
 
     def locateGrainID(self, clickEvent=None, displaySelected=False):
->>>>>>> master:hrdic.py
         if (self.grainList is not None) and (self.grainList != []):
             # reset current selected grain and plot max shear map with click handler
             self.currGrainId = None
