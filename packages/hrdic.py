@@ -79,6 +79,15 @@ class Map(base.Map):
         return data_grad
 
     def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
+        """Set a crop for the DIC map
+
+        Args:
+            xMin(int): Distance to crop from left in pixels
+            xMax(int): Distance to crop from right in pixels
+            yMin(int): Distance to crop from top in pixels
+            yMax(int): Distance to crop from bottom in pixels
+            updateHomogPoints (bool, optional): Change homologous points to reflect crop
+        """
         # changes in homog points
         dx = 0
         dy = 0
@@ -131,6 +140,12 @@ class Map(base.Map):
         super(type(self), self).setHomogPoint(binSize=binSize)
 
     def linkEbsdMap(self, ebsdMap, transformType="affine", order=2):
+        """Calculates the transformation required to align EBSD dataset to DIC
+
+        Args:
+            transformType(string): affine, piecewiseAffine or polynomial
+            order(int): Order of polynomial transform to apply
+        """
         self.ebsdMap = ebsdMap
         if transformType == "piecewiseAffine":
             self.ebsdTransform = tf.PiecewiseAffineTransform()
@@ -221,6 +236,18 @@ class Map(base.Map):
                      updateCurrent=False, highlightGrains=None, highlightColours=None,
                      plotColourBar=False, vmin=None, vmax=None,
                      slipTraceColours=["white", "green", "red", "black"]):
+        """Plot a maximum shear map
+
+        Args:
+            plotGBs(bool): Plot grain boundaries
+                dilateBoundaries(bool): Dilate boundaries by one pixel (useful for large maps or when DIC step size < EBSD step size)
+                boundaryColour(string): Colour of boundaries
+            plotSlipTraces(bool): Plot slip traces for each grain
+            plotPercent(bool): Plot maps using percentage
+            plotColourBar(bool): Plot colour bar
+            vmin(bool, optional): Minimum value to plot
+            vmax(bool, optional): Maximum value to plot
+        """
         if not updateCurrent:
             # self.fig, self.ax = plt.subplots(figsize=(5.75, 4))
             self.fig, self.ax = plt.subplots()
