@@ -38,8 +38,10 @@ Thumbs.db
 
 # My files #
 irradiated_new.ipynb
-newata/
+newdata/
+exports/
 .ipynb_checkpoints
 __pycache__
-*.sublime-project
-*.sublime-workspace
+.sublime-project
+.sublime-workspace
+Untitled.ipynb
