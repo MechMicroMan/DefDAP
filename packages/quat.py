@@ -499,19 +499,17 @@ class Quat(object):
         qsym.append(Quat(np.array([0.5, 0.5, 0.5, -0.5])))
         qsym.append(Quat(np.array([0.5, -0.5, -0.5, 0.5])))
 
-        # hexagonal hexads
+        # hexagonal 
         qsym.append(Quat(np.array([0.866254, 0.0, 0.0, 0.5])))
         qsym.append(Quat(np.array([0.5, 0.0, 0.0, 0.866254])))
         qsym.append(Quat(np.array([0.5, 0.0, 0.0, -0.866254])))
         qsym.append(Quat(np.array([0.866254, 0.0, 0.0, -0.5])))
-
-        # hexagonal diads
         qsym.append(Quat(np.array([0.0, -0.5, 0.866254, 0.0])))
         qsym.append(Quat(np.array([0.0, -0.5, -0.866254, 0.0])))
 
         if (group == 'cubic'):
             return qsym[0:24]
         elif (group == 'hexagonal'):
-            return [qsym[0], qsym[2], qsym[8]] + qsym[-6:30]
+            return [qsym[0], qsym[2], qsym[8]] + qsym[-6:30]       
         else:
             return qsym
