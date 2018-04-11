@@ -235,15 +235,15 @@ class Map(base.Map):
     def plotMaxShear(self, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=True,
                      updateCurrent=False, highlightGrains=None, highlightColours=None,
                      plotColourBar=False, vmin=None, vmax=None):
-        """Plot a maximum shear map
+        """Plot a map of maximum shear strain
 
         Args:
-            plotGBs(bool): Plot grain boundaries
-                dilateBoundaries(bool): Dilate boundaries by one pixel (useful for large maps or when DIC step size < EBSD step size)
-                boundaryColour(string): Colour of boundaries
-            plotSlipTraces(bool): Plot slip traces for each grain
-            plotPercent(bool): Plot maps using percentage
-            plotColourBar(bool): Plot colour bar
+            plotGBs(bool, optional): Set to true to overlay grain boundaries
+                dilateBoundaries(bool, optional): Set to true to dilate boundaries by one pixel
+                boundaryColour(string, optional): Colour of boundaries
+            plotSlipTraces(bool, optional): Set to true to plot slip traces for each grain
+            plotPercent(bool, optional): Set to true to plot maps using percentage
+            plotColourBar(bool, optional): Set to true to plot colour bar
             vmin(bool, optional): Minimum value to plot
             vmax(bool, optional): Maximum value to plot
         """
@@ -412,7 +412,7 @@ class Map(base.Map):
             self.plotMaxShear(plotGBs=True, vmin=vmin, vmax=vmax, dilateBoundaries=dilateBoundaries)
             if clickEvent is None:
                 # default click handler which highlights grain and prints id
-                self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickGrainId(x, displaySelected, vmin=None, vmax=None))
+                self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickGrainId(x, displaySelected, vmin=vmin, vmax=vmax))
             else:
                 # click handler loaded in as parameter. Pass current map object to it.
                 self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
