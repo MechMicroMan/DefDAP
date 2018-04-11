@@ -234,8 +234,7 @@ class Map(base.Map):
 
     def plotMaxShear(self, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=True,
                      updateCurrent=False, highlightGrains=None, highlightColours=None,
-                     plotColourBar=False, vmin=None, vmax=None,
-                     slipTraceColours=["white", "green", "red", "black"]):
+                     plotColourBar=False, vmin=None, vmax=None):
         """Plot a maximum shear map
 
         Args:
@@ -293,7 +292,7 @@ class Map(base.Map):
             xPos = grainSizeData[:, 0] + (grainSizeData[:, 2] - grainSizeData[:, 0]) / 2
             yPos = grainSizeData[:, 1] + (grainSizeData[:, 3] - grainSizeData[:, 1]) / 2
 
-            colours = slipTraceColours
+            colours = self.ebsdMap.slipTraceColours
 
             for i, colour in enumerate(colours[0:numSS]):
                 self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1],
@@ -324,7 +323,7 @@ class Map(base.Map):
             for coord in grain.coordList:
                 grainAvMaxShear[coord[1], coord[0]] = avMaxShear
 
-        plt.imshow(grainAvMaxShear * 100, vmin=0, vmax=6)
+        plt.imshow(grainAvMaxShear * 100, vmin=vmin, vmax=vmin)
 
         if plotColourBar:
                 plt.colorbar(label="Effective shear strain (%)")
@@ -425,7 +424,7 @@ class Map(base.Map):
         else:
             raise Exception("Grain list empty")
 
-    def clickGrainId(self, event, displaySelected, vmin=0, vmax=10):
+    def clickGrainId(self, event, displaySelected, vmin=None, vmax=None):
         if event.inaxes is not None:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
@@ -592,8 +591,7 @@ class Grain(object):
         return
 
     def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False,
-                     vmin=None, vmax=None, cmap="viridis", ax=None,
-                     slipTraceColours=["white", "green", "red", "black"]):
+                     vmin=None, vmax=None, cmap="viridis", ax=None):
 
         multiplier = 100 if plotPercent else 1
         x0, y0, xmax, ymax = self.extremeCoords
@@ -618,7 +616,7 @@ class Grain(object):
             if self.slipTraces() is None:
                 raise Exception("First calculate slip traces")
 
-            colours = slipTraceColours
+            colours = self.dicMap.ebsdMap.slipTraceColours
             xPos = int((xmax - x0) / 2)
             yPos = int((ymax - y0) / 2)
             for i, slipTrace in enumerate(self.slipTraces()):

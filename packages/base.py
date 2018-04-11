@@ -364,12 +364,18 @@ class SlipSystem(object):
         Raises:
             IOError: Raised if not 6 integers per line
         """
+
+        f = open(filepath)
+        lines = f.readlines()
+        colour = lines[1].rstrip()
+        slipTraceColours = colour.split(',')
+
         if crystalSym == "hexagonal":
             vectSize = 4
         else:
             vectSize = 3
 
-        ssData = np.loadtxt(filepath, delimiter='\t', skiprows=1, dtype=int)
+        ssData = np.loadtxt(filepath, delimiter='\t', skiprows=2, dtype=int)
         if ssData.shape[1] != 2 * vectSize:
             raise IOError("Slip system file not valid")
 
@@ -381,7 +387,7 @@ class SlipSystem(object):
         # Group slip sytems by slip plane
         groupedSlipSystems = SlipSystem.groupSlipSystems(slipSystems)
 
-        return groupedSlipSystems
+        return groupedSlipSystems, slipTraceColours
 
     @staticmethod
     def groupSlipSystems(slipSystems):

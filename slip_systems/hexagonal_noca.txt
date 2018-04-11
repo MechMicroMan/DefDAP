@@ -1,4 +1,5 @@
-# Plane normal then slip direction (3xbasal), (3xprism), (6xpyramidal)
+# Plane normal then slip direction (3xbasal), (3xprism), (6xpy a)
+red,blue,blue,blue,green,green,green,green,green,green
 0	0	0	1	1	1	-2	0
 0	0	0	1	1	-2	1	0
 0	0	0	1	-2	1	1	0

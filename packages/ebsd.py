@@ -51,6 +51,7 @@ class Map(base.Map):
         self.kam = None             # (array) map of kam
         self.averageSchmidFactor = None     # (array) map of average Schmid factor
         self.slipSystems = None     # (list(list(slipSystems))) slip systems grouped by slip plane
+        self.slipTraceColours = None    #list of colours used when plotting slip traces
         self.currGrainId = None     # Id of last selected grain
         self.origin = (0, 0)        # Map origin (y, x). Used by linker class where origin is a
                                     # homologue point of the maps
@@ -421,7 +422,7 @@ class Map(base.Map):
         return
 
     def loadSlipSystems(self, filepath, cOverA=None):
-        self.slipSystems = base.SlipSystem.loadSlipSystems(filepath, self.crystalSym, cOverA=cOverA)
+        self.slipSystems, self.slipTraceColours = base.SlipSystem.loadSlipSystems(filepath, self.crystalSym, cOverA=cOverA)
 
         if self.grainList is not None:
             for grain in self.grainList:
@@ -665,7 +666,7 @@ class Grain(object):
             plt.yticks([])
 
             if plotSlipTraces:
-                colours = ["white", "green", "red", "black"]
+                colours = self.ebsdMap.slipTraceColours
                 xPos = int((xmax - x0) / 2)
                 yPos = int((ymax - y0) / 2)
                 for slipTrace, colour in zip(self.slipTraces, colours):
