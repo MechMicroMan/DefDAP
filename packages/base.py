@@ -1,6 +1,7 @@
 import numpy as np
 
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
 
@@ -10,12 +11,25 @@ class Map(object):
         self.homogPoints = []
         self.selPoint = None
 
+        self.proxigramArr = None
+
     def __len__(self):
         return len(self.grainList)
 
     # allow array like getting of grains
     def __getitem__(self, key):
         return self.grainList[key]
+
+    def plotGBs(self, ax=None, colour='white'):
+        # create colourmap for boundaries and plot. colourmap goes transparent white to opaque white/colour
+        cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', colour], 256)
+        cmap1._init()
+        cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
+
+        if ax is not None:
+            ax.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
+        else:
+            plt.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
 
     def setHomogPoint(self, binSize=1):
         self.selPoint = None
@@ -63,6 +77,42 @@ class Map(object):
             self.ax.set_ylim(currYLim)
 
             self.fig.canvas.draw()
+
+    def updateHomogPoint(self, homogID, newPoint=None, delta=None):
+        """Update a homog by either over wrting it with a new point or
+        incrementing the current values.
+
+        Args:
+            homogID (int): ID (place in list) of point to update or -1 for all
+            newPoint (tuple, optional): New point
+            delta (tuple, optional): Increments to current point (dx, dy)
+        """
+        if type(homogID) is not int:
+            raise Exception("homogID must be an integer.")
+        if homogID >= len(self.homogPoints):
+            raise Exception("homogID is out of range.")
+
+        # Update all points
+        if homogID < 0:
+            for i in range(len(self.homogPoints)):
+                self.updateHomogPoint(homogID=i, delta=delta)
+        # Update a single point
+        else:
+            # overwrite point
+            if newPoint is not None:
+                if type(newPoint) is not tuple and len(newPoint) != 2:
+                    raise Exception("newPoint must be a 2 component tuple")
+
+            # increment current point
+            elif delta is not None:
+                if type(delta) is not tuple and len(delta) != 2:
+                    raise Exception("delta must be a 2 component tuple")
+                newPoint = list(self.homogPoints[homogID])
+                newPoint[0] += delta[0]
+                newPoint[1] += delta[1]
+                newPoint = tuple(newPoint)
+
+            self.homogPoints[homogID] = newPoint
 
     def highlightGrains(self, grainIds, grainColours):
         if grainColours is None:
@@ -169,6 +219,62 @@ class Map(object):
             self.plotDefault(updateCurrent=True, highlightGrains=highlightGrains,
                              highlightColours=highlightColours)
             self.fig.canvas.draw()
+
+    @property
+    def proxigram(self):
+        self.calcProxigram(forceCalc=False)
+
+        return self.proxigramArr
+
+    def calcProxigram(self, numTrials=500, forceCalc=True):
+        if self.proxigramArr is not None and not forceCalc:
+            return
+
+        proxBoundaries = np.copy(self.boundaries)
+        proxShape = proxBoundaries.shape
+
+        # ebsd boundary arrays have extra boundary along right and bottom edge. These need to be removed
+        # rigth edge
+        if np.all(proxBoundaries[:, -1] == -1):
+            proxBoundaries[:, -1] = proxBoundaries[:, -2]
+        # bottom edge
+        if np.all(proxBoundaries[-1, :] == -1):
+            proxBoundaries[-1, :] = proxBoundaries[-2, :]
+
+        # create list of positions of each boundary point
+        indexBoundaries = []
+        for index, value in np.ndenumerate(proxBoundaries):
+            if value == -1:
+                indexBoundaries.append(index)
+        # add 0.5 to boundary coordiantes as they are placed on the bottom right edge pixels of grains
+        indexBoundaries = np.array(indexBoundaries) + 0.5
+
+        # array of x and y coordinate of each pixel in the map
+        coords = np.zeros((2, proxShape[0], proxShape[1]), dtype=float)
+        coords[0], coords[1] = np.meshgrid(range(proxShape[0]), range(proxShape[1]), indexing='ij')
+
+        # array to store trial distance from each boundary point
+        trialDistances = np.full((numTrials + 1, proxShape[0], proxShape[1]), 1000, dtype=float)
+
+        # loop over each boundary point (p) and calcuale distance from p to all points in the map
+        # store minimum once numTrails have been made and start a new batch of trials
+        print("Calculating proxigram ", end='')
+        numBoundaryPoints = len(indexBoundaries)
+        j = 1
+        for i, indexBoundary in enumerate(indexBoundaries):
+            trialDistances[j] = np.sqrt((coords[0] - indexBoundary[0])**2 + (coords[1] - indexBoundary[1])**2)
+
+            if j == numTrials:
+                # find current minimum distances and store
+                trialDistances[0] = trialDistances.min(axis=0)
+                j = 0
+                print("{:.1f}% ".format(i / numBoundaryPoints * 100), end='')
+            j += 1
+
+        # find final minimum distances to a boundary
+        self.proxigramArr = trialDistances.min(axis=0)
+
+        trialDistances = None
 
 
 class SlipSystem(object):

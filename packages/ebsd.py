@@ -32,6 +32,7 @@ class Map(base.Map):
         xDim (int): x dimension of map
         yDim (int): y dimension of map
     """
+
     def __init__(self, fileName, crystalSym):
         # Call base class constructor
         super(Map, self).__init__()
@@ -195,11 +196,14 @@ class Map(base.Map):
         self.checkDataLoaded()
 
         if self.quatArray is None:
-            self.quatArray = np.empty([self.yDim, self.xDim], dtype=Quat)
-            for j in range(self.yDim):
-                for i in range(self.xDim):
-                    eulers = self.binData[j * self.xDim + i][('Eulers')]
-                    self.quatArray[j, i] = Quat(eulers[0], eulers[1], eulers[2])
+            eulerArray = self.binData[('Eulers')]
+            # reshape to map dimensions
+            eulerArray = eulerArray.reshape((self.yDim, self.xDim))
+            # this flattens the structures the Euler angles are stored into a normal array
+            eulerArray = np.array(eulerArray.tolist())
+            eulerArray = eulerArray.transpose((2, 0, 1))
+            # create the array of quat objects
+            self.quatArray = Quat.createManyQuats(eulerArray)
         return
 
     def findBoundaries(self, boundDef=10):
@@ -412,11 +416,15 @@ class Map(base.Map):
         plt.colorbar(label=cBarLabel)
 
         if plotGBs:
+<<<<<<< HEAD:packages/ebsd.py
             # create colourmap for boundaries and plot. colourmap goes transparent white to opaque black
             cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', boundaryColour], 256)
             cmap1._init()
             cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
             plt.imshow(-self.boundaries, interpolation='None', vmin=0, vmax=1, cmap=cmap1)
+=======
+            self.plotGBs()
+>>>>>>> master:ebsd.py
 
         return
 
@@ -448,11 +456,7 @@ class Map(base.Map):
         plt.colorbar(label="Schmid factor")
 
         if plotGBs:
-            # create colourmap for boundaries and plot. colourmap goes transparent white to opaque black
-            cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'black'], 256)
-            cmap1._init()
-            cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
-            plt.imshow(-self.boundaries, interpolation='None', vmin=0, vmax=1, cmap=cmap1)
+            self.plotGBs()
 
         return
 
@@ -521,7 +525,7 @@ class Grain(object):
             Dq[0, :] = (refOriInv[0] * minQuatComps[0, :] - refOriInv[1] * minQuatComps[1, :] -
                         refOriInv[2] * minQuatComps[2, :] - refOriInv[3] * minQuatComps[3, :])
 
-            Dq[1, :] = (refOriInv[1] * minQuatComps[1, :] + refOriInv[0] * minQuatComps[1, :] +
+            Dq[1, :] = (refOriInv[1] * minQuatComps[0, :] + refOriInv[0] * minQuatComps[1, :] +
                         refOriInv[3] * minQuatComps[2, :] - refOriInv[2] * minQuatComps[3, :])
 
             Dq[2, :] = (refOriInv[2] * minQuatComps[0, :] + refOriInv[0] * minQuatComps[2, :] +
@@ -769,6 +773,7 @@ class Linker(object):
                       map stored in same order of maps)
         numMaps (TYPE): Number of linked maps
     """
+
     def __init__(self, maps):
         self.ebsdMaps = maps
         self.numMaps = len(maps)

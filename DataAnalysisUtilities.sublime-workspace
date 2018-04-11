@@ -128,19 +128,19 @@
 	"buffers":
 	[
 		{
-			"file": "base.py",
+			"file": "quat.py",
 			"settings":
 			{
-				"buffer_size": 8253,
+				"buffer_size": 18626,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "ebsd.py",
+			"file": "fepx.py",
 			"settings":
 			{
-				"buffer_size": 40204,
+				"buffer_size": 47769,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -149,17 +149,7 @@
 			"file": "hrdic.py",
 			"settings":
 			{
-				"buffer_size": 20218,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "quat.py",
-			"settings":
-			{
-				"buffer_size": 11154,
-				"encoding": "UTF-8",
+				"buffer_size": 21428,
 				"line_ending": "Unix"
 			}
 		}
@@ -205,14 +195,16 @@
 	],
 	"file_history":
 	[
+		"/Users/mbcx9ma4/modelling_stuff/packages/DataAnalysisUtilities/fepx.py",
+		"/Users/mbcx9ma4/modelling_stuff/packages/DataAnalysisUtilities/base.py",
+		"/Users/mbcx9ma4/modelling_stuff/packages/DataAnalysisUtilities/ebsd.py",
+		"/Users/mbcx9ma4/modelling_stuff/packages/DataAnalysisUtilities/hrdic.py",
 		"/Users/mbcx9ma4/Library/Application Support/Sublime Text 3/Packages/AutoDocstring/Default.sublime-keymap",
 		"/Users/mbcx9ma4/Library/Application Support/Sublime Text 3/Packages/AutoDocstring/AutoDocstring.sublime-settings",
 		"/Users/mbcx9ma4/Library/Application Support/Sublime Text 3/Packages/Anaconda/Anaconda.sublime-settings",
-		"/Users/mbcx9ma4/modelling_stuff/packages/DataAnalysisUtilities/fepx.py",
 		"/Users/mbcx9ma4/Library/Application Support/Sublime Text 3/Packages/User/Python.sublime-settings",
 		"/Users/mbcx9ma4/Library/Application Support/Sublime Text 3/Packages/User/Anaconda.sublime-settings",
 		"/Users/mbcx9ma4/modelling_stuff/packages/DataAnalysisUtilities/quat.py",
-		"/Users/mbcx9ma4/modelling_stuff/packages/DataAnalysisUtilities/ebsd.py",
 		"/Users/mbcx9ma4/anaconda/lib/python2.7/site-packages/IPython/core/usage.py",
 		"/Users/mbcx9ma4/.ipython/profile_default/startup/10-addToPath.py",
 		"/Users/mbcx9ma4/modelling_stuff/packages/__init__.py",
@@ -225,7 +217,7 @@
 	],
 	"find":
 	{
-		"height": 35.0
+		"height": 23.0
 	},
 	"find_in_files":
 	{
@@ -314,19 +306,49 @@
 			[
 				{
 					"buffer": 0,
-					"file": "base.py",
+					"file": "quat.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 8253,
+						"buffer_size": 18626,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2083,
-								2083
+								11326,
+								11326
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 5652.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "fepx.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 47769,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								22699,
+								22699
 							]
 						],
 						"settings":
@@ -346,65 +368,13 @@
 									"selector": "source.python - string - constant.numeric"
 								}
 							],
+							"history_list_is_closing": true,
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 267.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 3,
-					"type": "text"
-				},
-				{
-					"buffer": 1,
-					"file": "ebsd.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 40204,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								2930,
-								2930
-							]
-						],
-						"settings":
-						{
-							"auto_complete_triggers":
-							[
-								{
-									"characters": "<",
-									"selector": "text.html"
-								},
-								{
-									"characters": ".",
-									"selector": "source.python - string - constant.numeric"
-								},
-								{
-									"characters": ".",
-									"selector": "source.python - string - constant.numeric"
-								},
-								{
-									"characters": ".",
-									"selector": "source.python - string - constant.numeric"
-								},
-								{
-									"characters": ".",
-									"selector": "source.python - string - constant.numeric"
-								}
-							],
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 887.0,
+						"translation.y": 7569.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 0,
@@ -416,77 +386,28 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 20218,
+						"buffer_size": 21428,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								5354,
-								5354
+								1825,
+								1825
 							]
 						],
 						"settings":
 						{
-							"auto_complete_triggers":
-							[
-								{
-									"characters": "<",
-									"selector": "text.html"
-								},
-								{
-									"characters": ".",
-									"selector": "source.python - string - constant.numeric"
-								},
-								{
-									"characters": ".",
-									"selector": "source.python - string - constant.numeric"
-								},
-								{
-									"characters": ".",
-									"selector": "source.python - string - constant.numeric"
-								}
-							],
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 2022.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 1,
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "quat.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 11154,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								7104,
-								7104
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 2.0,
-						"translation.y": 2301.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 2,
 					"type": "text"
 				}
 			]
@@ -531,7 +452,7 @@
 	"project": "DataAnalysisUtilities.sublime-project",
 	"replace":
 	{
-		"height": 64.0
+		"height": 42.0
 	},
 	"save_all_on_build": true,
 	"select_file":

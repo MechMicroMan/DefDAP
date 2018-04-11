@@ -29,6 +29,30 @@ class Quat(object):
         if (self.quatCoef[0] < 0):
             self.quatCoef = self.quatCoef * -1
 
+        # overload static method with instance method of same name in object
+        self.plotIPF = self._plotIPF
+
+    @classmethod
+    def fromAxisAngle(cls, axis, angle):
+        """Create a quat object from an axis angle pair
+
+        Args:
+            axis (np.array size 3): Axis of rotation
+            angle (float): Rotation arround axis (radians)
+
+        Returns:
+            Quat: Initialised Quat object
+        """
+        # normalise the axis vector
+        axis = axis / np.sqrt(np.dot(axis, axis))
+        # calculate quat coefficients
+        quatCoef = np.zeros(4, dtype=float)
+        quatCoef[0] = np.cos(angle / 2)
+        quatCoef[1:4] = np.sin(angle / 2) * axis
+
+        # call constructor
+        return cls(quatCoef)
+
     def eulerAngles(self):
         # See Melcher, a. Unser, A. Reichhardt, M. Nestler, B. Conversion of EBSD data by a
         # quaternion based algorithm to be used for grain structure simulations
@@ -102,6 +126,9 @@ class Quat(object):
 
     def __str__(self):
         return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
+
+    def _plotIPF(self, direction, symGroup, **kwargs):
+        Quat.plotIPF([self], direction, symGroup, **kwargs)
 
     # overload * operator for quaterion product and vector product
     def __mul__(self, right):
@@ -192,6 +219,35 @@ class Quat(object):
             else:
                 return minMisOri
         raise TypeError("Input must be a quaternion.")
+
+# Static methods
+
+    @staticmethod
+    def createManyQuats(eulerArray):
+        """Create a an array of quats from an array of Euler angles
+
+        Args:
+            eulerArray (array): Size 3 x n x ... x m
+        """
+        ph1 = eulerArray[0]
+        phi = eulerArray[1]
+        ph2 = eulerArray[2]
+        oriShape = eulerArray.shape[1:]
+
+        quatComps = np.zeros((4,) + oriShape, dtype=float)
+
+        quatComps[0] = np.cos(phi / 2.0) * np.cos((ph1 + ph2) / 2.0)
+        quatComps[1] = -np.sin(phi / 2.0) * np.cos((ph1 - ph2) / 2.0)
+        quatComps[2] = -np.sin(phi / 2.0) * np.sin((ph1 - ph2) / 2.0)
+        quatComps[3] = -np.cos(phi / 2.0) * np.sin((ph1 + ph2) / 2.0)
+
+        quats = np.empty(oriShape, dtype=Quat)
+
+        for idx in np.ndindex(oriShape):
+            quats[idx] = Quat(quatComps[(slice(None),) + idx])
+            # quatComps[(slice(None),) + idx] is equivalent to quatComps[:, idx[0], ..., idx[n]]
+
+        return quats
 
     @staticmethod
     def calcSymEqvs(quats, symGroup):
@@ -297,8 +353,8 @@ class Quat(object):
             plt.axis('equal')
             plt.axis('off')
 
-        elif plotType == "PF":
-            return
+        else:
+            print("Only works for cubic")
 
     @staticmethod
     def plotIPF(quats, direction, symGroup, **kwargs):
@@ -306,7 +362,7 @@ class Quat(object):
         plotParams.update(kwargs)
 
         if symGroup == "hexagonal":
-            raise(Exception("Have fun with that"))
+            raise Exception("Have fun with that")
 
         # Plot IPF axis
         plt.figure()
@@ -348,8 +404,10 @@ class Quat(object):
 
         # convert to spherical coordinates
         PFCoordsSph = np.empty((2, quatCompsSym.shape[0], quatCompsSym.shape[2]))
-        PFCoordsSph[0, :, :] = np.arccos(directionCrystal[2, :, :])  # alpha - angle with z axis
-        PFCoordsSph[1, :, :] = np.arctan2(directionCrystal[1, :, :], directionCrystal[0, :, :])  # beta - angle around z axis
+        # alpha - angle with z axis
+        PFCoordsSph[0, :, :] = np.arccos(directionCrystal[2, :, :])
+        # beta - angle around z axis
+        PFCoordsSph[1, :, :] = np.arctan2(directionCrystal[1, :, :], directionCrystal[0, :, :])
 
         # find the poles in the fundamental triangle
         if symGroup == "cubic":
@@ -366,7 +424,7 @@ class Quat(object):
             # create array to store final projected coordinates
             PFCoordsPjt = np.empty((2, quatCompsSym.shape[2]))
 
-            # now of symmetric equivalents left we want the one with minimum beta
+            # now of symmetric equivalents left we want the one with minimum alpha
             # loop over different orientations
             for i in range(trialPoles.shape[1]):
                 # create array of indexes of poles kept in previous step
@@ -378,6 +436,8 @@ class Quat(object):
 
                 # add to final array of poles
                 PFCoordsPjt[:, i] = PFCoordsSph[:, poleIdx, i]
+        else:
+            print("Only works for cubic")
 
         # project onto equatorial plane
         temp = np.tan(PFCoordsPjt[0, :] / 2)
@@ -386,6 +446,7 @@ class Quat(object):
 
         # plot poles
         plt.scatter(PFCoordsPjt[0, :], PFCoordsPjt[1, :], **plotParams)
+        plt.show()
 
         # unset variables
         quatCompsSym = None
