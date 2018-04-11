@@ -40,6 +40,6 @@ Thumbs.db
 irradiated_new.ipynb
 newata/
 .ipynb_checkpoints
-DataAnalysisUtilities.sublime-project
-DataAnalysisUtilities.sublime-workspace
 __pycache__
+*.sublime-project
+*.sublime-workspace
