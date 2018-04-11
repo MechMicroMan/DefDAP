@@ -232,7 +232,7 @@ class Map(base.Map):
             plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
 
         if plotGBs:
-            self.plotGBs(ax=self.ax, colour=boundaryColour)
+            self.plotGBs(ax=self.ax, colour=boundaryColour, dilate=dilateBoundaries)
 
         if highlightGrains is not None:
             self.highlightGrains(highlightGrains, highlightColours)
@@ -379,7 +379,7 @@ class Map(base.Map):
         if plotColourBar:
             plt.colorbar(label=clabel)
 
-    def locateGrainID(self, clickEvent=None, displaySelected=False):
+    def locateGrainID(self, clickEvent=None, displaySelected=False, vmin=None, vmax=None, dilateBoundaries=False):
         if (self.grainList is not None) and (self.grainList != []):
             # reset current selected grain and plot max shear map with click handler
             self.currGrainId = None
@@ -567,6 +567,7 @@ class Grain(object):
     def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False,
                      vmin=None, vmax=None, cmap="viridis", ax=None,
                      slipTraceColours=["white", "green", "red", "black"]):
+
         multiplier = 100 if plotPercent else 1
         x0, y0, xmax, ymax = self.extremeCoords
 

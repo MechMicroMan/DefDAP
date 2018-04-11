@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
+import skimage.morphology as mph
 
 
 class Map(object):
@@ -20,16 +21,21 @@ class Map(object):
     def __getitem__(self, key):
         return self.grainList[key]
 
-    def plotGBs(self, ax=None, colour='white'):
+    def plotGBs(self, ax=None, colour='white', dilate=False):
         # create colourmap for boundaries and plot. colourmap goes transparent white to opaque white/colour
         cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', colour], 256)
         cmap1._init()
         cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
 
+        boundariesImage=-self.boundaries
+
+        if dilate:
+            boundariesImage = mph.binary_dilation(boundariesImage)
+
         if ax is not None:
-            ax.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
+            ax.imshow(boundariesImage, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
         else:
-            plt.imshow(-self.boundaries, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
+            plt.imshow(boundariesImage, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
 
     def setHomogPoint(self, binSize=1):
         self.selPoint = None
