@@ -79,6 +79,15 @@ class Map(base.Map):
         return data_grad
 
     def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
+        """Set a crop for the DIC map
+
+        Args:
+            xMin(int): Distance to crop from left in pixels
+            xMax(int): Distance to crop from right in pixels
+            yMin(int): Distance to crop from top in pixels
+            yMax(int): Distance to crop from bottom in pixels
+            updateHomogPoints (bool, optional): Change homologous points to reflect crop
+        """
         # changes in homog points
         dx = 0
         dy = 0
@@ -131,6 +140,12 @@ class Map(base.Map):
         super(type(self), self).setHomogPoint(binSize=binSize)
 
     def linkEbsdMap(self, ebsdMap, transformType="affine", order=2):
+        """Calculates the transformation required to align EBSD dataset to DIC
+
+        Args:
+            transformType(string): affine, piecewiseAffine or polynomial
+            order(int): Order of polynomial transform to apply
+        """
         self.ebsdMap = ebsdMap
         if transformType == "piecewiseAffine":
             self.ebsdTransform = tf.PiecewiseAffineTransform()
@@ -164,7 +179,7 @@ class Map(base.Map):
             tempEbsdTransform.params[0:2, 2] = -0.05 * np.array(mapData.shape)
 
             # output the entire warped image with 5% border (add some extra to fix a bug)
-            outputShape = np.array(mapData.shape) * 1.3 / tempEbsdTransform.scale
+            outputShape = np.array(mapData.shape) * 1.4 / tempEbsdTransform.scale
 
             # warp the map
             warpedMap = tf.warp(mapData, tempEbsdTransform, output_shape=outputShape.astype(int))
@@ -217,9 +232,21 @@ class Map(base.Map):
         else:
             raise Exception("First set path to pattern image.")
 
-    def plotMaxShear(self, plotGBs=False, plotSlipTraces=False, plotPercent=True,
+    def plotMaxShear(self, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=True,
                      updateCurrent=False, highlightGrains=None, highlightColours=None,
                      plotColourBar=False, vmin=None, vmax=None):
+        """Plot a map of maximum shear strain
+
+        Args:
+            plotGBs(bool, optional): Set to true to overlay grain boundaries
+                dilateBoundaries(bool, optional): Set to true to dilate boundaries by one pixel
+                boundaryColour(string, optional): Colour of boundaries
+            plotSlipTraces(bool, optional): Set to true to plot slip traces for each grain
+            plotPercent(bool, optional): Set to true to plot maps using percentage
+            plotColourBar(bool, optional): Set to true to plot colour bar
+            vmin(bool, optional): Minimum value to plot
+            vmax(bool, optional): Maximum value to plot
+        """
         if not updateCurrent:
             # self.fig, self.ax = plt.subplots(figsize=(5.75, 4))
             self.fig, self.ax = plt.subplots()
@@ -231,7 +258,7 @@ class Map(base.Map):
             plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
 
         if plotGBs:
-            self.plotGBs(ax=self.ax)
+            self.plotGBs(ax=self.ax, colour=boundaryColour, dilate=dilateBoundaries)
 
         if highlightGrains is not None:
             self.highlightGrains(highlightGrains, highlightColours)
@@ -265,7 +292,7 @@ class Map(base.Map):
             xPos = grainSizeData[:, 0] + (grainSizeData[:, 2] - grainSizeData[:, 0]) / 2
             yPos = grainSizeData[:, 1] + (grainSizeData[:, 3] - grainSizeData[:, 1]) / 2
 
-            colours = ["white", "green", "red", "black"]
+            colours = self.ebsdMap.slipTraceColours
 
             for i, colour in enumerate(colours[0:numSS]):
                 self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1],
@@ -296,7 +323,7 @@ class Map(base.Map):
             for coord in grain.coordList:
                 grainAvMaxShear[coord[1], coord[0]] = avMaxShear
 
-        plt.imshow(grainAvMaxShear * 100, vmin=0, vmax=6)
+        plt.imshow(grainAvMaxShear * 100, vmin=vmin, vmax=vmin)
 
         if plotColourBar:
                 plt.colorbar(label="Effective shear strain (%)")
@@ -378,14 +405,14 @@ class Map(base.Map):
         if plotColourBar:
             plt.colorbar(label=clabel)
 
-    def locateGrainID(self, clickEvent=None, displaySelected=False):
+    def locateGrainID(self, clickEvent=None, displaySelected=False, vmin=None, vmax=None, dilateBoundaries=False):
         if (self.grainList is not None) and (self.grainList != []):
             # reset current selected grain and plot max shear map with click handler
             self.currGrainId = None
-            self.plotMaxShear(plotGBs=True)
+            self.plotMaxShear(plotGBs=True, vmin=vmin, vmax=vmax, dilateBoundaries=dilateBoundaries)
             if clickEvent is None:
                 # default click handler which highlights grain and prints id
-                self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickGrainId(x, displaySelected))
+                self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickGrainId(x, displaySelected, vmin=vmin, vmax=vmax))
             else:
                 # click handler loaded in as parameter. Pass current map object to it.
                 self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
@@ -397,7 +424,7 @@ class Map(base.Map):
         else:
             raise Exception("Grain list empty")
 
-    def clickGrainId(self, event, displaySelected):
+    def clickGrainId(self, event, displaySelected, vmin=None, vmax=None):
         if event.inaxes is not None:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
@@ -406,7 +433,7 @@ class Map(base.Map):
             # clear current axis and redraw map with highlighted grain overlay
             self.ax.clear()
             self.plotMaxShear(plotGBs=True, updateCurrent=True, highlightGrains=[self.currGrainId],
-                              highlightColours=['green'])
+                              vmin=vmin, vmax=vmax, highlightColours=['green'])
             self.fig.canvas.draw()
 
             if displaySelected:
@@ -416,7 +443,9 @@ class Map(base.Map):
                 self.grainAx.clear()
                 self.grainList[self.currGrainId].plotMaxShear(plotSlipTraces=True,
                                                               plotShearBands=True,
-                                                              ax=self.grainAx)
+                                                              ax=self.grainAx,
+                                                              vmin=vmin,
+                                                              vmax=vmax)
                 self.grainFig.canvas.draw()
 
     def findGrains(self, minGrainSize=10):
@@ -563,6 +592,7 @@ class Grain(object):
 
     def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False,
                      vmin=None, vmax=None, cmap="viridis", ax=None):
+
         multiplier = 100 if plotPercent else 1
         x0, y0, xmax, ymax = self.extremeCoords
 
@@ -586,7 +616,7 @@ class Grain(object):
             if self.slipTraces() is None:
                 raise Exception("First calculate slip traces")
 
-            colours = ["white", "green", "red", "black"]
+            colours = self.dicMap.ebsdMap.slipTraceColours
             xPos = int((xmax - x0) / 2)
             yPos = int((ymax - y0) / 2)
             for i, slipTrace in enumerate(self.slipTraces()):
@@ -612,6 +642,7 @@ class Grain(object):
             print("Number of bands detected: {:}".format(len(peaks)))
 
             shearBandAngles = peaks
+            print("Angles: {:}".format(180-(90-shearBandAngles)))
             shearBandAngles = -shearBandAngles * np.pi / 180
             shearBandVectors = np.array((np.sin(shearBandAngles), np.cos(shearBandAngles)))
 
