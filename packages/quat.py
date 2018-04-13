@@ -461,9 +461,11 @@ class Quat(object):
         overRoot2 = np.sqrt(2) / 2
         sqrt3over2 = np.sqrt(3) / 2
         qsym = []
+        # identity
         qsym.append(Quat(np.array([1.0, 0.0, 0.0, 0.0])))
 
         # from Pete Bate's fspl_orir.f90 code
+        # checked for consistency with mtex
         # cubic tetrads(100)
         qsym.append(Quat(np.array([overRoot2, overRoot2, 0.0, 0.0])))
         qsym.append(Quat(np.array([0.0, 1.0, 0.0, 0.0])))
@@ -500,11 +502,13 @@ class Quat(object):
         qsym.append(Quat(np.array([0.5, 0.5, 0.5, -0.5])))
         qsym.append(Quat(np.array([0.5, -0.5, -0.5, 0.5])))
 
-        # hexagonal [from mtex]
+        # hexagonal hexads
         qsym.append(Quat(np.array([sqrt3over2, 0.0, 0.0, 0.5])))
         qsym.append(Quat(np.array([0.5, 0.0, 0.0, sqrt3over2])))
-        qsym.append(Quat(np.array([-0.5, 0.0, 0.0, sqrt3over2])))
-        qsym.append(Quat(np.array([-sqrt3over2, 0.0, 0.0, 0.5])))
+        qsym.append(Quat(np.array([0.5, 0.0, 0.0, -sqrt3over2])))
+        qsym.append(Quat(np.array([sqrt3over2, 0.0, 0.0, -0.5])))
+
+        # hexagonal diads
         qsym.append(Quat(np.array([0.0, -0.5, -sqrt3over2, 0.0])))
         qsym.append(Quat(np.array([0.0, 0.5, -sqrt3over2, 0.0])))
         qsym.append(Quat(np.array([0.0, sqrt3over2, -0.5, 0.0])))
@@ -513,6 +517,6 @@ class Quat(object):
         if (group == 'cubic'):
             return qsym[0:24]
         elif (group == 'hexagonal'):
-            return [qsym[0], qsym[2], qsym[5], qsym[8]] + qsym[-8:32]       
+            return [qsym[0], qsym[2], qsym[5], qsym[8]] + qsym[-8:32]
         else:
             return qsym
