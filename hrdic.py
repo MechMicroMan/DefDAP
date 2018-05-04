@@ -332,19 +332,47 @@ class Map(base.Map):
             vmax (float, optional): Maximum value for colour scale
             clabel (str, optional): Colour bar label text
         """
-        plt.figure()
 
         grainAvData = self.calcGrainAv(mapData)
 
-        grainAvMap = np.zeros([self.yDim, self.xDim])
+        self.plotGrainData(
+            grainAvData,
+            grainIds=-1,
+            plotGBs=plotGBs,
+            plotColourBar=plotColourBar,
+            vmin=vmin,
+            vmax=vmax,
+            clabel=clabel
+        )
 
-        for grainId, grain in enumerate(self.grainList):
-            grainAv = grainAvData[grainId]
+    def plotGrainData(self, grainData, grainIds=-1, bg=0, plotGBs=False, plotColourBar=True, cmap=None, vmin=None, vmax=None, clabel=''):
+        """Plot grain map with grains filled with average value of from any DIC map data
 
+        Args:
+            grainData (np.array): Data value for each grain
+            grainIds (iterable): Grain IDs of each grain to plot, -1 for all grains
+            bg (float, optional): Background value for areas with no grain data.
+            plotGBs (bool, optional): Set to True to draw grain boundaries
+            plotColourBar (bool, optional): Set to Flase to exclude the colour bar
+            cmap (str, optional): Colour map to use
+            vmin (float, optional): Minimum value of colour scale
+            vmax (float, optional): Maximum value for colour scale
+            clabel (str, optional): Colour bar label text
+        """
+        if grainIds is int and grainIds == -1:
+            grainIds = range(len(self))
+
+        if len(grainData) != len(grainIds):
+            raise Exception("Must be 1 value for each grain in grainData.")
+
+        grainMap = np.full([self.yDim, self.xDim], bg)
+        for grainId, grainValue in zip(grainIds, grainData):
+            grain = self.grainList[grainId]
             for coord in grain.coordList:
-                grainAvMap[coord[1], coord[0]] = grainAv
+                grainMap[coord[1], coord[0]] = grainValue
 
-        plt.imshow(grainAvMap, vmin=vmin, vmax=vmax)
+        plt.figure()
+        plt.imshow(grainMap, vmin=vmin, vmax=vmax, cmap=cmap)
 
         if plotColourBar:
             plt.colorbar(label=clabel)
