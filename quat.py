@@ -365,7 +365,7 @@ class Quat(object):
             raise Exception("Have fun with that")
 
         # Plot IPF axis
-        plt.figure()
+        # plt.figure()
         Quat.plotPoleAxis("IPF", symGroup)
 
         # get array of symmetry operations. shape - (numSym, 4, numQuats)
