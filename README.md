@@ -1,4 +1,4 @@
-DataAnalysisUtilities
+*Def*ormation *D*ata *A*nalysis in *P*ython
 ==============
 A set of scripts for dealing with EBSD and HRDIC data.
 
