@@ -11,8 +11,8 @@ from IPython.display import clear_output
 
 import pyevtk.vtk
 
-# import vtk
-# from vtk.util import numpy_support as vnp
+import vtk
+from vtk.util import numpy_support as vnp
 
 from .quat import Quat
 
@@ -65,7 +65,7 @@ class Mesh(object):
         "angle",
     )
 
-    def __init__(self, name, meshDir="./", dataDir="./"):
+    def __init__(self, name, meshDir="./", dataDir="./", grainFilename=None):
         MESH_FILE_EX = "mesh"
         GRAIN_FILE_EX = "grain"
         ORI_FILE_EX = "ori"
@@ -73,6 +73,8 @@ class Mesh(object):
         self.meshName = name
         self.meshDir = meshDir if meshDir[-1] == "/" else "{:s}{:s}".format(meshDir, "/")
         self.dataDir = dataDir if dataDir[-1] == "/" else "{:s}{:s}".format(dataDir, "/")
+        if grainFilename is None:
+            grainFilename = name
 
         # open mesh file
         fileName = "{:s}{:s}.{:s}".format(self.meshDir, name, MESH_FILE_EX)
@@ -113,7 +115,7 @@ class Mesh(object):
         meshFile.close()
 
         # open grain file
-        fileName = "{:s}{:s}.{:s}".format(self.meshDir, name, GRAIN_FILE_EX)
+        fileName = "{:s}{:s}.{:s}".format(self.meshDir, grainFilename, GRAIN_FILE_EX)
         grainFile = open(fileName, "rb")
 
         # read header
@@ -341,13 +343,6 @@ class Mesh(object):
         self.simData['angle'][:, 2, :] += np.pi / 2
 
         oriData = Quat.createManyQuats(np.swapaxes(self.simData['angle'], 0, 1))
-
-        # # construct quat array
-        # oriData = np.empty([self.simData['angle'].shape[0], self.simData['angle'].shape[2]], dtype=Quat)
-
-        # for i in range(self.numFrames + 1):
-        #     for j, eulers in enumerate(self.simData['angle'][..., i]):
-        #         oriData[j, i] = Quat(eulers[0], eulers[1], eulers[2])
 
         self.createSimData("ori", oriData)
 
@@ -909,6 +904,20 @@ class Surface(object):
         return self.mesh.elmtGrain[self.elmtIDs]
 
     @property
+    def surfaceNormal(self):
+        if self.surfNum < 2:
+            # z surface
+            return 'z'
+        elif self.surfNum < 4:
+            # x surface
+            return 'x'
+        elif self.surfNum < 6:
+            # y surface
+            return 'y'
+
+        raise Exception("Invalid surface.")
+
+    @property
     def elmtEdges(self):
         # Create array with 3 edges of each element
         # Egdes are ordered tuples of 2 nodeIDs i.e (i, j) where j>i. nodeIDs are global for the mesh
@@ -1013,34 +1022,35 @@ class Surface(object):
 
         return self._meshEdges
 
-    def _2dAxes(self, surfaceNormal):
-        if surfaceNormal == 'x':
+    @property
+    def _2dAxes(self):
+        if self.surfaceNormal == 'x':
             axes = (1, 2)
-        elif surfaceNormal == 'y':
+        elif self.surfaceNormal == 'y':
             axes = (0, 2)
-        elif surfaceNormal == 'z':
+        elif self.surfaceNormal == 'z':
             axes = (0, 1)
         else:
             raise Exception("Surface normal must be x, y or z.")
 
         return axes
 
-    def plotStressStrain(self, revIncs=None):
-        revIncs = (180,)
-        meshDims = (1, 1, 0.2)
-        velocity = -1e-2
+    def plotStressStrain(self, meshDims=(1, 1, 0.2), velocity=-1e-2, revIncs=None, *args, **kwargs):
+        # revIncs = (180,)
+        # meshDims = (1, 1, 0.2)
+        # velocity = -1e-2
 
-        if self.surfNum < 2:
+        if self.surfaceNormal == 'z':
             # z surface
             areaInitial = meshDims[0] * meshDims[1]
             lengthInitial = meshDims[2]
             forceComp = 2
-        elif self.surfNum < 4:
+        elif self.surfaceNormal == 'x':
             # x surface
             areaInitial = meshDims[1] * meshDims[2]
             lengthInitial = meshDims[0]
             forceComp = 0
-        elif self.surfNum < 6:
+        elif self.surfaceNormal == 'y':
             # y surface
             areaInitial = meshDims[0] * meshDims[2]
             lengthInitial = meshDims[1]
@@ -1066,19 +1076,20 @@ class Surface(object):
                 length[revInc + 1:] = length[revInc] + revFactor * velocity * (time[revInc + 1:] - time[revInc])
                 revFactor *= -1
 
-
         strainEng = (length - lengthInitial) / lengthInitial
         strainTrue = np.log(1 + strainEng)
 
         stressEng = force[:, forceComp] / areaInitial
         stressTrue = force[:, forceComp] / area
 
-        plt.plot(strainTrue, stressTrue)
+        plt.plot(strainTrue, stressTrue, *args, **kwargs)
         plt.xlabel("True Strain")
         plt.ylabel("True Stress (MPa)")
 
-    def plotGBs(self, surfaceNormal, colour=None, linewidth=None, ax=None):
-        lc = LineCollection(self.mesh.nodePos[:, self._2dAxes(surfaceNormal)][self.grainEdges],
+        return strainTrue, stressTrue
+
+    def plotGBs(self, colour=None, linewidth=None, ax=None):
+        lc = LineCollection(self.mesh.nodePos[:, self._2dAxes][self.grainEdges],
                             colors=colour,
                             linewidths=linewidth)
         if ax is None:
@@ -1086,8 +1097,8 @@ class Surface(object):
         else:
             ax.add_collection(lc)
 
-    def plotMesh(self, surfaceNormal, colour=None, linewidth=None, ax=None):
-        lc = LineCollection(self.mesh.nodePos[:, self._2dAxes(surfaceNormal)][self.meshEdges],
+    def plotMesh(self, colour=None, linewidth=None, ax=None):
+        lc = LineCollection(self.mesh.nodePos[:, self._2dAxes][self.meshEdges],
                             colors=colour,
                             linewidths=linewidth)
         if ax is None:
@@ -1095,7 +1106,7 @@ class Surface(object):
         else:
             ax.add_collection(lc)
 
-    def plotSimData(self, dataKey, surfaceNormal, plotType="image", component=0,
+    def plotSimData(self, dataKey, plotType="image", component=0,
                     frameNum=1, plotGBs=False, plotMesh=False, label="", cmap="viridis",
                     vmin=None, vmax=None, invertData=False, returnFig=False, inputFig=None):
         # validate input data
@@ -1107,10 +1118,8 @@ class Surface(object):
             else:
                 raise Exception("{:s} does not have initial data.".format(dataKey))
 
-        axes = self._2dAxes(surfaceNormal)
-
         # collect unstructured coordinates
-        axes = self._2dAxes(surfaceNormal)
+        axes = self._2dAxes
         cX = self.mesh.nodePos[self.nodeIDs, axes[0]]
         cY = self.mesh.nodePos[self.nodeIDs, axes[1]]
 
@@ -1189,9 +1198,9 @@ class Surface(object):
                     img.set_data(gData.transpose())
 
         if plotGBs:
-            self.plotGBs(surfaceNormal, ax=ax, colour="white", linewidth=1)
+            self.plotGBs(ax=ax, colour="white", linewidth=1)
         if plotMesh:
-            self.plotMesh(surfaceNormal, ax=ax, colour="white", linewidth=0.2)
+            self.plotMesh(ax=ax, colour="white", linewidth=0.2)
 
         if newAx:
             ax.set_xticks([])
@@ -1205,7 +1214,7 @@ class Surface(object):
         else:
             fig.show()
 
-    def animateSimData(self, dataKey, surfaceNormal, plotType="image", component=0,
+    def animateSimData(self, dataKey, plotType="image", component=0,
                        plotGBs=False, plotMesh=False, label="", cmap="viridis",
                        vmin=None, vmax=None, invertData=False, saveVid=False):
 
@@ -1215,12 +1224,12 @@ class Surface(object):
         else:
             frames = range(1, simMetaData['numFrames'] + 1)
 
-        fig, ax, img = self.plotSimData(dataKey, surfaceNormal, plotType=plotType, component=component,
+        fig, ax, img = self.plotSimData(dataKey, plotType=plotType, component=component,
                                         frameNum=frames[0], plotGBs=plotGBs, plotMesh=plotMesh, label=label, cmap=cmap,
                                         vmin=vmin, vmax=vmax, invertData=invertData, returnFig=True)
 
         def animate(frameNum):
-            _, _, rtnImg = self.plotSimData(dataKey, surfaceNormal, plotType=plotType, component=component,
+            _, _, rtnImg = self.plotSimData(dataKey, plotType=plotType, component=component,
                                             frameNum=frameNum, plotGBs=plotGBs, plotMesh=plotMesh, label=label,
                                             cmap=cmap, vmin=vmin, vmax=vmax, invertData=invertData, returnFig=True,
                                             inputFig=(fig, ax, img))

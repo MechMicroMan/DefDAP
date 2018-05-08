@@ -51,7 +51,7 @@ class Map(base.Map):
         self.kam = None             # (array) map of kam
         self.averageSchmidFactor = None     # (array) map of average Schmid factor
         self.slipSystems = None     # (list(list(slipSystems))) slip systems grouped by slip plane
-        self.slipTraceColours = None    #list of colours used when plotting slip traces
+        self.slipTraceColours = None    # list of colours used when plotting slip traces
         self.currGrainId = None     # Id of last selected grain
         self.origin = (0, 0)        # Map origin (y, x). Used by linker class where origin is a
                                     # homologue point of the maps
@@ -191,7 +191,7 @@ class Map(base.Map):
     def checkDataLoaded(self):
         if self.binData is None:
             raise Exception("Data not loaded")
-        return
+        return True
 
     def buildQuatArray(self):
         self.checkDataLoaded()
@@ -313,19 +313,18 @@ class Map(base.Map):
         return
 
     def locateGrainID(self, clickEvent=None):
-        if (self.grainList is not None) and (self.grainList != []):
-            # reset current selected grain and plot euler map with click handler
-            self.currGrainId = None
-            self.plotEulerMap()
-            if clickEvent is None:
-                # default click handler which highlights grain and prints id
-                self.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
-            else:
-                # click handler loaded from linker classs. Pass current ebsd map to it.
-                self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
 
+        # reset current selected grain and plot euler map with click handler
+        self.currGrainId = None
+        self.plotEulerMap()
+        if clickEvent is None:
+            # default click handler which highlights grain and prints id
+            self.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
         else:
-            raise Exception("Grain list empty")
+            # click handler loaded from linker classs. Pass current ebsd map to it.
+            self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
 
     def clickGrainId(self, event):
         if event.inaxes is not None:
@@ -341,7 +340,7 @@ class Map(base.Map):
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self)
 
-        currentGrain.addPoint(self.quatArray[y, x], (x, y))
+        currentGrain.addPoint((x, y), self.quatArray[y, x])
 
         edge = [(x, y)]
         grain = [(x, y)]
@@ -368,12 +367,12 @@ class Map(base.Map):
 
                 for (s, t) in moves:
                     if self.grains[t, s] == 0:
-                        currentGrain.addPoint(self.quatArray[t, s], (s, t))
+                        currentGrain.addPoint((s, t), self.quatArray[t, s])
                         newedge.append((s, t))
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
                     elif self.grains[t, s] == -1 and (s > x or t > y):
-                        currentGrain.addPoint(self.quatArray[t, s], (s, t))
+                        currentGrain.addPoint((s, t), self.quatArray[t, s])
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
 
@@ -383,11 +382,16 @@ class Map(base.Map):
                 edge = newedge
 
     def calcGrainAvOris(self):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         for grain in self.grainList:
             grain.calcAverageOri()
-        return
 
     def calcGrainMisOri(self, calcAxis=False):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         for grain in self.grainList:
             grain.buildMisOriList(calcAxis=calcAxis)
 
@@ -395,6 +399,9 @@ class Map(base.Map):
 
     def plotMisOriMap(self, component=0, plotGBs=False, boundaryColour='black', vmin=None, vmax=None,
                       cmap="viridis", cBarLabel="ROD (degrees)"):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         self.misOri = np.ones([self.yDim, self.xDim])
 
         plt.figure()
@@ -429,10 +436,16 @@ class Map(base.Map):
                 grain.slipSystems = self.slipSystems
 
     def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         for grain in self.grainList:
             grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
 
     def plotAverageGrainSchmidFactorsMap(self, plotGBs=True):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         self.averageSchmidFactor = np.zeros([self.yDim, self.xDim])
 
         for grain in self.grainList:
@@ -454,13 +467,15 @@ class Map(base.Map):
         return
 
 
-class Grain(object):
+class Grain(base.Grain):
 
     def __init__(self, ebsdMap):
+        # Call base class constructor
+        super(Grain, self).__init__()
+
         self.crystalSym = ebsdMap.crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
         self.slipSystems = ebsdMap.slipSystems
         self.ebsdMap = ebsdMap                  # ebsd map this grain is a member of
-        self.coordList = []                     # list of coords stored as tuples (x, y)
         self.quatList = []                      # list of quats
         self.misOriList = None                  # list of misOri at each point in grain
         self.misOriAxisList = None              # list of misOri axes at each point in grain
@@ -468,32 +483,18 @@ class Grain(object):
         self.averageMisOri = None               # average misOri of grain
 
         self.averageSchmidFactors = None        # list of list Schmid factors (grouped by slip plane)
-        self.slipTraces = None                  # list of slip traces
-
-        return
-
-    def __len__(self):
-        return len(self.quatList)
+        self.slipTraceAngles = None             # list of slip trace angles
+        self.slipTraceInclinations = None
 
     # quat is a quaterion and coord is a tuple (x, y)
-    def addPoint(self, quat, coord):
+    def addPoint(self, coord, quat):
         self.coordList.append(coord)
         self.quatList.append(quat)
-        return
 
     def calcAverageOri(self):
         quatCompsSym = Quat.calcSymEqvs(self.quatList, self.crystalSym)
 
         self.refOri = Quat.calcAverageOri(quatCompsSym)
-
-        # self.refOri = copy.deepcopy(self.quatList[0])  # start average
-        # for quat in self.quatList[1:]:
-        #     # loop over symmetries and find min misorientation for average
-        #     # add the symetric equivelent of quat with the minimum misorientation (relative to the average)
-        #     # to the average. Then normalise.
-        #     self.refOri += self.refOri.misOri(quat, self.crystalSym, returnQuat=1)
-        # self.refOri.normalise()
-        return
 
     def buildMisOriList(self, calcAxis=False):
         quatCompsSym = Quat.calcSymEqvs(self.quatList, self.crystalSym)
@@ -529,12 +530,6 @@ class Grain(object):
 
             Dq[:, Dq[0] < 0] = -Dq[:, Dq[0] < 0]
 
-            # intr = np.arccos(Dq[0, :]) / np.sqrt(1 - np.power(Dq[0, :], 2))
-
-            # misOriAxis[0, :] = 2 * Dq[1, :] * intr
-            # misOriAxis[1, :] = 2 * Dq[2, :] * intr
-            # misOriAxis[2, :] = 2 * Dq[3, :] * intr
-
             # numpy broadcasting taking care of different array sizes
             misOriAxis[:, :] = (2 * Dq[1:4, :] * np.arccos(Dq[0, :])) / np.sqrt(1 - np.power(Dq[0, :], 2))
 
@@ -543,66 +538,6 @@ class Grain(object):
             self.misOriAxisList = []
             for row in misOriAxis.transpose():
                 self.misOriAxisList.append(row)
-
-        return
-
-        # if self.refOri is None:
-        #     self.calcAverageOri()
-
-        # self.misOriList = []
-
-        # if calcAxis:
-        #     self.misOriAxisList = []
-        #     aveageOriInverse = self.refOri.conjugate
-
-        #     DqList = []
-        #     minQuatSymList = []
-
-        # for quat in self.quatList:
-        #     # Calculate misOri to average ori. Return closest symmetric equivalent for later use
-        #     currentMisOri, currentQuatSym = self.refOri.misOri(quat, self.crystalSym, returnQuat=2)
-        #     self.misOriList.append(currentMisOri)
-
-        #     if calcAxis:
-        #         # Calculate misorientation axis
-        #         Dq = aveageOriInverse * currentQuatSym  # definitely quaternion product?
-        #         DqList.append(Dq)
-        #         minQuatSymList.append(currentQuatSym)
-        #         self.misOriAxisList.append((2 * Dq[1:4] * np.arccos(Dq[0])) / np.sqrt(1 - np.power(Dq[0], 2)))
-
-        # # remove any misorientation greater than 1
-        # misOriArray = np.array(self.misOriList)
-        # misOriArray[misOriArray > 1] = 1
-
-        # self.averageMisOri = misOriArray.mean()
-        # self.misOriList = list(misOriArray)
-
-    @property
-    def extremeCoords(self):
-        unzippedCoordlist = list(zip(*self.coordList))
-        x0 = min(unzippedCoordlist[0])
-        y0 = min(unzippedCoordlist[1])
-        xmax = max(unzippedCoordlist[0])
-        ymax = max(unzippedCoordlist[1])
-        return x0, y0, xmax, ymax
-
-    def grainOutline(self, bg=np.nan, fg=0):
-        x0, y0, xmax, ymax = self.extremeCoords
-
-        # initialise array with nans so area not in grain displays white
-        outline = np.full((ymax - y0 + 1, xmax - x0 + 1), bg, dtype=int)
-
-        for coord in self.coordList:
-            outline[coord[1] - y0, coord[0] - x0] = fg
-
-        return outline
-
-    def plotOutline(self):
-        plt.figure()
-        plt.imshow(self.grainOutline(), interpolation='none')
-        plt.colorbar()
-
-        return
 
     def plotRefOri(self, direction=np.array([0, 0, 1]), marker='+'):
         Quat.plotIPF([self.refOri], direction, self.crystalSym, marker=marker)
@@ -666,12 +601,7 @@ class Grain(object):
             plt.yticks([])
 
             if plotSlipTraces:
-                colours = self.ebsdMap.slipTraceColours
-                xPos = int((xmax - x0) / 2)
-                yPos = int((ymax - y0) / 2)
-                for slipTrace, colour in zip(self.slipTraces, colours):
-                    plt.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle",
-                               color=colour, headwidth=1, headlength=0)
+                self.plotSlipTraces()
 
         return
 
@@ -703,23 +633,12 @@ class Grain(object):
 
         return
 
-        # This was to check consistancy with Channel5. Channel5 calculates Schmid factor taking into
-        # account symmetry, so max of all slip systems of a certain type is returned.
-        # Calculate with symmetries
-        # schmidFactors = np.zeros((len(Quat.symEqv(self.crystalSym)), len(slipSystems)))
+    @property
+    def slipTraces(self):
+        if self.slipTraceAngles is None:
+            self.calcSlipTraces()
 
-        # # calculated Schmid factor of average ori with all slip systems
-        # # loop over symmetrically equivelent orienations
-        # for i, sym in enumerate(Quat.symEqv(self.crystalSym)):
-        #     quatSym = grainAvOri * sym
-        #     loadVectorCrystal = quatSym.transformVector(loadVector)
-
-        #     for j, slipSystem in enumerate(slipSystems):
-
-        #         schmidFactors[i, j] = abs(np.dot(loadVectorCrystal, slipSystem.slipPlane) *
-        #                                   np.dot(loadVectorCrystal, slipSystem.slipDir))
-
-        # self.averageSchmidFactors = list(schmidFactors.max(axis=0))
+        return self.slipTraceAngles
 
     def calcSlipTraces(self, slipSystems=None):
         if slipSystems is None:
@@ -733,7 +652,8 @@ class Grain(object):
 
         screenPlaneNormCrystal = grainAvOri.transformVector(screenPlaneNorm)
 
-        self.slipTraces = []
+        self.slipTraceAngles = []
+        self.slipTraceInclinations = []
         # Loop over each group of slip systems
         for slipSystemGroup in slipSystems:
             # Take slip plane from first in group
@@ -753,8 +673,14 @@ class Grain(object):
             intersection = grainAvOri.conjugate.transformVector(intersectionCrystal)
             intersection = intersection / np.sqrt(np.dot(intersection, intersection))  # normalise
 
+            # Calculate trace angle. Starting vertical and proceeding counter clockwise
+            if intersection[0] > 0:
+                intersection *= -1
+            traceAngle = np.arccos(np.dot(intersection, np.array([0, 1.0, 0])))
+
             # Append to list
-            self.slipTraces.append(intersection)
+            self.slipTraceAngles.append(traceAngle)
+            self.slipTraceInclinations.append(inclination)
 
 
 class Linker(object):

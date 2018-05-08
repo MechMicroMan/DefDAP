@@ -19,7 +19,23 @@ class Map(object):
 
     # allow array like getting of grains
     def __getitem__(self, key):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         return self.grainList[key]
+
+    def checkGrainsDetected(self):
+        """Check if grains have been detected
+
+        Returns:
+            bool: Returns True if grains detected
+
+        Raises:
+            Exception: if grains not detected
+        """
+        if self.grainList is None or type(self.grainList) is not list or len(self.grainList) < 1:
+            raise Exception("No grains detected.")
+        return True
 
     def plotGBs(self, ax=None, colour='white', dilate=False):
         # create colourmap for boundaries and plot. colourmap goes transparent white to opaque white/colour
@@ -27,7 +43,7 @@ class Map(object):
         cmap1._init()
         cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
 
-        boundariesImage=-self.boundaries
+        boundariesImage = -self.boundaries
 
         if dilate:
             boundariesImage = mph.binary_dilation(boundariesImage)
@@ -283,6 +299,171 @@ class Map(object):
         trialDistances = None
 
 
+class Grain(object):
+
+    def __init__(self):
+        self.coordList = []         # list of coords stored as tuples (x, y). These are corrds in a cropped image if crop exists
+
+    def __len__(self):
+        return len(self.quatList)
+
+    @property
+    def extremeCoords(self):
+        unzippedCoordlist = list(zip(*self.coordList))
+        x0 = min(unzippedCoordlist[0])
+        y0 = min(unzippedCoordlist[1])
+        xmax = max(unzippedCoordlist[0])
+        ymax = max(unzippedCoordlist[1])
+
+        return x0, y0, xmax, ymax
+
+    @property
+    def centreCoords(self):
+        x0, y0, xmax, ymax = self.extremeCoords
+        xCentre = int((xmax - x0) / 2)
+        yCentre = int((ymax - y0) / 2)
+
+        return xCentre, yCentre
+
+    def grainOutline(self, bg=np.nan, fg=0):
+        x0, y0, xmax, ymax = self.extremeCoords
+
+        # initialise array with nans so area not in grain displays white
+        outline = np.full((ymax - y0 + 1, xmax - x0 + 1), bg, dtype=int)
+
+        for coord in self.coordList:
+            outline[coord[1] - y0, coord[0] - x0] = fg
+
+        return outline
+
+    def plotOutline(self):
+        plt.figure()
+        plt.imshow(self.grainOutline(), interpolation='none')
+        plt.colorbar()
+
+    def plotSlipTraces(self, colours=None, ax=None, pos=None):
+        if colours is None:
+            colours = self.ebsdMap.slipTraceColours
+
+        if pos is None:
+            pos = self.centreCoords
+
+        for i, slipTraceAngle in enumerate(self.slipTraces):
+            slipTrace = np.array((-np.sin(slipTraceAngle), np.cos(slipTraceAngle)))
+            colour = colours[len(colours) - 1] if i >= len(colours) else colours[i]
+            if ax is None:
+                plt.quiver(
+                    pos[0], pos[1],
+                    slipTrace[0], slipTrace[1],
+                    scale=1, pivot="middle",
+                    color=colour, headwidth=1,
+                    headlength=0
+                )
+            else:
+                ax.quiver(
+                    pos[0], pos[1],
+                    slipTrace[0], slipTrace[1],
+                    scale=1, pivot="middle",
+                    color=colour, headwidth=1,
+                    headlength=0
+                )
+
+    def grainData(self, mapData):
+        """Takes this grains data from the given map data
+
+        Args:
+            mapData (np.array): Array of map data. This must be cropped!
+
+        Returns:
+            np.array: Array containing this grains values from the given map data
+        """
+        grainData = np.zeros(len(self), dtype=mapData.dtype)
+
+        for i, coord in enumerate(self.coordList):
+            grainData[i] = mapData[coord[1], coord[0]]
+
+        return grainData
+
+    def grainMapData(self, mapData, bg=np.nan):
+        """Creates a map of this grain only from the given map data
+
+        Args:
+            mapData (np.array): Array of map data. This must be cropped!
+            bg (float, optional): Value to fill the backgraound with. Must be same dtype as input.
+
+        Returns:
+            np.array: Map of this grains data
+        """
+        grainData = self.grainData(mapData)
+        x0, y0, xmax, ymax = self.extremeCoords
+
+        grainMapData = np.full((ymax - y0 + 1, xmax - x0 + 1), bg, dtype=mapData.dtype)
+
+        for coord, data in zip(self.coordList, grainData):
+            grainMapData[coord[1] - y0, coord[0] - x0] = data
+
+        return grainMapData
+
+    def grainMapDataCoarse(self, mapData, kernelSize=2, bg=np.nan):
+        """Creates a coarsed map of this grain only from the given map data.
+           Data is coarsened using a kenel at each pixel in the grain using only this grains data.
+
+        Args:
+            mapData (np.array): Array of map data. This must be cropped!
+            kernelSize (int, optional): Size of kernel as the number of pixels to dilate by i.e 1 gives a 3x3 kernel.
+            bg (float, optional): Value to fill the backgraound with. Must be same dtype as input.
+
+        Returns:
+            np.array: Map of this grains coarsened data
+        """
+        grainMapData = self.grainMapData(mapData)
+        grainMapDataCoarse = np.full_like(grainMapData, np.nan)
+
+        for i, j in np.ndindex(grainMapData.shape):
+            if np.isnan(grainMapData[i, j]):
+                grainMapDataCoarse[i, j] = bg
+            else:
+                coarseValue = 0
+
+                yLow = i - kernelSize if i - kernelSize >= 0 else 0
+                yHigh = i + kernelSize + 1 if i + kernelSize + 1 <= grainMapData.shape[0] else grainMapData.shape[0]
+
+                xLow = j - kernelSize if j - kernelSize >= 0 else 0
+                xHigh = j + kernelSize + 1 if j + kernelSize + 1 <= grainMapData.shape[1] else grainMapData.shape[1]
+
+                numPoints = 0
+                for k in range(yLow, yHigh):
+                    for l in range(xLow, xHigh):
+                        if not np.isnan(grainMapData[k, l]):
+                            coarseValue += grainMapData[k, l]
+                            numPoints += 1
+
+                grainMapDataCoarse[i, j] = coarseValue / numPoints if numPoints > 0 else np.nan
+
+        return grainMapDataCoarse
+
+    def plotGrainData(self, mapData, vmin=None, vmax=None, clabel='', cmap='viridis'):
+        """Plot a map of this grain only from the given map data.
+
+        Args:
+            mapData (np.array): Array of map data. This must be cropped!
+            vmin (float, optional): Minimum value of colour scale
+            vmax (float, optional): Maximum value for colour scale
+            clabel (str, optional): Colour bar label text
+            cmap (str, optional): Colour map to use, default is viridis.
+        """
+        grainMapData = self.grainMapData(mapData)
+
+        plt.figure()
+        plt.imshow(grainMapData, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
+
+        plt.colorbar(label=clabel)
+        plt.xticks([])
+        plt.yticks([])
+
+        return grainMapData
+
+
 class SlipSystem(object):
     def __init__(self, slipPlane, slipDir, crystalSym, cOverA=None):
         # Currently only for cubic
@@ -366,9 +547,10 @@ class SlipSystem(object):
         """
 
         f = open(filepath)
-        lines = f.readlines()
-        colour = lines[1].rstrip()
-        slipTraceColours = colour.split(',')
+        f.readline()
+        colours = f.readline().strip()
+        slipTraceColours = colours.split(',')
+        f.close()
 
         if crystalSym == "hexagonal":
             vectSize = 4
