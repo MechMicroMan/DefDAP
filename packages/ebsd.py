@@ -340,7 +340,7 @@ class Map(base.Map):
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self)
 
-        currentGrain.addPoint(self.quatArray[y, x], (x, y))
+        currentGrain.addPoint((x, y), self.quatArray[y, x])
 
         edge = [(x, y)]
         grain = [(x, y)]
@@ -367,12 +367,12 @@ class Map(base.Map):
 
                 for (s, t) in moves:
                     if self.grains[t, s] == 0:
-                        currentGrain.addPoint(self.quatArray[t, s], (s, t))
+                        currentGrain.addPoint((s, t), self.quatArray[t, s])
                         newedge.append((s, t))
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
                     elif self.grains[t, s] == -1 and (s > x or t > y):
-                        currentGrain.addPoint(self.quatArray[t, s], (s, t))
+                        currentGrain.addPoint((s, t), self.quatArray[t, s])
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
 
@@ -488,7 +488,7 @@ class Grain(object):
         return len(self.quatList)
 
     # quat is a quaterion and coord is a tuple (x, y)
-    def addPoint(self, quat, coord):
+    def addPoint(self, coord, quat):
         self.coordList.append(coord)
         self.quatList.append(quat)
 
