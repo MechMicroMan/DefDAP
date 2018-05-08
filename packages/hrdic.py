@@ -693,9 +693,6 @@ class Grain(object):
 
     @property
     def slipTraces(self):
-        if self.ebsdGrain.slipTraces is None:
-            self.calcSlipTraces()
-
         return self.ebsdGrain.slipTraces
 
     def calcSlipTraces(self, slipSystems=None):

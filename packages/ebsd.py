@@ -481,11 +481,11 @@ class Grain(object):
         self.averageMisOri = None               # average misOri of grain
 
         self.averageSchmidFactors = None        # list of list Schmid factors (grouped by slip plane)
-        self.slipTraces = None                  # list of slip trace angles
-        self.slipTraceInclination = None
 
     def __len__(self):
         return len(self.quatList)
+        self.slipTraceAngles = None             # list of slip trace angles
+        self.slipTraceInclinations = None
 
     # quat is a quaterion and coord is a tuple (x, y)
     def addPoint(self, coord, quat):
@@ -666,6 +666,13 @@ class Grain(object):
 
         return
 
+    @property
+    def slipTraces(self):
+        if self.slipTraceAngles is None:
+            self.calcSlipTraces()
+
+        return self.slipTraceAngles
+
     def calcSlipTraces(self, slipSystems=None):
         if slipSystems is None:
             slipSystems = self.slipSystems
@@ -678,8 +685,8 @@ class Grain(object):
 
         screenPlaneNormCrystal = grainAvOri.transformVector(screenPlaneNorm)
 
-        self.slipTraces = []
-        self.slipTraceInclination = []
+        self.slipTraceAngles = []
+        self.slipTraceInclinations = []
         # Loop over each group of slip systems
         for slipSystemGroup in slipSystems:
             # Take slip plane from first in group
@@ -705,8 +712,8 @@ class Grain(object):
             traceAngle = np.arccos(np.dot(intersection, np.array([0, 1.0, 0])))
 
             # Append to list
-            self.slipTraces.append(traceAngle)
-            self.slipTraceInclination.append(inclination)
+            self.slipTraceAngles.append(traceAngle)
+            self.slipTraceInclinations.append(inclination)
 
 
 class Linker(object):
