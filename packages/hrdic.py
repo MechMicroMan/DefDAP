@@ -143,8 +143,9 @@ class Map(base.Map):
         """Calculates the transformation required to align EBSD dataset to DIC
 
         Args:
-            transformType(string): affine, piecewiseAffine or polynomial
-            order(int): Order of polynomial transform to apply
+            ebsdMap(ebsd.Map): EBSD map object to link
+            transformType(string, optional): affine, piecewiseAffine or polynomial
+            order(int, optional): Order of polynomial transform to apply
         """
         self.ebsdMap = ebsdMap
         if transformType == "piecewiseAffine":
@@ -166,7 +167,23 @@ class Map(base.Map):
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
+    def checkEbsdLinked(self):
+        """Check if an EBSD map has been linked.
+
+        Returns:
+            bool: Returns True if EBSD map linked
+
+        Raises:
+            Exception: if EBSD map not linked
+        """
+        if self.ebsdMap is None:
+            raise Exception("No EBSD map linked.")
+        return True
+
     def warpToDicFrame(self, mapData, cropImage=True):
+        # Check a EBSD map is linked
+        self.checkEbsdLinked()
+
         if (cropImage or type(self.ebsdTransform) is not tf.AffineTransform):
             # crop to size of DIC map
             outputShape = (self.yDim, self.xDim)
@@ -189,6 +206,9 @@ class Map(base.Map):
 
     @property
     def boundaries(self):
+        # Check a EBSD map is linked
+        self.checkEbsdLinked()
+
         # image is returned cropped if a piecewise transform is being used
         boundaries = self.warpToDicFrame(-self.ebsdMap.boundaries.astype(float), cropImage=False) > 0.1
 
@@ -239,8 +259,8 @@ class Map(base.Map):
 
         Args:
             plotGBs(bool, optional): Set to true to overlay grain boundaries
-                dilateBoundaries(bool, optional): Set to true to dilate boundaries by one pixel
-                boundaryColour(string, optional): Colour of boundaries
+            dilateBoundaries(bool, optional): Set to true to dilate boundaries by one pixel
+            boundaryColour(string, optional): Colour of boundaries
             plotSlipTraces(bool, optional): Set to true to plot slip traces for each grain
             plotPercent(bool, optional): Set to true to plot maps using percentage
             plotColourBar(bool, optional): Set to true to plot colour bar
@@ -265,6 +285,9 @@ class Map(base.Map):
 
         # plot slip traces
         if plotSlipTraces:
+            # Check that grains have been detected in the map
+            self.checkGrainsDetected()
+
             numGrains = len(self.grainList)
             numSS = len(self.ebsdMap.slipSystems)
             grainSizeData = np.zeros((numGrains, 4))
@@ -313,6 +336,9 @@ class Map(base.Map):
             vmax (float, optional): Maximum value for colour scale
             clabel (str, optional): Colour bar label text
         """
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         plt.figure()
 
         grainAvMaxShear = np.zeros([self.yDim, self.xDim])
@@ -340,6 +366,9 @@ class Map(base.Map):
         Returns:
             np.array: Array containing the grain average values
         """
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         grainAvData = np.zeros(len(self))
 
         for grainId, grain in enumerate(self.grainList):
@@ -386,6 +415,9 @@ class Map(base.Map):
             vmax (float, optional): Maximum value for colour scale
             clabel (str, optional): Colour bar label text
         """
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         if grainIds is int and grainIds == -1:
             grainIds = range(len(self))
 
@@ -419,6 +451,9 @@ class Map(base.Map):
             vmax (float, optional): Maximum value for colour scale
             clabel (str, optional): Colour bar label text
         """
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         plt.figure()
         grainAvData = self.calcGrainAv(mapData)
 
@@ -434,26 +469,25 @@ class Map(base.Map):
             plt.colorbar(label=clabel)
 
     def locateGrainID(self, clickEvent=None, displaySelected=False, **kwargs):
-        if (self.grainList is not None) and (self.grainList != []):
-            # reset current selected grain and plot max shear map with click handler
-            self.currGrainId = None
-            self.plotMaxShear(plotGBs=True, **kwargs)
-            if clickEvent is None:
-                # default click handler which highlights grain and prints id
-                self.fig.canvas.mpl_connect(
-                    'button_press_event',
-                    lambda x: self.clickGrainId(x, displaySelected, **kwargs)
-                )
-            else:
-                # click handler loaded in as parameter. Pass current map object to it.
-                self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
 
-            # unset figure for plotting grains
-            self.grainFig = None
-            self.grainAx = None
-
+        # reset current selected grain and plot max shear map with click handler
+        self.currGrainId = None
+        self.plotMaxShear(plotGBs=True, **kwargs)
+        if clickEvent is None:
+            # default click handler which highlights grain and prints id
+            self.fig.canvas.mpl_connect(
+                'button_press_event',
+                lambda x: self.clickGrainId(x, displaySelected, **kwargs)
+            )
         else:
-            raise Exception("Grain list empty")
+            # click handler loaded in as parameter. Pass current map object to it.
+            self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
+
+        # unset figure for plotting grains
+        self.grainFig = None
+        self.grainAx = None
 
     def clickGrainId(self, event, displaySelected, **kwargs):
         if event.inaxes is not None:
@@ -475,11 +509,13 @@ class Map(base.Map):
                 self.grainList[self.currGrainId].plotMaxShear(plotSlipTraces=True,
                                                               plotShearBands=True,
                                                               ax=self.grainAx,
-                                                              vmin=vmin,
-                                                              vmax=vmax)
+                                                              **kwargs)
                 self.grainFig.canvas.draw()
 
     def findGrains(self, minGrainSize=10):
+        # Check a EBSD map is linked
+        self.checkEbsdLinked()
+
         # Initialise the grain map
         self.grains = np.copy(self.boundaries)
 

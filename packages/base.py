@@ -19,7 +19,23 @@ class Map(object):
 
     # allow array like getting of grains
     def __getitem__(self, key):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         return self.grainList[key]
+
+    def checkGrainsDetected(self):
+        """Check if grains have been detected
+
+        Returns:
+            bool: Returns True if grains detected
+
+        Raises:
+            Exception: if grains not detected
+        """
+        if self.grainList is None or type(self.grainList) is not list or len(self.grainList) < 1:
+            raise Exception("No grains detected.")
+        return True
 
     def plotGBs(self, ax=None, colour='white', dilate=False):
         # create colourmap for boundaries and plot. colourmap goes transparent white to opaque white/colour
@@ -27,7 +43,7 @@ class Map(object):
         cmap1._init()
         cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
 
-        boundariesImage=-self.boundaries
+        boundariesImage = -self.boundaries
 
         if dilate:
             boundariesImage = mph.binary_dilation(boundariesImage)

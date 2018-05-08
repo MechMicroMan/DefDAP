@@ -51,7 +51,7 @@ class Map(base.Map):
         self.kam = None             # (array) map of kam
         self.averageSchmidFactor = None     # (array) map of average Schmid factor
         self.slipSystems = None     # (list(list(slipSystems))) slip systems grouped by slip plane
-        self.slipTraceColours = None    #list of colours used when plotting slip traces
+        self.slipTraceColours = None    # list of colours used when plotting slip traces
         self.currGrainId = None     # Id of last selected grain
         self.origin = (0, 0)        # Map origin (y, x). Used by linker class where origin is a
                                     # homologue point of the maps
@@ -191,7 +191,7 @@ class Map(base.Map):
     def checkDataLoaded(self):
         if self.binData is None:
             raise Exception("Data not loaded")
-        return
+        return True
 
     def buildQuatArray(self):
         self.checkDataLoaded()
@@ -313,19 +313,18 @@ class Map(base.Map):
         return
 
     def locateGrainID(self, clickEvent=None):
-        if (self.grainList is not None) and (self.grainList != []):
-            # reset current selected grain and plot euler map with click handler
-            self.currGrainId = None
-            self.plotEulerMap()
-            if clickEvent is None:
-                # default click handler which highlights grain and prints id
-                self.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
-            else:
-                # click handler loaded from linker classs. Pass current ebsd map to it.
-                self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
 
+        # reset current selected grain and plot euler map with click handler
+        self.currGrainId = None
+        self.plotEulerMap()
+        if clickEvent is None:
+            # default click handler which highlights grain and prints id
+            self.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
         else:
-            raise Exception("Grain list empty")
+            # click handler loaded from linker classs. Pass current ebsd map to it.
+            self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
 
     def clickGrainId(self, event):
         if event.inaxes is not None:
@@ -383,11 +382,16 @@ class Map(base.Map):
                 edge = newedge
 
     def calcGrainAvOris(self):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         for grain in self.grainList:
             grain.calcAverageOri()
-        return
 
     def calcGrainMisOri(self, calcAxis=False):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         for grain in self.grainList:
             grain.buildMisOriList(calcAxis=calcAxis)
 
@@ -395,6 +399,9 @@ class Map(base.Map):
 
     def plotMisOriMap(self, component=0, plotGBs=False, boundaryColour='black', vmin=None, vmax=None,
                       cmap="viridis", cBarLabel="ROD (degrees)"):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         self.misOri = np.ones([self.yDim, self.xDim])
 
         plt.figure()
@@ -429,10 +436,16 @@ class Map(base.Map):
                 grain.slipSystems = self.slipSystems
 
     def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         for grain in self.grainList:
             grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
 
     def plotAverageGrainSchmidFactorsMap(self, plotGBs=True):
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
         self.averageSchmidFactor = np.zeros([self.yDim, self.xDim])
 
         for grain in self.grainList:
