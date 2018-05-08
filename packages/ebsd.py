@@ -467,13 +467,15 @@ class Map(base.Map):
         return
 
 
-class Grain(object):
+class Grain(base.Grain):
 
     def __init__(self, ebsdMap):
+        # Call base class constructor
+        super(Grain, self).__init__()
+
         self.crystalSym = ebsdMap.crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
         self.slipSystems = ebsdMap.slipSystems
         self.ebsdMap = ebsdMap                  # ebsd map this grain is a member of
-        self.coordList = []                     # list of coords stored as tuples (x, y)
         self.quatList = []                      # list of quats
         self.misOriList = None                  # list of misOri at each point in grain
         self.misOriAxisList = None              # list of misOri axes at each point in grain
@@ -481,9 +483,6 @@ class Grain(object):
         self.averageMisOri = None               # average misOri of grain
 
         self.averageSchmidFactors = None        # list of list Schmid factors (grouped by slip plane)
-
-    def __len__(self):
-        return len(self.quatList)
         self.slipTraceAngles = None             # list of slip trace angles
         self.slipTraceInclinations = None
 
@@ -539,33 +538,6 @@ class Grain(object):
             self.misOriAxisList = []
             for row in misOriAxis.transpose():
                 self.misOriAxisList.append(row)
-
-    @property
-    def extremeCoords(self):
-        unzippedCoordlist = list(zip(*self.coordList))
-        x0 = min(unzippedCoordlist[0])
-        y0 = min(unzippedCoordlist[1])
-        xmax = max(unzippedCoordlist[0])
-        ymax = max(unzippedCoordlist[1])
-        return x0, y0, xmax, ymax
-
-    def grainOutline(self, bg=np.nan, fg=0):
-        x0, y0, xmax, ymax = self.extremeCoords
-
-        # initialise array with nans so area not in grain displays white
-        outline = np.full((ymax - y0 + 1, xmax - x0 + 1), bg, dtype=int)
-
-        for coord in self.coordList:
-            outline[coord[1] - y0, coord[0] - x0] = fg
-
-        return outline
-
-    def plotOutline(self):
-        plt.figure()
-        plt.imshow(self.grainOutline(), interpolation='none')
-        plt.colorbar()
-
-        return
 
     def plotRefOri(self, direction=np.array([0, 0, 1]), marker='+'):
         Quat.plotIPF([self.refOri], direction, self.crystalSym, marker=marker)
