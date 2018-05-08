@@ -728,8 +728,8 @@ class Grain(object):
                     headlength=0
                 )
 
-    def calcShearBands(self, grainMapData, thres=0.3, min_dist=30):
-        """Use Radon transform to detect shear band angles
+    def calcSlipBands(self, grainMapData, thres=0.3, min_dist=30):
+        """Use Radon transform to detect slip band angles
 
         Args:
             grainMapData (numpy.array): Data to find bands in
@@ -737,7 +737,7 @@ class Grain(object):
             min_dist (int, optional): Minimum angle between bands
 
         Returns:
-            list(float): Detected shear band angles
+            list(float): Detected slip band angles
         """
         grainMapData = np.nan_to_num(grainMapData)
 
@@ -756,22 +756,22 @@ class Grain(object):
         # peaks = peakutils.interpolate(x, profile, ind=indexes)
         print("Number of bands detected: {:}".format(len(peaks)))
 
-        shearBandAngles = peaks
-        shearBandAngles = shearBandAngles * np.pi / 180
+        slipBandAngles = peaks
+        slipBandAngles = slipBandAngles * np.pi / 180
 
-        return shearBandAngles
+        return slipBandAngles
 
-    def plotShearBands(self, grainMapData, ax=None, thres=0.3, min_dist=30, shearBandAngles=None):
-        if shearBandAngles is None:
-            shearBandAngles = self.calcShearBands(grainMapData, thres=thres, min_dist=min_dist)
-        shearBandVectors = np.array((-np.sin(shearBandAngles), np.cos(shearBandAngles)))
+    def plotSlipBands(self, grainMapData, ax=None, thres=0.3, min_dist=30, slipBandAngles=None):
+        if slipBandAngles is None:
+            slipBandAngles = self.calcSlipBands(grainMapData, thres=thres, min_dist=min_dist)
+        slipBandVectors = np.array((-np.sin(slipBandAngles), np.cos(slipBandAngles)))
 
         xPos, yPos = self.centreCoords
 
         if ax is None:
             plt.quiver(
                 xPos, yPos,
-                shearBandVectors[0], shearBandVectors[1],
+                slipBandVectors[0], slipBandVectors[1],
                 scale=1, pivot="middle",
                 color='yellow', headwidth=1,
                 headlength=0
@@ -779,13 +779,12 @@ class Grain(object):
         else:
             ax.quiver(
                 xPos, yPos,
-                shearBandVectors[0], shearBandVectors[1],
+                slipBandVectors[0], slipBandVectors[1],
                 scale=1, pivot="middle",
                 color='yellow', headwidth=1,
                 headlength=0
             )
 
-        return shearBandAngles
 
     def grainData(self, mapData):
         """Takes this grains data from the given map data
@@ -870,3 +869,4 @@ class Grain(object):
         plt.yticks([])
 
         return grainMapData
+        return slipBandAngles
