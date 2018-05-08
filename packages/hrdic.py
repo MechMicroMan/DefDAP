@@ -283,44 +283,44 @@ class Map(base.Map):
         if highlightGrains is not None:
             self.highlightGrains(highlightGrains, highlightColours)
 
-        # plot slip traces
-        if plotSlipTraces:
-            # Check that grains have been detected in the map
-            self.checkGrainsDetected()
+        # # plot slip traces
+        # if plotSlipTraces:
+        #     # Check that grains have been detected in the map
+        #     self.checkGrainsDetected()
 
-            numGrains = len(self.grainList)
-            numSS = len(self.ebsdMap.slipSystems)
-            grainSizeData = np.zeros((numGrains, 4))
-            slipTraceData = np.zeros((numGrains, numSS, 2))
+        #     numGrains = len(self.grainList)
+        #     numSS = len(self.ebsdMap.slipSystems)
+        #     grainSizeData = np.zeros((numGrains, 4))
+        #     slipTraceData = np.zeros((numGrains, numSS, 2))
 
-            i = 0   # keep track of number of slip traces
-            for grain in self.grainList:
-                if len(grain) < 1000:
-                    continue
+        #     i = 0   # keep track of number of slip traces
+        #     for grain in self.grainList:
+        #         if len(grain) < 1000:
+        #             continue
 
-                # x0, y0, xmax, ymax
-                grainSizeData[i, 0], grainSizeData[i, 1], grainSizeData[i, 2], grainSizeData[i, 3] = grain.extremeCoords
+        #         # x0, y0, xmax, ymax
+        #         grainSizeData[i, 0], grainSizeData[i, 1], grainSizeData[i, 2], grainSizeData[i, 3] = grain.extremeCoords
 
-                for j, slipTrace in enumerate(grain.slipTraces()):
-                    slipTraceData[i, j, 0:2] = slipTrace[0:2]
+        #         for j, slipTrace in enumerate(grain.slipTraces()):
+        #             slipTraceData[i, j, 0:2] = slipTrace[0:2]
 
-                i += 1
+        #         i += 1
 
-            grainSizeData = grainSizeData[0:i, :]
-            slipTraceData = slipTraceData[0:i, :, :]
+        #     grainSizeData = grainSizeData[0:i, :]
+        #     slipTraceData = slipTraceData[0:i, :, :]
 
-            scale = 4 / ((grainSizeData[:, 2] - grainSizeData[:, 0]) / self.xDim +
-                         (grainSizeData[:, 3] - grainSizeData[:, 1]) / self.xDim)
+        #     scale = 4 / ((grainSizeData[:, 2] - grainSizeData[:, 0]) / self.xDim +
+        #                  (grainSizeData[:, 3] - grainSizeData[:, 1]) / self.xDim)
 
-            xPos = grainSizeData[:, 0] + (grainSizeData[:, 2] - grainSizeData[:, 0]) / 2
-            yPos = grainSizeData[:, 1] + (grainSizeData[:, 3] - grainSizeData[:, 1]) / 2
+        #     xPos = grainSizeData[:, 0] + (grainSizeData[:, 2] - grainSizeData[:, 0]) / 2
+        #     yPos = grainSizeData[:, 1] + (grainSizeData[:, 3] - grainSizeData[:, 1]) / 2
 
-            colours = self.ebsdMap.slipTraceColours
+        #     colours = self.ebsdMap.slipTraceColours
 
-            for i, colour in enumerate(colours[0:numSS]):
-                self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1],
-                               scale=scale, pivot="middle", color=colour, headwidth=1,
-                               headlength=0, width=0.002)
+        #     for i, colour in enumerate(colours[0:numSS]):
+        #         self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1],
+        #                        scale=scale, pivot="middle", color=colour, headwidth=1,
+        #                        headlength=0, width=0.002)
 
         return
 

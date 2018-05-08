@@ -601,12 +601,7 @@ class Grain(base.Grain):
             plt.yticks([])
 
             if plotSlipTraces:
-                colours = self.ebsdMap.slipTraceColours
-                xPos = int((xmax - x0) / 2)
-                yPos = int((ymax - y0) / 2)
-                for slipTrace, colour in zip(self.slipTraces, colours):
-                    plt.quiver(xPos, yPos, slipTrace[0], slipTrace[1], scale=1, pivot="middle",
-                               color=colour, headwidth=1, headlength=0)
+                self.plotSlipTraces()
 
         return
 
