@@ -366,9 +366,10 @@ class SlipSystem(object):
         """
 
         f = open(filepath)
-        lines = f.readlines()
-        colour = lines[1].rstrip()
-        slipTraceColours = colour.split(',')
+        f.readline()
+        colours = f.readline().strip()
+        slipTraceColours = colours.split(',')
+        f.close()
 
         if crystalSym == "hexagonal":
             vectSize = 4
