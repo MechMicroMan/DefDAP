@@ -305,7 +305,7 @@ class Grain(object):
         self.coordList = []         # list of coords stored as tuples (x, y). These are corrds in a cropped image if crop exists
 
     def __len__(self):
-        return len(self.quatList)
+        return len(self.coordList)
 
     @property
     def extremeCoords(self):
