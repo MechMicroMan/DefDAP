@@ -43,7 +43,11 @@ class Map(base.Map):
         self.stepSize = None        # (float) step size
         self.binData = None         # imported binary data
         self.quatArray = None       # (array) array of quaterions for each point of map
-        self.boundaries = None      # (array) map of boundariers. -1 for a boundary, 0 otherwise
+        self.numPhases = None       # (int) number of phases
+        self.phaseArray = None      # (array) map of phase ids
+        self.phaseNames = None      # (array) array of phase names
+        self.boundaries = None      # (array) map of boundaries. -1 for a boundary, 0 otherwise
+        self.phaseBoundaries = None # (array) map of phase boundaries. -1 for boundary, 0 otherwise
         self.grains = None          # (array) map of grains
         self.grainList = None       # (list) list of grains
         self.misOri = None          # (array) map of misorientation
@@ -66,7 +70,7 @@ class Map(base.Map):
         self.plotEulerMap(*args, **kwargs)
 
     def loadData(self, fileName, crystalSym):
-        # open meta data file and read in x and y dimensions
+        # open meta data file and read in x and y dimensions and phase names
         f = open(fileName + ".cpr", 'r')
         for line in f:
             if line[:6] == 'xCells':
@@ -75,6 +79,17 @@ class Map(base.Map):
                 self.yDim = int(line[7:])
             if line[:9] == 'GridDistX':
                 self.stepSize = float(line[10:])
+            if line[:8] == '[Phases]':
+                self.numPhases= int(next(f)[6:])
+                self.phaseNames = np.empty(self.numPhases, dtype='U30')
+        
+                for phase in range(self.numPhases):
+                    if phase == 0:
+                        for i in range(2):
+                            self.phaseNames[phase]=next(f)[14:].strip('\n')
+                    if phase > 0:
+                        for i in range(16):
+                            self.phaseNames[phase]=next(f)[14:].strip('\n')
 
         f.close()
         # now read the binary .crc file
@@ -101,6 +116,7 @@ class Map(base.Map):
         #                    ('IB5', 'uint8')])
         self.binData = np.fromfile(fileName + ".crc", fmt_np, count=-1)
         self.crystalSym = crystalSym
+        self.phaseArray = np.reshape(self.binData[('Phase')], (self.yDim, self.xDim))
         return
 
     def plotBandContrastMap(self):
@@ -112,7 +128,7 @@ class Map(base.Map):
         return
 
     def plotEulerMap(self, updateCurrent=False, highlightGrains=None, highlightColours=None):
-        """Summary
+        """Plots an orientation map in Euler colouring
 
         Args:
             updateCurrent (bool, optional): Description
@@ -140,6 +156,35 @@ class Map(base.Map):
             self.highlightGrains(highlightGrains, highlightColours)
 
         return
+
+    def plotPhaseMap(self, cmap='viridis'):
+        """Plots a phase map
+
+        Args:
+            cmap(str, optional): Colour map
+        """
+        values = np.zeros(self.numPhases+1)
+        names = np.empty(self.numPhases+1, dtype="U30")
+        values[0], names[0] = -1, "Non-indexed"
+
+        for i in range(self.numPhases):
+            values[i+1] = i+1
+            names[i+1] = self.phaseNames[i]
+
+        plt.figure(figsize=(8,6))
+        im = plt.imshow(self.phaseArray, cmap=cmap)
+
+        # Find colour values for phases
+        colors = [ im.cmap(im.norm(value)) for value in values]
+
+        # Make legend
+        patches = [ mpl.patches.Patch(color=colors[i], label=names[i] ) for i in range(len(values)) ]
+        plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0. )
+
+        plt.show()
+
+        return
+
 
     def calcKam(self):
         """Calculates Kernel Average Misorientaion (KAM) for the EBSD map. Crystal symmetric
@@ -270,7 +315,32 @@ class Map(base.Map):
 
         return
 
+    def findPhaseBoundaries(self):
+        """Finds boundaries in the phase map
+        """
+
+        # make new array shifted by one to left and up
+        phaseArrayShifted = np.full((self.yDim,self.xDim),-3)
+        phaseArrayShifted[:-1,:-1] = self.phaseArray[1:,1:]
+
+        # where shifted array not equal to starting array, set to -1
+        self.phaseBoundaries = np.zeros((self.yDim,self.xDim))
+        self.phaseBoundaries = np.where(np.not_equal(self.phaseArray,phaseArrayShifted),-1,0)
+
+        return
+
+    def plotPhaseBoundaryMap(self):
+        """Plots phase boundary map
+        """
+
+        plt.figure()
+        plt.imshow(-self.phaseBoundaries, vmax=1, cmap='gray')
+        plt.colorbar()
+        return
+
     def plotBoundaryMap(self):
+        """Plots grain boundary map
+        """
         plt.figure()
         plt.imshow(-self.boundaries, vmax=1, cmap='gray')
         plt.colorbar()
