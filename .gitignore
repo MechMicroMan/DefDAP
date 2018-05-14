@@ -12,3 +12,4 @@ Thumbs.db
 __pycache__
 *.sublime-project
 *.sublime-workspace
+*.pyc
