@@ -159,21 +159,16 @@ class Map(base.Map):
         Args:
             cmap(str, optional): Colour map
         """
-        values = np.zeros(self.numPhases + 1)
-        names = np.empty(self.numPhases + 1, dtype=str)
-        values[0], names[0] = -1, "Non-indexed"
+        values = [-1] + list(range(1,self.numPhases+1))
+        names = ["Non-indexed"] + self.phaseNames
 
-        for i in range(self.numPhases):
-            values[i + 1] = i + 1
-            names[i + 1] = self.phaseNames[i]
-
-        plt.figure(figsize=(8, 6))
+        plt.figure(figsize=(10, 6))
         im = plt.imshow(self.phaseArray, cmap=cmap)
 
         # Find colour values for phases
         colors = [im.cmap(im.norm(value)) for value in values]
 
-        # Make legend
+        # Get colour patches for each phase and make legend
         patches = [mpl.patches.Patch(color=colors[i], label=names[i]) for i in range(len(values))]
         plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
