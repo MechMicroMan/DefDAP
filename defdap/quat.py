@@ -314,41 +314,94 @@ class Quat(object):
         return minMisOris, minQuatComps
 
     @staticmethod
-    def stereoProject(x, y, z, returnAngles=False):
+    def polarAngles(x, y, z):
         mod = np.sqrt(x**2 + y**2 + z**2)
         x = x / mod
         y = y / mod
         z = z / mod
 
+        # alpha - angle with z axis
         alpha = np.arccos(z)
+        # beta - angle around z axis
         beta = np.arctan2(y, x)
 
-        xp = np.tan(alpha / 2) * np.sin(beta)
-        yp = -np.tan(alpha / 2) * np.cos(beta)
+        return alpha, beta
+
+    @staticmethod
+    def stereoProject(*args):
+        if len(args) == 3:
+            alpha, beta = Quat.polarAngles(args[0], args[1], args[2])
+        elif len(args) == 2:
+            alpha, beta = args
+        else:
+            raise Exception("3 arguments for pole directions and 2 for polar angles.")
+
+        alphaComp = np.tan(alpha / 2)
+        xp = alphaComp * np.cos(beta)
+        yp = alphaComp * np.sin(beta)
 
         return xp, yp
 
     @staticmethod
+    def plotLine(startPoint, endPoint, plotSymmetries=False, symGroup=None, res=100, projection=None, ax=None, **kwargs):
+        if projection is None:
+            projection = Quat.stereoProject
+        if ax is None:
+            ax = plt.gca()
+
+        lines = []
+        lines.append((startPoint, endPoint))
+        if plotSymmetries:
+            if symGroup is None:
+                raise Exception("Please provide a symGroup")
+            for symm in Quat.symEqv(symGroup)[1:]:
+                startPointSymm = symm.transformVector(startPoint).astype(int)
+                endPointSymm = symm.transformVector(endPoint).astype(int)
+
+                if startPointSymm[2] < 0:
+                    startPointSymm *= -1
+                if endPointSymm[2] < 0:
+                    endPointSymm *= -1
+
+                lines.append((startPointSymm, endPointSymm))
+
+        linePoints = np.zeros((3, res), dtype=float)
+        for line in lines:
+            for i in range(3):
+                if line[0][i] == line[1][i]:
+                    linePoints[i] = np.full(res, line[0][i])
+                else:
+                    linePoints[i] = np.linspace(line[0][i], line[1][i], res)
+
+            xp, yp = projection(linePoints[0], linePoints[1], linePoints[2])
+            ax.plot(xp, yp, **kwargs)
+
+    @staticmethod
+    def labelPoint(point, label, projection=None, ax=None, padX=0, padY=0, **kwargs):
+        if projection is None:
+            projection = Quat.stereoProject
+        if ax is None:
+            ax = plt.gca()
+
+        xp, yp = projection(point[0], point[1], point[2])
+        ax.text(xp + padX, yp + padY, label, **kwargs)
+
+    @staticmethod
     def plotPoleAxis(plotType, symGroup):
         if plotType == "IPF" and symGroup == "cubic":
-            res = 100
-            s = np.linspace(0, 1, res)
-            t = np.linspace(0, -1, res)
+            # line between [001] and [111]
+            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 1, 1]), c='k', lw=2)
 
-            # line between [001] and [-111]
-            xp, yp = Quat.stereoProject(t, s, np.ones(res))
-            plt.plot(xp, yp, 'k', lw=2)
-            plt.text(xp[0], yp[0] - 0.005, '001', va='top', ha='center')
+            # line between [001] and [101]
+            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 1]), c='k', lw=2)
 
-            # line between [001] and [011]
-            xp, yp = Quat.stereoProject(np.zeros(res), s, np.ones(res))
-            plt.plot(xp, yp, 'k', lw=2)
-            plt.text(xp[res - 1], yp[res - 1] - 0.005, '011', va='top', ha='center')
+            # line between [101] and [111]
+            Quat.plotLine(np.array([1, 0, 1]), np.array([1, 1, 1]), c='k', lw=2)
 
-            # line between [011] and [-111]
-            xp, yp = Quat.stereoProject(t, np.ones(res), np.ones(res))
-            plt.plot(xp, yp, 'k', lw=2)
-            plt.text(xp[res - 1], yp[res - 1] + 0.005, '-111', va='bottom', ha='center')
+            # label poles
+            Quat.labelPoint(np.array([0, 0, 1]), '001', padY=-0.005, va='top', ha='center')
+            Quat.labelPoint(np.array([1, 0, 1]), '101', padY=-0.005, va='top', ha='center')
+            Quat.labelPoint(np.array([1, 1, 1]), '111', padY=0.005, va='bottom', ha='center')
 
             plt.axis('equal')
             plt.axis('off')
@@ -403,26 +456,20 @@ class Quat(object):
         directionCrystal[:, directionCrystal[2, :, :] < 0] *= -1
 
         # convert to spherical coordinates
-        PFCoordsSph = np.empty((2, quatCompsSym.shape[0], quatCompsSym.shape[2]))
-        # alpha - angle with z axis
-        PFCoordsSph[0, :, :] = np.arccos(directionCrystal[2, :, :])
-        # beta - angle around z axis
-        PFCoordsSph[1, :, :] = np.arctan2(directionCrystal[1, :, :], directionCrystal[0, :, :])
+        alpha, beta = Quat.polarAngles(directionCrystal[0], directionCrystal[1], directionCrystal[2])
 
         # find the poles in the fundamental triangle
         if symGroup == "cubic":
             # first beta should be between 0 and 45 deg leaving 3 symmetric equivalents per orientation
-            trialPoles = np.logical_and(PFCoordsSph[1, :, :] >= 0,
-                                        PFCoordsSph[1, :, :] <= np.pi / 4)
+            trialPoles = np.logical_and(beta >= 0, beta <= np.pi / 4)
 
             # if less than 3 left need to expand search slighly to catch edge cases
             if np.sum(np.sum(trialPoles, axis=0) < 3) > 0:
                 deltaBeta = 1e-8
-                trialPoles = np.logical_and(PFCoordsSph[1, :, :] >= 0 - deltaBeta,
-                                            PFCoordsSph[1, :, :] <= np.pi / 4 + deltaBeta)
+                trialPoles = np.logical_and(beta >= -deltaBeta, beta <= np.pi / 4 + deltaBeta)
 
-            # create array to store final projected coordinates
-            PFCoordsPjt = np.empty((2, quatCompsSym.shape[2]))
+            # create array to store angles of pols in fundermental triangle
+            alphaFund, betaFund = np.empty((quatCompsSym.shape[2])), np.empty((quatCompsSym.shape[2]))
 
             # now of symmetric equivalents left we want the one with minimum alpha
             # loop over different orientations
@@ -430,38 +477,29 @@ class Quat(object):
                 # create array of indexes of poles kept in previous step
                 trialPoleIdxs = np.arange(trialPoles.shape[0])[trialPoles[:, i]]
 
-                # find pole with minimum beta of those kept in previous step
+                # find pole with minimum alpha of those kept in previous step
                 # then use trialPoleIdxs to get its index in original arrays
-                poleIdx = trialPoleIdxs[np.argmin(PFCoordsSph[0, trialPoles[:, i], i])]
+                poleIdx = trialPoleIdxs[np.argmin(alpha[trialPoles[:, i], i])]
 
                 # add to final array of poles
-                PFCoordsPjt[:, i] = PFCoordsSph[:, poleIdx, i]
+                alphaFund[i] = alpha[poleIdx, i]
+                betaFund[i] = beta[poleIdx, i]
         else:
             print("Only works for cubic")
 
         # project onto equatorial plane
-        temp = np.tan(PFCoordsPjt[0, :] / 2)
-        PFCoordsPjt[0, :] = temp * np.cos(PFCoordsPjt[1, :])
-        PFCoordsPjt[1, :] = temp * np.sin(PFCoordsPjt[1, :])
+        xp, yp = Quat.stereoProject(alphaFund, betaFund)
 
         # plot poles
-        plt.scatter(PFCoordsPjt[0, :], PFCoordsPjt[1, :], **plotParams)
+        plt.scatter(xp, yp, **plotParams)
         plt.show()
-
-        # unset variables
-        quatCompsSym = None
-        quatDotVec = None
-        temp = None
-        PFCoordsSph = None
-        PFCoordsPjt = None
-        directionCrystal = None
 
     @staticmethod
     def symEqv(group):
         overRoot2 = np.sqrt(2) / 2
         sqrt3over2 = np.sqrt(3) / 2
         qsym = []
-        # identity
+        # identity - this should always be returned as the first symmetry
         qsym.append(Quat(np.array([1.0, 0.0, 0.0, 0.0])))
 
         # from Pete Bate's fspl_orir.f90 code
