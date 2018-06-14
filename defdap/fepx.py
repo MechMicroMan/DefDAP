@@ -481,7 +481,7 @@ class Mesh(object):
         # create VTK mesh
         uGrid = self.constructVtkMesh()
 
-        numFrames = self.simData[inDataKey].shape[-1]
+        numFrames = inDataShape[-1]
         for i in range(numFrames):
             # add point data to unstructured grid
             vtkData = vnp.numpy_to_vtk(np.ascontiguousarray(self.simData[inDataKey][..., i]))
@@ -506,9 +506,6 @@ class Mesh(object):
 
         self.createSimData(outDataKey, gradient)
 
-
-
-
     def nodeToElmtData(self, inDataKey, outDataKey):
         """Convert node data to element data using VTK framework
 
@@ -523,16 +520,12 @@ class Mesh(object):
         # create array to store element data
         simMetaData = self.simMetaData(inDataKey)
         inDataShape = simMetaData['shape']
-        if simMetaData['numComponents'] == 1:
-            elmtData = np.empty((self.numElmts, inDataShape[-1]))
-        else:
-            print("Currenly works for data with 1 component.")
-            return
+        elmtData = np.empty((self.numElmts,) + inDataShape[1:])
 
         # create VTK mesh
         uGrid = self.constructVtkMesh()
 
-        numFrames = self.simData[inDataKey].shape[-1]
+        numFrames = inDataShape[-1]
         for i in range(numFrames):
             # add point data to unstructured grid
             vtkData = vnp.numpy_to_vtk(np.ascontiguousarray(self.simData[inDataKey][..., i]))
@@ -545,7 +538,7 @@ class Mesh(object):
             conversionFilter.Update()
 
             # collect output
-            elmtData[:, i] = vnp.vtk_to_numpy(
+            elmtData[..., i] = vnp.vtk_to_numpy(
                 conversionFilter.GetOutput().GetCellData().GetArray(inDataKey)
             )
 
@@ -556,11 +549,6 @@ class Mesh(object):
             vtkData = None
 
         self.createSimData(outDataKey, elmtData)
-
-
-
-
-
 
     def calcMisori(self, frameNums):
         frameNums = self._validateFrameNums(frameNums)
@@ -885,12 +873,12 @@ class Surface(object):
         self.mesh = mesh
         self.numElmts = numElmts
         self.elmtIDs = elmtIDs          # Mesh global element IDs
-        self.elmtCon = elmtCon          # Mesh global element IDs
+        self.elmtCon = elmtCon          # Mesh global node IDs
 
         self.nodeIDs = np.unique(self.elmtCon.flatten())    # Mesh global node IDs
         self.numNodes = len(self.nodeIDs)
 
-        self.forceCalc = False          # Set to true to force recalcualtion of all below
+        self.forceCalc = False              # Set to true to force recalcualtion of all below
         self._elmtEdges = None
         self._elmtNeighbours = None
         self._elmtNeighbourEdges = None
@@ -945,46 +933,21 @@ class Surface(object):
             neighbourEdges = []
             elmtEdges = self.elmtEdges
 
+            # create list of edges from each element to compare
+            neighbourPerms = []
+            for i in range(3):
+                for j in range(3):
+                    neighbourPerms.append((i, j))
+
             # Loop over elements to compare each with all others
             for i in range(self.numElmts):
                 for j in range(i + 1, self.numElmts):
                     # check if any of the edges are the same
-                    if elmtEdges[i, 0] == elmtEdges[j, 0]:
-                        neighbours.append((i, j))
-                        neighbourEdges.append(elmtEdges[i, 0])
-                        continue
-                    if elmtEdges[i, 0] == elmtEdges[j, 1]:
-                        neighbours.append((i, j))
-                        neighbourEdges.append(elmtEdges[i, 0])
-                        continue
-                    if elmtEdges[i, 0] == elmtEdges[j, 2]:
-                        neighbours.append((i, j))
-                        neighbourEdges.append(elmtEdges[i, 0])
-                        continue
-                    if elmtEdges[i, 1] == elmtEdges[j, 0]:
-                        neighbours.append((i, j))
-                        neighbourEdges.append(elmtEdges[i, 1])
-                        continue
-                    if elmtEdges[i, 1] == elmtEdges[j, 1]:
-                        neighbours.append((i, j))
-                        neighbourEdges.append(elmtEdges[i, 1])
-                        continue
-                    if elmtEdges[i, 1] == elmtEdges[j, 2]:
-                        neighbours.append((i, j))
-                        neighbourEdges.append(elmtEdges[i, 1])
-                        continue
-                    if elmtEdges[i, 2] == elmtEdges[j, 0]:
-                        neighbours.append((i, j))
-                        neighbourEdges.append(elmtEdges[i, 2])
-                        continue
-                    if elmtEdges[i, 2] == elmtEdges[j, 1]:
-                        neighbours.append((i, j))
-                        neighbourEdges.append(elmtEdges[i, 2])
-                        continue
-                    if elmtEdges[i, 2] == elmtEdges[j, 2]:
-                        neighbours.append((i, j))
-                        neighbourEdges.append(elmtEdges[i, 2])
-                        continue
+                    for perm in neighbourPerms:
+                        if elmtEdges[i, perm[0]] == elmtEdges[j, perm[1]]:
+                            neighbours.append((i, j))
+                            neighbourEdges.append(elmtEdges[i, perm[0]])
+                            break
 
             self._elmtNeighbours = neighbours
             self._elmtNeighbourEdges = neighbourEdges
