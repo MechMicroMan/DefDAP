@@ -159,7 +159,7 @@ class Map(base.Map):
         Args:
             cmap(str, optional): Colour map
         """
-        values = [-1] + list(range(1,self.numPhases+1))
+        values = [-1] + list(range(1, self.numPhases + 1))
         names = ["Non-indexed"] + self.phaseNames
 
         plt.figure(figsize=(10, 6))
@@ -625,16 +625,20 @@ class Grain(base.Grain):
             f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
 
             img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vmin, vmax=vmax)
-            plt.colorbar(img, ax=ax1)
+            plt.colorbar(img, ax=ax1, label="Grain misorientation ($^\circ$)")
             vmin = None if vRange[0] is None else -vRange[0]
             img = ax2.imshow(grainMisOri[1], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[0])
-            plt.colorbar(img, ax=ax2)
+            plt.colorbar(img, ax=ax2, label="x rotation ($^\circ$)")
             vmin = None if vRange[0] is None else -vRange[1]
             img = ax3.imshow(grainMisOri[2], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[1])
-            plt.colorbar(img, ax=ax3)
+            plt.colorbar(img, ax=ax3, label="y rotation ($^\circ$)")
             vmin = None if vRange[0] is None else -vRange[2]
             img = ax4.imshow(grainMisOri[3], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[2])
-            plt.colorbar(img, ax=ax4)
+            plt.colorbar(img, ax=ax4, label="z rotation ($^\circ$)")
+
+            for ax in (ax1, ax2, ax3, ax4):
+                ax.set_xticks([])
+                ax.set_yticks([])
 
         else:
             # single plot

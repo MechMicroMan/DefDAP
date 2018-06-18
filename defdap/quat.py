@@ -557,4 +557,4 @@ class Quat(object):
         elif (group == 'hexagonal'):
             return [qsym[0], qsym[2], qsym[5], qsym[8]] + qsym[-8:32]
         else:
-            return qsym
+            return [qsym[0]]
