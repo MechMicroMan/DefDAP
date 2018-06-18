@@ -994,7 +994,7 @@ class Surface(object):
 
     @property
     def neighbourNetwork(self):
-    	if (self._neighbourNetwork is None) or self.forceCalc:
+        if (self._neighbourNetwork is None) or self.forceCalc:
             neighboursList = []
             neighbours, _ = self.elmtNeighbours
 
@@ -1011,8 +1011,8 @@ class Surface(object):
             self._neighbourNetwork = nx.Graph()
             self._neighbourNetwork.add_nodes_from(self.grainIDs)
             self._neighbourNetwork.add_edges_from(neighboursList)
-        
-    	return self._neighbourNetwork
+
+        return self._neighbourNetwork
 
     @property
     def _2dAxes(self):
@@ -1095,12 +1095,12 @@ class Surface(object):
                             linewidths=linewidth)
         if ax is None:
             ax = plt.gca()
-        
+
         ax.add_collection(lc)
 
     def plotGrainIDs(self, ax=None, **kwargs):
         if ax is None:
-            ax = plt.gca()        
+            ax = plt.gca()
 
         for grainID in self.grainIDs:
             grainElmtIDsLocal = np.nonzero(self.elmtGrain == grainID)[0]

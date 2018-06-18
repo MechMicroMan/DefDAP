@@ -201,8 +201,22 @@ class Quat(object):
             return vectorTransformed
 
         raise TypeError("Vector must be a size 3 numpy array.")
-
+    
     def misOri(self, right, symGroup, returnQuat=0):
+        """Calculate misorientation angle between 2 orientations taking
+        into account the symmetries of the crystal structure.
+        Angle is 2*arccos(output).
+
+        Args:
+            rigth (quat): Orientation to find misorientation to
+            symGroup (str): Crystal type (cubic, hexagonal)
+            returnQuat (int): What to return
+
+        Returns:
+            various:    returnQuat = 0 - misorientation
+                        returnQuat = 1 - symmetric equivalent with min misorientation
+                        returnQuat = 2 - both
+        """
         if isinstance(right, type(self)):
             minMisOri = 0   # actually looking for max of this as it is cos of misoriention angle
             for sym in Quat.symEqv(symGroup):   # loop over symmetrically equivelent orienations
@@ -218,6 +232,24 @@ class Quat(object):
                 return minMisOri, minQuatSym
             else:
                 return minMisOri
+        raise TypeError("Input must be a quaternion.")
+
+    def misOriAxis(self, right):
+        """Calculate misorientation axis between 2 orientations.
+        This does not consider symmetries of the crystal structure.
+
+        Args:
+            rigth (quat): Orientation to find misorientation axis to
+
+        Returns:
+            numpy.ndarray: axis of misorientation
+        """
+        if isinstance(right, type(self)):
+            Dq = right * self.conjugate
+            Dq = Dq.quatCoef
+            misOriAxis = (2 * Dq[1:4] * np.arccos(Dq[0])) / np.sqrt(1 - np.power(Dq[0], 2))
+
+            return misOriAxis
         raise TypeError("Input must be a quaternion.")
 
 # Static methods
