@@ -272,13 +272,13 @@ class Mesh(object):
                 singleData = True
                 # reshape into 2d array with 2nd dim for each frame
                 cols, = loadedData[i].shape
-                perFrame = cols / numFrames
+                perFrame = int(cols / numFrames)
                 loadedData[i] = np.reshape(loadedData[i], (perFrame, numFrames), order='F')
             else:
                 # vector data
                 # reshape into 3d array with 3rd dim for each frame
                 rows, cols = loadedData[i].shape
-                perFrame = cols / numFrames
+                perFrame = int(cols / numFrames)
                 loadedData[i] = np.reshape(loadedData[i], (rows, perFrame, numFrames), order='F')
 
         # concatenate data from all processors into one array and transpose first 2 axes if vectr data
@@ -884,12 +884,19 @@ class Surface(object):
         self._elmtNeighbourEdges = None
         self._grainEdges = None
         self._meshEdges = None
+        self._neighbourNetwork = None
 
     @property
     def elmtGrain(self):
-        """Returns an aray of grain IDs for elements in the surface (note grain IDs are 1 based)
+        """Returns an array of grain IDs for elements in the surface (note grain IDs are 1 based)
         """
         return self.mesh.elmtGrain[self.elmtIDs]
+
+    @property
+    def grainIDs(self):
+        """Returns an array of grain IDs included in the surface
+        """
+        return np.unique(self.elmtGrain)
 
     @property
     def surfaceNormal(self):
@@ -986,6 +993,28 @@ class Surface(object):
         return self._meshEdges
 
     @property
+    def neighbourNetwork(self):
+        if (self._neighbourNetwork is None) or self.forceCalc:
+            neighboursList = []
+            neighbours, _ = self.elmtNeighbours
+
+            for i, neighbour in enumerate(neighbours):
+                grainIDs = (self.mesh.elmtGrain[self.elmtIDs[neighbour[0]]],
+                            self.mesh.elmtGrain[self.elmtIDs[neighbour[1]]])
+
+                if grainIDs[0] != grainIDs[1]:
+                    if grainIDs not in neighboursList:
+                        neighboursList.append(grainIDs)
+
+            # create network
+            import networkx as nx
+            self._neighbourNetwork = nx.Graph()
+            self._neighbourNetwork.add_nodes_from(self.grainIDs)
+            self._neighbourNetwork.add_edges_from(neighboursList)
+
+        return self._neighbourNetwork
+
+    @property
     def _2dAxes(self):
         if self.surfaceNormal == 'x':
             axes = (1, 2)
@@ -998,7 +1027,7 @@ class Surface(object):
 
         return axes
 
-    def plotStressStrain(self, meshDims=(1, 1, 0.2), velocity=-1e-2, revIncs=None, *args, **kwargs):
+    def plotStressStrain(self, *args, meshDims=(1, 1, 0.2), velocity=-1e-2, revIncs=None, **kwargs):
         # revIncs = (180,)
         # meshDims = (1, 1, 0.2)
         # velocity = -1e-2
@@ -1056,18 +1085,37 @@ class Surface(object):
                             colors=colour,
                             linewidths=linewidth)
         if ax is None:
-            plt.gca().add_collection(lc)
-        else:
-            ax.add_collection(lc)
+            ax = plt.gca()
+
+        ax.add_collection(lc)
 
     def plotMesh(self, colour=None, linewidth=None, ax=None):
         lc = LineCollection(self.mesh.nodePos[:, self._2dAxes][self.meshEdges],
                             colors=colour,
                             linewidths=linewidth)
         if ax is None:
-            plt.gca().add_collection(lc)
-        else:
-            ax.add_collection(lc)
+            ax = plt.gca()
+
+        ax.add_collection(lc)
+
+    def plotGrainIDs(self, ax=None, **kwargs):
+        if ax is None:
+            ax = plt.gca()
+
+        for grainID in self.grainIDs:
+            grainElmtIDsLocal = np.nonzero(self.elmtGrain == grainID)[0]
+            # only corner nodes
+            grainNodes = self.elmtCon[grainElmtIDsLocal, :][:, [0, 2, 4]]
+            grainNodes = np.unique(grainNodes.flatten())
+
+            grainNodesPos = self.mesh.nodePos[grainNodes, :]
+            grainNodesPosMin = grainNodesPos.min(axis=0)
+            grainNodesPosMax = grainNodesPos.max(axis=0)
+
+            grainCentrePos = (grainNodesPosMax + grainNodesPosMin) / 2
+
+            ax.text(grainCentrePos[0], grainCentrePos[1], str(grainID),
+                    horizontalalignment='center', verticalalignment='center', **kwargs)
 
     def plotSimData(self, dataKey, plotType="image", component=0,
                     frameNum=1, plotGBs=False, plotMesh=False, label="", cmap="viridis",
