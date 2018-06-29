@@ -254,6 +254,45 @@ class Mesh(object):
         if isNotVector:
             self.simDataKeysNotVectorDyn.append(dataKey)
 
+    def removeSimData(self, dataKey):
+        try:
+            del self.simData[dataKey]
+            if dataKey in self.simDataKeysDyn:
+                self.simDataKeysDyn.remove(dataKey)
+            if dataKey in self.simDataKeysNotVectorDyn:
+                self.simDataKeysNotVectorDyn.remove(dataKey)
+        except KeyError:
+            raise KeyError("Sim data '{:}' not found.".format(dataKey))
+
+    def saveSimData(self, dataKey, saveDir=None):
+        import os
+
+        try:
+            data = self.simData[dataKey]
+        except KeyError:
+            raise KeyError("Sim data '{:}' not found.".format(dataKey))
+
+        # Create save directory if it doesn't exist
+        if saveDir is None:
+            saveDir = self.dataDir + 'saved_data/'
+        if not os.path.exists(saveDir):
+            os.makedirs(saveDir)
+
+        # Save data to file
+        fileName = "{:}{:}.npz".format(saveDir, dataKey)
+        np.savez_compressed(fileName, data=data)
+
+    def loadSimData(self, dataKey, saveDir=None):
+        if saveDir is None:
+            saveDir = self.dataDir + 'saved_data/'
+
+        # Load from file
+        fileName = "{:}{:}.npz".format(saveDir, dataKey)
+        data = np.load(fileName)['data']
+
+        # doesn't save the state of isNotVector
+        self.createSimData(dataKey, data)
+
     def loadFrameData(self, dataName, initialIncd, usecols=None, numProcs=-1, numFrames=-1, numSlipSys=-1):
         self.setSimParams(numProcs=numProcs, numFrames=numFrames, numSlipSys=numSlipSys)
 
