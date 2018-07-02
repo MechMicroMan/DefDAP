@@ -264,7 +264,7 @@ class Mesh(object):
         except KeyError:
             raise KeyError("Sim data '{:}' not found.".format(dataKey))
 
-    def saveSimData(self, dataKey, saveDir=None):
+    def saveArchSimData(self, dataKey, saveDir=None):
         import os
 
         try:
@@ -282,7 +282,7 @@ class Mesh(object):
         fileName = "{:}{:}.npz".format(saveDir, dataKey)
         np.savez_compressed(fileName, data=data)
 
-    def loadSimData(self, dataKey, saveDir=None):
+    def loadArchSimData(self, dataKey, saveDir=None):
         if saveDir is None:
             saveDir = self.dataDir + 'saved_data/'
 
