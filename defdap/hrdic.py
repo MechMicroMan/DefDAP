@@ -16,37 +16,59 @@ from .quat import Quat
 class Map(base.Map):
 
     def __init__(self, path, fname):
+        """Initialise class and import DIC data from file
+
+        Args:
+            path(str): Path to file
+            fname(str): Name of file including extension
+        """
+        
         # Call base class constructor
         super(Map, self).__init__()
-
-        self.ebsdMap = None
-        self.ebsdTransform = None       # Transform from EBSD to DIC coordinates
-        self.ebsdTransformInv = None    # Transform from DIC to EBSD coordinates
+        
+        print("Loading DIC data...", end="")
+        
+        # Initialise variables
+        self.ebsdMap = None                 # EBSD map linked to DIC map
+        self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
+        self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
         self.grainList = None
-        self.currGrainId = None     # Id of last selected grain
-        # ...
+        self.currGrainId = None             # ID of last selected grain
         self.ebsdGrainIds = None
-        self.patternImPath = None   # Path to BSE image of map
-        self.windowSize = None      # Window size for map
-
-        self.plotHomog = self.plotMaxShear
+        self.patternImPath = None           # Path to BSE image of map
+        self.windowSize = None              # Window size for map
         self.plotHomog = self.plotMaxShear  # Use max shear map for defining homologous points
         self.highlightAlpha = 0.6
-
-        self.path = path
-        self.fname = fname
-        # Load in data
+        self.path = path                    # file path
+        self.fname = fname                  # file name
+        
+        # Load metadata
+        with open(self.path + self.fname, 'r') as f:
+            first_line = f.readline()
+            
+        metadata=list()
+        [metadata.append(word) for word in first_line.split()]
+    
+        self.version = metadata[1]          # DaVis version
+        self.binning = metadata[3]          # Sub-window width in pixels
+        self.xdimfile = int(metadata[5])    # size of map along x (from header)
+        self.ydimfile = int(metadata[4])    # size of map along y (from header)
+            
+        # Load data
         self.data = np.loadtxt(self.path + self.fname, skiprows=1)
-        self.xc = self.data[:, 0]  # x coordinates
-        self.yc = self.data[:, 1]  # y coordinates
-        self.xd = self.data[:, 2]  # x displacement
-        self.yd = self.data[:, 3]  # y displacement
-
+        self.xc = self.data[:, 0]           # x coordinates
+        self.yc = self.data[:, 1]           # y coordinates
+        self.xd = self.data[:, 2]           # x displacement
+        self.yd = self.data[:, 3]           # y displacement
+        
         # Calculate size of map
         self.xdim = int((self.xc.max() - self.xc.min()) /
                         min(abs((np.diff(self.xc)))) + 1)  # size of map along x
         self.ydim = int((self.yc.max() - self.yc.min()) /
                         max(abs((np.diff(self.yc)))) + 1)  # size of map along y
+        
+        if (self.xdim != self.xdimfile) or (self.ydim != self.ydimfile):
+            raise Exception("Dimensions of data and header do not match")
 
         # *dim are full size of data. *Dim are size after cropping
         self.xDim = self.xdim
@@ -56,16 +78,19 @@ class Map(base.Map):
         self.y_map = self._map(self.yd)     # v (displacement component along x)
         xDispGrad = self._grad(self.x_map)
         yDispGrad = self._grad(self.y_map)
-        self.f11 = xDispGrad[1] + 1     # f11
-        self.f22 = yDispGrad[0] + 1     # f22
-        self.f12 = xDispGrad[0]         # f12
-        self.f21 = yDispGrad[1]         # f21
+        self.f11 = xDispGrad[1] + 1         # f11
+        self.f22 = yDispGrad[0] + 1         # f22
+        self.f12 = xDispGrad[0]             # f12
+        self.f21 = yDispGrad[1]             # f21
 
         self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
-                                 ((self.f12 + self.f21) / 2.)**2)  # max shear component
-        self.mapshape = np.shape(self.max_shear)
+                                 ((self.f12 + self.f21) / 2.)**2)   # max shear component
+        self.mapshape = np.shape(self.max_shear)                    # map shape
 
-        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
+        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)      # crop distances (default all zeros)
+        
+        print("\rLoaded DaVis {0} data (dimensions: {1} x {2} pixels, sub-window size: {3} x {3} pixels)".
+              format(self.version, self.xdimfile, self.ydimfile, self.binning))
 
     def plotDefault(self, *args, **kwargs):
         self.plotMaxShear(plotGBs=True, *args, **kwargs)
@@ -148,6 +173,8 @@ class Map(base.Map):
             transformType(string, optional): affine, piecewiseAffine or polynomial
             order(int, optional): Order of polynomial transform to apply
         """
+        print("Linking EBSD <-> DIC...", end="")
+        
         self.ebsdMap = ebsdMap
         if transformType == "piecewiseAffine":
             self.ebsdTransform = tf.PiecewiseAffineTransform()
@@ -167,6 +194,8 @@ class Map(base.Map):
 
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
+        
+        print("\r", end="")
 
     def checkEbsdLinked(self):
         """Check if an EBSD map has been linked.
@@ -514,6 +543,8 @@ class Map(base.Map):
                 self.grainFig.canvas.draw()
 
     def findGrains(self, minGrainSize=10):
+        print("Finding grains in DIC map...", end="")
+        
         # Check a EBSD map is linked
         self.checkEbsdLinked()
 
@@ -563,7 +594,8 @@ class Map(base.Map):
             self.grainList[i].ebsdGrainId = modeId[0] - 1
             self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
             self.grainList[i].ebsdMap = self.ebsdMap
-
+            
+        print("\r", end="")
         return
 
     def floodFill(self, x, y, grainIndex):
