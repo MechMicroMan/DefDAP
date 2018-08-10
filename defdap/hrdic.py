@@ -30,6 +30,7 @@ class Map(base.Map):
         self.windowSize = None      # Window size for map
 
         self.plotHomog = self.plotMaxShear
+        self.plotHomog = self.plotMaxShear  # Use max shear map for defining homologous points
         self.highlightAlpha = 0.6
 
         self.path = path

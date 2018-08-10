@@ -34,33 +34,42 @@ class Map(base.Map):
     """
 
     def __init__(self, fileName, crystalSym):
+        """Initialise class and import DIC data from file
+
+        Args:
+            filename(str): Path to file, including name, excluding extension
+            crystalSym(str): Crystal sturcture, 'cubic' or 'hexagonal'
+        """
+            
         # Call base class constructor
         super(Map, self).__init__()
 
-        self.crystalSym = None      # symmetry of material e.g. "cubic", "hexagonal"
-        self.xDim = None            # (int) dimensions of maps
+        print("Loading EBSD data...", end="")
+        
+        self.crystalSym = None              # (str) symmetry of material e.g. "cubic", "hexagonal"
+        self.xDim = None                    # (int) dimensions of maps
         self.yDim = None
-        self.stepSize = None        # (float) step size
-        self.binData = None         # imported binary data
-        self.quatArray = None       # (array) array of quaterions for each point of map
-        self.numPhases = None       # (int) number of phases
-        self.phaseArray = None      # (array) map of phase ids
-        self.phaseNames = []        # (array) array of phase names
-        self.boundaries = None      # (array) map of boundaries. -1 for a boundary, 0 otherwise
-        self.phaseBoundaries = None # (array) map of phase boundaries. -1 for boundary, 0 otherwise
-        self.grains = None          # (array) map of grains
-        self.grainList = None       # (list) list of grains
-        self.misOri = None          # (array) map of misorientation
-        self.misOriAxis = None      # (list of arrays) map of misorientation axis components
-        self.kam = None             # (array) map of kam
+        self.stepSize = None                # (float) step size
+        self.binData = None                 # imported binary data
+        self.quatArray = None               # (array) array of quaterions for each point of map
+        self.numPhases = None               # (int) number of phases
+        self.phaseArray = None              # (array) map of phase ids
+        self.phaseNames = []                # (array) array of phase names
+        self.boundaries = None              # (array) map of boundaries. -1 for a boundary, 0 otherwise
+        self.phaseBoundaries = None         # (array) map of phase boundaries. -1 for boundary, 0 otherwise
+        self.grains = None                  # (array) map of grains
+        self.grainList = None               # (list) list of grains
+        self.misOri = None                  # (array) map of misorientation
+        self.misOriAxis = None              # (list of arrays) map of misorientation axis components
+        self.kam = None                     # (array) map of kam
         self.averageSchmidFactor = None     # (array) map of average Schmid factor
-        self.slipSystems = None     # (list(list(slipSystems))) slip systems grouped by slip plane
-        self.slipTraceColours = None    # list of colours used when plotting slip traces
-        self.currGrainId = None     # Id of last selected grain
-        self.origin = (0, 0)        # Map origin (y, x). Used by linker class where origin is a
-                                    # homologue point of the maps
+        self.slipSystems = None             # (list(list(slipSystems))) slip systems grouped by slip plane
+        self.slipTraceColours = None        # (list) colours used when plotting slip traces
+        self.currGrainId = None             # (int) ID of last selected grain
+        self.origin = (0, 0)                # Map origin (y, x). Used by linker class where origin is a
+                                            # homologue point of the maps
 
-        self.plotHomog = self.plotEulerMap
+        self.plotHomog = self.plotEulerMap  # Use euler map for defining homologous points
         self.highlightAlpha = 1
 
         self.loadData(fileName, crystalSym)
@@ -113,6 +122,10 @@ class Map(base.Map):
         self.binData = np.fromfile(fileName + ".crc", fmt_np, count=-1)
         self.crystalSym = crystalSym
         self.phaseArray = np.reshape(self.binData[('Phase')], (self.yDim, self.xDim))
+        
+        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
+              format(self.xDim, self.yDim, self.stepSize))
+        
         return
 
     def plotBandContrastMap(self):
@@ -229,6 +242,8 @@ class Map(base.Map):
         return True
 
     def buildQuatArray(self):
+        print("Building quaternion array...", end="")
+        
         self.checkDataLoaded()
 
         if self.quatArray is None:
@@ -240,9 +255,12 @@ class Map(base.Map):
             eulerArray = eulerArray.transpose((2, 0, 1))
             # create the array of quat objects
             self.quatArray = Quat.createManyQuats(eulerArray)
+            
+        print("\r", end="")
         return
 
     def findBoundaries(self, boundDef=10):
+        print("Finding boundaries...", end="")
         self.buildQuatArray()
 
         syms = Quat.symEqv(self.crystalSym)
@@ -302,7 +320,8 @@ class Map(base.Map):
             for j in range(self.yDim):
                 if (misOrix[j, i] > boundDef) or (misOriy[j, i] > boundDef):
                     self.boundaries[j, i] = -1
-
+                    
+        print("\r", end="")
         return
 
     def findPhaseBoundaries(self):
@@ -333,6 +352,8 @@ class Map(base.Map):
         plt.colorbar()
 
     def findGrains(self, minGrainSize=10):
+        print("Finding grains...", end="")
+        
         # Initialise the grain map
         self.grains = np.copy(self.boundaries)
 
@@ -360,6 +381,7 @@ class Map(base.Map):
 
             # update unknown points
             unknownPoints = np.where(self.grains == 0)
+        print("\r", end="")   
         return
 
     def plotGrainMap(self):
@@ -445,12 +467,15 @@ class Map(base.Map):
             grain.calcAverageOri()
 
     def calcGrainMisOri(self, calcAxis=False):
+        print("Calculating grain misorientations...", end="")
+        
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
         for grain in self.grainList:
             grain.buildMisOriList(calcAxis=calcAxis)
-
+            
+        print("\r", end="")
         return
 
     def plotMisOriMap(self, component=0, plotGBs=False, boundaryColour='black', vmin=None, vmax=None,
@@ -492,12 +517,16 @@ class Map(base.Map):
                 grain.slipSystems = self.slipSystems
 
     def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
+        print("Calculating grain average Schmid factors...", end="")
+        
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
         for grain in self.grainList:
             grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
-
+                 
+        print("\r", end="")
+        
     def plotAverageGrainSchmidFactorsMap(self, plotGBs=True):
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
