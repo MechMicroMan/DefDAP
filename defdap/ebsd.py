@@ -260,8 +260,8 @@ class Map(base.Map):
         return
 
     def findBoundaries(self, boundDef=10):
-        print("Finding boundaries...", end="")
         self.buildQuatArray()
+        print("Finding boundaries...", end="")
 
         syms = Quat.symEqv(self.crystalSym)
         numSyms = len(syms)
@@ -327,7 +327,9 @@ class Map(base.Map):
     def findPhaseBoundaries(self):
         """Finds boundaries in the phase map
         """
-
+        
+        print("Finding phase boundaries...", end="")
+        
         # make new array shifted by one to left and up
         phaseArrayShifted = np.full((self.yDim, self.xDim), -3)
         phaseArrayShifted[:-1, :-1] = self.phaseArray[1:, 1:]
@@ -335,6 +337,8 @@ class Map(base.Map):
         # where shifted array not equal to starting array, set to -1
         self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
         self.phaseBoundaries = np.where(np.not_equal(self.phaseArray, phaseArrayShifted), -1, 0)
+        
+        print("\r", end="")
 
     def plotPhaseBoundaryMap(self):
         """Plots phase boundary map
