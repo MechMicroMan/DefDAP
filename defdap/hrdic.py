@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import inspect
 
 from skimage import transform as tf
 from skimage import morphology as mph
@@ -49,7 +50,8 @@ class Map(base.Map):
         metadata=list()
         [metadata.append(word) for word in first_line.split()]
     
-        self.version = metadata[1]          # DaVis version
+        self.format = metadata[0].strip('#') # Software name
+        self.version = metadata[1]          # Software version
         self.binning = metadata[3]          # Sub-window width in pixels
         self.xdimfile = int(metadata[5])    # size of map along x (from header)
         self.ydimfile = int(metadata[4])    # size of map along y (from header)
@@ -89,8 +91,8 @@ class Map(base.Map):
 
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)      # crop distances (default all zeros)
         
-        print("\rLoaded DaVis {0} data (dimensions: {1} x {2} pixels, sub-window size: {3} x {3} pixels)".
-              format(self.version, self.xdimfile, self.ydimfile, self.binning))
+        print("\rLoaded {0} {1} data (dimensions: {2} x {3} pixels, sub-window size: {4} x {4} pixels)".
+              format(self.format, self.version, self.xdimfile, self.ydimfile, self.binning))
 
     def plotDefault(self, *args, **kwargs):
         self.plotMaxShear(plotGBs=True, *args, **kwargs)
@@ -103,6 +105,69 @@ class Map(base.Map):
         grad_step = min(abs((np.diff(self.xc))))
         data_grad = np.gradient(data_map, grad_step, grad_step)
         return data_grad
+    
+    def retrieveName(self):
+        """
+        Gets the first name assigned to the a map, as a string
+        
+        var(obj) variable to get name of
+        """
+        for fi in reversed(inspect.stack()):
+            names = [var_name for var_name, var_val in fi.frame.f_locals.items() if var_val is self]
+            if len(names) > 0:
+                return names[0]
+    
+    def printStatsTable(self, percentiles, components):
+        """
+        Print out statistics table for a DIC map
+
+        percentiles(list) list of percentiles to print (number, Min, Mean or Max)
+        components(list of str) lis of map components to print i.e. f11, mss
+        """
+
+        # Print map info
+        print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} x {3} pixels, number of points: {4})\n".
+                  format(self.retrieveName(), self.xdimfile, self.ydimfile, self.binning, self.xdimfile*self.ydimfile))
+
+        # Print table header
+        print('\033[1m', end='')    # START BOLD
+        print("Component\t".format(), end="")
+        for x in percentiles:
+            if x=='Min' or x== 'Mean' or x== 'Max':
+                print("{0}\t".format(x), end='')
+            else:
+                print("P{0}\t".format(x), end='')
+        print('\033[0m', end='')    # END BOLD
+        print()
+        
+        # Print table
+        for c in components:
+            selmap=[]
+            if c=='mss':
+                selmap=self.crop(self.max_shear)*100
+            if c=='f11':
+                selmap=(self.crop(self.f11)-1)*100
+            if c=='f12':
+                selmap=self.crop(self.f12)*100
+            if c=='f21':
+                selmap=self.crop(self.f21)*100
+            if c=='f22':
+                selmap=(self.crop(self.f22)-1)*100
+            plist=list()
+            for p in percentiles:
+                if p=='Min':
+                    plist.append(np.min(selmap))
+                elif p=='Mean':
+                    plist.append(np.mean(selmap))
+                elif p=='Max':
+                    plist.append(np.max(selmap))
+                else:
+                    plist.append(np.percentile(selmap,p))
+            print("{0}\t\t".format(c),end="")
+            for l in plist:
+                print("{0:.2f}\t".format(l), end='')
+            print()
+        print()
 
     def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
         """Set a crop for the DIC map
