@@ -346,7 +346,22 @@ class Map(base.Map):
 
         else:
             raise Exception("First set path to pattern image.")
+            
+            
+    def plotGrainNumbers(self, dilate=False):
+        """Plot a map with grains numbered
+        """
+        
+        self.fig, self.ax = plt.subplots()
 
+        for grainID in range(0,len(self.grainList)):
+            xmiddle=(self.grainList[grainID].extremeCoords[2]+self.grainList[grainID].extremeCoords[0])/2
+            ymiddle=(self.grainList[grainID].extremeCoords[3]+self.grainList[grainID].extremeCoords[1])/2
+            self.ax.text(xmiddle, ymiddle, grainID, fontsize=10)
+            
+        self.plotGBs(ax=self.ax, colour='black', dilate=dilate)
+
+            
     def plotMaxShear(self, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=False,
                      updateCurrent=False, highlightGrains=None, highlightColours=None,
                      plotColourBar=False, vmin=None, vmax=None):
