@@ -400,7 +400,9 @@ class Map(base.Map):
         img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
                              cmap='viridis', interpolation='None', vmin=vmin, vmax=vmax)
         if plotColourBar:
-            plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
+            if plotPercent:
+                plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
+            plt.colorbar(img, ax=self.ax, label="Effective shear strain")
 
         if plotGBs:
             self.plotGBs(ax=self.ax, colour=boundaryColour, dilate=dilateBoundaries)
