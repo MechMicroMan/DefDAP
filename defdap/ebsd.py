@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
+from skimage import morphology as mph
 
 import copy
 
@@ -176,7 +177,7 @@ class Map(base.Map):
         names = ["Non-indexed"] + self.phaseNames
 
         plt.figure(figsize=(10, 6))
-        im = plt.imshow(self.phaseArray, cmap=cmap)
+        im = plt.imshow(self.phaseArray, cmap=cmap, vmin=-1, vmax=self.numPhases)
 
         # Find colour values for phases
         colors = [im.cmap(im.norm(value)) for value in values]
@@ -340,19 +341,31 @@ class Map(base.Map):
         
         print("\r", end="")
 
-    def plotPhaseBoundaryMap(self):
+    def plotPhaseBoundaryMap(self, dilate=False):
         """Plots phase boundary map
         """
 
         plt.figure()
-        plt.imshow(-self.phaseBoundaries, vmax=1, cmap='gray')
+        
+        boundariesImage = -self.phaseBoundaries
+        
+        if dilate:
+            boundariesImage = mph.binary_dilation(-self.phaseBoundaries)
+            
+        plt.imshow(boundariesImage, vmax=1, cmap='gray')
         plt.colorbar()
 
-    def plotBoundaryMap(self):
+    def plotBoundaryMap(self, dilate=False):
         """Plots grain boundary map
         """
         plt.figure()
-        plt.imshow(-self.boundaries, vmax=1, cmap='gray')
+        
+        boundariesImage = -self.Boundaries
+        
+        if dilate:
+            boundariesImage = mph.binary_dilation(-self.Boundaries)
+            
+        plt.imshow(boundariesImage, vmax=1, cmap='gray')
         plt.colorbar()
 
     def findGrains(self, minGrainSize=10):

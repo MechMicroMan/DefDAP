@@ -275,7 +275,19 @@ class Map(base.Map):
             raise Exception("No EBSD map linked.")
         return True
 
-    def warpToDicFrame(self, mapData, cropImage=True):
+    def warpToDicFrame(self, mapData, cropImage=True, order=1, preserve_range=False):
+        """Warps a map to the DIC frame
+
+        Returns:
+            warpedMap: Map (i.e. EBSD map) warped to the DIC frame
+            
+        Args:
+            mapData(map): data to warp
+            cropImage(bool, optional): 
+            order(int, optional): order of interpolation (0: Nearest-neighbor, 1: Bi-linear...)
+            preserve_range(bool, optional): keep the original range of values
+        """
+        
         # Check a EBSD map is linked
         self.checkEbsdLinked()
 
@@ -283,7 +295,7 @@ class Map(base.Map):
             # crop to size of DIC map
             outputShape = (self.yDim, self.xDim)
             # warp the map
-            warpedMap = tf.warp(mapData, self.ebsdTransform, output_shape=outputShape)
+            warpedMap = tf.warp(mapData, self.ebsdTransform, output_shape=outputShape, order=order, preserve_range=preserve_range)
         else:
             # copy ebsd transform and change translation to give an extra 5% border
             # to show the entire image after rotation/shearing
@@ -294,7 +306,7 @@ class Map(base.Map):
             outputShape = np.array(mapData.shape) * 1.4 / tempEbsdTransform.scale
 
             # warp the map
-            warpedMap = tf.warp(mapData, tempEbsdTransform, output_shape=outputShape.astype(int))
+            warpedMap = tf.warp(mapData, tempEbsdTransform, output_shape=outputShape.astype(int), order=order, preserve_range=preserve_range)
 
         # return map
         return warpedMap
@@ -350,6 +362,9 @@ class Map(base.Map):
             
     def plotGrainNumbers(self, dilate=False):
         """Plot a map with grains numbered
+        
+        Args:
+            dilate(bool, optional): Set to true to dilate boundaries by one pixel
         """
         
         self.fig, self.ax = plt.subplots()
