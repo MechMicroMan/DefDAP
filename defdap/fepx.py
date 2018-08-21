@@ -234,7 +234,7 @@ class Mesh(object):
         elif dataKey in self.simDataKeys:
             raise Exception("{:} data is not loaded.".format(dataKey))
         else:
-            raise Exception("\"{:}\" is not a valid sim data key.".format(dataKey))
+            raise Exception("\"{:}\" is not available.".format(dataKey))
 
     def _validateFrameNums(self, frameNums):
         # frameNums: frame or list of frames to run calculation for. -1 for all
@@ -925,6 +925,8 @@ class Surface(object):
         self._meshEdges = None
         self._neighbourNetwork = None
 
+        self._elmtIDsLayer = None
+
     @property
     def elmtGrain(self):
         """Returns an array of grain IDs for elements in the surface (note grain IDs are 1 based)
@@ -936,6 +938,39 @@ class Surface(object):
         """Returns an array of grain IDs included in the surface
         """
         return np.unique(self.elmtGrain)
+
+    # properties postfixed with 'Layer' are equivalent to those without but take
+    # the first 3d layer of elements not just those with a face in the surface
+    @property
+    def elmtIDsLayer(self):
+        if (self._elmtIDsLayer is None) or self.forceCalc:
+            # just corner nodes
+            surfaceNodeIDs = np.unique(self.elmtCon[:, (0, 2, 4)].flatten())
+
+            # All elements that have a node in the surface
+            surfaceElmtIDs = []
+            # Find elements with a corner node in the surface
+            for elmtID in range(self.mesh.numElmts):
+                for nodeID in self.mesh.elmtCon[elmtID, (0, 2, 4, 9)]:
+                    if nodeID in surfaceNodeIDs:
+                        surfaceElmtIDs.append(elmtID)
+                        break
+
+            self._elmtIDsLayer = np.array(surfaceElmtIDs)
+
+        return self._elmtIDsLayer
+    
+    @property
+    def elmtGrainLayer(self):
+        """Returns an array of grain IDs for elements in the surface (note grain IDs are 1 based)
+        """
+        return self.mesh.elmtGrain[self.elmtIDsLayer]
+
+    @property
+    def grainIDsLayer(self):
+        """Returns an array of grain IDs included in the surface
+        """
+        return np.unique(self.elmtGrainLayer)
 
     @property
     def surfaceNormal(self):
