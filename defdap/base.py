@@ -222,12 +222,12 @@ class Map(object):
 
             # clear current axis and redraw euler map with highlighted grain overlay
             self.ax.clear()
-            highlightGrains = [self.currGrainId] + self.neighbourNetwork.neighbors(self.currGrainId)
+            highlightGrains = [self.currGrainId] + list(self.neighbourNetwork.neighbors(self.currGrainId))
 
             secondNeighbours = []
 
-            for firstNeighbour in self.neighbourNetwork.neighbors(self.currGrainId):
-                trialSecondNeighbours = self.neighbourNetwork.neighbors(firstNeighbour)
+            for firstNeighbour in list(self.neighbourNetwork.neighbors(self.currGrainId)):
+                trialSecondNeighbours = list(self.neighbourNetwork.neighbors(firstNeighbour))
                 for secondNeighbour in trialSecondNeighbours:
                     if secondNeighbour not in highlightGrains and secondNeighbour not in secondNeighbours:
                         secondNeighbours.append(secondNeighbour)
@@ -543,7 +543,7 @@ class SlipSystem(object):
             list(list(SlipSystem)): A list of list of slip systems grouped slip plane.
 
         Raises:
-            IOError: Raised if not 6 integers per line
+            IOError: Raised if not 6/8 integers per line
         """
 
         f = open(filepath)

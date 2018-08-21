@@ -201,7 +201,7 @@ class Quat(object):
             return vectorTransformed
 
         raise TypeError("Vector must be a size 3 numpy array.")
-    
+
     def misOri(self, right, symGroup, returnQuat=0):
         """Calculate misorientation angle between 2 orientations taking
         into account the symmetries of the crystal structure.

@@ -11,8 +11,8 @@ from IPython.display import clear_output
 
 import pyevtk.vtk
 
-import vtk
-from vtk.util import numpy_support as vnp
+# import vtk
+# from vtk.util import numpy_support as vnp
 
 from .quat import Quat
 
@@ -1027,7 +1027,7 @@ class Surface(object):
 
         return axes
 
-    def plotStressStrain(self, *args, meshDims=(1, 1, 0.2), velocity=-1e-2, revIncs=None, **kwargs):
+    def plotStressStrain(self, meshDims=(1, 1, 0.2), velocity=-1e-2, revIncs=None, **kwargs):
         # revIncs = (180,)
         # meshDims = (1, 1, 0.2)
         # velocity = -1e-2
@@ -1074,7 +1074,7 @@ class Surface(object):
         stressEng = force[:, forceComp] / areaInitial
         stressTrue = force[:, forceComp] / area
 
-        plt.plot(strainTrue, stressTrue, *args, **kwargs)
+        plt.plot(strainTrue, stressTrue, **kwargs)
         plt.xlabel("True Strain")
         plt.ylabel("True Stress (MPa)")
 
@@ -1109,10 +1109,14 @@ class Surface(object):
             grainNodes = np.unique(grainNodes.flatten())
 
             grainNodesPos = self.mesh.nodePos[grainNodes, :]
-            grainNodesPosMin = grainNodesPos.min(axis=0)
-            grainNodesPosMax = grainNodesPos.max(axis=0)
 
-            grainCentrePos = (grainNodesPosMax + grainNodesPosMin) / 2
+            # centre of a bounding box
+            # grainNodesPosMin = grainNodesPos.min(axis=0)
+            # grainNodesPosMax = grainNodesPos.max(axis=0)
+            # grainCentrePos = (grainNodesPosMax + grainNodesPosMin) / 2
+
+            # mean node position
+            grainCentrePos = grainNodesPos.mean(axis=0)
 
             ax.text(grainCentrePos[0], grainCentrePos[1], str(grainID),
                     horizontalalignment='center', verticalalignment='center', **kwargs)

@@ -418,7 +418,7 @@ class Map(base.Map):
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
-        if grainIds is int and grainIds == -1:
+        if type(grainIds) is int and grainIds == -1:
             grainIds = range(len(self))
 
         if len(grainData) != len(grainIds):
@@ -462,7 +462,7 @@ class Map(base.Map):
         for grainId, grain in enumerate(self.grainList):
             grainOri[grainId] = grain.ebsdGrain.refOri
 
-        Quat.plotIPF(grainOri, direction, self.ebsdMap.symGroup, c=grainAvData,
+        Quat.plotIPF(grainOri, direction, self.ebsdMap.crystalSym, c=grainAvData,
                      marker='o', vmin=vmin, vmax=vmax)
 
         if plotColourBar:
