@@ -293,8 +293,19 @@ class Mesh(object):
         # doesn't save the state of isNotVector
         self.createSimData(dataKey, data)
 
-    def loadFrameData(self, dataName, initialIncd, usecols=None, numProcs=-1, numFrames=-1, numSlipSys=-1):
+    def loadFrameData(self, dataName, initialIncd, usecols=None, frameNums=-1, numProcs=-1, numFrames=-1, numSlipSys=-1):
         self.setSimParams(numProcs=numProcs, numFrames=numFrames, numSlipSys=numSlipSys)
+        if frameNums != -1:
+            frameNums = self._validateFrameNums(frameNums)
+            frameNums.sort()
+            if initialIncd:
+                if frameNums[0] != 0:
+                    frameNums = [0, ] + frameNums
+                    print("Initial values must be loaded if available.")
+            else:
+                if frameNums[0] == 0:
+                    raise Exception("{:s} does not include initial data".format(dataName))
+                frameNums = [i - 1 for i in frameNums]
 
         # +1 if initial values are also stored
         numFrames = (self.numFrames + 1) if initialIncd else self.numFrames
@@ -304,21 +315,25 @@ class Mesh(object):
         for i in range(self.numProcs):
             # load data per processor
             fileName = "{:s}post.{:s}.{:d}".format(self.dataDir, dataName, i)
-            loadedData.append(np.loadtxt(fileName, dtype=float, comments="%", usecols=usecols, unpack=True))
+            loadedDataTemp = np.loadtxt(fileName, dtype=float, comments="%", usecols=usecols, unpack=True)
 
-            if len(loadedData[i].shape) == 1:
+            if len(loadedDataTemp.shape) == 1:
                 # scalar data
                 singleData = True
                 # reshape into 2d array with 2nd dim for each frame
-                cols, = loadedData[i].shape
+                cols, = loadedDataTemp.shape
                 perFrame = int(cols / numFrames)
-                loadedData[i] = np.reshape(loadedData[i], (perFrame, numFrames), order='F')
+                loadedDataTemp = np.reshape(loadedDataTemp, (perFrame, numFrames), order='F')
             else:
                 # vector data
                 # reshape into 3d array with 3rd dim for each frame
-                rows, cols = loadedData[i].shape
+                rows, cols = loadedDataTemp.shape
                 perFrame = int(cols / numFrames)
-                loadedData[i] = np.reshape(loadedData[i], (rows, perFrame, numFrames), order='F')
+                loadedDataTemp = np.reshape(loadedDataTemp, (rows, perFrame, numFrames), order='F')
+
+            if frameNums != -1:
+                loadedDataTemp = loadedDataTemp[..., frameNums]
+            loadedData.append(loadedDataTemp)
 
         # concatenate data from all processors into one array and transpose first 2 axes if vectr data
         # make data contiguous in memory in column major order
@@ -327,7 +342,7 @@ class Mesh(object):
         else:
             return np.asfortranarray(np.transpose(np.concatenate(loadedData, axis=1), axes=(1, 0, 2)))
 
-    def loadSimData(self, dataKeys, forceLoad=False, numProcs=-1, numFrames=-1, numSlipSys=-1):
+    def loadSimData(self, dataKeys, forceLoad=False, frameNums=-1, numProcs=-1, numFrames=-1, numSlipSys=-1):
         self.setSimParams(numProcs=numProcs, numFrames=numFrames, numSlipSys=numSlipSys)
 
         simDataLoadFunctions = {
@@ -348,7 +363,7 @@ class Mesh(object):
         for dataKey in dataKeys:
             if dataKey in Mesh.simDataKeysStatic:
                 if forceLoad or (dataKey not in self.simData):
-                    simDataLoadFunctions[dataKey]()
+                    simDataLoadFunctions[dataKey](frameNums=frameNums)
                     print("Finished loading {:} data.".format(dataKey))
                 else:
                     print("{:} data already loaded.".format(dataKey))
@@ -356,22 +371,25 @@ class Mesh(object):
                 print("\"{:}\" is not a valid sim data key.".format(dataKey))
 
     # load node positions for each frame of the simulation
-    def loadNodePosData(self, numProcs=-1, numFrames=-1):
+    def loadNodePosData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['nodePos'] = self.loadFrameData("adx",
                                                      True,
+                                                     frameNums=frameNums,
                                                      numProcs=numProcs,
                                                      numFrames=numFrames)
 
-    def loadNodeVelData(self, numProcs=-1, numFrames=-1):
+    def loadNodeVelData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['nodeVel'] = self.loadFrameData("advel",
                                                      True,
+                                                     frameNums=frameNums,
                                                      numProcs=numProcs,
                                                      numFrames=numFrames)
 
-    def loadAngleData(self, numProcs=-1, numFrames=-1):
+    def loadAngleData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['angle'] = self.loadFrameData("ang",
                                                    True,
                                                    usecols=[1, 2, 3],
+                                                   frameNums=frameNums,
                                                    numProcs=numProcs,
                                                    numFrames=numFrames)
 
@@ -385,59 +403,68 @@ class Mesh(object):
 
         self.createSimData("ori", oriData)
 
-    def loadHardnessData(self, numProcs=-1, numFrames=-1, numSlipSys=-1):
+    def loadHardnessData(self, frameNums=-1, numProcs=-1, numFrames=-1, numSlipSys=-1):
         self.simData['hardness'] = self.loadFrameData("crss",
                                                       True,
+                                                      frameNums=frameNums,
                                                       numProcs=numProcs,
                                                       numFrames=numFrames,
                                                       numSlipSys=numSlipSys)
 
-    def loadStrainData(self, numProcs=-1, numFrames=-1):
+    def loadStrainData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['strain'] = self.loadFrameData("strain",
                                                     False,
+                                                    frameNums=frameNums,
                                                     numProcs=numProcs,
                                                     numFrames=numFrames)
 
-    def loadStressData(self, numProcs=-1, numFrames=-1):
+    def loadStressData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['stress'] = self.loadFrameData("stress",
                                                     False,
+                                                    frameNums=frameNums,
                                                     numProcs=numProcs,
                                                     numFrames=numFrames)
 
-    def loadShearRateData(self, numProcs=-1, numFrames=-1, numSlipSys=-1):
+    def loadShearRateData(self, frameNums=-1, numProcs=-1, numFrames=-1, numSlipSys=-1):
         self.simData['shearRate'] = self.loadFrameData("gammadot",
                                                        False,
+                                                       frameNums=frameNums,
                                                        numProcs=numProcs,
                                                        numFrames=numFrames,
                                                        numSlipSys=numSlipSys)
 
-    def loadEffDefRateData(self, numProcs=-1, numFrames=-1):
+    def loadEffDefRateData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['effDefRate'] = self.loadFrameData("deff",
                                                         False,
+                                                        frameNums=frameNums,
                                                         numProcs=numProcs,
                                                         numFrames=numFrames)
 
-    def loadEffPlasticDefRateData(self, numProcs=-1, numFrames=-1):
+    def loadEffPlasticDefRateData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['effPlasticDefRate'] = self.loadFrameData("dpeff",
                                                                False,
+                                                               frameNums=frameNums,
                                                                numProcs=numProcs,
                                                                numFrames=numFrames)
 
-    def loadEqvStrainData(self, numProcs=-1, numFrames=-1):
+    def loadEqvStrainData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['eqvStrain'] = self.loadFrameData("eqstrain",
                                                        False,
+                                                       frameNums=frameNums,
                                                        numProcs=numProcs,
                                                        numFrames=numFrames)
 
-    def loadEqvPlasticStrainData(self, numProcs=-1, numFrames=-1):
+    def loadEqvPlasticStrainData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['eqvPlasticStrain'] = self.loadFrameData("eqplstrain",
                                                               False,
+                                                              frameNums=frameNums,
                                                               numProcs=numProcs,
                                                               numFrames=numFrames)
 
-    def loadBackstressData(self, numProcs=-1, numFrames=-1):
+    def loadBackstressData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['backstress'] = self.loadFrameData("backstress",
                                                         False,
+                                                        frameNums=frameNums,
                                                         numProcs=numProcs,
                                                         numFrames=numFrames)
 
