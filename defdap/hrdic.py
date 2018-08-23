@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import inspect
+import pandas as pd
 
 from skimage import transform as tf
 from skimage import morphology as mph
@@ -57,11 +58,12 @@ class Map(base.Map):
         self.ydimfile = int(metadata[4])    # size of map along y (from header)
             
         # Load data
-        self.data = np.loadtxt(self.path + self.fname, skiprows=1)
-        self.xc = self.data[:, 0]           # x coordinates
-        self.yc = self.data[:, 1]           # y coordinates
-        self.xd = self.data[:, 2]           # x displacement
-        self.yd = self.data[:, 3]           # y displacement
+        
+        self.data = pd.read_table(self.path + self.fname, delimiter = "\t", skiprows=1, header=None)
+        self.xc = self.data.values[:, 0]           # x coordinates
+        self.yc = self.data.values[:, 1]           # y coordinates
+        self.xd = self.data.values[:, 2]           # x displacement
+        self.yd = self.data.values[:, 3]           # y displacement
         
         # Calculate size of map
         self.xdim = int((self.xc.max() - self.xc.min()) /
@@ -126,11 +128,12 @@ class Map(base.Map):
         """
 
         # Print map info
+        print('\033[1m', end='')    # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} x {3} pixels, number of points: {4})\n".
                   format(self.retrieveName(), self.xdimfile, self.ydimfile, self.binning, self.xdimfile*self.ydimfile))
 
         # Print table header
-        print('\033[1m', end='')    # START BOLD
+        
         print("Component\t".format(), end="")
         for x in percentiles:
             if x=='Min' or x== 'Mean' or x== 'Max':
