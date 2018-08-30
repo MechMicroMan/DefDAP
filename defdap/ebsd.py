@@ -360,10 +360,10 @@ class Map(base.Map):
         """
         plt.figure()
         
-        boundariesImage = -self.Boundaries
+        boundariesImage = -self.boundaries
         
         if dilate:
-            boundariesImage = mph.binary_dilation(-self.Boundaries)
+            boundariesImage = mph.binary_dilation(-self.boundaries)
             
         plt.imshow(boundariesImage, vmax=1, cmap='gray')
         plt.colorbar()

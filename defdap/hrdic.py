@@ -3,6 +3,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import inspect
 import pandas as pd
+from matplotlib_scalebar.scalebar import ScaleBar
 
 from skimage import transform as tf
 from skimage import morphology as mph
@@ -53,7 +54,7 @@ class Map(base.Map):
     
         self.format = metadata[0].strip('#') # Software name
         self.version = metadata[1]          # Software version
-        self.binning = metadata[3]          # Sub-window width in pixels
+        self.binning = int(metadata[3])          # Sub-window width in pixels
         self.xdimfile = int(metadata[5])    # size of map along x (from header)
         self.ydimfile = int(metadata[4])    # size of map along y (from header)
             
@@ -118,6 +119,19 @@ class Map(base.Map):
             names = [var_name for var_name, var_val in fi.frame.f_locals.items() if var_val is self]
             if len(names) > 0:
                 return names[0]
+            
+    def setScale(self, micrometrePerPixel=None):
+        """
+        Sets the scale of the map
+        
+        micrometrePerPixel(float) length of pixel in original BSE image in micrometres
+        """
+        if micrometrePerPixel==None:
+            raise Exception("Please define scale using micrometrePerPixel=")
+            
+        if micrometrePerPixel:
+            self.bseScale = micrometrePerPixel
+            self.strainScale = micrometrePerPixel * self.binning
     
     def printStatsTable(self, percentiles, components):
         """
@@ -381,7 +395,7 @@ class Map(base.Map):
 
             
     def plotMaxShear(self, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=False,
-                     updateCurrent=False, highlightGrains=None, highlightColours=None,
+                     scaleBar=False, updateCurrent=False, highlightGrains=None, highlightColours=None,
                      plotColourBar=False, vmin=None, vmax=None):
         """Plot a map of maximum shear strain
 
@@ -412,6 +426,13 @@ class Map(base.Map):
 
         if highlightGrains is not None:
             self.highlightGrains(highlightGrains, highlightColours)
+            
+        if scaleBar:
+            if self.strainScale is None:
+                raise Exception("First set path to pattern image.")
+            else:
+                scalebar = ScaleBar(self.strainScale*(1e-6)) # 1 pixel = 0.2 meter
+                plt.gca().add_artist(scalebar)
 
         # # plot slip traces
         # if plotSlipTraces:
