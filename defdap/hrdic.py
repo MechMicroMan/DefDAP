@@ -429,7 +429,7 @@ class Map(base.Map):
             
         if scaleBar:
             if self.strainScale is None:
-                raise Exception("First set path to pattern image.")
+                raise Exception("First set image scale using setScale")
             else:
                 scalebar = ScaleBar(self.strainScale*(1e-6)) # 1 pixel = 0.2 meter
                 plt.gca().add_artist(scalebar)
