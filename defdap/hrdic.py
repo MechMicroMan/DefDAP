@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import inspect
+import pandas as pd
+from matplotlib_scalebar.scalebar import ScaleBar
 
 from skimage import transform as tf
 from skimage import morphology as mph
@@ -16,36 +19,60 @@ from .quat import Quat
 class Map(base.Map):
 
     def __init__(self, path, fname):
+        """Initialise class and import DIC data from file
+
+        Args:
+            path(str): Path to file
+            fname(str): Name of file including extension
+        """
+
         # Call base class constructor
         super(Map, self).__init__()
 
-        self.ebsdMap = None
-        self.ebsdTransform = None       # Transform from EBSD to DIC coordinates
-        self.ebsdTransformInv = None    # Transform from DIC to EBSD coordinates
+        print("Loading DIC data...", end="")
+
+        # Initialise variables
+        self.ebsdMap = None                 # EBSD map linked to DIC map
+        self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
+        self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
         self.grainList = None
-        self.currGrainId = None     # Id of last selected grain
-        # ...
+        self.currGrainId = None             # ID of last selected grain
         self.ebsdGrainIds = None
-        self.patternImPath = None   # Path to BSE image of map
-        self.windowSize = None      # Window size for map
-
-        self.plotHomog = self.plotMaxShear
+        self.patternImPath = None           # Path to BSE image of map
+        self.windowSize = None              # Window size for map
+        self.plotHomog = self.plotMaxShear  # Use max shear map for defining homologous points
         self.highlightAlpha = 0.6
+        self.bseScale = None
+        self.path = path                    # file path
+        self.fname = fname                  # file name
 
-        self.path = path
-        self.fname = fname
-        # Load in data
-        self.data = np.loadtxt(self.path + self.fname, skiprows=1)
-        self.xc = self.data[:, 0]  # x coordinates
-        self.yc = self.data[:, 1]  # y coordinates
-        self.xd = self.data[:, 2]  # x displacement
-        self.yd = self.data[:, 3]  # y displacement
+        # Load metadata
+        with open(self.path + self.fname, 'r') as f:
+            header = f.readline()
+        metadata = header.split()
+
+        self.format = metadata[0].strip('#')    # Software name
+        self.version = metadata[1]              # Software version
+        self.binning = int(metadata[3])         # Sub-window width in pixels
+        self.xdimfile = int(metadata[5])        # size of map along x (from header)
+        self.ydimfile = int(metadata[4])        # size of map along y (from header)
+
+        # Load data
+
+        self.data = pd.read_table(self.path + self.fname, delimiter='\t', skiprows=1, header=None)
+        self.xc = self.data.values[:, 0]           # x coordinates
+        self.yc = self.data.values[:, 1]           # y coordinates
+        self.xd = self.data.values[:, 2]           # x displacement
+        self.yd = self.data.values[:, 3]           # y displacement
 
         # Calculate size of map
         self.xdim = int((self.xc.max() - self.xc.min()) /
                         min(abs((np.diff(self.xc)))) + 1)  # size of map along x
         self.ydim = int((self.yc.max() - self.yc.min()) /
                         max(abs((np.diff(self.yc)))) + 1)  # size of map along y
+
+        if (self.xdim != self.xdimfile) or (self.ydim != self.ydimfile):
+            raise Exception("Dimensions of data and header do not match")
 
         # *dim are full size of data. *Dim are size after cropping
         self.xDim = self.xdim
@@ -55,16 +82,19 @@ class Map(base.Map):
         self.y_map = self._map(self.yd)     # v (displacement component along x)
         xDispGrad = self._grad(self.x_map)
         yDispGrad = self._grad(self.y_map)
-        self.f11 = xDispGrad[1] + 1     # f11
-        self.f22 = yDispGrad[0] + 1     # f22
-        self.f12 = xDispGrad[0]         # f12
-        self.f21 = yDispGrad[1]         # f21
+        self.f11 = xDispGrad[1] + 1         # f11
+        self.f22 = yDispGrad[0] + 1         # f22
+        self.f12 = xDispGrad[0]             # f12
+        self.f21 = yDispGrad[1]             # f21
 
         self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
-                                 ((self.f12 + self.f21) / 2.)**2)  # max shear component
-        self.mapshape = np.shape(self.max_shear)
+                                 ((self.f12 + self.f21) / 2.)**2)   # max shear component
+        self.mapshape = np.shape(self.max_shear)                    # map shape
 
-        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
+        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)      # crop distances (default all zeros)
+
+        print("\rLoaded {0} {1} data (dimensions: {2} x {3} pixels, sub-window size: {4} x {4} pixels)".
+              format(self.format, self.version, self.xdimfile, self.ydimfile, self.binning))
 
     def plotDefault(self, *args, **kwargs):
         self.plotMaxShear(plotGBs=True, *args, **kwargs)
@@ -77,6 +107,86 @@ class Map(base.Map):
         grad_step = min(abs((np.diff(self.xc))))
         data_grad = np.gradient(data_map, grad_step, grad_step)
         return data_grad
+
+    def retrieveName(self):
+        """
+        Gets the first name assigned to the a map, as a string
+
+        var(obj) variable to get name of
+        """
+        for fi in reversed(inspect.stack()):
+            names = [var_name for var_name, var_val in fi.frame.f_locals.items() if var_val is self]
+            if len(names) > 0:
+                return names[0]
+
+    def setScale(self, micrometrePerPixel):
+        """
+        Sets the scale of the map
+
+        micrometrePerPixel(float) length of pixel in original BSE image in micrometres
+        """
+        self.bseScale = micrometrePerPixel
+
+    @property
+    def strainScale(self):
+        return None if self.bseScale is None else self.bseScale * self.binning
+
+    def printStatsTable(self, percentiles, components):
+        """
+        Print out statistics table for a DIC map
+
+        percentiles(list) list of percentiles to print (number, Min, Mean or Max)
+        components(list of str) lis of map components to print i.e. f11, mss
+        """
+
+        # Print map info
+        print('\033[1m', end='')    # START BOLD
+        print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} x {3} pixels, number of points: {4})\n".format(
+            self.retrieveName(),
+            self.xdimfile,
+            self.ydimfile,
+            self.binning,
+            self.xdimfile * self.ydimfile
+        ))
+
+        # Print table header
+        print("Component\t".format(), end="")
+        for x in percentiles:
+            if x == 'Min' or x == 'Mean' or x == 'Max':
+                print("{0}\t".format(x), end='')
+            else:
+                print("P{0}\t".format(x), end='')
+        print('\033[0m', end='')    # END BOLD
+        print()
+
+        # Print table
+        for c in components:
+            selmap = []
+            if c == 'mss':
+                selmap = self.crop(self.max_shear) * 100
+            if c == 'f11':
+                selmap = (self.crop(self.f11) - 1) * 100
+            if c == 'f12':
+                selmap = self.crop(self.f12) * 100
+            if c == 'f21':
+                selmap = self.crop(self.f21) * 100
+            if c == 'f22':
+                selmap = (self.crop(self.f22) - 1) * 100
+            plist = []
+            for p in percentiles:
+                if p == 'Min':
+                    plist.append(np.min(selmap))
+                elif p == 'Mean':
+                    plist.append(np.mean(selmap))
+                elif p == 'Max':
+                    plist.append(np.max(selmap))
+                else:
+                    plist.append(np.percentile(selmap, p))
+            print("{0}\t\t".format(c), end="")
+            for l in plist:
+                print("{0:.2f}\t".format(l), end='')
+            print()
+        print()
 
     def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
         """Set a crop for the DIC map
@@ -147,6 +257,8 @@ class Map(base.Map):
             transformType(string, optional): affine, piecewiseAffine or polynomial
             order(int, optional): Order of polynomial transform to apply
         """
+        print("Linking EBSD <-> DIC...", end="")
+
         self.ebsdMap = ebsdMap
         if transformType == "piecewiseAffine":
             self.ebsdTransform = tf.PiecewiseAffineTransform()
@@ -167,6 +279,8 @@ class Map(base.Map):
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
 
+        print("\r", end="")
+
     def checkEbsdLinked(self):
         """Check if an EBSD map has been linked.
 
@@ -180,7 +294,18 @@ class Map(base.Map):
             raise Exception("No EBSD map linked.")
         return True
 
-    def warpToDicFrame(self, mapData, cropImage=True):
+    def warpToDicFrame(self, mapData, cropImage=True, order=1, preserve_range=False):
+        """Warps a map to the DIC frame
+
+        Returns:
+            warpedMap: Map (i.e. EBSD map) warped to the DIC frame
+
+        Args:
+            mapData(map): data to warp
+            cropImage(bool, optional):
+            order(int, optional): order of interpolation (0: Nearest-neighbor, 1: Bi-linear...)
+            preserve_range(bool, optional): keep the original range of values
+        """
         # Check a EBSD map is linked
         self.checkEbsdLinked()
 
@@ -188,7 +313,7 @@ class Map(base.Map):
             # crop to size of DIC map
             outputShape = (self.yDim, self.xDim)
             # warp the map
-            warpedMap = tf.warp(mapData, self.ebsdTransform, output_shape=outputShape)
+            warpedMap = tf.warp(mapData, self.ebsdTransform, output_shape=outputShape, order=order, preserve_range=preserve_range)
         else:
             # copy ebsd transform and change translation to give an extra 5% border
             # to show the entire image after rotation/shearing
@@ -199,7 +324,7 @@ class Map(base.Map):
             outputShape = np.array(mapData.shape) * 1.4 / tempEbsdTransform.scale
 
             # warp the map
-            warpedMap = tf.warp(mapData, tempEbsdTransform, output_shape=outputShape.astype(int))
+            warpedMap = tf.warp(mapData, tempEbsdTransform, output_shape=outputShape.astype(int), order=order, preserve_range=preserve_range)
 
         # return map
         return warpedMap
@@ -252,8 +377,24 @@ class Map(base.Map):
         else:
             raise Exception("First set path to pattern image.")
 
+    def plotGrainNumbers(self, dilate=False):
+        """Plot a map with grains numbered
+
+        Args:
+            dilate(bool, optional): Set to true to dilate boundaries by one pixel
+        """
+
+        self.fig, self.ax = plt.subplots()
+
+        for grainID in range(0, len(self.grainList)):
+            xmiddle = (self.grainList[grainID].extremeCoords[2] + self.grainList[grainID].extremeCoords[0]) / 2
+            ymiddle = (self.grainList[grainID].extremeCoords[3] + self.grainList[grainID].extremeCoords[1]) / 2
+            self.ax.text(xmiddle, ymiddle, grainID, fontsize=10)
+
+        self.plotGBs(ax=self.ax, colour='black', dilate=dilate)
+
     def plotMaxShear(self, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=False,
-                     updateCurrent=False, highlightGrains=None, highlightColours=None,
+                     scaleBar=False, updateCurrent=False, highlightGrains=None, highlightColours=None,
                      plotColourBar=False, vmin=None, vmax=None):
         """Plot a map of maximum shear strain
 
@@ -275,13 +416,22 @@ class Map(base.Map):
         img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
                              cmap='viridis', interpolation='None', vmin=vmin, vmax=vmax)
         if plotColourBar:
-            plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
+            if plotPercent:
+                plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
+            plt.colorbar(img, ax=self.ax, label="Effective shear strain")
 
         if plotGBs:
             self.plotGBs(ax=self.ax, colour=boundaryColour, dilate=dilateBoundaries)
 
         if highlightGrains is not None:
             self.highlightGrains(highlightGrains, highlightColours)
+
+        if scaleBar:
+            if self.strainScale is None:
+                raise Exception("First set image scale using setScale")
+            else:
+                scalebar = ScaleBar(self.strainScale * (1e-6))  # 1 pixel = 0.2 meter
+                plt.gca().add_artist(scalebar)
 
         # # plot slip traces
         # if plotSlipTraces:
@@ -513,6 +663,8 @@ class Map(base.Map):
                 self.grainFig.canvas.draw()
 
     def findGrains(self, minGrainSize=10):
+        print("Finding grains in DIC map...", end="")
+        
         # Check a EBSD map is linked
         self.checkEbsdLinked()
 
@@ -562,7 +714,8 @@ class Map(base.Map):
             self.grainList[i].ebsdGrainId = modeId[0] - 1
             self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
             self.grainList[i].ebsdMap = self.ebsdMap
-
+            
+        print("\r", end="")
         return
 
     def floodFill(self, x, y, grainIndex):

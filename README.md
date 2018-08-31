@@ -11,6 +11,7 @@ Installation instructions
 - Run the following commands in Terminal to install packages required by DataAnalysisUtilites
 ```
 pip install peakutils
+pip install matplotlib-scalebar
 ```
 
 - To run the notebook, use the command `jupyter notebook` then browse to the DataAnalysisUtilities directory and select the notebook (.ipynb file)
