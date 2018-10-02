@@ -534,11 +534,7 @@ class Quat(object):
 
         if symGroup == "hexagonal":
             raise Exception("Have fun with that")
-
-        # Plot IPF axis
-        # plt.figure()
-        Quat.plotPoleAxis("IPF", symGroup)
-        
+       
         # change quat array to single 
         qshape=quats.shape
         if len(qshape)>1:
@@ -623,7 +619,7 @@ class Quat(object):
         bvect = np.matlib.repmat([1, 1, 1]/np.sqrt(3),N,1)
         rgb=np.zeros((N,3))
         
-        # Red Component
+        # Red Component; these subroutines are converted from Stephen Cluff's IPF_rgbcalc.m (BYU)
         RDirPlane = np.cross(dirvec,rvect)
         GBplane = np.cross(bvect,gvect)
         Rintersect = np.cross(RDirPlane,GBplane)
