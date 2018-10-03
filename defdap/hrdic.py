@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import inspect
 import pandas as pd
@@ -551,7 +550,7 @@ class Map(base.Map):
             clabel=clabel
         )
 
-    def plotGrainData(self, grainData, grainIds=-1, bg=0, plotGBs=False, plotColourBar=True, cmap=None, vmin=None, vmax=None, clabel=''):
+    def plotGrainData(self, grainData, grainIds=-1, bg=0, ax=None, plotGBs=False, plotColourBar=True, cmap=None, vmin=None, vmax=None, clabel=''):
         """Plot grain map with grains filled with average value of from any DIC map data
 
         Args:
@@ -574,22 +573,25 @@ class Map(base.Map):
         if len(grainData) != len(grainIds):
             raise Exception("Must be 1 value for each grain in grainData.")
 
-        grainMap = np.full([self.yDim, self.xDim], bg)
+        grainMap = np.full([self.yDim, self.xDim], bg, dtype=grainData.dtype)
         for grainId, grainValue in zip(grainIds, grainData):
             grain = self.grainList[grainId]
             for coord in grain.coordList:
                 grainMap[coord[1], coord[0]] = grainValue
 
-        plt.figure()
-        plt.imshow(grainMap, vmin=vmin, vmax=vmax, cmap=cmap)
+        if ax is None:
+            plt.figure()
+            ax = plt.gca()
+
+        im = ax.imshow(grainMap, vmin=vmin, vmax=vmax, cmap=cmap)
 
         if plotColourBar:
-            plt.colorbar(label=clabel)
+            plt.colorbar(im, ax=ax, label=clabel)
 
         if plotGBs:
             self.plotGBs()
 
-    def plotGrainAvIPF(self, mapData, direction, plotColourBar=True, vmin=None, vmax=None, clabel=''):
+    def plotGrainAvIPF(self, mapData, direction, ax=None, plotColourBar=True, vmin=None, vmax=None, clabel=''):
         """Plot IPF of grain reference (average) orientations with points coloured
         by grain average values from map data.
 
@@ -612,8 +614,12 @@ class Map(base.Map):
         for grainId, grain in enumerate(self.grainList):
             grainOri[grainId] = grain.ebsdGrain.refOri
 
-        Quat.plotIPF(grainOri, direction, self.ebsdMap.crystalSym, c=grainAvData,
-                     marker='o', vmin=vmin, vmax=vmax)
+        if ax is None:
+            plt.figure()
+            ax = plt.gca()
+
+        Quat.plotIPF(grainOri, direction, self.ebsdMap.crystalSym, ax=ax,
+                     c=grainAvData, marker='o', vmin=vmin, vmax=vmax)
 
         if plotColourBar:
             plt.colorbar(label=clabel)
@@ -664,7 +670,7 @@ class Map(base.Map):
 
     def findGrains(self, minGrainSize=10):
         print("Finding grains in DIC map...", end="")
-        
+
         # Check a EBSD map is linked
         self.checkEbsdLinked()
 
@@ -714,7 +720,7 @@ class Map(base.Map):
             self.grainList[i].ebsdGrainId = modeId[0] - 1
             self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
             self.grainList[i].ebsdMap = self.ebsdMap
-            
+
         print("\r", end="")
         return
 

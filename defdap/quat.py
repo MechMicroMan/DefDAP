@@ -419,39 +419,44 @@ class Quat(object):
         ax.text(xp + padX, yp + padY, label, **kwargs)
 
     @staticmethod
-    def plotPoleAxis(plotType, symGroup):
+    def plotPoleAxis(plotType, symGroup, ax=None):
+        if ax is None:
+            ax = plt.gca()
+
         if plotType == "IPF" and symGroup == "cubic":
             # line between [001] and [111]
-            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 1, 1]), c='k', lw=2)
+            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 1, 1]), ax=ax, c='k', lw=2)
 
             # line between [001] and [101]
-            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 1]), c='k', lw=2)
+            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 1]), ax=ax, c='k', lw=2)
 
             # line between [101] and [111]
-            Quat.plotLine(np.array([1, 0, 1]), np.array([1, 1, 1]), c='k', lw=2)
+            Quat.plotLine(np.array([1, 0, 1]), np.array([1, 1, 1]), ax=ax, c='k', lw=2)
 
             # label poles
-            Quat.labelPoint(np.array([0, 0, 1]), '001', padY=-0.005, va='top', ha='center')
-            Quat.labelPoint(np.array([1, 0, 1]), '101', padY=-0.005, va='top', ha='center')
-            Quat.labelPoint(np.array([1, 1, 1]), '111', padY=0.005, va='bottom', ha='center')
+            Quat.labelPoint(np.array([0, 0, 1]), '001', ax=ax, padY=-0.005, va='top', ha='center')
+            Quat.labelPoint(np.array([1, 0, 1]), '101', ax=ax, padY=-0.005, va='top', ha='center')
+            Quat.labelPoint(np.array([1, 1, 1]), '111', ax=ax, padY=0.005, va='bottom', ha='center')
 
-            plt.axis('equal')
-            plt.axis('off')
+            ax.axis('equal')
+            ax.axis('off')
 
         else:
             print("Only works for cubic")
 
     @staticmethod
-    def plotIPF(quats, direction, symGroup, **kwargs):
+    def plotIPF(quats, direction, symGroup, ax=None, **kwargs):
         plotParams = {'marker': '+', 'c': 'r'}
         plotParams.update(kwargs)
+        if ax is None:
+            ax = plt.gca()
 
         if symGroup == "hexagonal":
             raise Exception("Have fun with that")
 
         # Plot IPF axis
         # plt.figure()
-        Quat.plotPoleAxis("IPF", symGroup)
+        Quat.plotPoleAxis("IPF", symGroup, ax=ax)
 
         # get array of symmetry operations. shape - (numSym, 4, numQuats)
         quatCompsSym = Quat.calcSymEqvs(quats, symGroup)
@@ -523,8 +528,7 @@ class Quat(object):
         xp, yp = Quat.stereoProject(alphaFund, betaFund)
 
         # plot poles
-        plt.scatter(xp, yp, **plotParams)
-        plt.show()
+        ax.scatter(xp, yp, **plotParams)
 
     @staticmethod
     def symEqv(group):
