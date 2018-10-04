@@ -1,6 +1,3 @@
-        #  import pdb; pdb.set_trace()
-        # to debug
-
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -44,12 +41,12 @@ class Map(base.Map):
             filename(str): Path to file, including name, excluding extension
             crystalSym(str): Crystal sturcture, 'cubic' or 'hexagonal'
         """
-            
+
         # Call base class constructor
         super(Map, self).__init__()
 
         print("Loading EBSD data...", end="")
-        
+
         self.crystalSym = None              # (str) symmetry of material e.g. "cubic", "hexagonal"
         self.xDim = None                    # (int) dimensions of maps
         self.yDim = None
@@ -74,7 +71,7 @@ class Map(base.Map):
                                             # homologue point of the maps
         self.GND = None                     # GND scalar map
         self.Nye = None                     # 3x3 Nye tensor at each point
-        
+
         self.plotHomog = self.plotEulerMap  # Use euler map for defining homologous points
         self.highlightAlpha = 1
 
@@ -82,9 +79,6 @@ class Map(base.Map):
         return
 
     def plotDefault(self, *args, **kwargs):
-        self.plotEulerMap(*args, **kwargs)
-        
-    def plotDefault1(self, *args, **kwargs):
         self.plotEulerMap(*args, **kwargs)
 
     def loadData(self, fileName, crystalSym):
@@ -131,10 +125,10 @@ class Map(base.Map):
         self.binData = np.fromfile(fileName + ".crc", fmt_np, count=-1)
         self.crystalSym = crystalSym
         self.phaseArray = np.reshape(self.binData[('Phase')], (self.yDim, self.xDim))
-        
+
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
               format(self.xDim, self.yDim, self.stepSize))
-        
+
         return
 
     def plotBandContrastMap(self):
@@ -174,6 +168,9 @@ class Map(base.Map):
             self.highlightGrains(highlightGrains, highlightColours)
 
         return
+
+    def plotIPFmap(self, direction):
+        Quat.plotIPFmap(self.quatArray, direction, self.crystalSym)
 
     def plotPhaseMap(self, cmap='viridis'):
         """Plots a phase map
@@ -346,8 +343,7 @@ class Map(base.Map):
         plt.imshow(np.log10(EbsdMap.GND), vmin=12, vmax=15, cmap="viridis")
         plt.colorbar()
         plt.show()
-        return        
-        
+
     def checkDataLoaded(self):
         if self.binData is None:
             raise Exception("Data not loaded")
@@ -355,7 +351,7 @@ class Map(base.Map):
 
     def buildQuatArray(self):
         print("Building quaternion array...", end="")
-        
+
         self.checkDataLoaded()
 
         if self.quatArray is None:
@@ -367,7 +363,7 @@ class Map(base.Map):
             eulerArray = eulerArray.transpose((2, 0, 1))
             # create the array of quat objects
             self.quatArray = Quat.createManyQuats(eulerArray)
-            
+
         print("\r", end="")
 
         return
@@ -433,16 +429,16 @@ class Map(base.Map):
             for j in range(self.yDim):
                 if (misOrix[j, i] > boundDef) or (misOriy[j, i] > boundDef):
                     self.boundaries[j, i] = -1
-                    
+
         print("\r", end="")
         return
 
     def findPhaseBoundaries(self):
         """Finds boundaries in the phase map
         """
-        
+
         print("Finding phase boundaries...", end="")
-        
+
         # make new array shifted by one to left and up
         phaseArrayShifted = np.full((self.yDim, self.xDim), -3)
         phaseArrayShifted[:-1, :-1] = self.phaseArray[1:, 1:]
@@ -450,7 +446,7 @@ class Map(base.Map):
         # where shifted array not equal to starting array, set to -1
         self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
         self.phaseBoundaries = np.where(np.not_equal(self.phaseArray, phaseArrayShifted), -1, 0)
-        
+
         print("\r", end="")
 
     def plotPhaseBoundaryMap(self, dilate=False):
@@ -458,12 +454,12 @@ class Map(base.Map):
         """
 
         plt.figure()
-        
+
         boundariesImage = -self.phaseBoundaries
-        
+
         if dilate:
             boundariesImage = mph.binary_dilation(-self.phaseBoundaries)
-            
+
         plt.imshow(boundariesImage, vmax=1, cmap='gray')
         plt.colorbar()
 
@@ -471,18 +467,18 @@ class Map(base.Map):
         """Plots grain boundary map
         """
         plt.figure()
-        
+
         boundariesImage = -self.boundaries
-        
+
         if dilate:
             boundariesImage = mph.binary_dilation(-self.boundaries)
-            
+
         plt.imshow(boundariesImage, vmax=1, cmap='gray')
         plt.colorbar()
 
     def findGrains(self, minGrainSize=10):
         print("Finding grains...", end="")
-        
+
         # Initialise the grain map
         self.grains = np.copy(self.boundaries)
 
@@ -510,7 +506,7 @@ class Map(base.Map):
 
             # update unknown points
             unknownPoints = np.where(self.grains == 0)
-        print("\r", end="")   
+        print("\r", end="")
         return
 
     def plotGrainMap(self):
@@ -597,13 +593,13 @@ class Map(base.Map):
 
     def calcGrainMisOri(self, calcAxis=False):
         print("Calculating grain misorientations...", end="")
-        
+
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
         for grain in self.grainList:
             grain.buildMisOriList(calcAxis=calcAxis)
-            
+
         print("\r", end="")
         return
 
@@ -647,15 +643,15 @@ class Map(base.Map):
 
     def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
         print("Calculating grain average Schmid factors...", end="")
-        
+
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
         for grain in self.grainList:
             grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
-                 
+
         print("\r", end="")
-        
+
     def plotAverageGrainSchmidFactorsMap(self, plotGBs=True):
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
