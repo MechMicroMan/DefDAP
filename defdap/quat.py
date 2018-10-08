@@ -438,11 +438,26 @@ class Quat(object):
             Quat.labelPoint(np.array([1, 0, 1]), '101', ax=ax, padY=-0.005, va='top', ha='center')
             Quat.labelPoint(np.array([1, 1, 1]), '111', ax=ax, padY=0.005, va='bottom', ha='center')
 
-            ax.axis('equal')
-            ax.axis('off')
+        elif plotType == "IPF" and symGroup == "hexagonal":
+            # line between [0001] and [10-10] ([001] and [210])
+            Quat.plotLine(np.array([0, 0, 1]), np.array([2, 1, 0]), ax=ax, c='k', lw=2)
+
+            # line between [0001] and [2-1-10] ([001] and [100])
+            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 0]), ax=ax, c='k', lw=2)
+
+            # line between [2-1-10] and [10-10] ([100] and [210])
+            Quat.plotLine(np.array([1, 0, 0]), np.array([2, 1, 0]), ax=ax, c='k', lw=2)
+
+            # label poles
+            Quat.labelPoint(np.array([0, 0, 1]), '0001', padY=-0.005, va='top', ha='center')
+            Quat.labelPoint(np.array([1, 0, 0]), '2-1-10', padY=-0.005, va='top', ha='center')
+            Quat.labelPoint(np.array([2, 1, 0]), '10-10', padY=0.005, va='bottom', ha='center')
 
         else:
-            print("Only works for cubic")
+            raise Exception("Only works for cubic and hexagonal IPFs")
+
+        ax.axis('equal')
+        ax.axis('off')
 
     @staticmethod
     def plotIPF(quats, direction, symGroup, ax=None, **kwargs):
@@ -450,9 +465,6 @@ class Quat(object):
         plotParams.update(kwargs)
         if ax is None:
             ax = plt.gca()
-
-        if symGroup == "hexagonal":
-            raise Exception("Have fun with that")
 
         # Plot IPF axis
         # plt.figure()
@@ -521,8 +533,21 @@ class Quat(object):
                 # add to final array of poles
                 alphaFund[i] = alpha[poleIdx, i]
                 betaFund[i] = beta[poleIdx, i]
+
+        elif symGroup == "hexagonal":
+            # first beta should be between 0 and 30 deg leaving 1 symmetric equivalent per orientation
+            trialPoles = np.logical_and(beta >= 0, beta <= np.pi / 6)
+
+            # if less than 1 left need to expand search slighly to catch edge cases
+            if np.sum(np.sum(trialPoles, axis=0) < 1) > 0:
+                deltaBeta = 1e-8
+                trialPoles = np.logical_and(beta >= -deltaBeta, beta <= np.pi / 6 + deltaBeta)
+
+            alphaFund = alpha[trialPoles]
+            betaFund = beta[trialPoles]
+
         else:
-            print("Only works for cubic")
+            raise Exception("symGroup must be cubic or hexagonal")
 
         # project onto equatorial plane
         xp, yp = Quat.stereoProject(alphaFund, betaFund)
