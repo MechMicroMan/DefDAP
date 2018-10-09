@@ -439,19 +439,19 @@ class Quat(object):
             Quat.labelPoint(np.array([1, 1, 1]), '111', ax=ax, padY=0.005, va='bottom', ha='center')
 
         elif plotType == "IPF" and symGroup == "hexagonal":
-            # line between [0001] and [10-10] ([001] and [210])
-            Quat.plotLine(np.array([0, 0, 1]), np.array([2, 1, 0]), ax=ax, c='k', lw=2)
+            # line between [0001] and [10-10] ([001] and [210]) - converted to cubic axes
+            Quat.plotLine(np.array([0, 0, 1]), np.array([np.sqrt(3), 1, 0]), ax=ax, c='k', lw=2)
 
-            # line between [0001] and [2-1-10] ([001] and [100])
+            # line between [0001] and [2-1-10] ([001] and [100]) - converted to cubic axes
             Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 0]), ax=ax, c='k', lw=2)
 
-            # line between [2-1-10] and [10-10] ([100] and [210])
-            Quat.plotLine(np.array([1, 0, 0]), np.array([2, 1, 0]), ax=ax, c='k', lw=2)
+            # line between [2-1-10] and [10-10] ([100] and [210]) - converted to cubic axes
+            Quat.plotLine(np.array([1, 0, 0]), np.array([np.sqrt(3), 1, 0]), ax=ax, c='k', lw=2)
 
             # label poles
             Quat.labelPoint(np.array([0, 0, 1]), '0001', padY=-0.005, va='top', ha='center')
             Quat.labelPoint(np.array([1, 0, 0]), '2-1-10', padY=-0.005, va='top', ha='center')
-            Quat.labelPoint(np.array([2, 1, 0]), '10-10', padY=0.005, va='bottom', ha='center')
+            Quat.labelPoint(np.array([np.sqrt(3), 1, 0]), '10-10', padY=0.005, va='bottom', ha='center')
 
         else:
             raise Exception("Only works for cubic and hexagonal IPFs")
