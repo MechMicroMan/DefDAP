@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pdb
+import matplotlib as mpl
 
 # be careful with deep and shallow copies
 class Quat(object):
@@ -655,7 +656,22 @@ class Quat(object):
         if len(qshape)>1:
             rgb=np.reshape(rgb,(qshape[0],qshape[1],3))
         plt.imshow(rgb)
+
+        colourblack = np.full((np.shape(rgb)[0], np.shape(rgb)[1]),0)
+
+        for rows in range (len(rgb)):
+            for col, element in enumerate(rgb[rows]):
+                if (element == [1, 0, 0]).all():
+                    colourblack[rows][col] = 1
+
+        cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'black'], 256)
+        cmap1._init()
+        cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
+
+        plt.imshow(colourblack, cmap = cmap1, vmin=0, vmax=1)
+
         plt.show()
+        return
         
     @staticmethod
     def symEqv(group):

@@ -8,7 +8,8 @@ from matplotlib.widgets import Button
 from skimage import morphology as mph
 
 import copy
-
+import os
+import pdb
 from .quat import Quat
 from . import base
 
@@ -77,8 +78,12 @@ class Map(base.Map):
         
         self.plotHomog = self.plotEulerMap  # Use euler map for defining homologous points
         self.highlightAlpha = 1
-
-        self.loadData(fileName, crystalSym)
+        if os.path.isfile(fileName + ".cpr"):
+            self.loadData(fileName, crystalSym)
+        elif os.path.isfile(fileName + ".ctf"):
+            self.loadDatactf(fileName, crystalSym) 
+        else:
+            raise Exception("Can't find file")   
         return
 
     def plotDefault(self, *args, **kwargs):
@@ -136,7 +141,53 @@ class Map(base.Map):
               format(self.xDim, self.yDim, self.stepSize))
         
         return
+    
+    def loadDatactf(self, fileName, crystalSym):
+        # open meta data file and read in x and y dimensions and phase names: ctf version
+        with open(fileName + ".ctf", 'r') as header:
+            lines = [next(header) for x in range(15)]
+            
+        for line in lines:
+            if line[:6] == 'XCells':
+                self.xDim = int(line[7:])
+            elif line[:6] == 'YCells':
+                self.yDim = int(line[7:])
+            elif line[:5] == 'XStep':
+                self.stepSize = float(line[6:])
+            elif line[:6] == 'Phases':
+                self.numPhases = int(line[7:])
 
+        '''if len(self.phaseNames) != self.numPhases:
+            print("Error with cpr file. Number of phases mismatch.")
+            '''
+
+        header.close()
+        # now read the binary .crc file
+        fmt_np = np.dtype([('Phase', 'b'),
+                           ('x','f'),
+                           ('y','f'),
+                           ('Eulers', [('ph1', 'f'),
+                                       ('phi', 'f'),
+                                       ('ph2', 'f')]),
+                           ('mad', 'f'),
+                           ('IB2', 'uint8')])
+        #                   ('IB3', 'uint8'),
+        #                   ('IB4', 'uint8'),
+        #                   ('IB5', 'uint8'),
+        #                   ('IB6', 'f')])
+        
+        self.binData = np.loadtxt(fileName + ".ctf", fmt_np, delimiter='\t', skiprows=15, usecols=(0,1,2,5,6,7,8,9))
+        self.crystalSym = crystalSym
+        self.phaseArray = np.reshape(self.binData[('Phase')], (self.yDim, self.xDim))
+        self.binData['Eulers']['ph1']=self.binData['Eulers']['ph1']*np.pi/180.0
+        self.binData['Eulers']['phi']=self.binData['Eulers']['phi']*np.pi/180.0
+        self.binData['Eulers']['ph2']=self.binData['Eulers']['ph2']*np.pi/180.0
+        
+        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
+              format(self.xDim, self.yDim, self.stepSize))
+        
+        return
+    
     def plotBandContrastMap(self):
         self.checkDataLoaded()
 

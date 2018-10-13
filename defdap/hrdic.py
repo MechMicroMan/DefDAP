@@ -49,52 +49,85 @@ class Map(base.Map):
         # Load metadata
         with open(self.path + self.fname, 'r') as f:
             header = f.readline()
-        metadata = header.split()
+        if header[0]=='#':
+            metadata = header.split()
 
-        self.format = metadata[0].strip('#')    # Software name
-        self.version = metadata[1]              # Software version
-        self.binning = int(metadata[3])         # Sub-window width in pixels
-        self.xdimfile = int(metadata[5])        # size of map along x (from header)
-        self.ydimfile = int(metadata[4])        # size of map along y (from header)
+            self.format = metadata[0].strip('#')    # Software name
+            self.version = metadata[1]              # Software version
+            self.binning = int(metadata[3])         # Sub-window width in pixels
+            self.xdimfile = int(metadata[5])        # size of map along x (from header)
+            self.ydimfile = int(metadata[4])        # size of map along y (from header)
 
-        # Load data
+            # Load data
 
-        self.data = pd.read_table(self.path + self.fname, delimiter='\t', skiprows=1, header=None)
-        self.xc = self.data.values[:, 0]           # x coordinates
-        self.yc = self.data.values[:, 1]           # y coordinates
-        self.xd = self.data.values[:, 2]           # x displacement
-        self.yd = self.data.values[:, 3]           # y displacement
+            self.data = pd.read_table(self.path + self.fname, delimiter='\t', skiprows=1, header=None)
+            self.xc = self.data.values[:, 0]           # x coordinates
+            self.yc = self.data.values[:, 1]           # y coordinates
+            # Calculate size of map
+            self.xdim = int((self.xc.max() - self.xc.min()) /
+                            min(abs((np.diff(self.xc)))) + 1)  # size of map along x
+            self.ydim = int((self.yc.max() - self.yc.min()) /
+                            max(abs((np.diff(self.yc)))) + 1)  # size of map along y            
+            self.xd = self.data.values[:, 2]           # x displacement
+            self.yd = self.data.values[:, 3]           # y displacement
+            self.x_map = self._map(self.xd)     # u (displacement component along x)
+            self.y_map = self._map(self.yd)     # v (displacement component along x)
+            xDispGrad = self._grad(self.x_map)
+            yDispGrad = self._grad(self.y_map)
+            self.f11 = xDispGrad[1] + 1         # f11
+            self.f22 = yDispGrad[0] + 1         # f22
+            self.f12 = xDispGrad[0]             # f12
+            self.f21 = yDispGrad[1]             # f21
 
-        # Calculate size of map
-        self.xdim = int((self.xc.max() - self.xc.min()) /
-                        min(abs((np.diff(self.xc)))) + 1)  # size of map along x
-        self.ydim = int((self.yc.max() - self.yc.min()) /
-                        max(abs((np.diff(self.yc)))) + 1)  # size of map along y
+            self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
+                                     ((self.f12 + self.f21) / 2.)**2)   # max shear component
+            self.mapshape = np.shape(self.max_shear)                    # map shape
+            if (self.xdim != self.xdimfile) or (self.ydim != self.ydimfile):
+                raise Exception("Dimensions of data and header do not match")
+            print("\rLoaded {0} {1} data (sub-window size: {2} x {2} pixels)".
+                  format(self.format, self.version, self.binning))
 
-        if (self.xdim != self.xdimfile) or (self.ydim != self.ydimfile):
-            raise Exception("Dimensions of data and header do not match")
+
+
+        else: # if data saved as a table from Matlab using save(dlmwrite('fileName.txt',data,'delimiter','\t'););
+            self.binning = 1 # assume 1x1 binning
+            self.data = pd.read_table(self.path + self.fname, delimiter='\t', skiprows=0, header=None) # x,y,E11,E22,E12
+            self.xc = self.data.values[:, 0]           # x coordinates
+            self.yc = self.data.values[:, 1]           # y coordinates
+            # Calculate size of map
+            self.xdim = int((self.xc.max() - self.xc.min()) /
+                            min(abs((np.diff(self.xc)))) + 1)  # size of map along x
+            self.ydim = int((self.yc.max() - self.yc.min()) /
+                            max(abs((np.diff(self.yc)))) + 1)  # size of map along y   
+            self.xdimfile = self.xdim # for compatibility with standard DIC output format above
+            self.ydimfile = self.ydim
+            self.xd = self.data.values[:, 2]           # x displacement
+            self.yd = self.data.values[:, 3]           # y displacement
+            self.effstrain = self.data.values[:, 7]    # effective strain
+            self.x_map = self._map(self.xd)     # u (displacement component along x)
+            self.y_map = self._map(self.yd)     # v (displacement component along x)
+            xDispGrad = self._grad(self.x_map)
+            yDispGrad = self._grad(self.y_map)
+            self.f11 = xDispGrad[1] + 1         # f11
+            self.f22 = yDispGrad[0] + 1         # f22
+            self.f12 = xDispGrad[0]             # f12
+            self.f21 = yDispGrad[1]             # f21
+
+            self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
+                                     ((self.f12 + self.f21) / 2.)**2)   # max shear component
+#            self.max_shear = np.sqrt((((self.data.values[:, 4] - self.data.values[:, 5]) / 2.)**2) +
+#                                     (self.data.values[:, 6])**2)   # max shear component
+            self.mapshape = np.shape(self.max_shear)                    # map shape
+            
+
 
         # *dim are full size of data. *Dim are size after cropping
         self.xDim = self.xdim
         self.yDim = self.ydim
 
-        self.x_map = self._map(self.xd)     # u (displacement component along x)
-        self.y_map = self._map(self.yd)     # v (displacement component along x)
-        xDispGrad = self._grad(self.x_map)
-        yDispGrad = self._grad(self.y_map)
-        self.f11 = xDispGrad[1] + 1         # f11
-        self.f22 = yDispGrad[0] + 1         # f22
-        self.f12 = xDispGrad[0]             # f12
-        self.f21 = yDispGrad[1]             # f21
-
-        self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
-                                 ((self.f12 + self.f21) / 2.)**2)   # max shear component
-        self.mapshape = np.shape(self.max_shear)                    # map shape
-
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)      # crop distances (default all zeros)
+        print(" (dimensions: {0} x {1} pixels)".format(self.xDim, self.yDim)) # can I get this on the end of the previous print line?*******
 
-        print("\rLoaded {0} {1} data (dimensions: {2} x {3} pixels, sub-window size: {4} x {4} pixels)".
-              format(self.format, self.version, self.xdimfile, self.ydimfile, self.binning))
 
     def plotDefault(self, *args, **kwargs):
         self.plotMaxShear(plotGBs=True, *args, **kwargs)
@@ -229,7 +262,6 @@ class Map(base.Map):
             multiplier = 1
         else:
             multiplier = self.windowSize
-
         return mapData[int(self.cropDists[1, 0] * multiplier):int((self.ydim - self.cropDists[1, 1]) * multiplier),
                        int(self.cropDists[0, 0] * multiplier):int((self.xdim - self.cropDists[0, 1]) * multiplier)]
 
@@ -395,7 +427,7 @@ class Map(base.Map):
 
     def plotMaxShear(self, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=False,
                      scaleBar=False, updateCurrent=False, highlightGrains=None, highlightColours=None,
-                     plotColourBar=False, vmin=None, vmax=None):
+                     plotColourBar=False, vmin=None, vmax=0.1):
         """Plot a map of maximum shear strain
 
         Args:
@@ -699,7 +731,7 @@ class Map(base.Map):
         # Now link grains to those in ebsd Map
         # Warp DIC grain map to EBSD frame
         dicGrains = self.grains
-        warpedDicGrains = tf.warp(dicGrains.astype(float), self.ebsdTransformInv,
+        warpedDicGrains = tf.warp(np.ascontiguousarray(dicGrains.astype(float)), self.ebsdTransformInv,
                                   output_shape=(self.ebsdMap.yDim, self.ebsdMap.xDim), order=0).astype(int)
 
         # Initalise list to store ID of corresponding grain in EBSD map. Also stored in grain objects
@@ -810,7 +842,7 @@ class Grain(base.Grain):
             self.plotSlipTraces(ax=ax)
 
         if plotShearBands:
-            self.plotShearBands(grainMaxShear, ax=ax)
+            self.plotSlipBands(grainMaxShear, ax=ax)
 
     @property
     def slipTraces(self):
@@ -819,7 +851,7 @@ class Grain(base.Grain):
     def calcSlipTraces(self, slipSystems=None):
         self.ebsdGrain.calcSlipTraces(slipSystems=slipSystems)
 
-    def calcSlipBands(self, grainMapData, thres=0.3, min_dist=30):
+    def calcSlipBands(self, grainMapData, thres=0.4, min_dist=30):
         """Use Radon transform to detect slip band angles
 
         Args:
@@ -833,23 +865,33 @@ class Grain(base.Grain):
         grainMapData = np.nan_to_num(grainMapData)
 
         if grainMapData.min() < 0:
-            print("Negeative values in data, taking absolute value.")
+            print("Negative values in data, taking absolute value.")
             # grainMapData = grainMapData**2
             grainMapData = np.abs(grainMapData)
-
+        suppGMD = np.zeros(grainMapData.shape) #array to hold shape / support of grain
+        suppGMD[grainMapData!=0]=1
         sin_map = tf.radon(grainMapData, circle=False)
-        profile = np.max(sin_map, axis=0)
+        #profile = np.max(sin_map, axis=0) # old method
+        supp_map = tf.radon(suppGMD, circle=False)
+        supp_1 = np.zeros(supp_map.shape)
+        supp_1[supp_map>0]=1
+        mindiam = np.min(np.sum(supp_1, axis=0), axis=0) # minimum diameter of grain
+        crop_map = np.zeros(sin_map.shape)
+        # only consider radon rays that cut grain with mindiam*2/3 or more, and scale by length of the cut
+        crop_map[supp_map>mindiam*2/3] = sin_map[supp_map>mindiam*2/3]/supp_map[supp_map>mindiam*2/3] 
+        supp_crop = np.zeros(crop_map.shape)
+        supp_crop[crop_map>0] = 1
+        profile = np.sum(crop_map**4, axis=0) / np.sum(supp_crop, axis=0) # raise to power to accentuate local peaks
 
         x = np.arange(180)
 
-        indexes = peakutils.indexes(profile, thres=thres, min_dist=min_dist)
+        indexes = peakutils.indexes(profile, thres=thres, min_dist=min_dist, thres_abs=False)
         peaks = x[indexes]
         # peaks = peakutils.interpolate(x, profile, ind=indexes)
         print("Number of bands detected: {:}".format(len(peaks)))
 
         slipBandAngles = peaks
         slipBandAngles = slipBandAngles * np.pi / 180
-
         return slipBandAngles
 
     def plotSlipBands(self, grainMapData, ax=None, thres=0.3, min_dist=30, slipBandAngles=None):
