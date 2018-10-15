@@ -1,7 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pdb
-import matplotlib as mpl
 
 # be careful with deep and shallow copies
 class Quat(object):
@@ -283,9 +281,9 @@ class Quat(object):
         return quats
 
     @staticmethod
-    def calcSymEqvs(quats, symGroup):
+    def calcSymEqvs(quats, symGroup, dtype=np.float):
         syms = Quat.symEqv(symGroup)
-        quatComps = np.empty((len(syms), 4, len(quats)))
+        quatComps = np.empty((len(syms), 4, len(quats)), dtype=dtype)
 
         # store quat components in array
         for i, quat in enumerate(quats):
@@ -450,105 +448,104 @@ class Quat(object):
         if symGroup == "hexagonal":
             raise Exception("Have fun with that")
 
-        # Plot IPF axis
-        # plt.figure()
-        Quat.plotPoleAxis("IPF", symGroup)
-
-        # get array of symmetry operations. shape - (numSym, 4, numQuats)
-        quatCompsSym = Quat.calcSymEqvs(quats, symGroup)
-
-        # array to store crytal directions for all orientations and symmetries
-        directionCrystal = np.empty((3, quatCompsSym.shape[0], quatCompsSym.shape[2]))
-
-        # temp variables to use bleow
-        quatDotVec = (quatCompsSym[:, 1, :] * direction[0] +
-                      quatCompsSym[:, 2, :] * direction[1] +
-                      quatCompsSym[:, 3, :] * direction[2])
-        temp = (np.square(quatCompsSym[:, 0, :]) - np.square(quatCompsSym[:, 1, :]) -
-                np.square(quatCompsSym[:, 2, :]) - np.square(quatCompsSym[:, 3, :]))
-
-        # transform the pole direction to crystal coords for all orientations and symmetries
-        # (quatCompsSym * vectorQuat) * quatCompsSym.conjugate
-        directionCrystal[0, :, :] = (2 * quatDotVec * quatCompsSym[:, 1, :] +
-                                     temp * direction[0] +
-                                     2 * quatCompsSym[:, 0, :] * (quatCompsSym[:, 2, :] * direction[2] -
-                                                                  quatCompsSym[:, 3, :] * direction[1]))
-        directionCrystal[1, :, :] = (2 * quatDotVec * quatCompsSym[:, 2, :] +
-                                     temp * direction[1] +
-                                     2 * quatCompsSym[:, 0, :] * (quatCompsSym[:, 3, :] * direction[0] -
-                                                                  quatCompsSym[:, 1, :] * direction[2]))
-        directionCrystal[2, :, :] = (2 * quatDotVec * quatCompsSym[:, 3, :] +
-                                     temp * direction[2] +
-                                     2 * quatCompsSym[:, 0, :] * (quatCompsSym[:, 1, :] * direction[1] -
-                                                                  quatCompsSym[:, 2, :] * direction[0]))
-
-        # normalise vectors
-        directionCrystal /= np.sqrt(np.einsum('ijk,ijk->jk', directionCrystal, directionCrystal))
-
-        # move all vectors into north hemisphere
-        directionCrystal[:, directionCrystal[2, :, :] < 0] *= -1
-
-        # convert to spherical coordinates
-        alpha, beta = Quat.polarAngles(directionCrystal[0], directionCrystal[1], directionCrystal[2])
-
-        # find the poles in the fundamental triangle
-        if symGroup == "cubic":
-            # first beta should be between 0 and 45 deg leaving 3 symmetric equivalents per orientation
-            trialPoles = np.logical_and(beta >= 0, beta <= np.pi / 4)
-
-            # if less than 3 left need to expand search slighly to catch edge cases
-            if np.sum(np.sum(trialPoles, axis=0) < 3) > 0:
-                deltaBeta = 1e-8
-                trialPoles = np.logical_and(beta >= -deltaBeta, beta <= np.pi / 4 + deltaBeta)
-
-            # create array to store angles of pols in fundermental triangle
-            alphaFund, betaFund = np.empty((quatCompsSym.shape[2])), np.empty((quatCompsSym.shape[2]))
-
-            # now of symmetric equivalents left we want the one with minimum alpha
-            # loop over different orientations
-            for i in range(trialPoles.shape[1]):
-                # create array of indexes of poles kept in previous step
-                trialPoleIdxs = np.arange(trialPoles.shape[0])[trialPoles[:, i]]
-
-                # find pole with minimum alpha of those kept in previous step
-                # then use trialPoleIdxs to get its index in original arrays
-                poleIdx = trialPoleIdxs[np.argmin(alpha[trialPoles[:, i], i])]
-
-                # add to final array of poles
-                alphaFund[i] = alpha[poleIdx, i]
-                betaFund[i] = beta[poleIdx, i]
-        else:
-            print("Only works for cubic")
+        alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup)
 
         # project onto equatorial plane
         xp, yp = Quat.stereoProject(alphaFund, betaFund)
+
+        # Plot IPF axis
+        Quat.plotPoleAxis("IPF", symGroup)
 
         # plot poles
         plt.scatter(xp, yp, **plotParams)
         plt.show()
 
     @staticmethod
-    def plotIPFmap(quats, direction, symGroup, **kwargs): 
+    def plotIPFmap(quatArray, direction, symGroup, **kwargs):
         # quats is an nxm array of quaternion orientations; symGroup must be "cubic"
-        plotParams = {'marker': '+', 'c': 'r'}
+        plotParams = {}
         plotParams.update(kwargs)
 
-        if symGroup == "hexagonal":
-            raise Exception("Have fun with that")
-       
-        # change quat array to single 
-        qshape=quats.shape
-        if len(qshape)>1:
-            N=qshape[0]*qshape[1]
-            quats=np.reshape(quats,N)
-        else:
-            N=qshape[0]
+        # flatten quat array to single dimension
+        mapShape = quatArray.shape
+        quats = quatArray.flatten()
+
+        # calculate IPF colours
+        IPFcolours = Quat.calcIPFcolours(quats, direction, symGroup)
+
+        # reshape back to 2d array
+        IPFcolours = np.reshape(IPFcolours, mapShape + (3, ))
+
+        # plot map
+        plt.imshow(IPFcolours, **kwargs)
+        plt.show()
+
+    @staticmethod
+    def calcIPFcolours(quats, direction, symGroup):
+        numQuats = len(quats)
+
+        # Calculating as float32 seems to speed this up
+        alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup, dtype=np.float32)
+
+        # revert to cartesians
+        # at some this should be changed to have the quats dimention last to fit with numpys row major storage
+        # direction vector in cartesians. Changes this to float32 causes errors in arccos, so leave to default to 64
+        dirvec = np.empty((numQuats, 3))
+        dirvec[:, 0] = np.sin(alphaFund) * np.cos(betaFund)
+        dirvec[:, 1] = np.sin(alphaFund) * np.sin(betaFund)
+        dirvec[:, 2] = np.cos(alphaFund)
+        rvect = np.matlib.repmat([0., 0., 1.], numQuats, 1)
+        gvect = np.matlib.repmat([1., 0., 1.] / np.sqrt(2), numQuats, 1)
+        bvect = np.matlib.repmat([1., 1., 1.] / np.sqrt(3), numQuats, 1)
+        rgb = np.zeros((numQuats, 3))
+
+        # Red Component; these subroutines are converted from Stephen Cluff's IPF_rgbcalc.m (BYU)
+        RDirPlane = np.cross(dirvec, rvect)
+        GBplane = np.cross(bvect, gvect)
+        Rintersect = np.cross(RDirPlane, GBplane)
+        NORM = np.sqrt(np.power(Rintersect[:, 0], 2) + np.power(Rintersect[:, 1], 2) + np.power(Rintersect[:, 2], 2))
+        Rintersect[NORM != 0, :] = np.divide(Rintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+
+        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Rintersect))
+        Rintersect[temp > (np.pi / 2), :] = Rintersect[temp > (np.pi / 2), :] * -1
+        rgb[:, 0] = np.divide(np.arccos(np.einsum("ij,ij->i", dirvec, Rintersect)), np.arccos(np.einsum("ij,ij->i", rvect, Rintersect)))
+
+        # Green Component
+        GDirPlane = np.cross(dirvec, gvect)
+        RBplane = np.cross(rvect, bvect)
+        Gintersect = np.cross(GDirPlane, RBplane)
+        NORM = np.sqrt(np.power(Gintersect[:, 0], 2) + np.power(Gintersect[:, 1], 2) + np.power(Gintersect[:, 2], 2))
+        Gintersect[NORM != 0, :] = np.divide(Gintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+
+        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Gintersect))
+        Gintersect[temp > (np.pi / 2), :] = Gintersect[temp > (np.pi / 2), :] * -1
+        rgb[:, 1] = np.divide(np.arccos(np.einsum("ij,ij->i", dirvec, Gintersect)), np.arccos(np.einsum("ij,ij->i", gvect, Gintersect)))
+
+        # Blue Component
+        BDirPlane = np.cross(dirvec, bvect)
+        RGplane = np.cross(gvect, rvect)
+        Bintersect = np.cross(BDirPlane, RGplane)
+        NORM = np.sqrt(np.power(Bintersect[:, 0], 2) + np.power(Bintersect[:, 1], 2) + np.power(Bintersect[:, 2], 2))
+        Bintersect[NORM != 0, :] = np.divide(Bintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+
+        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Bintersect))
+        Bintersect[temp > (np.pi / 2), :] = Bintersect[temp > (np.pi / 2), :] * -1
+        rgb[:, 2] = np.divide(np.arccos(np.einsum("ij,ij->i", dirvec, Bintersect)), np.arccos(np.einsum("ij,ij->i", bvect, Bintersect)))
+
+        rgb = np.divide(rgb, np.transpose(np.matlib.repmat(np.amax(rgb, 1), 3, 1)))
+
+        return rgb
+
+    @staticmethod
+    def calcFundDirs(quats, direction, symGroup, dtype=np.float):
+        # convert direction to float array
+        direction = np.array(direction, dtype=dtype)
 
         # get array of symmetry operations. shape - (numSym, 4, numQuats)
-        quatCompsSym = Quat.calcSymEqvs(quats, symGroup)
+        quatCompsSym = Quat.calcSymEqvs(quats, symGroup, dtype=dtype)
 
         # array to store crytal directions for all orientations and symmetries
-        directionCrystal = np.empty((3, quatCompsSym.shape[0], quatCompsSym.shape[2]))
+        directionCrystal = np.empty((3, quatCompsSym.shape[0], quatCompsSym.shape[2]), dtype=dtype)
 
         # temp variables to use bleow
         quatDotVec = (quatCompsSym[:, 1, :] * direction[0] +
@@ -596,6 +593,7 @@ class Quat(object):
 
             # now of symmetric equivalents left we want the one with minimum alpha
             # loop over different orientations
+            # this seems quite slow so might be worth finding a different way to do it
             for i in range(trialPoles.shape[1]):
                 # create array of indexes of poles kept in previous step
                 trialPoleIdxs = np.arange(trialPoles.shape[0])[trialPoles[:, i]]
@@ -610,69 +608,8 @@ class Quat(object):
         else:
             print("Only works for cubic")
 
-        # revert to cartesians - ***is stereoproject function equivalent??***
-        dirvec=np.empty((N,3)) # direction vector in cartesians
-        dirvec[:,0] = np.sin(alphaFund)*np.cos(betaFund)
-        dirvec[:,1] = np.sin(alphaFund)*np.sin(betaFund)
-        dirvec[:,2] = np.cos(alphaFund)
-        rvect = np.matlib.repmat([0,0,1],N,1)
-        gvect = np.matlib.repmat([1, 0, 1]/np.sqrt(2),N,1)
-        bvect = np.matlib.repmat([1, 1, 1]/np.sqrt(3),N,1)
-        rgb=np.zeros((N,3))
-        
-        # Red Component; these subroutines are converted from Stephen Cluff's IPF_rgbcalc.m (BYU)
-        RDirPlane = np.cross(dirvec,rvect)
-        GBplane = np.cross(bvect,gvect)
-        Rintersect = np.cross(RDirPlane,GBplane)
-        NORM = np.sqrt(np.power(Rintersect[:,0],2)+np.power(Rintersect[:,1],2)+np.power(Rintersect[:,2],2))
-        Rintersect[NORM!=0,:] = np.divide(Rintersect[NORM!=0,:],np.transpose(np.matlib.repmat(NORM[NORM!=0],3,1)))
+        return alphaFund, betaFund
 
-        temp =  np.arccos(np.einsum("ij,ij->i",dirvec,Rintersect)) 
-        Rintersect[temp>(np.pi/2),:] = Rintersect[temp>(np.pi/2),:]*-1 # pi?***
-        rgb[:,0] = np.divide(np.arccos(np.einsum("ij,ij->i",dirvec,Rintersect)),np.arccos(np.einsum("ij,ij->i",rvect,Rintersect)))
-
-        # Green Component
-        GDirPlane = np.cross(dirvec,gvect)
-        RBplane = np.cross(rvect,bvect)
-        Gintersect = np.cross(GDirPlane,RBplane)
-        NORM = np.sqrt(np.power(Gintersect[:,0],2)+np.power(Gintersect[:,1],2)+np.power(Gintersect[:,2],2))
-        Gintersect[NORM!=0,:] = np.divide(Gintersect[NORM!=0,:],np.transpose(np.matlib.repmat(NORM[NORM!=0],3,1)))
-
-        temp = np.arccos(np.einsum("ij,ij->i",dirvec,Gintersect))
-        Gintersect[temp>(np.pi/2),:] = Gintersect[temp>(np.pi/2),:]*-1
-        rgb[:,1] = np.divide(np.arccos(np.einsum("ij,ij->i",dirvec,Gintersect)),np.arccos(np.einsum("ij,ij->i",gvect,Gintersect)))
-
-        # Blue Component
-        BDirPlane = np.cross(dirvec,bvect)
-        RGplane = np.cross(gvect,rvect)
-        Bintersect = np.cross(BDirPlane,RGplane)
-        NORM = np.sqrt(np.power(Bintersect[:,0],2)+np.power(Bintersect[:,1],2)+np.power(Bintersect[:,2],2))
-        Bintersect[NORM!=0,:] = np.divide(Bintersect[NORM!=0,:],np.transpose(np.matlib.repmat(NORM[NORM!=0],3,1)))
-
-        temp = np.arccos(np.einsum("ij,ij->i",dirvec,Bintersect))
-        Bintersect[temp>(np.pi/2),:] = Bintersect[temp>(np.pi/2),:]*-1
-        rgb[:,2] = np.divide(np.arccos(np.einsum("ij,ij->i",dirvec,Bintersect)),np.arccos(np.einsum("ij,ij->i",bvect,Bintersect)))
-        rgb = np.divide(rgb,np.transpose(np.matlib.repmat(np.amax(rgb,1),3,1)))        
-        if len(qshape)>1:
-            rgb=np.reshape(rgb,(qshape[0],qshape[1],3))
-        plt.imshow(rgb)
-
-        colourblack = np.full((np.shape(rgb)[0], np.shape(rgb)[1]),0)
-
-        for rows in range (len(rgb)):
-            for col, element in enumerate(rgb[rows]):
-                if (element == [1, 0, 0]).all():
-                    colourblack[rows][col] = 1
-
-        cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', 'black'], 256)
-        cmap1._init()
-        cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
-
-        plt.imshow(colourblack, cmap = cmap1, vmin=0, vmax=1)
-
-        plt.show()
-        return
-        
     @staticmethod
     def symEqv(group):
         overRoot2 = np.sqrt(2) / 2
