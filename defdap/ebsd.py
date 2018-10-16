@@ -390,8 +390,8 @@ class Map(base.Map):
         alpha_total3[abs(alpha_total3) < 1] = 1e12
         self.GND=alpha_total9 # choose from the different alpha_totals according to preference; see Ruggles GND density paper
         self.Nye=alpha
-        EbsdMap.GND[abs(EbsdMap.GND) < 1] = 1e12
-        plt.imshow(np.log10(EbsdMap.GND), vmin=12, vmax=15, cmap="viridis")
+        self.GND[abs(self.GND) < 1] = 1e12
+        plt.imshow(np.log10(self.GND), vmin=12, vmax=15, cmap="viridis")
         plt.colorbar()
         plt.show()
 
