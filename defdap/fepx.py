@@ -234,7 +234,7 @@ class Mesh(object):
         elif dataKey in self.simDataKeys:
             raise Exception("{:} data is not loaded.".format(dataKey))
         else:
-            raise Exception("\"{:}\" is not a valid sim data key.".format(dataKey))
+            raise Exception("\"{:}\" is not available.".format(dataKey))
 
     def _validateFrameNums(self, frameNums):
         # frameNums: frame or list of frames to run calculation for. -1 for all
@@ -293,8 +293,19 @@ class Mesh(object):
         # doesn't save the state of isNotVector
         self.createSimData(dataKey, data)
 
-    def loadFrameData(self, dataName, initialIncd, usecols=None, numProcs=-1, numFrames=-1, numSlipSys=-1):
+    def loadFrameData(self, dataName, initialIncd, usecols=None, frameNums=-1, numProcs=-1, numFrames=-1, numSlipSys=-1):
         self.setSimParams(numProcs=numProcs, numFrames=numFrames, numSlipSys=numSlipSys)
+        if frameNums != -1:
+            frameNums = self._validateFrameNums(frameNums)
+            frameNums.sort()
+            if initialIncd:
+                if frameNums[0] != 0:
+                    frameNums = [0, ] + frameNums
+                    print("Initial values must be loaded if available.")
+            else:
+                if frameNums[0] == 0:
+                    raise Exception("{:s} does not include initial data".format(dataName))
+                frameNums = [i - 1 for i in frameNums]
 
         # +1 if initial values are also stored
         numFrames = (self.numFrames + 1) if initialIncd else self.numFrames
@@ -304,21 +315,25 @@ class Mesh(object):
         for i in range(self.numProcs):
             # load data per processor
             fileName = "{:s}post.{:s}.{:d}".format(self.dataDir, dataName, i)
-            loadedData.append(np.loadtxt(fileName, dtype=float, comments="%", usecols=usecols, unpack=True))
+            loadedDataTemp = np.loadtxt(fileName, dtype=float, comments="%", usecols=usecols, unpack=True)
 
-            if len(loadedData[i].shape) == 1:
+            if len(loadedDataTemp.shape) == 1:
                 # scalar data
                 singleData = True
                 # reshape into 2d array with 2nd dim for each frame
-                cols, = loadedData[i].shape
+                cols, = loadedDataTemp.shape
                 perFrame = int(cols / numFrames)
-                loadedData[i] = np.reshape(loadedData[i], (perFrame, numFrames), order='F')
+                loadedDataTemp = np.reshape(loadedDataTemp, (perFrame, numFrames), order='F')
             else:
                 # vector data
                 # reshape into 3d array with 3rd dim for each frame
-                rows, cols = loadedData[i].shape
+                rows, cols = loadedDataTemp.shape
                 perFrame = int(cols / numFrames)
-                loadedData[i] = np.reshape(loadedData[i], (rows, perFrame, numFrames), order='F')
+                loadedDataTemp = np.reshape(loadedDataTemp, (rows, perFrame, numFrames), order='F')
+
+            if frameNums != -1:
+                loadedDataTemp = loadedDataTemp[..., frameNums]
+            loadedData.append(loadedDataTemp)
 
         # concatenate data from all processors into one array and transpose first 2 axes if vectr data
         # make data contiguous in memory in column major order
@@ -327,7 +342,7 @@ class Mesh(object):
         else:
             return np.asfortranarray(np.transpose(np.concatenate(loadedData, axis=1), axes=(1, 0, 2)))
 
-    def loadSimData(self, dataKeys, forceLoad=False, numProcs=-1, numFrames=-1, numSlipSys=-1):
+    def loadSimData(self, dataKeys, forceLoad=False, frameNums=-1, numProcs=-1, numFrames=-1, numSlipSys=-1):
         self.setSimParams(numProcs=numProcs, numFrames=numFrames, numSlipSys=numSlipSys)
 
         simDataLoadFunctions = {
@@ -348,7 +363,7 @@ class Mesh(object):
         for dataKey in dataKeys:
             if dataKey in Mesh.simDataKeysStatic:
                 if forceLoad or (dataKey not in self.simData):
-                    simDataLoadFunctions[dataKey]()
+                    simDataLoadFunctions[dataKey](frameNums=frameNums)
                     print("Finished loading {:} data.".format(dataKey))
                 else:
                     print("{:} data already loaded.".format(dataKey))
@@ -356,22 +371,25 @@ class Mesh(object):
                 print("\"{:}\" is not a valid sim data key.".format(dataKey))
 
     # load node positions for each frame of the simulation
-    def loadNodePosData(self, numProcs=-1, numFrames=-1):
+    def loadNodePosData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['nodePos'] = self.loadFrameData("adx",
                                                      True,
+                                                     frameNums=frameNums,
                                                      numProcs=numProcs,
                                                      numFrames=numFrames)
 
-    def loadNodeVelData(self, numProcs=-1, numFrames=-1):
+    def loadNodeVelData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['nodeVel'] = self.loadFrameData("advel",
                                                      True,
+                                                     frameNums=frameNums,
                                                      numProcs=numProcs,
                                                      numFrames=numFrames)
 
-    def loadAngleData(self, numProcs=-1, numFrames=-1):
+    def loadAngleData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['angle'] = self.loadFrameData("ang",
                                                    True,
                                                    usecols=[1, 2, 3],
+                                                   frameNums=frameNums,
                                                    numProcs=numProcs,
                                                    numFrames=numFrames)
 
@@ -385,59 +403,68 @@ class Mesh(object):
 
         self.createSimData("ori", oriData)
 
-    def loadHardnessData(self, numProcs=-1, numFrames=-1, numSlipSys=-1):
+    def loadHardnessData(self, frameNums=-1, numProcs=-1, numFrames=-1, numSlipSys=-1):
         self.simData['hardness'] = self.loadFrameData("crss",
                                                       True,
+                                                      frameNums=frameNums,
                                                       numProcs=numProcs,
                                                       numFrames=numFrames,
                                                       numSlipSys=numSlipSys)
 
-    def loadStrainData(self, numProcs=-1, numFrames=-1):
+    def loadStrainData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['strain'] = self.loadFrameData("strain",
                                                     False,
+                                                    frameNums=frameNums,
                                                     numProcs=numProcs,
                                                     numFrames=numFrames)
 
-    def loadStressData(self, numProcs=-1, numFrames=-1):
+    def loadStressData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['stress'] = self.loadFrameData("stress",
                                                     False,
+                                                    frameNums=frameNums,
                                                     numProcs=numProcs,
                                                     numFrames=numFrames)
 
-    def loadShearRateData(self, numProcs=-1, numFrames=-1, numSlipSys=-1):
+    def loadShearRateData(self, frameNums=-1, numProcs=-1, numFrames=-1, numSlipSys=-1):
         self.simData['shearRate'] = self.loadFrameData("gammadot",
                                                        False,
+                                                       frameNums=frameNums,
                                                        numProcs=numProcs,
                                                        numFrames=numFrames,
                                                        numSlipSys=numSlipSys)
 
-    def loadEffDefRateData(self, numProcs=-1, numFrames=-1):
+    def loadEffDefRateData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['effDefRate'] = self.loadFrameData("deff",
                                                         False,
+                                                        frameNums=frameNums,
                                                         numProcs=numProcs,
                                                         numFrames=numFrames)
 
-    def loadEffPlasticDefRateData(self, numProcs=-1, numFrames=-1):
+    def loadEffPlasticDefRateData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['effPlasticDefRate'] = self.loadFrameData("dpeff",
                                                                False,
+                                                               frameNums=frameNums,
                                                                numProcs=numProcs,
                                                                numFrames=numFrames)
 
-    def loadEqvStrainData(self, numProcs=-1, numFrames=-1):
+    def loadEqvStrainData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['eqvStrain'] = self.loadFrameData("eqstrain",
                                                        False,
+                                                       frameNums=frameNums,
                                                        numProcs=numProcs,
                                                        numFrames=numFrames)
 
-    def loadEqvPlasticStrainData(self, numProcs=-1, numFrames=-1):
+    def loadEqvPlasticStrainData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['eqvPlasticStrain'] = self.loadFrameData("eqplstrain",
                                                               False,
+                                                              frameNums=frameNums,
                                                               numProcs=numProcs,
                                                               numFrames=numFrames)
 
-    def loadBackstressData(self, numProcs=-1, numFrames=-1):
+    def loadBackstressData(self, frameNums=-1, numProcs=-1, numFrames=-1):
         self.simData['backstress'] = self.loadFrameData("backstress",
                                                         False,
+                                                        frameNums=frameNums,
                                                         numProcs=numProcs,
                                                         numFrames=numFrames)
 
@@ -925,6 +952,8 @@ class Surface(object):
         self._meshEdges = None
         self._neighbourNetwork = None
 
+        self._elmtIDsLayer = None
+
     @property
     def elmtGrain(self):
         """Returns an array of grain IDs for elements in the surface (note grain IDs are 1 based)
@@ -936,6 +965,39 @@ class Surface(object):
         """Returns an array of grain IDs included in the surface
         """
         return np.unique(self.elmtGrain)
+
+    # properties postfixed with 'Layer' are equivalent to those without but take
+    # the first 3d layer of elements not just those with a face in the surface
+    @property
+    def elmtIDsLayer(self):
+        if (self._elmtIDsLayer is None) or self.forceCalc:
+            # just corner nodes
+            surfaceNodeIDs = np.unique(self.elmtCon[:, (0, 2, 4)].flatten())
+
+            # All elements that have a node in the surface
+            surfaceElmtIDs = []
+            # Find elements with a corner node in the surface
+            for elmtID in range(self.mesh.numElmts):
+                for nodeID in self.mesh.elmtCon[elmtID, (0, 2, 4, 9)]:
+                    if nodeID in surfaceNodeIDs:
+                        surfaceElmtIDs.append(elmtID)
+                        break
+
+            self._elmtIDsLayer = np.array(surfaceElmtIDs)
+
+        return self._elmtIDsLayer
+
+    @property
+    def elmtGrainLayer(self):
+        """Returns an array of grain IDs for elements in the surface (note grain IDs are 1 based)
+        """
+        return self.mesh.elmtGrain[self.elmtIDsLayer]
+
+    @property
+    def grainIDsLayer(self):
+        """Returns an array of grain IDs included in the surface
+        """
+        return np.unique(self.elmtGrainLayer)
 
     @property
     def surfaceNormal(self):
@@ -1066,7 +1128,7 @@ class Surface(object):
 
         return axes
 
-    def plotStressStrain(self, *args, meshDims=(1, 1, 0.2), velocity=-1e-2, revIncs=None, **kwargs):
+    def plotStressStrain(self, meshDims=(1, 1, 0.2), velocity=-1e-2, revIncs=None, **kwargs):
         # revIncs = (180,)
         # meshDims = (1, 1, 0.2)
         # velocity = -1e-2
@@ -1113,7 +1175,7 @@ class Surface(object):
         stressEng = force[:, forceComp] / areaInitial
         stressTrue = force[:, forceComp] / area
 
-        plt.plot(strainTrue, stressTrue, *args, **kwargs)
+        plt.plot(strainTrue, stressTrue, **kwargs)
         plt.xlabel("True Strain")
         plt.ylabel("True Stress (MPa)")
 
@@ -1148,10 +1210,14 @@ class Surface(object):
             grainNodes = np.unique(grainNodes.flatten())
 
             grainNodesPos = self.mesh.nodePos[grainNodes, :]
-            grainNodesPosMin = grainNodesPos.min(axis=0)
-            grainNodesPosMax = grainNodesPos.max(axis=0)
 
-            grainCentrePos = (grainNodesPosMax + grainNodesPosMin) / 2
+            # centre of a bounding box
+            # grainNodesPosMin = grainNodesPos.min(axis=0)
+            # grainNodesPosMax = grainNodesPos.max(axis=0)
+            # grainCentrePos = (grainNodesPosMax + grainNodesPosMin) / 2
+
+            # mean node position
+            grainCentrePos = grainNodesPos.mean(axis=0)
 
             ax.text(grainCentrePos[0], grainCentrePos[1], str(grainID),
                     horizontalalignment='center', verticalalignment='center', **kwargs)

@@ -461,14 +461,23 @@ class Quat(object):
         ax.axis('off')
 
     @staticmethod
-    def plotIPF(quats, direction, symGroup, ax=None, mcol='red', s=40, **kwargs):
+
+    def plotIPF(quats, direction, symGroup, ax=None, markerColour='red', markerSize=40, **kwargs):
+        """Plot crystal orientations on an IPF
+
+        Args:
+            quats (list): Lits of quats to plot on the IPF
+            direction (array): Sample direction for IPF
+            symGroup (str): Crystal type (cubic, hexagonal)
+            ax (str): Axis to plot to
+            markerColour (str): Marker colour (or two colours for halp and half)
+            markerSize (int): Size of marker to plot
+        """
+
         plotParams = {'marker': '+'}
         plotParams.update(kwargs)
         if ax is None:
             ax = plt.gca()
-            
-            
- 
 
         # Plot IPF axis
         # plt.figure()
@@ -557,10 +566,14 @@ class Quat(object):
         xp, yp = Quat.stereoProject(alphaFund, betaFund)
 
         # plot poles
-        if type(mcol) == str:
-            ax.scatter(xp, yp, c = mcol, **plotParams)
-        else:
-            pos=(xp,yp); r1 = 0.5; r2 = r1+0.5; markersize = np.sqrt(s);
+        # plot markers with 'half and half' colour
+        if type(markerColour) == str:
+            markerColour = [markerColour]
+
+        if len(markerColour) == 1:
+            ax.scatter(xp, yp, c = markerColour, **plotParams)
+        elif len(markerColour) == 2:
+            pos=(xp,yp); r1 = 0.5; r2 = r1+0.5; markerSize = np.sqrt(markerSize);
 
             x = [0] + np.cos(np.linspace(0, 2*math.pi*r1, 10)).tolist()
             y = [0] + np.sin(np.linspace(0, 2*math.pi*r1, 10)).tolist()
@@ -573,9 +586,11 @@ class Quat(object):
             xy2 = list(zip(x, y))
             s2 = max(max(x), max(y))
 
-            ax.scatter(pos[0],pos[1], marker=(xy1, 0), s=s, c=mcol[0])
-            ax.scatter(pos[0],pos[1], marker=(xy2, 0), s=s, c=mcol[1])
-            
+            ax.scatter(pos[0],pos[1], marker=(xy1, 0), s=markerSize, c=markerColour[0])
+            ax.scatter(pos[0],pos[1], marker=(xy2, 0), s=markerSize, c=markerColour[1])
+        else:
+            raise Exception("specify one colour for solid markers or list two for 'half and half'")
+
 
     @staticmethod
     def symEqv(group):
