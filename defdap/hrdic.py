@@ -231,21 +231,26 @@ class Map(base.Map):
         return mapData[int(self.cropDists[1, 0] * multiplier):int((self.ydim - self.cropDists[1, 1]) * multiplier),
                        int(self.cropDists[0, 0] * multiplier):int((self.xdim - self.cropDists[0, 1]) * multiplier)]
 
-    def setHomogPoint(self, display=None):
-        if display is None:
-            display = "maxshear"
+    def setHomogPoint(self, points=None, display=None):
+        
+        if points is not None:
+            self.homogPoints = points
+            
+        if points is None:
+            if display is None:
+                display = "maxshear"
 
-        # Set plot dafault to display selected image
-        display = display.lower().replace(" ", "")
-        if display == "bse" or display == "pattern":
-            self.plotHomog = self.plotPattern
-            binSize = self.windowSize
-        else:
-            self.plotHomog = self.plotMaxShear
-            binSize = 1
+            # Set plot dafault to display selected image
+            display = display.lower().replace(" ", "")
+            if display == "bse" or display == "pattern":
+                self.plotHomog = self.plotPattern
+                binSize = self.windowSize
+            else:
+                self.plotHomog = self.plotMaxShear
+                binSize = 1
 
-        # Call set homog points from base class setting the bin size
-        super(type(self), self).setHomogPoint(binSize=binSize)
+            # Call set homog points from base class setting the bin size
+            super(type(self), self).setHomogPoint(binSize=binSize, points=points)
 
     def linkEbsdMap(self, ebsdMap, transformType="affine", order=2):
         """Calculates the transformation required to align EBSD dataset to DIC
@@ -255,8 +260,7 @@ class Map(base.Map):
             transformType(string, optional): affine, piecewiseAffine or polynomial
             order(int, optional): Order of polynomial transform to apply
         """
-        print("Linking EBSD <-> DIC...", end="")
-        
+      
         self.ebsdMap = ebsdMap
         if transformType == "piecewiseAffine":
             self.ebsdTransform = tf.PiecewiseAffineTransform()
@@ -277,7 +281,6 @@ class Map(base.Map):
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
         
-        print("\r", end="")
 
     def checkEbsdLinked(self):
         """Check if an EBSD map has been linked.
@@ -394,7 +397,7 @@ class Map(base.Map):
         self.plotGBs(ax=self.ax, colour='black', dilate=dilate)
 
             
-    def plotMaxShear(self, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=False,
+    def plotMaxShear(self, ax=None, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=False,
                      scaleBar=False, updateCurrent=False, highlightGrains=None, highlightColours=None,
                      plotColourBar=False, vmin=None, vmax=None):
         """Plot a map of maximum shear strain
@@ -412,7 +415,10 @@ class Map(base.Map):
         if not updateCurrent:
             # self.fig, self.ax = plt.subplots(figsize=(5.75, 4))
             self.fig, self.ax = plt.subplots()
-
+        if ax is not None:
+            self.ax=ax
+            
+            
         multiplier = 100 if plotPercent else 1
         img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
                              cmap='viridis', interpolation='None', vmin=vmin, vmax=vmax)
@@ -664,7 +670,7 @@ class Map(base.Map):
                 self.grainFig.canvas.draw()
 
     def findGrains(self, minGrainSize=10):
-        print("Finding grains in DIC map...", end="")
+        print("Finding grains in DIC map...                     ", end="")
         
         # Check a EBSD map is linked
         self.checkEbsdLinked()
@@ -716,7 +722,7 @@ class Map(base.Map):
             self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
             self.grainList[i].ebsdMap = self.ebsdMap
             
-        print("\r", end="")
+        print("\r                                 ", end="")
         return
 
     def floodFill(self, x, y, grainIndex):
@@ -786,7 +792,7 @@ class Grain(base.Grain):
         self.maxShearList.append(maxShear)
 
     def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False,
-                     vmin=None, vmax=None, cmap="viridis", ax=None):
+                     vmin=None, vmax=None, cmap="viridis", ax=None, scaleBar=False):
 
         multiplier = 100 if plotPercent else 1
         x0, y0, xmax, ymax = self.extremeCoords
@@ -812,6 +818,17 @@ class Grain(base.Grain):
 
         if plotShearBands:
             self.plotShearBands(grainMaxShear, ax=ax)
+            
+        if scaleBar:
+            if self.dicMap.strainScale is None:
+                raise Exception("First set image scale using setScale")
+            else:
+                
+                scalebar = ScaleBar(self.dicMap.strainScale*(1e-6))
+                if ax is None:
+                    plt.gca().add_artist(scalebar)
+                else:
+                    ax.add_artist(scalebar)
 
     @property
     def slipTraces(self):

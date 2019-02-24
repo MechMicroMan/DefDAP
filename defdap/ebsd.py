@@ -243,7 +243,7 @@ class Map(base.Map):
         return True
 
     def buildQuatArray(self):
-        print("Building quaternion array...", end="")
+        print("\rBuilding quaternion array...", end="")
         
         self.checkDataLoaded()
 
@@ -257,12 +257,12 @@ class Map(base.Map):
             # create the array of quat objects
             self.quatArray = Quat.createManyQuats(eulerArray)
             
-        print("\r", end="")
+        print("\r                                            ", end="")
         return
 
     def findBoundaries(self, boundDef=10):
         self.buildQuatArray()
-        print("Finding boundaries...", end="")
+        print("\rFinding boundaries...                      ", end="")
 
         syms = Quat.symEqv(self.crystalSym)
         numSyms = len(syms)
@@ -322,24 +322,30 @@ class Map(base.Map):
                 if (misOrix[j, i] > boundDef) or (misOriy[j, i] > boundDef):
                     self.boundaries[j, i] = -1
                     
-        print("\r", end="")
+        print("\r                                            ", end="")
         return
 
-    def findPhaseBoundaries(self):
+    def findPhaseBoundaries(self, setNonIndexedAs=None):
         """Finds boundaries in the phase map
         """
         
-        print("Finding phase boundaries...", end="")
+        print("\rFinding phase boundaries...                 ", end="")
+        
+        phaseArrayNew = self.phaseArray
         
         # make new array shifted by one to left and up
         phaseArrayShifted = np.full((self.yDim, self.xDim), -3)
         phaseArrayShifted[:-1, :-1] = self.phaseArray[1:, 1:]
+        
+        if setNonIndexedAs:
+            phaseArrayNew[phaseArrayNew == -1] = setNonIndexedAs
+            phaseArrayShifted[phaseArrayShifted == -1] = setNonIndexedAs
 
         # where shifted array not equal to starting array, set to -1
         self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
-        self.phaseBoundaries = np.where(np.not_equal(self.phaseArray, phaseArrayShifted), -1, 0)
+        self.phaseBoundaries = np.where(np.not_equal(phaseArrayNew, phaseArrayShifted), -1, 0)
         
-        print("\r", end="")
+        print("\r                                            ", end="")
 
     def plotPhaseBoundaryMap(self, dilate=False):
         """Plots phase boundary map
@@ -369,7 +375,7 @@ class Map(base.Map):
         plt.colorbar()
 
     def findGrains(self, minGrainSize=10):
-        print("Finding grains...", end="")
+        print("\rFinding grains...                        ", end="")
         
         # Initialise the grain map
         self.grains = np.copy(self.boundaries)
@@ -398,7 +404,7 @@ class Map(base.Map):
 
             # update unknown points
             unknownPoints = np.where(self.grains == 0)
-        print("\r", end="")   
+        print("\r                                            ", end="")  
         return
 
     def plotGrainMap(self):
@@ -484,7 +490,7 @@ class Map(base.Map):
             grain.calcAverageOri()
 
     def calcGrainMisOri(self, calcAxis=False):
-        print("Calculating grain misorientations...", end="")
+        print("\rCalculating grain misorientations...", end="")
         
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
@@ -492,7 +498,7 @@ class Map(base.Map):
         for grain in self.grainList:
             grain.buildMisOriList(calcAxis=calcAxis)
             
-        print("\r", end="")
+        print("\r                                            ", end="")
         return
 
     def plotMisOriMap(self, component=0, plotGBs=False, boundaryColour='black', vmin=None, vmax=None,
@@ -534,7 +540,7 @@ class Map(base.Map):
                 grain.slipSystems = self.slipSystems
 
     def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
-        print("Calculating grain average Schmid factors...", end="")
+        print("\rCalculating grain average Schmid factors...", end="")
         
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
@@ -542,7 +548,7 @@ class Map(base.Map):
         for grain in self.grainList:
             grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
                  
-        print("\r", end="")
+        print("\r                                            ", end="")
         
     def plotAverageGrainSchmidFactorsMap(self, plotGBs=True):
         # Check that grains have been detected in the map

@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 
 # be careful with deep and shallow copies
@@ -419,39 +420,59 @@ class Quat(object):
         ax.text(xp + padX, yp + padY, label, **kwargs)
 
     @staticmethod
-    def plotPoleAxis(plotType, symGroup):
+    def plotPoleAxis(plotType, symGroup, ax=None):
+        if ax is None:
+            ax = plt.gca()
+
         if plotType == "IPF" and symGroup == "cubic":
             # line between [001] and [111]
-            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 1, 1]), c='k', lw=2)
+            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 1, 1]), ax=ax, c='k', lw=2)
 
             # line between [001] and [101]
-            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 1]), c='k', lw=2)
+            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 1]), ax=ax, c='k', lw=2)
 
             # line between [101] and [111]
-            Quat.plotLine(np.array([1, 0, 1]), np.array([1, 1, 1]), c='k', lw=2)
+            Quat.plotLine(np.array([1, 0, 1]), np.array([1, 1, 1]), ax=ax, c='k', lw=2)
 
             # label poles
-            Quat.labelPoint(np.array([0, 0, 1]), '001', padY=-0.005, va='top', ha='center')
-            Quat.labelPoint(np.array([1, 0, 1]), '101', padY=-0.005, va='top', ha='center')
-            Quat.labelPoint(np.array([1, 1, 1]), '111', padY=0.005, va='bottom', ha='center')
+            Quat.labelPoint(np.array([0, 0, 1]), '001', ax=ax, padY=-0.005, va='top', ha='center')
+            Quat.labelPoint(np.array([1, 0, 1]), '101', ax=ax, padY=-0.005, va='top', ha='center')
+            Quat.labelPoint(np.array([1, 1, 1]), '111', ax=ax, padY=0.005, va='bottom', ha='center')
 
-            plt.axis('equal')
-            plt.axis('off')
+        elif plotType == "IPF" and symGroup == "hexagonal":
+            # line between [0001] and [10-10] ([001] and [210]) - converted to cubic axes
+            Quat.plotLine(np.array([0, 0, 1]), np.array([np.sqrt(3), 1, 0]), ax=ax, c='k', lw=2)
+
+            # line between [0001] and [2-1-10] ([001] and [100]) - converted to cubic axes
+            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 0]), ax=ax, c='k', lw=2)
+
+            # line between [2-1-10] and [10-10] ([100] and [210]) - converted to cubic axes
+            Quat.plotLine(np.array([1, 0, 0]), np.array([np.sqrt(3), 1, 0]), ax=ax, c='k', lw=2)
+
+            # label poles
+            Quat.labelPoint(np.array([0, 0, 1]), '0001', padY=-0.008, va='top', ha='center')
+            Quat.labelPoint(np.array([1, 0, 0]), '2-1-10', padY=-0.008, va='top', ha='center')
+            Quat.labelPoint(np.array([np.sqrt(3), 1, 0]), '10-10', padY=0.008, va='bottom', ha='center')
 
         else:
-            print("Only works for cubic")
+            raise Exception("Only works for cubic and hexagonal IPFs")
+
+        ax.axis('equal')
+        ax.axis('off')
 
     @staticmethod
-    def plotIPF(quats, direction, symGroup, **kwargs):
-        plotParams = {'marker': '+', 'c': 'r'}
+    def plotIPF(quats, direction, symGroup, ax=None, mcol='red', s=40, **kwargs):
+        plotParams = {'marker': '+'}
         plotParams.update(kwargs)
-
-        if symGroup == "hexagonal":
-            raise Exception("Have fun with that")
+        if ax is None:
+            ax = plt.gca()
+            
+            
+ 
 
         # Plot IPF axis
         # plt.figure()
-        Quat.plotPoleAxis("IPF", symGroup)
+        Quat.plotPoleAxis("IPF", symGroup, ax=ax)
 
         # get array of symmetry operations. shape - (numSym, 4, numQuats)
         quatCompsSym = Quat.calcSymEqvs(quats, symGroup)
@@ -516,15 +537,45 @@ class Quat(object):
                 # add to final array of poles
                 alphaFund[i] = alpha[poleIdx, i]
                 betaFund[i] = beta[poleIdx, i]
+
+        elif symGroup == "hexagonal":
+            # first beta should be between 0 and 30 deg leaving 1 symmetric equivalent per orientation
+            trialPoles = np.logical_and(beta >= 0, beta <= np.pi / 6)
+
+            # if less than 1 left need to expand search slighly to catch edge cases
+            if np.sum(np.sum(trialPoles, axis=0) < 1) > 0:
+                deltaBeta = 1e-8
+                trialPoles = np.logical_and(beta >= -deltaBeta, beta <= np.pi / 6 + deltaBeta)
+
+            alphaFund = alpha[trialPoles]
+            betaFund = beta[trialPoles]
+
         else:
-            print("Only works for cubic")
+            raise Exception("symGroup must be cubic or hexagonal")
 
         # project onto equatorial plane
         xp, yp = Quat.stereoProject(alphaFund, betaFund)
 
         # plot poles
-        plt.scatter(xp, yp, **plotParams)
-        plt.show()
+        if type(mcol) == str:
+            ax.scatter(xp, yp, c = mcol, **plotParams)
+        else:
+            pos=(xp,yp); r1 = 0.5; r2 = r1+0.5; markersize = np.sqrt(s);
+
+            x = [0] + np.cos(np.linspace(0, 2*math.pi*r1, 10)).tolist()
+            y = [0] + np.sin(np.linspace(0, 2*math.pi*r1, 10)).tolist()
+
+            xy1 = list(zip(x, y))
+            s1 = max(max(x), max(y))
+
+            x = [0] + np.cos(np.linspace(2*math.pi*r1, 2*math.pi*r2, 10)).tolist()
+            y = [0] + np.sin(np.linspace(2*math.pi*r1, 2*math.pi*r2, 10)).tolist()
+            xy2 = list(zip(x, y))
+            s2 = max(max(x), max(y))
+
+            ax.scatter(pos[0],pos[1], marker=(xy1, 0), s=s, c=mcol[0])
+            ax.scatter(pos[0],pos[1], marker=(xy2, 0), s=s, c=mcol[1])
+            
 
     @staticmethod
     def symEqv(group):
