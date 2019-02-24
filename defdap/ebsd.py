@@ -262,7 +262,7 @@ class Map(base.Map):
 
     def findBoundaries(self, boundDef=10):
         self.buildQuatArray()
-        print("\rFinding boundaries...                      ", end="")
+        print("Finding boundaries...", end="")
 
         syms = Quat.symEqv(self.crystalSym)
         numSyms = len(syms)
