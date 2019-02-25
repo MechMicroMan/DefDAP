@@ -1,0 +1,54 @@
+ package
+========
+
+Submodules
+----------
+
+base module
+-----------
+
+.. automodule:: base
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ebsd module
+-----------
+
+.. automodule:: ebsd
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+fepx module
+-----------
+
+.. automodule:: fepx
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+hrdic module
+------------
+
+.. automodule:: hrdic
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+quat module
+-----------
+
+.. automodule:: quat
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: 
+    :members:
+    :undoc-members:
+    :show-inheritance:
