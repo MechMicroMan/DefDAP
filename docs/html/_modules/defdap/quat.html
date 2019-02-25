@@ -6,29 +6,30 @@
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>quat &#8212; DefDAP 0.1 documentation</title>
-    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <title>defdap.quat &#8212; DefDAP 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
     
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" /> 
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
-          <a href="../genindex.html" title="General Index"
+          <a href="../../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="../py-modindex.html" title="Python Module Index"
+          <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">DefDAP 0.1 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -37,14 +38,14 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <h1>Source code for quat</h1><div class="highlight"><pre>
+  <h1>Source code for defdap.quat</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">math</span>
 
 
 <span class="c1"># be careful with deep and shallow copies</span>
-<div class="viewcode-block" id="Quat"><a class="viewcode-back" href="../.html#quat.Quat">[docs]</a><span class="k">class</span> <span class="nc">Quat</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat">[docs]</a><span class="k">class</span> <span class="nc">Quat</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
         <span class="c1"># construt with Bunge euler angles (radians, ZXZ)</span>
@@ -73,7 +74,7 @@
         <span class="c1"># overload static method with instance method of same name in object</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">plotIPF</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plotIPF</span>
 
-<div class="viewcode-block" id="Quat.fromAxisAngle"><a class="viewcode-back" href="../.html#quat.Quat.fromAxisAngle">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Quat.fromAxisAngle"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.fromAxisAngle">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">fromAxisAngle</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">angle</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create a quat object from an axis angle pair</span>
 
@@ -94,7 +95,7 @@
         <span class="c1"># call constructor</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">quatCoef</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.eulerAngles"><a class="viewcode-back" href="../.html#quat.Quat.eulerAngles">[docs]</a>    <span class="k">def</span> <span class="nf">eulerAngles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.eulerAngles"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.eulerAngles">[docs]</a>    <span class="k">def</span> <span class="nf">eulerAngles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># See Melcher, a. Unser, A. Reichhardt, M. Nestler, B. Conversion of EBSD data by a</span>
         <span class="c1"># quaternion based algorithm to be used for grain structure simulations</span>
         <span class="c1"># or</span>
@@ -141,7 +142,7 @@
 
         <span class="k">return</span> <span class="n">eulers</span></div>
 
-<div class="viewcode-block" id="Quat.rotMatrix"><a class="viewcode-back" href="../.html#quat.Quat.rotMatrix">[docs]</a>    <span class="k">def</span> <span class="nf">rotMatrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.rotMatrix"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.rotMatrix">[docs]</a>    <span class="k">def</span> <span class="nf">rotMatrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">rotMatrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
 
         <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span>
@@ -185,7 +186,7 @@
 
     <span class="c1"># # overload % operator for dot product</span>
     <span class="c1"># def __mod__(self, right):</span>
-<div class="viewcode-block" id="Quat.dot"><a class="viewcode-back" href="../.html#quat.Quat.dot">[docs]</a>    <span class="k">def</span> <span class="nf">dot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.dot"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.dot">[docs]</a>    <span class="k">def</span> <span class="nf">dot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">,</span> <span class="n">right</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">)</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">()</span></div>
@@ -211,10 +212,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
         <span class="k">return</span>
 
-<div class="viewcode-block" id="Quat.norm"><a class="viewcode-back" href="../.html#quat.Quat.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.norm"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]))</span></div>
 
-<div class="viewcode-block" id="Quat.normalise"><a class="viewcode-back" href="../.html#quat.Quat.normalise">[docs]</a>    <span class="k">def</span> <span class="nf">normalise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.normalise"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.normalise">[docs]</a>    <span class="k">def</span> <span class="nf">normalise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
         <span class="k">return</span></div>
 
@@ -223,7 +224,7 @@
     <span class="k">def</span> <span class="nf">conjugate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">Quat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
 
-<div class="viewcode-block" id="Quat.transformVector"><a class="viewcode-back" href="../.html#quat.Quat.transformVector">[docs]</a>    <span class="k">def</span> <span class="nf">transformVector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.transformVector"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.transformVector">[docs]</a>    <span class="k">def</span> <span class="nf">transformVector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Transforms vector by the quaternion. For EBSD quaterions this</span>
 <span class="sd">        is a transformation from sample space to crystal space. Perform</span>
 <span class="sd">        on conjugate of quaternion for crystal to sample.</span>
@@ -243,7 +244,7 @@
 
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Vector must be a size 3 numpy array.&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.misOri"><a class="viewcode-back" href="../.html#quat.Quat.misOri">[docs]</a>    <span class="k">def</span> <span class="nf">misOri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">returnQuat</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.misOri"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.misOri">[docs]</a>    <span class="k">def</span> <span class="nf">misOri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">returnQuat</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Calculate misorientation angle between 2 orientations taking</span>
 <span class="sd">        into account the symmetries of the crystal structure.</span>
 <span class="sd">        Angle is 2*arccos(output).</span>
@@ -275,7 +276,7 @@
                 <span class="k">return</span> <span class="n">minMisOri</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Input must be a quaternion.&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.misOriAxis"><a class="viewcode-back" href="../.html#quat.Quat.misOriAxis">[docs]</a>    <span class="k">def</span> <span class="nf">misOriAxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.misOriAxis"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.misOriAxis">[docs]</a>    <span class="k">def</span> <span class="nf">misOriAxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Calculate misorientation axis between 2 orientations.</span>
 <span class="sd">        This does not consider symmetries of the crystal structure.</span>
 
@@ -295,7 +296,7 @@
 
 <span class="c1"># Static methods</span>
 
-<div class="viewcode-block" id="Quat.createManyQuats"><a class="viewcode-back" href="../.html#quat.Quat.createManyQuats">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.createManyQuats"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.createManyQuats">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">createManyQuats</span><span class="p">(</span><span class="n">eulerArray</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create a an array of quats from an array of Euler angles</span>
 
@@ -322,7 +323,7 @@
 
         <span class="k">return</span> <span class="n">quats</span></div>
 
-<div class="viewcode-block" id="Quat.calcSymEqvs"><a class="viewcode-back" href="../.html#quat.Quat.calcSymEqvs">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.calcSymEqvs"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.calcSymEqvs">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">calcSymEqvs</span><span class="p">(</span><span class="n">quats</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">):</span>
         <span class="n">syms</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">symEqv</span><span class="p">(</span><span class="n">symGroup</span><span class="p">)</span>
         <span class="n">quatComps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">syms</span><span class="p">),</span> <span class="mi">4</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">quats</span><span class="p">)))</span>
@@ -348,7 +349,7 @@
 
         <span class="k">return</span> <span class="n">quatComps</span></div>
 
-<div class="viewcode-block" id="Quat.calcAverageOri"><a class="viewcode-back" href="../.html#quat.Quat.calcAverageOri">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.calcAverageOri"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.calcAverageOri">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">calcAverageOri</span><span class="p">(</span><span class="n">quatComps</span><span class="p">):</span>
         <span class="n">avOri</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">])</span>
         <span class="n">currMisOris</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">quatComps</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
@@ -368,7 +369,7 @@
 
         <span class="k">return</span> <span class="n">avOri</span></div>
 
-<div class="viewcode-block" id="Quat.calcMisOri"><a class="viewcode-back" href="../.html#quat.Quat.calcMisOri">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.calcMisOri"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.calcMisOri">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">calcMisOri</span><span class="p">(</span><span class="n">quatComps</span><span class="p">,</span> <span class="n">refOri</span><span class="p">):</span>
         <span class="n">misOris</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">quatComps</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">quatComps</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
 
@@ -386,7 +387,7 @@
 
         <span class="k">return</span> <span class="n">minMisOris</span><span class="p">,</span> <span class="n">minQuatComps</span></div>
 
-<div class="viewcode-block" id="Quat.polarAngles"><a class="viewcode-back" href="../.html#quat.Quat.polarAngles">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.polarAngles"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.polarAngles">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">polarAngles</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
         <span class="n">mod</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="n">mod</span>
@@ -400,7 +401,7 @@
 
         <span class="k">return</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span></div>
 
-<div class="viewcode-block" id="Quat.stereoProject"><a class="viewcode-back" href="../.html#quat.Quat.stereoProject">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.stereoProject"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.stereoProject">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">stereoProject</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">polarAngles</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">args</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
@@ -415,7 +416,7 @@
 
         <span class="k">return</span> <span class="n">xp</span><span class="p">,</span> <span class="n">yp</span></div>
 
-<div class="viewcode-block" id="Quat.plotLine"><a class="viewcode-back" href="../.html#quat.Quat.plotLine">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.plotLine"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.plotLine">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">plotLine</span><span class="p">(</span><span class="n">startPoint</span><span class="p">,</span> <span class="n">endPoint</span><span class="p">,</span> <span class="n">plotSymmetries</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">symGroup</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">res</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">projection</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">projection</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">stereoProject</span>
@@ -449,7 +450,7 @@
             <span class="n">xp</span><span class="p">,</span> <span class="n">yp</span> <span class="o">=</span> <span class="n">projection</span><span class="p">(</span><span class="n">linePoints</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">linePoints</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">linePoints</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xp</span><span class="p">,</span> <span class="n">yp</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.labelPoint"><a class="viewcode-back" href="../.html#quat.Quat.labelPoint">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.labelPoint"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.labelPoint">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">labelPoint</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">padX</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">padY</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">projection</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">projection</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">stereoProject</span>
@@ -459,7 +460,7 @@
         <span class="n">xp</span><span class="p">,</span> <span class="n">yp</span> <span class="o">=</span> <span class="n">projection</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
         <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">xp</span> <span class="o">+</span> <span class="n">padX</span><span class="p">,</span> <span class="n">yp</span> <span class="o">+</span> <span class="n">padY</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.plotPoleAxis"><a class="viewcode-back" href="../.html#quat.Quat.plotPoleAxis">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.plotPoleAxis"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.plotPoleAxis">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">plotPoleAxis</span><span class="p">(</span><span class="n">plotType</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
@@ -500,7 +501,7 @@
         <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;equal&#39;</span><span class="p">)</span>
         <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.plotIPF"><a class="viewcode-back" href="../.html#quat.Quat.plotIPF">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.plotIPF"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.plotIPF">[docs]</a>    <span class="nd">@staticmethod</span>
 
     <span class="k">def</span> <span class="nf">plotIPF</span><span class="p">(</span><span class="n">quats</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">markerColour</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">markerSize</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Plot crystal orientations on an IPF</span>
@@ -632,7 +633,7 @@
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;specify one colour for solid markers or list two for &#39;half and half&#39;&quot;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="Quat.symEqv"><a class="viewcode-back" href="../.html#quat.Quat.symEqv">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.symEqv"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.symEqv">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">symEqv</span><span class="p">(</span><span class="n">group</span><span class="p">):</span>
         <span class="n">overRoot2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="n">sqrt3over2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
@@ -706,7 +707,7 @@
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
+    <form class="search" action="../../search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
@@ -723,18 +724,18 @@
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
-          <a href="../genindex.html" title="General Index"
+          <a href="../../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="../py-modindex.html" title="Python Module Index"
+          <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">DefDAP 0.1 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="index.html" >Module code</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2019, Michael Atkinson.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.2.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.4.
     </div>
   </body>
 </html>

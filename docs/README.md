@@ -19,6 +19,6 @@ sphinx-build -b html ./source ./html
 
 If the structure of the Python scripts is significantly changed, api-doc can autogenerate the API documentation with the command::
 
-sphinx-apidoc ../tcc_python_scripts -o ./source
+sphinx-apidoc ../defdap -o ./source
 
 Once a commit is made to the master branch the docs folder is mirrored to NOT YET IMPLEMENTED, providing an online version of the documentation.
