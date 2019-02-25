@@ -14,3 +14,9 @@ __pycache__
 *.sublime-project
 *.sublime-workspace
 *.pyc
+
+# Intellij IDE files
+.idea/
+
+#Python Virtual Environment
+venv/
