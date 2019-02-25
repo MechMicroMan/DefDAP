@@ -6,6 +6,7 @@ from skimage import morphology as mph
 
 import copy
 
+from .io import EBSDDataLoader
 from .quat import Quat
 from . import base
 
@@ -52,7 +53,8 @@ class Map(base.Map):
         self.xDim = None                    # (int) dimensions of maps
         self.yDim = None
         self.stepSize = None                # (float) step size
-        self.binData = None                 # imported binary data
+        self.eulerAngleArray = None
+        self.bandContrastArray = None
         self.quatArray = None               # (array) array of quaterions for each point of map
         self.numPhases = None               # (int) number of phases
         self.phaseArray = None              # (array) map of phase ids
@@ -80,7 +82,7 @@ class Map(base.Map):
     def plotDefault(self, *args, **kwargs):
         self.plotEulerMap(*args, **kwargs)
 
-    def loadData(self, fileName, crystalSym):
+    def loadData(self, fileName, crystalSym, dataType="OxfordBinary"):
         """
         Load EBSD data from file
 
@@ -89,49 +91,26 @@ class Map(base.Map):
         :param crystalSym: Crystal structure, 'cubic' or 'hexagonal'
         :type crystalSym: str
         """
-        # open meta data file and read in x and y dimensions and phase names
-        metaFile = open(fileName + ".cpr", 'r')
-        for line in metaFile:
-            if line[:6] == 'xCells':
-                self.xDim = int(line[7:])
-            elif line[:6] == 'yCells':
-                self.yDim = int(line[7:])
-            elif line[:9] == 'GridDistX':
-                self.stepSize = float(line[10:])
-            elif line[:8] == '[Phases]':
-                self.numPhases = int(next(metaFile)[6:])
-            elif line[:6] == '[Phase':
-                self.phaseNames.append(next(metaFile)[14:].strip('\n'))
 
-        if len(self.phaseNames) != self.numPhases:
-            print("Error with cpr file. Number of phases mismatch.")
+        dataLoader = EBSDDataLoader()
+        if dataType == "OxfordBinary":
+            metadataDict, dataDict = dataLoader.loadOxfordCPR(fileName)
+        elif dataType == "OxfordText":
+            raise Exception("Oxford text loader coming soon...")
+        else:
+            raise Exception("No loader found for this EBSD data.")
 
-        metaFile.close()
-        # now read the binary .crc file
-        fmt_np = np.dtype([('Phase', 'b'),
-                           ('Eulers', [('ph1', 'f'),
-                                       ('phi', 'f'),
-                                       ('ph2', 'f')]),
-                           ('mad', 'f'),
-                           ('IB2', 'uint8'),
-                           ('IB3', 'uint8'),
-                           ('IB4', 'uint8'),
-                           ('IB5', 'uint8'),
-                           ('IB6', 'f')])
-        # for ctf files that have been converted using channel 5
-        # CHANGE BACK!!!!!!!
-        # fmt_np = np.dtype([('Phase', 'b'),
-        #                    ('Eulers', [('ph1', 'f'),
-        #                                ('phi', 'f'),
-        #                                ('ph2', 'f')]),
-        #                    ('mad', 'f'),
-        #                    ('IB2', 'uint8'),
-        #                    ('IB3', 'uint8'),
-        #                    ('IB4', 'uint8'),
-        #                    ('IB5', 'uint8')])
-        self.binData = np.fromfile(fileName + ".crc", fmt_np, count=-1)
+        self.xDim = metadataDict['xDim']
+        self.yDim = metadataDict['yDim']
+        self.stepSize = metadataDict['stepSize']
+        self.numPhases = metadataDict['numPhases']
+        self.phaseNames = metadataDict['phaseNames']
+
+        self.eulerAngleArray = dataDict['eulerAngle']
+        self.bandContrastArray = dataDict['bandContrast']
+        self.phaseArray = dataDict['phase']
+
         self.crystalSym = crystalSym
-        self.phaseArray = np.reshape(self.binData[('Phase')], (self.yDim, self.xDim))
 
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
               format(self.xDim, self.yDim, self.stepSize))
@@ -144,8 +123,7 @@ class Map(base.Map):
         """
         self.checkDataLoaded()
 
-        bcmap = np.reshape(self.binData[('IB2')], (self.yDim, self.xDim))
-        plt.imshow(bcmap, cmap='gray')
+        plt.imshow(self.bandContrastArray, cmap='gray')
         plt.colorbar()
         return
 
@@ -259,7 +237,7 @@ class Map(base.Map):
 
         :return: True if data loaded
         """
-        if self.binData is None:
+        if self.eulerAngleArray is None:
             raise Exception("Data not loaded")
         return True
 
@@ -272,14 +250,8 @@ class Map(base.Map):
         self.checkDataLoaded()
 
         if self.quatArray is None:
-            eulerArray = self.binData[('Eulers')]
-            # reshape to map dimensions
-            eulerArray = eulerArray.reshape((self.yDim, self.xDim))
-            # this flattens the structures the Euler angles are stored into a normal array
-            eulerArray = np.array(eulerArray.tolist())
-            eulerArray = eulerArray.transpose((2, 0, 1))
             # create the array of quat objects
-            self.quatArray = Quat.createManyQuats(eulerArray)
+            self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
 
         print("\r", end="")
         return
