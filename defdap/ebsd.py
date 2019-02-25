@@ -647,6 +647,11 @@ class Map(base.Map):
         print("\r", end="")
 
     def plotAverageGrainSchmidFactorsMap(self, plotGBs=True):
+        """
+
+        :param plotGBs:
+        :return:
+        """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
