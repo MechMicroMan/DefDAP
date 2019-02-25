@@ -11,8 +11,8 @@ from scipy.stats import mode
 
 import peakutils
 
-from . import base
-from .quat import Quat
+from defdap import base
+from defdap.quat import Quat
 
 
 class Map(base.Map):
