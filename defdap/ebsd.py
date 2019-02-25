@@ -6,8 +6,8 @@ from skimage import morphology as mph
 
 import copy
 
-from .quat import Quat
-from . import base
+from defdap.quat import Quat
+from defdap import base
 
 
 class Map(base.Map):
