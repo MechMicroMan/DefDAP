@@ -1,0 +1,13 @@
+scipy
+numpy
+matplotlib
+scikit-image
+pandas
+peakutils
+matplotlib_scalebar
+vtk
+pyevtk
+IPython
+
+#For visualisation
+jupyter
