@@ -620,7 +620,14 @@ class Map(base.Map):
         return
 
     def loadSlipSystems(self, filepath, cOverA=None):
-        self.slipSystems, self.slipTraceColours = base.SlipSystem.loadSlipSystems(filepath, self.crystalSym, cOverA=cOverA)
+        """
+        Load slip system definitions from file
+
+        :param filepath: File path to slip system definition txt file
+        :param cOverA: cOverA ratio (for hexagonal)
+        """
+        self.slipSystems, self.slipTraceColours = base.SlipSystem.loadSlipSystems(filepath,
+                                                                                  self.crystalSym, cOverA=cOverA)
 
         if self.grainList is not None:
             for grain in self.grainList:
@@ -636,33 +643,63 @@ class Map(base.Map):
                 print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
 
     def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
-        print("Calculating grain average Schmid factors...", end="")
+        """
+        Calculates Schmid factors for all slip systems, for all grains, based on average grain orientation
 
+        :param loadVector:
+        :param slipSystems:
+        """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
         for grain in self.grainList:
             grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
 
-        print("\r", end="")
-
-    def plotAverageGrainSchmidFactorsMap(self, plotGBs=True):
+    def plotAverageGrainSchmidFactorsMap(self, plotGBs=True, boundaryColour='black', dilateBoundaries=False,
+                                         planes=None, directions=None):
         """
+        Plot maximum Schmid factor map, based on average grain orientation (for all slip systems unless specified)
 
-        :param plotGBs:
+        :param planes: Plane ID(s) to consider (optional)
+        :type planes: list
+        :param directions: Direction ID(s) to consider (optional)
+        :type directions: list
+        :param plotGBs: Plots grain boundaries if True
+        :param boundaryColour:  Colour of grain boundaries
+        :param dilateBoundaries: Dilates grain boundaries if True
+        :type boundaryColour: string
         :return:
         """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
-
         self.averageSchmidFactor = np.zeros([self.yDim, self.xDim])
 
+        if self[0].averageSchmidFactors is None:
+            raise Exception("Run 'calcAverageGrainSchmidFactors' first")
+
         for grain in self.grainList:
-            # max Schmid factor
-            currentSchmidFactor = np.array(grain.averageSchmidFactors).flatten().max()
-            # currentSchmidFactor = grain.averageSchmidFactors[0][0]
+
+            currentSchmidFactor = []
+
+            if planes is not None:
+
+                # Error catching
+                if np.max(planes) > len(self.slipSystems) - 1:
+                    raise Exception("Check plane IDs exists, IDs range from 0 to {0}".format(len(self.slipSystems) - 1))
+
+                for plane in planes:
+                    if directions is not None:
+                        for direction in directions:
+                            currentSchmidFactor.append(grain.averageSchmidFactors[plane][direction])
+                    elif directions is None:
+                        currentSchmidFactor.append(grain.averageSchmidFactors[plane])
+                currentSchmidFactor = [max(s) for s in zip(*currentSchmidFactor)]
+            elif planes is None:
+                currentSchmidFactor = [max(s) for s in zip(*grain.averageSchmidFactors)]
+
+            # Fill grain with colour
             for coord in grain.coordList:
-                self.averageSchmidFactor[coord[1], coord[0]] = currentSchmidFactor
+                self.averageSchmidFactor[coord[1], coord[0]] = currentSchmidFactor[0]
 
         self.averageSchmidFactor[self.averageSchmidFactor == 0] = 0.5
 
@@ -671,7 +708,7 @@ class Map(base.Map):
         plt.colorbar(label="Schmid factor")
 
         if plotGBs:
-            self.plotGBs()
+            self.plotGBs(colour=boundaryColour, dilate=dilateBoundaries)
 
         return
 
