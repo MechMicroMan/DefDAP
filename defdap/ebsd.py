@@ -646,8 +646,8 @@ class Map(base.Map):
         """
         Calculates Schmid factors for all slip systems, for all grains, based on average grain orientation
 
-        :param loadVector:
-        :param slipSystems:
+        :param loadVector: Loading vector, i.e. [1, 0, 0]
+        :param slipSystems: Slip systems
         """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
@@ -857,6 +857,12 @@ class Grain(base.Grain):
 
     # define load axis as unit vector
     def calcAverageSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
+        """
+        Calculate Schmid factors for grain, using average orientation
+
+        :param loadVector: Loading vector, i.e. [1, 0, 0]
+        :param slipSystems: Slip systems
+        """
         if slipSystems is None:
             slipSystems = self.slipSystems
         if self.refOri is None:
