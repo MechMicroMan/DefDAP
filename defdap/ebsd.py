@@ -13,7 +13,7 @@ from . import base
 class Map(base.Map):
     """Summary
 
-    Attributes:
+    Args:
         averageSchmidFactor (TYPE): Description
         binData (TYPE): imported binary data
         boundaries (TYPE): Description
@@ -35,11 +35,12 @@ class Map(base.Map):
     """
 
     def __init__(self, fileName, crystalSym):
-        """Initialise class and import DIC data from file
+        """Initialise class
 
-        Args:
-            filename(str): Path to file, including name, excluding extension
-            crystalSym(str): Crystal sturcture, 'cubic' or 'hexagonal'
+        :param fileName: Path to file, including name, excluding extension
+        :type fileName: str
+        :param crystalSym: Crystal structure, 'cubic' or 'hexagonal'
+        :type crystalSym: str
         """
 
         # Call base class constructor
@@ -80,6 +81,14 @@ class Map(base.Map):
         self.plotEulerMap(*args, **kwargs)
 
     def loadData(self, fileName, crystalSym):
+        """
+        Load EBSD data from file
+
+        :param fileName: Path to file, including name, excluding extension
+        :type fileName: str
+        :param crystalSym: Crystal structure, 'cubic' or 'hexagonal'
+        :type crystalSym: str
+        """
         # open meta data file and read in x and y dimensions and phase names
         metaFile = open(fileName + ".cpr", 'r')
         for line in metaFile:
@@ -130,6 +139,9 @@ class Map(base.Map):
         return
 
     def plotBandContrastMap(self):
+        """
+        Plot band contrast map
+        """
         self.checkDataLoaded()
 
         bcmap = np.reshape(self.binData[('IB2')], (self.yDim, self.xDim))
@@ -138,11 +150,14 @@ class Map(base.Map):
         return
 
     def plotEulerMap(self, updateCurrent=False, highlightGrains=None, highlightColours=None):
-        """Plots an orientation map in Euler colouring
+        """Plot an orientation map in Euler colouring
 
-        Args:
-            updateCurrent (bool, optional): Description
-            highlightGrains (List int, optional): Grain ids of grains to highlight
+        :param updateCurrent: Description (optional)
+        :type updateCurrent: bool
+        :param highlightGrains: Grain ids of grains to highlight (optional)
+        :type highlightGrains: list
+        :param highlightColours: Colour to highlight grain (optional)
+        :type highlightColours: str
         """
         self.checkDataLoaded()
 
@@ -168,10 +183,10 @@ class Map(base.Map):
         return
 
     def plotPhaseMap(self, cmap='viridis'):
-        """Plots a phase map
+        """Plot a phase map
 
-        Args:
-            cmap(str, optional): Colour map
+        :param cmap: Colour map (optional)
+        :type cmap: str
         """
         values = [-1] + list(range(1, self.numPhases + 1))
         names = ["Non-indexed"] + self.phaseNames
@@ -223,12 +238,14 @@ class Map(base.Map):
         self.kam[self.kam > 1] = 1
 
     def plotKamMap(self, vmin=None, vmax=None, cmap="viridis"):
-        """Plots Kernel Average Misorientaion (KAM) for the EBSD map.
+        """Plot Kernel Average Misorientaion (KAM) for the EBSD map.
 
-        Args:
-            vmin (float, optional): Minimum of colour scale.
-            vmax (float, optional): Maximum of colour scale.
-            cmap (str, optional): Colourmap to show data with.
+        :param vmin: Minimum of colour scale (optional)
+        :type vmin: float
+        :param vmax: Maximum of colour scale (optional)
+        :type vmax: float
+        :param cmap: Colour map (optional)
+        :type cmap: str
         """
         self.calcKam()
         # Convert to degrees and plot
@@ -238,11 +255,18 @@ class Map(base.Map):
         plt.colorbar()
 
     def checkDataLoaded(self):
+        """ Checks if EBSD data is loaded
+
+        :return: True if data loaded
+        """
         if self.binData is None:
             raise Exception("Data not loaded")
         return True
 
     def buildQuatArray(self):
+        """
+        Build quaternion array
+        """
         print("Building quaternion array...", end="")
 
         self.checkDataLoaded()
@@ -261,6 +285,12 @@ class Map(base.Map):
         return
 
     def findBoundaries(self, boundDef=10):
+        """
+        Find grain boundaries
+
+        :param boundDef: critical misorientation
+        :type boundDef: float
+        """
         self.buildQuatArray()
         print("Finding boundaries...", end="")
 
@@ -325,19 +355,20 @@ class Map(base.Map):
         print("\r", end="")
         return
 
-    def findPhaseBoundaries(self, setNonIndexedAs=None):
+    def findPhaseBoundaries(self, treatNonIndexedAs=None):
         """Finds boundaries in the phase map
+
+        :param treatNonIndexedAs: value to assign to non-indexed points, defaults to -1
         """
         print("Finding phase boundaries...", end="")
-
 
         # make new array shifted by one to left and up
         phaseArrayShifted = np.full((self.yDim, self.xDim), -3)
         phaseArrayShifted[:-1, :-1] = self.phaseArray[1:, 1:]
         
-        if setNonIndexedAs:
-            phaseArrayNew[phaseArrayNew == -1] = setNonIndexedAs
-            phaseArrayShifted[phaseArrayShifted == -1] = setNonIndexedAs
+        if treatNonIndexedAs:
+            self.phaseArray[self.phaseArray == -1] = treatNonIndexedAs
+            phaseArrayShifted[phaseArrayShifted == -1] = treatNonIndexedAs
 
         # where shifted array not equal to starting array, set to -1
         self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
@@ -346,7 +377,9 @@ class Map(base.Map):
         print("\r", end="")
 
     def plotPhaseBoundaryMap(self, dilate=False):
-        """Plots phase boundary map
+        """Plot phase boundary map
+
+        :param dilate: Dilate boundary by one pixel
         """
 
         plt.figure()
@@ -360,7 +393,9 @@ class Map(base.Map):
         plt.colorbar()
 
     def plotBoundaryMap(self, dilate=False):
-        """Plots grain boundary map
+        """Plot grain boundary map
+
+        :param dilate: Dilate boundary by one pixel
         """
         plt.figure()
 
@@ -373,6 +408,11 @@ class Map(base.Map):
         plt.colorbar()
 
     def findGrains(self, minGrainSize=10):
+        """
+        Find grains and assign ids
+
+        :param minGrainSize: Minimum grain area in pixels
+        """
         print("Finding grains...", end="")
 
         # Initialise the grain map
@@ -408,12 +448,22 @@ class Map(base.Map):
         return
 
     def plotGrainMap(self):
+        """
+        Plot a map with grains coloured
+
+        :return: Figure
+        """
         plt.figure()
         plt.imshow(self.grains)
         plt.colorbar()
         return
 
-    def locateGrainID(self, clickEvent=None):
+    def locateGrainID(self, clickEvent=None, displaySelected=False):
+        """
+        Interactive plot for identifying grains
+
+        :param displaySelected: Plot slip traces for selected grain
+        """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
@@ -422,12 +472,19 @@ class Map(base.Map):
         self.plotEulerMap()
         if clickEvent is None:
             # default click handler which highlights grain and prints id
-            self.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
+            self.fig.canvas.mpl_connect(
+                'button_press_event',
+                lambda x: self.clickGrainId(x, displaySelected)
+            )
         else:
-            # click handler loaded from linker classs. Pass current ebsd map to it.
+            # click handler loaded in as parameter. Pass current map object to it.
             self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
 
-    def clickGrainId(self, event):
+        # unset figure for plotting grains
+        self.grainFig = None
+        self.grainAx = None
+
+    def clickGrainId(self, event, displaySelected):
         if event.inaxes is not None:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
@@ -437,6 +494,14 @@ class Map(base.Map):
             self.ax.clear()
             self.plotEulerMap(updateCurrent=True, highlightGrains=[self.currGrainId])
             self.fig.canvas.draw()
+
+            if displaySelected:
+                if self.grainFig is None:
+                    self.grainFig, self.grainAx = plt.subplots()
+                self.grainList[self.currGrainId].calcSlipTraces()
+                self.grainAx.clear()
+                self.grainList[self.currGrainId].plotSlipTraces(ax=self.grainAx)
+                self.grainFig.canvas.draw()
 
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self)
@@ -490,6 +555,12 @@ class Map(base.Map):
             grain.calcAverageOri()
 
     def calcGrainMisOri(self, calcAxis=False):
+        """
+        Calculate grain misorientation
+
+        :param calcAxis: Calculate the misorientation axis also
+        :return:
+        """
         print("Calculating grain misorientations...", end="")
 
         # Check that grains have been detected in the map
@@ -504,6 +575,21 @@ class Map(base.Map):
 
     def plotMisOriMap(self, component=0, plotGBs=False, boundaryColour='black', vmin=None, vmax=None,
                       cmap="viridis", cBarLabel="ROD (degrees)"):
+        """
+        Plot misorientation map
+
+        :param component: 0: misorientation, 1, 2, 3: rotation about x, y, z
+        :param plotGBs: Plot grain boundaries
+        :param boundaryColour: Colour of grain boundary
+        :param vmin: Minimum of colour scale (optional)
+        :type vmin: float
+        :param vmax: Maximum of colour scale (optional)
+        :type vmax: float
+        :param cmap: Colour map (optional)
+        :type cmap: str
+        :param cBarLabel: Label for colour bar
+        :return: Figure
+        """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
