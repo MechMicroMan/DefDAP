@@ -1,0 +1,630 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Submodules &#8212; DefDAP 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <blockquote>
+<div>package</div></blockquote>
+<hr class="docutils" />
+<div class="section" id="submodules">
+<h1>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="module-base">
+<span id="base-module"></span><h1>base module<a class="headerlink" href="#module-base" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="base.Grain">
+<em class="property">class </em><code class="descclassname">base.</code><code class="descname">Grain</code><a class="reference internal" href="_modules/base.html#Grain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Grain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="attribute">
+<dt id="base.Grain.centreCoords">
+<code class="descname">centreCoords</code><a class="headerlink" href="#base.Grain.centreCoords" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="base.Grain.extremeCoords">
+<code class="descname">extremeCoords</code><a class="headerlink" href="#base.Grain.extremeCoords" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Grain.grainData">
+<code class="descname">grainData</code><span class="sig-paren">(</span><em>mapData</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Grain.grainData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Grain.grainData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes this grains data from the given map data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mapData</strong> (<em>np.array</em>) – Array of map data. This must be cropped!</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Array containing this grains values from the given map data</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">np.array</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="base.Grain.grainMapData">
+<code class="descname">grainMapData</code><span class="sig-paren">(</span><em>mapData</em>, <em>bg=nan</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Grain.grainMapData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Grain.grainMapData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a map of this grain only from the given map data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mapData</strong> (<em>np.array</em>) – Array of map data. This must be cropped!</li>
+<li><strong>bg</strong> (<em>float</em><em>, </em><em>optional</em>) – Value to fill the backgraound with. Must be same dtype as input.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Map of this grains data</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="base.Grain.grainMapDataCoarse">
+<code class="descname">grainMapDataCoarse</code><span class="sig-paren">(</span><em>mapData</em>, <em>kernelSize=2</em>, <em>bg=nan</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Grain.grainMapDataCoarse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Grain.grainMapDataCoarse" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Creates a coarsed map of this grain only from the given map data.</dt>
+<dd>Data is coarsened using a kenel at each pixel in the grain using only this grains data.</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mapData</strong> (<em>np.array</em>) – Array of map data. This must be cropped!</li>
+<li><strong>kernelSize</strong> (<em>int</em><em>, </em><em>optional</em>) – Size of kernel as the number of pixels to dilate by i.e 1 gives a 3x3 kernel.</li>
+<li><strong>bg</strong> (<em>float</em><em>, </em><em>optional</em>) – Value to fill the backgraound with. Must be same dtype as input.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Map of this grains coarsened data</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="base.Grain.grainOutline">
+<code class="descname">grainOutline</code><span class="sig-paren">(</span><em>bg=nan</em>, <em>fg=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Grain.grainOutline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Grain.grainOutline" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Grain.plotGrainData">
+<code class="descname">plotGrainData</code><span class="sig-paren">(</span><em>mapData</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>clabel=''</em>, <em>cmap='viridis'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Grain.plotGrainData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Grain.plotGrainData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a map of this grain only from the given map data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mapData</strong> (<em>np.array</em>) – Array of map data. This must be cropped!</li>
+<li><strong>vmin</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum value of colour scale</li>
+<li><strong>vmax</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum value for colour scale</li>
+<li><strong>clabel</strong> (<em>str</em><em>, </em><em>optional</em>) – Colour bar label text</li>
+<li><strong>cmap</strong> (<em>str</em><em>, </em><em>optional</em>) – Colour map to use, default is viridis.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="base.Grain.plotOutline">
+<code class="descname">plotOutline</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Grain.plotOutline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Grain.plotOutline" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Grain.plotSlipTraces">
+<code class="descname">plotSlipTraces</code><span class="sig-paren">(</span><em>colours=None</em>, <em>ax=None</em>, <em>pos=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Grain.plotSlipTraces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Grain.plotSlipTraces" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="base.Map">
+<em class="property">class </em><code class="descclassname">base.</code><code class="descname">Map</code><a class="reference internal" href="_modules/base.html#Map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="base.Map.buildNeighbourNetwork">
+<code class="descname">buildNeighbourNetwork</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Map.buildNeighbourNetwork"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map.buildNeighbourNetwork" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Map.calcProxigram">
+<code class="descname">calcProxigram</code><span class="sig-paren">(</span><em>numTrials=500</em>, <em>forceCalc=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Map.calcProxigram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map.calcProxigram" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Map.checkGrainsDetected">
+<code class="descname">checkGrainsDetected</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Map.checkGrainsDetected"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map.checkGrainsDetected" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if grains have been detected</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns True if grains detected</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal notranslate"><span class="pre">Exception</span></code> – if grains not detected</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="base.Map.clickGrainNeighbours">
+<code class="descname">clickGrainNeighbours</code><span class="sig-paren">(</span><em>event</em>, <em>map</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Map.clickGrainNeighbours"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map.clickGrainNeighbours" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Map.clickHomog">
+<code class="descname">clickHomog</code><span class="sig-paren">(</span><em>event</em>, <em>binSize=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Map.clickHomog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map.clickHomog" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Map.displayNeighbours">
+<code class="descname">displayNeighbours</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Map.displayNeighbours"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map.displayNeighbours" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Map.highlightGrains">
+<code class="descname">highlightGrains</code><span class="sig-paren">(</span><em>grainIds</em>, <em>grainColours</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Map.highlightGrains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map.highlightGrains" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Map.plotGBs">
+<code class="descname">plotGBs</code><span class="sig-paren">(</span><em>ax=None</em>, <em>colour='white'</em>, <em>dilate=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Map.plotGBs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map.plotGBs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="base.Map.proxigram">
+<code class="descname">proxigram</code><a class="headerlink" href="#base.Map.proxigram" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Map.setHomogPoint">
+<code class="descname">setHomogPoint</code><span class="sig-paren">(</span><em>binSize=1</em>, <em>points=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Map.setHomogPoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map.setHomogPoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="base.Map.updateHomogPoint">
+<code class="descname">updateHomogPoint</code><span class="sig-paren">(</span><em>homogID</em>, <em>newPoint=None</em>, <em>delta=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#Map.updateHomogPoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.Map.updateHomogPoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update a homog by either over wrting it with a new point or
+incrementing the current values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>homogID</strong> (<em>int</em>) – ID (place in list) of point to update or -1 for all</li>
+<li><strong>newPoint</strong> (<em>tuple</em><em>, </em><em>optional</em>) – New point</li>
+<li><strong>delta</strong> (<em>tuple</em><em>, </em><em>optional</em>) – Increments to current point (dx, dy)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="base.SlipSystem">
+<em class="property">class </em><code class="descclassname">base.</code><code class="descname">SlipSystem</code><span class="sig-paren">(</span><em>slipPlane</em>, <em>slipDir</em>, <em>crystalSym</em>, <em>cOverA=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#SlipSystem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.SlipSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="staticmethod">
+<dt id="base.SlipSystem.groupSlipSystems">
+<em class="property">static </em><code class="descname">groupSlipSystems</code><span class="sig-paren">(</span><em>slipSystems</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#SlipSystem.groupSlipSystems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.SlipSystem.groupSlipSystems" title="Permalink to this definition">¶</a></dt>
+<dd><p>Groups slip systems by there slip plane.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>slipSytems</strong> (<em>list</em><em>(</em><a class="reference internal" href="#base.SlipSystem" title="base.SlipSystem"><em>SlipSystem</em></a><em>)</em>) – A list of slip systems</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A list of list of slip systems grouped slip plane.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list(list(<a class="reference internal" href="#base.SlipSystem" title="base.SlipSystem">SlipSystem</a>))</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="base.SlipSystem.lMatrix">
+<em class="property">static </em><code class="descname">lMatrix</code><span class="sig-paren">(</span><em>a</em>, <em>b</em>, <em>c</em>, <em>alpha</em>, <em>beta</em>, <em>gamma</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#SlipSystem.lMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.SlipSystem.lMatrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="base.SlipSystem.loadSlipSystems">
+<em class="property">static </em><code class="descname">loadSlipSystems</code><span class="sig-paren">(</span><em>filepath</em>, <em>crystalSym</em>, <em>cOverA=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#SlipSystem.loadSlipSystems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.SlipSystem.loadSlipSystems" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Load in slip systems from file. 3 integers for slip plane normal and</dt>
+<dd>3 for slip direction. Returns a list of list of slip systems
+grouped by slip plane.</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filepath</strong> (<em>string</em>) – Path to file containing slip systems</li>
+<li><strong>crystalSym</strong> (<em>string</em>) – The crystal symmetry (“cubic” or “hexagonal”)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A list of list of slip systems grouped slip plane.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first">list(list(<a class="reference internal" href="#base.SlipSystem" title="base.SlipSystem">SlipSystem</a>))</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal notranslate"><span class="pre">IOError</span></code> – Raised if not 6/8 integers per line</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="base.SlipSystem.qMatrix">
+<em class="property">static </em><code class="descname">qMatrix</code><span class="sig-paren">(</span><em>lMatrix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/base.html#SlipSystem.qMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#base.SlipSystem.qMatrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="base.SlipSystem.slipDir">
+<code class="descname">slipDir</code><a class="headerlink" href="#base.SlipSystem.slipDir" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="base.SlipSystem.slipDirLabel">
+<code class="descname">slipDirLabel</code><a class="headerlink" href="#base.SlipSystem.slipDirLabel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="base.SlipSystem.slipPlane">
+<code class="descname">slipPlane</code><a class="headerlink" href="#base.SlipSystem.slipPlane" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="base.SlipSystem.slipPlaneLabel">
+<code class="descname">slipPlaneLabel</code><a class="headerlink" href="#base.SlipSystem.slipPlaneLabel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="ebsd-module">
+<h1>ebsd module<a class="headerlink" href="#ebsd-module" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="fepx-module">
+<h1>fepx module<a class="headerlink" href="#fepx-module" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="hrdic-module">
+<h1>hrdic module<a class="headerlink" href="#hrdic-module" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="module-quat">
+<span id="quat-module"></span><h1>quat module<a class="headerlink" href="#module-quat" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="quat.Quat">
+<em class="property">class </em><code class="descclassname">quat.</code><code class="descname">Quat</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="staticmethod">
+<dt id="quat.Quat.calcAverageOri">
+<em class="property">static </em><code class="descname">calcAverageOri</code><span class="sig-paren">(</span><em>quatComps</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.calcAverageOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.calcAverageOri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="quat.Quat.calcMisOri">
+<em class="property">static </em><code class="descname">calcMisOri</code><span class="sig-paren">(</span><em>quatComps</em>, <em>refOri</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.calcMisOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.calcMisOri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="quat.Quat.calcSymEqvs">
+<em class="property">static </em><code class="descname">calcSymEqvs</code><span class="sig-paren">(</span><em>quats</em>, <em>symGroup</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.calcSymEqvs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.calcSymEqvs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="quat.Quat.conjugate">
+<code class="descname">conjugate</code><a class="headerlink" href="#quat.Quat.conjugate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="quat.Quat.createManyQuats">
+<em class="property">static </em><code class="descname">createManyQuats</code><span class="sig-paren">(</span><em>eulerArray</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.createManyQuats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.createManyQuats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a an array of quats from an array of Euler angles</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>eulerArray</strong> (<em>array</em>) – Size 3 x n x … x m</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="quat.Quat.dot">
+<code class="descname">dot</code><span class="sig-paren">(</span><em>right</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.dot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="quat.Quat.eulerAngles">
+<code class="descname">eulerAngles</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.eulerAngles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.eulerAngles" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="quat.Quat.fromAxisAngle">
+<em class="property">classmethod </em><code class="descname">fromAxisAngle</code><span class="sig-paren">(</span><em>axis</em>, <em>angle</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.fromAxisAngle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.fromAxisAngle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a quat object from an axis angle pair</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>axis</strong> (<em>np.array size 3</em>) – Axis of rotation</li>
+<li><strong>angle</strong> (<em>float</em>) – Rotation arround axis (radians)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Initialised Quat object</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#quat.Quat" title="quat.Quat">Quat</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="quat.Quat.labelPoint">
+<em class="property">static </em><code class="descname">labelPoint</code><span class="sig-paren">(</span><em>point</em>, <em>label</em>, <em>projection=None</em>, <em>ax=None</em>, <em>padX=0</em>, <em>padY=0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.labelPoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.labelPoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="quat.Quat.misOri">
+<code class="descname">misOri</code><span class="sig-paren">(</span><em>right</em>, <em>symGroup</em>, <em>returnQuat=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.misOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.misOri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate misorientation angle between 2 orientations taking
+into account the symmetries of the crystal structure.
+Angle is 2*arccos(output).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rigth</strong> (<em>quat</em>) – Orientation to find misorientation to</li>
+<li><strong>symGroup</strong> (<em>str</em>) – Crystal type (cubic, hexagonal)</li>
+<li><strong>returnQuat</strong> (<em>int</em>) – What to return</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><dl class="docutils">
+<dt>returnQuat = 0 - misorientation</dt>
+<dd><p class="first last">returnQuat = 1 - symmetric equivalent with min misorientation
+returnQuat = 2 - both</p>
+</dd>
+</dl>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">various</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="quat.Quat.misOriAxis">
+<code class="descname">misOriAxis</code><span class="sig-paren">(</span><em>right</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.misOriAxis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.misOriAxis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate misorientation axis between 2 orientations.
+This does not consider symmetries of the crystal structure.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rigth</strong> (<em>quat</em>) – Orientation to find misorientation axis to</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">axis of misorientation</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="quat.Quat.norm">
+<code class="descname">norm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.norm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.norm" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="quat.Quat.normalise">
+<code class="descname">normalise</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.normalise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.normalise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="quat.Quat.plotIPF">
+<em class="property">static </em><code class="descname">plotIPF</code><span class="sig-paren">(</span><em>quats</em>, <em>direction</em>, <em>symGroup</em>, <em>ax=None</em>, <em>markerColour='red'</em>, <em>markerSize=40</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.plotIPF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.plotIPF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot crystal orientations on an IPF</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>quats</strong> (<em>list</em>) – Lits of quats to plot on the IPF</li>
+<li><strong>direction</strong> (<em>array</em>) – Sample direction for IPF</li>
+<li><strong>symGroup</strong> (<em>str</em>) – Crystal type (cubic, hexagonal)</li>
+<li><strong>ax</strong> (<em>str</em>) – Axis to plot to</li>
+<li><strong>markerColour</strong> (<em>str</em>) – Marker colour (or two colours for halp and half)</li>
+<li><strong>markerSize</strong> (<em>int</em>) – Size of marker to plot</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="quat.Quat.plotLine">
+<em class="property">static </em><code class="descname">plotLine</code><span class="sig-paren">(</span><em>startPoint</em>, <em>endPoint</em>, <em>plotSymmetries=False</em>, <em>symGroup=None</em>, <em>res=100</em>, <em>projection=None</em>, <em>ax=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.plotLine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.plotLine" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="quat.Quat.plotPoleAxis">
+<em class="property">static </em><code class="descname">plotPoleAxis</code><span class="sig-paren">(</span><em>plotType</em>, <em>symGroup</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.plotPoleAxis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.plotPoleAxis" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="quat.Quat.polarAngles">
+<em class="property">static </em><code class="descname">polarAngles</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.polarAngles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.polarAngles" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="quat.Quat.rotMatrix">
+<code class="descname">rotMatrix</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.rotMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.rotMatrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="quat.Quat.stereoProject">
+<em class="property">static </em><code class="descname">stereoProject</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.stereoProject"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.stereoProject" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="quat.Quat.symEqv">
+<em class="property">static </em><code class="descname">symEqv</code><span class="sig-paren">(</span><em>group</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.symEqv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.symEqv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="quat.Quat.transformVector">
+<code class="descname">transformVector</code><span class="sig-paren">(</span><em>vector</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/quat.html#Quat.transformVector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#quat.Quat.transformVector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms vector by the quaternion. For EBSD quaterions this
+is a transformation from sample space to crystal space. Perform
+on conjugate of quaternion for crystal to sample.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>vector</strong> (<em>numpy.ndarray</em>) – Vector to transform</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Transformed vector</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-contents">
+<h1>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h1>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Submodules</a></li>
+<li><a class="reference internal" href="#module-base">base module</a></li>
+<li><a class="reference internal" href="#ebsd-module">ebsd module</a></li>
+<li><a class="reference internal" href="#fepx-module">fepx module</a></li>
+<li><a class="reference internal" href="#hrdic-module">hrdic module</a></li>
+<li><a class="reference internal" href="#module-quat">quat module</a></li>
+<li><a class="reference internal" href="#module-contents">Module contents</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2019, Michael Atkinson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.2.
+    </div>
+  </body>
+</html>
