@@ -6,6 +6,7 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+.*
 
 # My files #
 .ipynb_checkpoints
