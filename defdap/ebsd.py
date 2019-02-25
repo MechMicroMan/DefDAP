@@ -626,6 +626,15 @@ class Map(base.Map):
             for grain in self.grainList:
                 grain.slipSystems = self.slipSystems
 
+    def printSlipSystems(self):
+        """
+        Print a list of slip planes (with colours) and slip directions
+        """
+        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems, self.slipTraceColours)):
+            print('Plane {0}: {1}\tColour: {2}'.format(i, ssGroup[0].slipPlaneLabel, colour))
+            for j, ss in enumerate(ssGroup):
+                print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
+
     def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
         print("Calculating grain average Schmid factors...", end="")
 
@@ -838,6 +847,20 @@ class Grain(base.Grain):
             self.calcSlipTraces()
 
         return self.slipTraceAngles
+
+    def printSlipTraces(self):
+        """
+        Print a list of slip planes (with colours) and slip directions
+        """
+
+        self.calcSlipTraces()
+        self.calcAverageSchmidFactors()
+
+        for ssGroup, colour, sfGroup, slipTrace in zip(self.slipSystems, self.ebsdMap.slipTraceColours,
+                                                       self.averageSchmidFactors, self.slipTraces):
+            print('{0}\tColour: {1}\tAngle: {2:.2f}'.format(ssGroup[0].slipPlaneLabel, colour, slipTrace * 180 / np.pi))
+            for ss, sf in zip(ssGroup, sfGroup):
+                print('  {0}   SF: {1:.3f}'.format(ss.slipDirLabel, sf))
 
     def calcSlipTraces(self, slipSystems=None):
         if slipSystems is None:
