@@ -35,7 +35,7 @@ class Map(base.Map):
         yDim (int): y dimension of map
     """
 
-    def __init__(self, fileName, crystalSym):
+    def __init__(self, fileName, crystalSym, dataType=None):
         """Initialise class
 
         :param fileName: Path to file, including name, excluding extension
@@ -76,13 +76,12 @@ class Map(base.Map):
         self.plotHomog = self.plotEulerMap  # Use euler map for defining homologous points
         self.highlightAlpha = 1
 
-        self.loadData(fileName, crystalSym)
-        return
+        self.loadData(fileName, crystalSym, dataType=dataType)
 
     def plotDefault(self, *args, **kwargs):
         self.plotEulerMap(*args, **kwargs)
 
-    def loadData(self, fileName, crystalSym, dataType="OxfordBinary"):
+    def loadData(self, fileName, crystalSym, dataType=None):
         """
         Load EBSD data from file
 
@@ -91,6 +90,8 @@ class Map(base.Map):
         :param crystalSym: Crystal structure, 'cubic' or 'hexagonal'
         :type crystalSym: str
         """
+
+        dataType = "OxfordBinary" if dataType is None else dataType
 
         dataLoader = EBSDDataLoader()
         if dataType == "OxfordBinary":
@@ -114,8 +115,6 @@ class Map(base.Map):
 
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
               format(self.xDim, self.yDim, self.stepSize))
-
-        return
 
     def plotBandContrastMap(self):
         """
