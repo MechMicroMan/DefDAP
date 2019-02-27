@@ -61,6 +61,7 @@ class Map(base.Map):
         self.phaseNames = []                # (array) array of phase names
         self.boundaries = None              # (array) map of boundaries. -1 for a boundary, 0 otherwise
         self.phaseBoundaries = None         # (array) map of phase boundaries. -1 for boundary, 0 otherwise
+        self.cacheEulerMap = None
         self.grains = None                  # (array) map of grains
         self.grainList = None               # (list) list of grains
         self.misOri = None                  # (array) map of misorientation
@@ -72,6 +73,8 @@ class Map(base.Map):
         self.currGrainId = None             # (int) ID of last selected grain
         self.origin = (0, 0)                # Map origin (y, x). Used by linker class where origin is a
                                             # homologue point of the maps
+        self.fig = None
+        self.ax = None
 
         self.plotHomog = self.plotEulerMap  # Use euler map for defining homologous points
         self.highlightAlpha = 1
@@ -138,18 +141,19 @@ class Map(base.Map):
         """
         self.checkDataLoaded()
 
-        if not updateCurrent:
-            emap = np.transpose(np.array([self.binData['Eulers']['ph1'],
-                                          self.binData['Eulers']['phi'],
-                                          self.binData['Eulers']['ph2']]))
-            # this is the normalization for the
+        if (not updateCurrent) or self.cacheEulerMap is None:
+            eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
+
+            # this is the normalisation
             norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]), (self.yDim, self.xDim))
             norm = np.reshape(norm, (self.yDim, self.xDim, 3))
-            eumap = np.reshape(emap, (self.yDim, self.xDim, 3))
-            # make non-indexed points green
-            eumap = np.where(eumap != [0., 0., 0.], eumap, [0., 1., 0.])
 
-            self.cacheEulerMap = eumap / norm
+            # make non-indexed points green
+            eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
+
+            eulerMap /= norm
+
+            self.cacheEulerMap = eulerMap
             self.fig, self.ax = plt.subplots()
 
         self.ax.imshow(self.cacheEulerMap, aspect='equal')

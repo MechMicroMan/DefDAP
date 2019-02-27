@@ -107,14 +107,16 @@ class DICDataLoader(object):
         return
 
     def checkData(self):
-        # Calculate size of map
-        def coordSize(coords):
-            return int(
-                (coords.max() - coords.min()) / min(abs(np.diff(coords))) + 1
-            )
+        # Calculate size of map from loaded data and check it matches values from metadata
+        coords = self.loadedData['xc']
+        xdim = int(
+            (coords.max() - coords.min()) / min(abs(np.diff(coords))) + 1
+        )
 
-        xdim = coordSize(self.loadedData['xc'])
-        ydim = coordSize(self.loadedData['yc'])
+        coords = self.loadedData['yc']
+        ydim = int(
+            (coords.max() - coords.min()) / max(abs(np.diff(coords))) + 1
+        )
 
         if (xdim != self.loadedMetadata['xDim']) or (ydim != self.loadedMetadata['yDim']):
             raise Exception("Dimensions of data and header do not match")

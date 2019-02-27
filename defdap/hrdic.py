@@ -31,6 +31,17 @@ class Map(base.Map):
         print("Loading DIC data...", end="")
 
         # Initialise variables
+        self.format = None      # Software name
+        self.version = None     # Software version
+        self.binning = None     # Sub-window width in pixels
+        self.xdim = None        # size of map along x (from header)
+        self.ydim = None        # size of map along y (from header)
+
+        self.xc = None          # x coordinates
+        self.yc = None          # y coordinates
+        self.xd = None          # x displacement
+        self.yd = None          # y displacement
+
         self.ebsdMap = None                 # EBSD map linked to DIC map
         self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
         self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
@@ -67,7 +78,7 @@ class Map(base.Map):
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)      # crop distances (default all zeros)
 
         print("\rLoaded {0} {1} data (dimensions: {2} x {3} pixels, sub-window size: {4} x {4} pixels)".
-              format(self.format, self.version, self.xdimfile, self.ydimfile, self.binning))
+              format(self.format, self.version, self.xdim, self.ydim, self.binning))
 
     def plotDefault(self, *args, **kwargs):
         self.plotMaxShear(plotGBs=True, *args, **kwargs)
@@ -136,10 +147,10 @@ class Map(base.Map):
         print('\033[1m', end='')    # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} x {3} pixels, number of points: {4})\n".format(
             self.retrieveName(),
-            self.xdimfile,
-            self.ydimfile,
+            self.xDim,
+            self.yDim,
             self.binning,
-            self.xdimfile * self.ydimfile
+            self.xDim * self.yDim
         ))
 
         # Print table header
