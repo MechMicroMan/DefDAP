@@ -6,7 +6,6 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
-.*
 
 # My files #
 .ipynb_checkpoints
@@ -14,3 +13,15 @@ __pycache__
 *.sublime-project
 *.sublime-workspace
 *.pyc
+
+# Intellij IDE files
+.idea/
+
+#Python Virtual Environment
+venv/
+
+#Sphinx docs
+docs/_build
+
+#Pip install
+DefDAP.egg-info/

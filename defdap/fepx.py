@@ -14,7 +14,7 @@ import pyevtk.vtk
 import vtk
 from vtk.util import numpy_support as vnp
 
-from .quat import Quat
+from defdap.quat import Quat
 
 
 class Mesh(object):

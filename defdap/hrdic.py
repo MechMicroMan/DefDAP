@@ -10,9 +10,9 @@ from scipy.stats import mode
 
 import peakutils
 
-from .io import DICDataLoader
-from . import base
-from .quat import Quat
+from defdap.io import DICDataLoader
+from defdap import base
+from defdap.quat import Quat
 
 
 class Map(base.Map):
