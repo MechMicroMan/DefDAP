@@ -154,6 +154,9 @@ class Mesh(object):
         self.simDataKeysDyn = []
         self.simDataKeysNotVectorDyn = []
 
+        # Stores the number of frames data is loaded for excluding the initial frame
+        self.numFramesLoaded = 0
+
     @property
     def simDataKeys(self):
         return Mesh.simDataKeysStatic + tuple(self.simDataKeysDyn)
@@ -180,7 +183,7 @@ class Mesh(object):
         Returns:
             dict: Metadata
         """
-        includesInitial = self.simData[dataKey].shape[-1] == self.numFrames + 1
+        includesInitial = self.simData[dataKey].shape[-1] == self.numFramesLoaded + 1
         numComponents = self.simData[dataKey].shape[-2] if len(self.simData[dataKey].shape) == 3 else 1
         nodeData = self.simData[dataKey].shape[0] == self.numNodes
         elmtData = self.simData[dataKey].shape[0] == self.numElmts
@@ -302,10 +305,14 @@ class Mesh(object):
                 if frameNums[0] != 0:
                     frameNums = [0, ] + frameNums
                     print("Initial values must be loaded if available.")
+                self.numFramesLoaded = len(frameNums) - 1
             else:
                 if frameNums[0] == 0:
                     raise Exception("{:s} does not include initial data".format(dataName))
                 frameNums = [i - 1 for i in frameNums]
+                self.numFramesLoaded = len(frameNums)
+        else:
+            self.numFramesLoaded = self.numFrames
 
         # +1 if initial values are also stored
         numFrames = (self.numFrames + 1) if initialIncd else self.numFrames
@@ -1222,9 +1229,12 @@ class Surface(object):
             ax.text(grainCentrePos[0], grainCentrePos[1], str(grainID),
                     horizontalalignment='center', verticalalignment='center', **kwargs)
 
-    def plotSimData(self, dataKey, plotType="image", component=0,
-                    frameNum=1, plotGBs=False, plotMesh=False, label="", cmap="viridis",
-                    vmin=None, vmax=None, invertData=False, returnFig=False, inputFig=None):
+    def plotSimData(
+        self, dataKey, plotType="image", component=0,
+        frameNum=1, plotGBs=False, plotMesh=False, label="", cmap="viridis",
+        vmin=None, vmax=None, invertData=False, returnFig=False, inputFig=None,
+        plotColourBar=True
+    ):
         # validate input data
         self.mesh._validateSimDataKey(dataKey)
         simMetaData = self.mesh.simMetaData(dataKey)
@@ -1245,6 +1255,9 @@ class Surface(object):
         # if input fig is provided then update it else create a new one
         if inputFig is None:
             fig, ax = plt.subplots()
+            newAx = True
+        elif len(inputFig) == 2:
+            fig, ax = inputFig
             newAx = True
         else:
             fig, ax, img = inputFig
@@ -1271,7 +1284,8 @@ class Surface(object):
             pc.set_array(cData)
 
             ax.add_collection(pc)
-            fig.colorbar(pc, label=label)
+            if plotColourBar:
+                fig.colorbar(pc, label=label)
 
         elif simMetaData['nodeData']:
             if simMetaData['numComponents'] == 1:
@@ -1292,7 +1306,7 @@ class Surface(object):
             gX, gY = np.mgrid[extent[0]:extent[1]:numPoints[0] * 1j, extent[2]:extent[3]:numPoints[1] * 1j]
             gData = griddata(cX, cY, cData, gX, gY, interp='linear')
 
-            if inputFig is None:
+            if newAx:
                 if plotType == "contour":
                     contours = np.linspace(vmin, vmax, 9)
                     img = ax.contourf(gX, gY, gData, contours, cmap=cmap, vmin=vmin, vmax=vmax)
@@ -1300,15 +1314,16 @@ class Surface(object):
                 else:
                     img = ax.imshow(gData.transpose(), origin='lower', cmap=cmap, vmin=vmin, vmax=vmax,
                                     extent=extent, interpolation='nearest')
-
-                fig.colorbar(img, label=label)
+                if plotColourBar:
+                    fig.colorbar(img, label=label)
             else:
                 if plotType == "contour":
                     ax.cla()
                     contours = np.linspace(vmin, vmax, 9)
                     img = ax.contourf(gX, gY, gData, contours, cmap=cmap, vmin=vmin, vmax=vmax)
                     # img = None
-                    fig.colorbar(img, label=label)
+                    if plotColourBar:
+                        fig.colorbar(img, label=label)
                     newAx = True
                 else:
                     img.set_data(gData.transpose())
