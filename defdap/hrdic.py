@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import inspect
-import pandas as pd
 from matplotlib_scalebar.scalebar import ScaleBar
 
 from skimage import transform as tf
@@ -11,13 +10,14 @@ from scipy.stats import mode
 
 import peakutils
 
+from defdap.io import DICDataLoader
 from defdap import base
 from defdap.quat import Quat
 
 
 class Map(base.Map):
 
-    def __init__(self, path, fname):
+    def __init__(self, path, fname, dataType=None):
         """Initialise class and import DIC data from file
 
         Args:
@@ -31,6 +31,17 @@ class Map(base.Map):
         print("Loading DIC data...", end="")
 
         # Initialise variables
+        self.format = None      # Software name
+        self.version = None     # Software version
+        self.binning = None     # Sub-window width in pixels
+        self.xdim = None        # size of map along x (from header)
+        self.ydim = None        # size of map along y (from header)
+
+        self.xc = None          # x coordinates
+        self.yc = None          # y coordinates
+        self.xd = None          # x displacement
+        self.yd = None          # y displacement
+
         self.ebsdMap = None                 # EBSD map linked to DIC map
         self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
         self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
@@ -45,33 +56,7 @@ class Map(base.Map):
         self.path = path                    # file path
         self.fname = fname                  # file name
 
-        # Load metadata
-        with open(self.path + self.fname, 'r') as f:
-            header = f.readline()
-        metadata = header.split()
-
-        self.format = metadata[0].strip('#')    # Software name
-        self.version = metadata[1]              # Software version
-        self.binning = int(metadata[3])         # Sub-window width in pixels
-        self.xdimfile = int(metadata[5])        # size of map along x (from header)
-        self.ydimfile = int(metadata[4])        # size of map along y (from header)
-
-        # Load data
-
-        self.data = pd.read_table(self.path + self.fname, delimiter='\t', skiprows=1, header=None)
-        self.xc = self.data.values[:, 0]           # x coordinates
-        self.yc = self.data.values[:, 1]           # y coordinates
-        self.xd = self.data.values[:, 2]           # x displacement
-        self.yd = self.data.values[:, 3]           # y displacement
-
-        # Calculate size of map
-        self.xdim = int((self.xc.max() - self.xc.min()) /
-                        min(abs((np.diff(self.xc)))) + 1)  # size of map along x
-        self.ydim = int((self.yc.max() - self.yc.min()) /
-                        max(abs((np.diff(self.yc)))) + 1)  # size of map along y
-
-        if (self.xdim != self.xdimfile) or (self.ydim != self.ydimfile):
-            raise Exception("Dimensions of data and header do not match")
+        self.loadData(path, fname, dataType=dataType)
 
         # *dim are full size of data. *Dim are size after cropping
         self.xDim = self.xdim
@@ -93,10 +78,30 @@ class Map(base.Map):
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)      # crop distances (default all zeros)
 
         print("\rLoaded {0} {1} data (dimensions: {2} x {3} pixels, sub-window size: {4} x {4} pixels)".
-              format(self.format, self.version, self.xdimfile, self.ydimfile, self.binning))
+              format(self.format, self.version, self.xdim, self.ydim, self.binning))
 
     def plotDefault(self, *args, **kwargs):
         self.plotMaxShear(plotGBs=True, *args, **kwargs)
+
+    def loadData(self, fileDir, fileName, dataType=None):
+        dataType = "DavisText" if dataType is None else dataType
+
+        dataLoader = DICDataLoader()
+        if dataType == "DavisText":
+            metadataDict, dataDict = dataLoader.loadDavisTXT(fileName, fileDir=fileDir)
+        else:
+            raise Exception("No loader found for this DIC data.")
+
+        self.format = metadataDict['format']      # Software name
+        self.version = metadataDict['version']    # Software version
+        self.binning = metadataDict['binning']    # Sub-window width in pixels
+        self.xdim = metadataDict['xDim']          # size of map along x (from header)
+        self.ydim = metadataDict['yDim']          # size of map along y (from header)
+
+        self.xc = dataDict['xc']    # x coordinates
+        self.yc = dataDict['yc']    # y coordinates
+        self.xd = dataDict['xd']    # x displacement
+        self.yd = dataDict['yd']    # y displacement
 
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))
@@ -142,10 +147,10 @@ class Map(base.Map):
         print('\033[1m', end='')    # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} x {3} pixels, number of points: {4})\n".format(
             self.retrieveName(),
-            self.xdimfile,
-            self.ydimfile,
+            self.xDim,
+            self.yDim,
             self.binning,
-            self.xdimfile * self.ydimfile
+            self.xDim * self.yDim
         ))
 
         # Print table header

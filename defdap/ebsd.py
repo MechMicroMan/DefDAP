@@ -6,6 +6,7 @@ from skimage import morphology as mph
 
 import copy
 
+from defdap.io import EBSDDataLoader
 from defdap.quat import Quat
 from defdap import base
 
@@ -34,7 +35,7 @@ class Map(base.Map):
         yDim (int): y dimension of map
     """
 
-    def __init__(self, fileName, crystalSym):
+    def __init__(self, fileName, crystalSym, dataType=None):
         """Initialise class
 
         :param fileName: Path to file, including name, excluding extension
@@ -52,13 +53,15 @@ class Map(base.Map):
         self.xDim = None                    # (int) dimensions of maps
         self.yDim = None
         self.stepSize = None                # (float) step size
-        self.binData = None                 # imported binary data
+        self.eulerAngleArray = None
+        self.bandContrastArray = None
         self.quatArray = None               # (array) array of quaterions for each point of map
         self.numPhases = None               # (int) number of phases
         self.phaseArray = None              # (array) map of phase ids
         self.phaseNames = []                # (array) array of phase names
         self.boundaries = None              # (array) map of boundaries. -1 for a boundary, 0 otherwise
         self.phaseBoundaries = None         # (array) map of phase boundaries. -1 for boundary, 0 otherwise
+        self.cacheEulerMap = None
         self.grains = None                  # (array) map of grains
         self.grainList = None               # (list) list of grains
         self.misOri = None                  # (array) map of misorientation
@@ -70,17 +73,18 @@ class Map(base.Map):
         self.currGrainId = None             # (int) ID of last selected grain
         self.origin = (0, 0)                # Map origin (y, x). Used by linker class where origin is a
                                             # homologue point of the maps
+        self.fig = None
+        self.ax = None
 
         self.plotHomog = self.plotEulerMap  # Use euler map for defining homologous points
         self.highlightAlpha = 1
 
-        self.loadData(fileName, crystalSym)
-        return
+        self.loadData(fileName, crystalSym, dataType=dataType)
 
     def plotDefault(self, *args, **kwargs):
         self.plotEulerMap(*args, **kwargs)
 
-    def loadData(self, fileName, crystalSym):
+    def loadData(self, fileName, crystalSym, dataType=None):
         """
         Load EBSD data from file
 
@@ -89,54 +93,31 @@ class Map(base.Map):
         :param crystalSym: Crystal structure, 'cubic' or 'hexagonal'
         :type crystalSym: str
         """
-        # open meta data file and read in x and y dimensions and phase names
-        metaFile = open(fileName + ".cpr", 'r')
-        for line in metaFile:
-            if line[:6] == 'xCells':
-                self.xDim = int(line[7:])
-            elif line[:6] == 'yCells':
-                self.yDim = int(line[7:])
-            elif line[:9] == 'GridDistX':
-                self.stepSize = float(line[10:])
-            elif line[:8] == '[Phases]':
-                self.numPhases = int(next(metaFile)[6:])
-            elif line[:6] == '[Phase':
-                self.phaseNames.append(next(metaFile)[14:].strip('\n'))
 
-        if len(self.phaseNames) != self.numPhases:
-            print("Error with cpr file. Number of phases mismatch.")
+        dataType = "OxfordBinary" if dataType is None else dataType
 
-        metaFile.close()
-        # now read the binary .crc file
-        fmt_np = np.dtype([('Phase', 'b'),
-                           ('Eulers', [('ph1', 'f'),
-                                       ('phi', 'f'),
-                                       ('ph2', 'f')]),
-                           ('mad', 'f'),
-                           ('IB2', 'uint8'),
-                           ('IB3', 'uint8'),
-                           ('IB4', 'uint8'),
-                           ('IB5', 'uint8'),
-                           ('IB6', 'f')])
-        # for ctf files that have been converted using channel 5
-        # CHANGE BACK!!!!!!!
-        # fmt_np = np.dtype([('Phase', 'b'),
-        #                    ('Eulers', [('ph1', 'f'),
-        #                                ('phi', 'f'),
-        #                                ('ph2', 'f')]),
-        #                    ('mad', 'f'),
-        #                    ('IB2', 'uint8'),
-        #                    ('IB3', 'uint8'),
-        #                    ('IB4', 'uint8'),
-        #                    ('IB5', 'uint8')])
-        self.binData = np.fromfile(fileName + ".crc", fmt_np, count=-1)
+        dataLoader = EBSDDataLoader()
+        if dataType == "OxfordBinary":
+            metadataDict, dataDict = dataLoader.loadOxfordCPR(fileName)
+        elif dataType == "OxfordText":
+            raise Exception("Oxford text loader coming soon...")
+        else:
+            raise Exception("No loader found for this EBSD data.")
+
+        self.xDim = metadataDict['xDim']
+        self.yDim = metadataDict['yDim']
+        self.stepSize = metadataDict['stepSize']
+        self.numPhases = metadataDict['numPhases']
+        self.phaseNames = metadataDict['phaseNames']
+
+        self.eulerAngleArray = dataDict['eulerAngle']
+        self.bandContrastArray = dataDict['bandContrast']
+        self.phaseArray = dataDict['phase']
+
         self.crystalSym = crystalSym
-        self.phaseArray = np.reshape(self.binData[('Phase')], (self.yDim, self.xDim))
 
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
               format(self.xDim, self.yDim, self.stepSize))
-
-        return
 
     def plotBandContrastMap(self):
         """
@@ -144,8 +125,7 @@ class Map(base.Map):
         """
         self.checkDataLoaded()
 
-        bcmap = np.reshape(self.binData[('IB2')], (self.yDim, self.xDim))
-        plt.imshow(bcmap, cmap='gray')
+        plt.imshow(self.bandContrastArray, cmap='gray')
         plt.colorbar()
         return
 
@@ -161,18 +141,19 @@ class Map(base.Map):
         """
         self.checkDataLoaded()
 
-        if not updateCurrent:
-            emap = np.transpose(np.array([self.binData['Eulers']['ph1'],
-                                          self.binData['Eulers']['phi'],
-                                          self.binData['Eulers']['ph2']]))
-            # this is the normalization for the
+        if (not updateCurrent) or self.cacheEulerMap is None:
+            eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
+
+            # this is the normalisation
             norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]), (self.yDim, self.xDim))
             norm = np.reshape(norm, (self.yDim, self.xDim, 3))
-            eumap = np.reshape(emap, (self.yDim, self.xDim, 3))
-            # make non-indexed points green
-            eumap = np.where(eumap != [0., 0., 0.], eumap, [0., 1., 0.])
 
-            self.cacheEulerMap = eumap / norm
+            # make non-indexed points green
+            eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
+
+            eulerMap /= norm
+
+            self.cacheEulerMap = eulerMap
             self.fig, self.ax = plt.subplots()
 
         self.ax.imshow(self.cacheEulerMap, aspect='equal')
@@ -259,7 +240,7 @@ class Map(base.Map):
 
         :return: True if data loaded
         """
-        if self.binData is None:
+        if self.eulerAngleArray is None:
             raise Exception("Data not loaded")
         return True
 
@@ -272,14 +253,8 @@ class Map(base.Map):
         self.checkDataLoaded()
 
         if self.quatArray is None:
-            eulerArray = self.binData[('Eulers')]
-            # reshape to map dimensions
-            eulerArray = eulerArray.reshape((self.yDim, self.xDim))
-            # this flattens the structures the Euler angles are stored into a normal array
-            eulerArray = np.array(eulerArray.tolist())
-            eulerArray = eulerArray.transpose((2, 0, 1))
             # create the array of quat objects
-            self.quatArray = Quat.createManyQuats(eulerArray)
+            self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
 
         print("\r", end="")
         return
