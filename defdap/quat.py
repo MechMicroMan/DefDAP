@@ -1,13 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import math
 
 
-# be careful with deep and shallow copies
 class Quat(object):
+    defaultProjection = "stereographic"
+
     def __init__(self, *args, **kwargs):
         self.quatCoef = np.zeros(4, dtype=float)
-        # construt with Bunge euler angles (radians, ZXZ)
+        # construct with Bunge euler angles (radians, ZXZ)
         if len(args) == 3:
             ph1 = args[0]
             phi = args[1]
@@ -17,17 +17,17 @@ class Quat(object):
             self.quatCoef[1] = -np.sin(phi / 2.0) * np.cos((ph1 - ph2) / 2.0)
             self.quatCoef[2] = -np.sin(phi / 2.0) * np.sin((ph1 - ph2) / 2.0)
             self.quatCoef[3] = -np.cos(phi / 2.0) * np.sin((ph1 + ph2) / 2.0)
-        # construt with array of quat coefficients
+        # construct with array of quat coefficients
         elif len(args) == 1:
             self.quatCoef = args[0]
-        # construt with quat coefficients
+        # construct with quat coefficients
         elif len(args) == 4:
             self.quatCoef[0] = args[0]
             self.quatCoef[1] = args[1]
             self.quatCoef[2] = args[2]
             self.quatCoef[3] = args[3]
 
-        if (self.quatCoef[0] < 0):
+        if self.quatCoef[0] < 0:
             self.quatCoef = self.quatCoef * -1
 
         # overload static method with instance method of same name in object
@@ -376,9 +376,55 @@ class Quat(object):
         return xp, yp
 
     @staticmethod
-    def plotLine(startPoint, endPoint, plotSymmetries=False, symGroup=None, res=100, projection=None, ax=None, **kwargs):
+    def lambertProject(*args):
+        if len(args) == 3:
+            alpha, beta = Quat.polarAngles(args[0], args[1], args[2])
+        elif len(args) == 2:
+            alpha, beta = args
+        else:
+            raise Exception("3 arguments for pole directions and 2 for polar angles.")
+
+        alphaComp = np.sqrt(2 * (1 - np.cos(alpha)))
+        xp = alphaComp * np.cos(beta)
+        yp = alphaComp * np.sin(beta)
+
+        return xp, yp
+
+    @staticmethod
+    def _validateProjection(projectionIn, validateDefault=False):
+        if validateDefault:
+            defaultProjection = None
+        else:
+            defaultProjection = Quat._validateProjection(Quat.defaultProjection, validateDefault=True)
+
+        if projectionIn is None:
+            projection = defaultProjection
+
+        elif type(projectionIn) is str:
+            projectionName = projectionIn.replace(" ", "").lower()
+            if projectionName in ["lambert", "equalarea"]:
+                projection = Quat.lambertProject
+            elif projectionName in ["stereographic", "stereo", "equalangle"]:
+                projection = Quat.stereoProject
+            else:
+                print("Unknown projection name, using default")
+                projection = defaultProjection
+
+        elif callable(projectionIn):
+            projection = projectionIn
+
+        else:
+            print("Unknown projection, using default")
+            projection = defaultProjection
+
         if projection is None:
-            projection = Quat.stereoProject
+            raise Exception("Problem with default projection.")
+
+        return projection
+
+    @staticmethod
+    def plotLine(startPoint, endPoint, plotSymmetries=False, symGroup=None, res=100, projection=None, ax=None, **kwargs):
+        projection = Quat._validateProjection(projection)
         if ax is None:
             ax = plt.gca()
 
@@ -411,8 +457,7 @@ class Quat(object):
 
     @staticmethod
     def labelPoint(point, label, projection=None, ax=None, padX=0, padY=0, **kwargs):
-        if projection is None:
-            projection = Quat.stereoProject
+        projection = Quat._validateProjection(projection)
         if ax is None:
             ax = plt.gca()
 
@@ -420,39 +465,76 @@ class Quat(object):
         ax.text(xp + padX, yp + padY, label, **kwargs)
 
     @staticmethod
-    def plotPoleAxis(plotType, symGroup, ax=None):
+    def plotPoleAxis(plotType, symGroup, projection=None, ax=None):
+        projection = Quat._validateProjection(projection)
         if ax is None:
             ax = plt.gca()
 
         if plotType == "IPF" and symGroup == "cubic":
             # line between [001] and [111]
-            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 1, 1]), ax=ax, c='k', lw=2)
+            Quat.plotLine(
+                np.array([0, 0, 1]), np.array([1, 1, 1]),
+                projection=projection, ax=ax, c='k', lw=2
+            )
 
             # line between [001] and [101]
-            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 1]), ax=ax, c='k', lw=2)
+            Quat.plotLine(
+                np.array([0, 0, 1]), np.array([1, 0, 1]),
+                projection=projection, ax=ax, c='k', lw=2
+            )
 
             # line between [101] and [111]
-            Quat.plotLine(np.array([1, 0, 1]), np.array([1, 1, 1]), ax=ax, c='k', lw=2)
+            Quat.plotLine(
+                np.array([1, 0, 1]), np.array([1, 1, 1]),
+                projection=projection, ax=ax, c='k', lw=2
+            )
 
             # label poles
-            Quat.labelPoint(np.array([0, 0, 1]), '001', ax=ax, padY=-0.005, va='top', ha='center')
-            Quat.labelPoint(np.array([1, 0, 1]), '101', ax=ax, padY=-0.005, va='top', ha='center')
-            Quat.labelPoint(np.array([1, 1, 1]), '111', ax=ax, padY=0.005, va='bottom', ha='center')
+            Quat.labelPoint(
+                np.array([0, 0, 1]), '001',
+                projection=projection, ax=ax, padY=-0.005, va='top', ha='center'
+            )
+            Quat.labelPoint(
+                np.array([1, 0, 1]), '101',
+                projection=projection, ax=ax, padY=-0.005, va='top', ha='center'
+            )
+            Quat.labelPoint(
+                np.array([1, 1, 1]), '111',
+                projection=projection, ax=ax, padY=0.005, va='bottom', ha='center'
+            )
 
         elif plotType == "IPF" and symGroup == "hexagonal":
             # line between [0001] and [10-10] ([001] and [210]) - converted to cubic axes
-            Quat.plotLine(np.array([0, 0, 1]), np.array([np.sqrt(3), 1, 0]), ax=ax, c='k', lw=2)
+            Quat.plotLine(
+                np.array([0, 0, 1]), np.array([np.sqrt(3), 1, 0]),
+                projection=projection, ax=ax, c='k', lw=2
+            )
 
             # line between [0001] and [2-1-10] ([001] and [100]) - converted to cubic axes
-            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 0]), ax=ax, c='k', lw=2)
+            Quat.plotLine(
+                np.array([0, 0, 1]), np.array([1, 0, 0]),
+                projection=projection, ax=ax, c='k', lw=2
+            )
 
             # line between [2-1-10] and [10-10] ([100] and [210]) - converted to cubic axes
-            Quat.plotLine(np.array([1, 0, 0]), np.array([np.sqrt(3), 1, 0]), ax=ax, c='k', lw=2)
+            Quat.plotLine(
+                np.array([1, 0, 0]), np.array([np.sqrt(3), 1, 0]),
+                projection=projection, ax=ax, c='k', lw=2
+            )
 
             # label poles
-            Quat.labelPoint(np.array([0, 0, 1]), '0001', padY=-0.008, va='top', ha='center')
-            Quat.labelPoint(np.array([1, 0, 0]), '2-1-10', padY=-0.008, va='top', ha='center')
-            Quat.labelPoint(np.array([np.sqrt(3), 1, 0]), '10-10', padY=0.008, va='bottom', ha='center')
+            Quat.labelPoint(
+                np.array([0, 0, 1]), '0001',
+                projection=projection, ax=ax, padY=-0.008, va='top', ha='center'
+            )
+            Quat.labelPoint(
+                np.array([1, 0, 0]), '2-1-10',
+                projection=projection, ax=ax, padY=-0.008, va='top', ha='center'
+            )
+            Quat.labelPoint(
+                np.array([np.sqrt(3), 1, 0]), '10-10',
+                projection=projection, ax=ax, padY=0.008, va='bottom', ha='center'
+            )
 
         else:
             raise Exception("Only works for cubic and hexagonal IPFs")
@@ -461,27 +543,29 @@ class Quat(object):
         ax.axis('off')
 
     @staticmethod
-
-    def plotIPF(quats, direction, symGroup, ax=None, markerColour='red', markerSize=40, **kwargs):
-        """Plot crystal orientations on an IPF
-
-        Args:
-            quats (list): Lits of quats to plot on the IPF
-            direction (array): Sample direction for IPF
-            symGroup (str): Crystal type (cubic, hexagonal)
-            ax (str): Axis to plot to
-            markerColour (str): Marker colour (or two colours for halp and half)
-            markerSize (int): Size of marker to plot
+    def plotIPF(quats, direction, symGroup, projection=None, ax=None, markerColour='red', markerSize=40, **kwargs):
         """
 
+        :param quats: List (or any enumerable) of quats to plot on the IPF
+        :type quats: enumerable(quat)
+        :param direction: Sample reference direction for IPF
+        :type direction: np.array
+        :param symGroup: Crystal type (cubic, hexagonal)
+        :type symGroup: string
+        :param projection: Projection to use (stereographic or lambert)
+        :param ax: matplotlib axis to plot on
+        :param markerColour: Colour of markers
+        :param markerSize: Size of markers
+        :param kwargs: All other arguments are passed to the matplotlib scatter call
+        """
+        projection = Quat._validateProjection(projection)
         plotParams = {'marker': '+'}
         plotParams.update(kwargs)
         if ax is None:
             ax = plt.gca()
 
         # Plot IPF axis
-        # plt.figure()
-        Quat.plotPoleAxis("IPF", symGroup, ax=ax)
+        Quat.plotPoleAxis("IPF", symGroup, projection=projection, ax=ax)
 
         # get array of symmetry operations. shape - (numSym, 4, numQuats)
         quatCompsSym = Quat.calcSymEqvs(quats, symGroup)
@@ -563,7 +647,7 @@ class Quat(object):
             raise Exception("symGroup must be cubic or hexagonal")
 
         # project onto equatorial plane
-        xp, yp = Quat.stereoProject(alphaFund, betaFund)
+        xp, yp = projection(alphaFund, betaFund)
 
         # plot poles
         # plot markers with 'half and half' colour
@@ -571,26 +655,25 @@ class Quat(object):
             markerColour = [markerColour]
 
         if len(markerColour) == 1:
-            ax.scatter(xp, yp, c = markerColour, **plotParams)
+            ax.scatter(xp, yp, c=markerColour, **plotParams)
         elif len(markerColour) == 2:
-            pos=(xp,yp); r1 = 0.5; r2 = r1+0.5; markerSize = np.sqrt(markerSize);
+            pos = (xp, yp)
+            r1 = 0.5
+            r2 = r1 + 0.5
+            markerSize = np.sqrt(markerSize)
 
-            x = [0] + np.cos(np.linspace(0, 2*math.pi*r1, 10)).tolist()
-            y = [0] + np.sin(np.linspace(0, 2*math.pi*r1, 10)).tolist()
-
+            x = [0] + np.cos(np.linspace(0, 2 * np.pi * r1, 10)).tolist()
+            y = [0] + np.sin(np.linspace(0, 2 * np.pi * r1, 10)).tolist()
             xy1 = list(zip(x, y))
-            s1 = max(max(x), max(y))
 
-            x = [0] + np.cos(np.linspace(2*math.pi*r1, 2*math.pi*r2, 10)).tolist()
-            y = [0] + np.sin(np.linspace(2*math.pi*r1, 2*math.pi*r2, 10)).tolist()
+            x = [0] + np.cos(np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 10)).tolist()
+            y = [0] + np.sin(np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 10)).tolist()
             xy2 = list(zip(x, y))
-            s2 = max(max(x), max(y))
 
-            ax.scatter(pos[0],pos[1], marker=(xy1, 0), s=markerSize, c=markerColour[0])
-            ax.scatter(pos[0],pos[1], marker=(xy2, 0), s=markerSize, c=markerColour[1])
+            ax.scatter(pos[0], pos[1], marker=(xy1, 0), s=markerSize, c=markerColour[0], **plotParams)
+            ax.scatter(pos[0], pos[1], marker=(xy2, 0), s=markerSize, c=markerColour[1], **plotParams)
         else:
             raise Exception("specify one colour for solid markers or list two for 'half and half'")
-
 
     @staticmethod
     def symEqv(group):
@@ -650,9 +733,9 @@ class Quat(object):
         qsym.append(Quat(np.array([0.0, sqrt3over2, -0.5, 0.0])))
         qsym.append(Quat(np.array([0.0, -sqrt3over2, -0.5, 0.0])))
 
-        if (group == 'cubic'):
+        if group == 'cubic':
             return qsym[0:24]
-        elif (group == 'hexagonal'):
+        elif group == 'hexagonal':
             return [qsym[0], qsym[2], qsym[5], qsym[8]] + qsym[-8:32]
         else:
             return [qsym[0]]
