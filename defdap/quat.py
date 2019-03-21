@@ -543,20 +543,28 @@ class Quat(object):
         ax.axis('off')
 
     @staticmethod
-    def plotIPF(quats, direction, symGroup, projection=None, ax=None, markerColour='red', markerSize=40, **kwargs):
+    def plotIPF(quats, direction, symGroup, projection=None, ax=None, markerColour=None, markerSize=40, **kwargs):
         """
+        Plot IPF of orientations for specified sample diection.
 
-        :param quats: List (or any enumerable) of quats to plot on the IPF
-        :type quats: enumerable(quat)
-        :param direction: Sample reference direction for IPF
-        :type direction: np.array
-        :param symGroup: Crystal type (cubic, hexagonal)
-        :type symGroup: string
-        :param projection: Projection to use (stereographic or lambert)
-        :param ax: matplotlib axis to plot on
-        :param markerColour: Colour of markers
-        :param markerSize: Size of markers
-        :param kwargs: All other arguments are passed to the matplotlib scatter call
+        Parameters
+        ----------
+        quats : enumerable(quat)
+            Quats to plot on the IPF
+        direction : np.array
+            Sample reference direction for IPF
+        symGroup : string
+            Crystal type (cubic, hexagonal)
+        projection
+             Projection to use. Either string (stereographic or lambert) or a function
+        ax
+            matplotlib axis to plot on, if not provided the current active axis is used
+        markerColour : string
+            Colour of markers (only used for half and half colouring, otherwise us arguemnt c)
+        markerSize : int
+            Size of markers (only used for half and half colouring, otherwise us arguemnt s)
+        kwargs
+            All other arguments are passed to the matplotlib scatter call
         """
         projection = Quat._validateProjection(projection)
         plotParams = {'marker': '+'}
@@ -654,8 +662,8 @@ class Quat(object):
         if type(markerColour) == str:
             markerColour = [markerColour]
 
-        if len(markerColour) == 1:
-            ax.scatter(xp, yp, c=markerColour, **plotParams)
+        if markerColour is None:
+            ax.scatter(xp, yp, **plotParams)
         elif len(markerColour) == 2:
             pos = (xp, yp)
             r1 = 0.5
@@ -672,8 +680,6 @@ class Quat(object):
 
             ax.scatter(pos[0], pos[1], marker=(xy1, 0), s=markerSize, c=markerColour[0], **plotParams)
             ax.scatter(pos[0], pos[1], marker=(xy2, 0), s=markerSize, c=markerColour[1], **plotParams)
-        else:
-            raise Exception("specify one colour for solid markers or list two for 'half and half'")
 
     @staticmethod
     def symEqv(group):

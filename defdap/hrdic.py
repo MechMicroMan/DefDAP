@@ -673,7 +673,7 @@ class Map(base.Map):
                 self.grainList[self.currGrainId].calcSlipTraces()
                 self.grainAx.clear()
                 self.grainList[self.currGrainId].plotMaxShear(plotSlipTraces=True,
-                                                              plotShearBands=True,
+                                                              plotSlipBands=True,
                                                               ax=self.grainAx,
                                                               **kwargs)
                 self.grainFig.canvas.draw()
@@ -801,7 +801,7 @@ class Grain(base.Grain):
         self.coordList.append(coord)
         self.maxShearList.append(maxShear)
 
-    def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False,
+    def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotSlipBands=False,
                      vmin=None, vmax=None, cmap="viridis", ax=None, scaleBar=False):
 
         multiplier = 100 if plotPercent else 1
@@ -826,8 +826,8 @@ class Grain(base.Grain):
         if plotSlipTraces:
             self.plotSlipTraces(ax=ax)
 
-        if plotShearBands:
-            self.plotShearBands(grainMaxShear, ax=ax)
+        if plotSlipBands:
+            self.plotSlipBands(grainMaxShear, ax=ax)
             
         if scaleBar:
             if self.dicMap.strainScale is None:

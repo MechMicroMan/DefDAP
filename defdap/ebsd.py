@@ -760,11 +760,15 @@ class Grain(base.Grain):
             for row in misOriAxis.transpose():
                 self.misOriAxisList.append(row)
 
-    def plotRefOri(self, direction=np.array([0, 0, 1]), marker='+'):
-        Quat.plotIPF([self.refOri], direction, self.crystalSym, marker=marker)
+    def plotRefOri(self, direction=np.array([0, 0, 1]), **kwargs):
+        plotParams = {'marker': '+'}
+        plotParams.update(kwargs)
+        Quat.plotIPF([self.refOri], direction, self.crystalSym, **plotParams)
 
-    def plotOriSpread(self, direction=np.array([0, 0, 1]), marker='.'):
-        Quat.plotIPF(self.quatList, direction, self.crystalSym, marker=marker)
+    def plotOriSpread(self, direction=np.array([0, 0, 1]), **kwargs):
+        plotParams = {'marker': '.'}
+        plotParams.update(kwargs)
+        Quat.plotIPF(self.quatList, direction, self.crystalSym, **plotParams)
 
     # component
     # 0 = misOri
