@@ -399,7 +399,8 @@ class Map(base.Map):
 
         self.plotGBs(ax=self.ax, colour='black', dilate=dilate)
 
-    def plotMaxShear(self, ax=None, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=False,
+    def plotMaxShear(self, ax=None, plotGBs=False, dilateBoundaries=False,
+                     boundaryColour='white', plotSlipTraces=False, plotPercent=False,
                      scaleBar=False, updateCurrent=False, highlightGrains=None, highlightColours=None,
                      plotColourBar=False, vmin=None, vmax=None):
         """Plot a map of maximum shear strain
@@ -418,9 +419,8 @@ class Map(base.Map):
             # self.fig, self.ax = plt.subplots(figsize=(5.75, 4))
             self.fig, self.ax = plt.subplots()
         if ax is not None:
-            self.ax=ax
-            
-            
+            self.ax = ax
+
         multiplier = 100 if plotPercent else 1
         img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
                              cmap='viridis', interpolation='None', vmin=vmin, vmax=vmax)
@@ -814,14 +814,13 @@ class Grain(base.Grain):
             grainMaxShear[coord[1] - y0, coord[0] - x0] = maxShear
 
         if ax is None:
-            plt.figure()
-            plt.imshow(grainMaxShear * multiplier, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
-            plt.colorbar(label="Effective shear strain (%)")
-            plt.xticks([])
-            plt.yticks([])
-        else:
-            ax.imshow(grainMaxShear * multiplier, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
-            # ax.colorbar()
+            ax = plt.gca()
+
+        img = ax.imshow(grainMaxShear * multiplier, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
+        plt.colorbar(img, label="Effective shear strain")
+
+        ax.set_xticks([])
+        ax.set_yticks([])
 
         if plotSlipTraces:
             self.plotSlipTraces(ax=ax)
@@ -834,7 +833,7 @@ class Grain(base.Grain):
                 raise Exception("First set image scale using setScale")
             else:
                 
-                scalebar = ScaleBar(self.dicMap.strainScale*(1e-6))
+                scalebar = ScaleBar(self.dicMap.strainScale * 1e-6)
                 if ax is None:
                     plt.gca().add_artist(scalebar)
                 else:
