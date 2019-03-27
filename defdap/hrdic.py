@@ -1,8 +1,6 @@
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import inspect
-import pandas as pd
 from matplotlib_scalebar.scalebar import ScaleBar
 
 from skimage import transform as tf
@@ -12,13 +10,14 @@ from scipy.stats import mode
 
 import peakutils
 
-from . import base
-from .quat import Quat
+from defdap.io import DICDataLoader
+from defdap import base
+from defdap.quat import Quat
 
 
 class Map(base.Map):
 
-    def __init__(self, path, fname):
+    def __init__(self, path, fname, dataType=None):
         """Initialise class and import DIC data from file
 
         Args:
@@ -32,6 +31,17 @@ class Map(base.Map):
         print("Loading DIC data...", end="")
 
         # Initialise variables
+        self.format = None      # Software name
+        self.version = None     # Software version
+        self.binning = None     # Sub-window width in pixels
+        self.xdim = None        # size of map along x (from header)
+        self.ydim = None        # size of map along y (from header)
+
+        self.xc = None          # x coordinates
+        self.yc = None          # y coordinates
+        self.xd = None          # x displacement
+        self.yd = None          # y displacement
+
         self.ebsdMap = None                 # EBSD map linked to DIC map
         self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
         self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
@@ -46,91 +56,52 @@ class Map(base.Map):
         self.path = path                    # file path
         self.fname = fname                  # file name
 
-        # Load metadata
-        with open(self.path + self.fname, 'r') as f:
-            header = f.readline()
-        if header[0]=='#':
-            metadata = header.split()
-
-            self.format = metadata[0].strip('#')    # Software name
-            self.version = metadata[1]              # Software version
-            self.binning = int(metadata[3])         # Sub-window width in pixels
-            self.xdimfile = int(metadata[5])        # size of map along x (from header)
-            self.ydimfile = int(metadata[4])        # size of map along y (from header)
-
-            # Load data
-
-            self.data = pd.read_table(self.path + self.fname, delimiter='\t', skiprows=1, header=None)
-            self.xc = self.data.values[:, 0]           # x coordinates
-            self.yc = self.data.values[:, 1]           # y coordinates
-            # Calculate size of map
-            self.xdim = int((self.xc.max() - self.xc.min()) /
-                            min(abs((np.diff(self.xc)))) + 1)  # size of map along x
-            self.ydim = int((self.yc.max() - self.yc.min()) /
-                            max(abs((np.diff(self.yc)))) + 1)  # size of map along y            
-            self.xd = self.data.values[:, 2]           # x displacement
-            self.yd = self.data.values[:, 3]           # y displacement
-            self.x_map = self._map(self.xd)     # u (displacement component along x)
-            self.y_map = self._map(self.yd)     # v (displacement component along x)
-            xDispGrad = self._grad(self.x_map)
-            yDispGrad = self._grad(self.y_map)
-            self.f11 = xDispGrad[1] + 1         # f11
-            self.f22 = yDispGrad[0] + 1         # f22
-            self.f12 = xDispGrad[0]             # f12
-            self.f21 = yDispGrad[1]             # f21
-
-            self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
-                                     ((self.f12 + self.f21) / 2.)**2)   # max shear component
-            self.mapshape = np.shape(self.max_shear)                    # map shape
-            if (self.xdim != self.xdimfile) or (self.ydim != self.ydimfile):
-                raise Exception("Dimensions of data and header do not match")
-            print("\rLoaded {0} {1} data (sub-window size: {2} x {2} pixels)".
-                  format(self.format, self.version, self.binning))
-
-
-
-        else: # if data saved as a table from Matlab using save(dlmwrite('fileName.txt',data,'delimiter','\t'););
-            self.binning = 1 # assume 1x1 binning
-            self.data = pd.read_table(self.path + self.fname, delimiter='\t', skiprows=0, header=None) # x,y,E11,E22,E12
-            self.xc = self.data.values[:, 0]           # x coordinates
-            self.yc = self.data.values[:, 1]           # y coordinates
-            # Calculate size of map
-            self.xdim = int((self.xc.max() - self.xc.min()) /
-                            min(abs((np.diff(self.xc)))) + 1)  # size of map along x
-            self.ydim = int((self.yc.max() - self.yc.min()) /
-                            max(abs((np.diff(self.yc)))) + 1)  # size of map along y   
-            self.xdimfile = self.xdim # for compatibility with standard DIC output format above
-            self.ydimfile = self.ydim
-            self.xd = self.data.values[:, 2]           # x displacement
-            self.yd = self.data.values[:, 3]           # y displacement
-            self.effstrain = self.data.values[:, 7]    # effective strain
-            self.x_map = self._map(self.xd)     # u (displacement component along x)
-            self.y_map = self._map(self.yd)     # v (displacement component along x)
-            xDispGrad = self._grad(self.x_map)
-            yDispGrad = self._grad(self.y_map)
-            self.f11 = xDispGrad[1] + 1         # f11
-            self.f22 = yDispGrad[0] + 1         # f22
-            self.f12 = xDispGrad[0]             # f12
-            self.f21 = yDispGrad[1]             # f21
-
-            self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
-                                     ((self.f12 + self.f21) / 2.)**2)   # max shear component
-#            self.max_shear = np.sqrt((((self.data.values[:, 4] - self.data.values[:, 5]) / 2.)**2) +
-#                                     (self.data.values[:, 6])**2)   # max shear component
-            self.mapshape = np.shape(self.max_shear)                    # map shape
-            
-
-
+        self.loadData(path, fname, dataType=dataType)
+  
         # *dim are full size of data. *Dim are size after cropping
         self.xDim = self.xdim
         self.yDim = self.ydim
+        
+        self.x_map = self._map(self.xd)     # u (displacement component along x)
+        self.y_map = self._map(self.yd)     # v (displacement component along x)
+        xDispGrad = self._grad(self.x_map)
+        yDispGrad = self._grad(self.y_map)
+        self.f11 = xDispGrad[1] + 1         # f11
+        self.f22 = yDispGrad[0] + 1         # f22
+        self.f12 = xDispGrad[0]             # f12
+        self.f21 = yDispGrad[1]             # f21
+
+        self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
+                                 ((self.f12 + self.f21) / 2.)**2)   # max shear component
+        self.mapshape = np.shape(self.max_shear)                    # map shape
 
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)      # crop distances (default all zeros)
-        print(" (dimensions: {0} x {1} pixels)".format(self.xDim, self.yDim)) # can I get this on the end of the previous print line?*******
 
+        print("\rLoaded {0} {1} data (dimensions: {2} x {3} pixels, sub-window size: {4} x {4} pixels)".
+              format(self.format, self.version, self.xdim, self.ydim, self.binning))
 
     def plotDefault(self, *args, **kwargs):
         self.plotMaxShear(plotGBs=True, *args, **kwargs)
+
+    def loadData(self, fileDir, fileName, dataType=None):
+        dataType = "DavisText" if dataType is None else dataType
+
+        dataLoader = DICDataLoader()
+        if dataType == "DavisText":
+            metadataDict, dataDict = dataLoader.loadDavisTXT(fileName, fileDir=fileDir)
+        else:
+            raise Exception("No loader found for this DIC data.")
+
+        self.format = metadataDict['format']      # Software name
+        self.version = metadataDict['version']    # Software version
+        self.binning = metadataDict['binning']    # Sub-window width in pixels
+        self.xdim = metadataDict['xDim']          # size of map along x (from header)
+        self.ydim = metadataDict['yDim']          # size of map along y (from header)
+
+        self.xc = dataDict['xc']    # x coordinates
+        self.yc = dataDict['yc']    # y coordinates
+        self.xd = dataDict['xd']    # x displacement
+        self.yd = dataDict['yd']    # y displacement
 
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))
@@ -176,10 +147,10 @@ class Map(base.Map):
         print('\033[1m', end='')    # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} x {3} pixels, number of points: {4})\n".format(
             self.retrieveName(),
-            self.xdimfile,
-            self.ydimfile,
+            self.xDim,
+            self.yDim,
             self.binning,
-            self.xdimfile * self.ydimfile
+            self.xDim * self.yDim
         ))
 
         # Print table header
@@ -265,21 +236,26 @@ class Map(base.Map):
         return mapData[int(self.cropDists[1, 0] * multiplier):int((self.ydim - self.cropDists[1, 1]) * multiplier),
                        int(self.cropDists[0, 0] * multiplier):int((self.xdim - self.cropDists[0, 1]) * multiplier)]
 
-    def setHomogPoint(self, display=None):
-        if display is None:
-            display = "maxshear"
+    def setHomogPoint(self, points=None, display=None):
+        
+        if points is not None:
+            self.homogPoints = points
+            
+        if points is None:
+            if display is None:
+                display = "maxshear"
 
-        # Set plot dafault to display selected image
-        display = display.lower().replace(" ", "")
-        if display == "bse" or display == "pattern":
-            self.plotHomog = self.plotPattern
-            binSize = self.windowSize
-        else:
-            self.plotHomog = self.plotMaxShear
-            binSize = 1
+            # Set plot dafault to display selected image
+            display = display.lower().replace(" ", "")
+            if display == "bse" or display == "pattern":
+                self.plotHomog = self.plotPattern
+                binSize = self.windowSize
+            else:
+                self.plotHomog = self.plotMaxShear
+                binSize = 1
 
-        # Call set homog points from base class setting the bin size
-        super(type(self), self).setHomogPoint(binSize=binSize)
+            # Call set homog points from base class setting the bin size
+            super(type(self), self).setHomogPoint(binSize=binSize, points=points)
 
     def linkEbsdMap(self, ebsdMap, transformType="affine", order=2):
         """Calculates the transformation required to align EBSD dataset to DIC
@@ -289,7 +265,6 @@ class Map(base.Map):
             transformType(string, optional): affine, piecewiseAffine or polynomial
             order(int, optional): Order of polynomial transform to apply
         """
-        print("Linking EBSD <-> DIC...", end="")
 
         self.ebsdMap = ebsdMap
         if transformType == "piecewiseAffine":
@@ -310,8 +285,6 @@ class Map(base.Map):
 
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
-
-        print("\r", end="")
 
     def checkEbsdLinked(self):
         """Check if an EBSD map has been linked.
@@ -425,7 +398,7 @@ class Map(base.Map):
 
         self.plotGBs(ax=self.ax, colour='black', dilate=dilate)
 
-    def plotMaxShear(self, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=False,
+    def plotMaxShear(self, ax=None, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=False,
                      scaleBar=False, updateCurrent=False, highlightGrains=None, highlightColours=None,
                      plotColourBar=False, vmin=None, vmax=0.1):
         """Plot a map of maximum shear strain
@@ -443,7 +416,10 @@ class Map(base.Map):
         if not updateCurrent:
             # self.fig, self.ax = plt.subplots(figsize=(5.75, 4))
             self.fig, self.ax = plt.subplots()
-
+        if ax is not None:
+            self.ax=ax
+            
+            
         multiplier = 100 if plotPercent else 1
         img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
                              cmap='viridis', interpolation='None', vmin=vmin, vmax=vmax)
@@ -583,7 +559,7 @@ class Map(base.Map):
             clabel=clabel
         )
 
-    def plotGrainData(self, grainData, grainIds=-1, bg=0, plotGBs=False, plotColourBar=True, cmap=None, vmin=None, vmax=None, clabel=''):
+    def plotGrainData(self, grainData, grainIds=-1, bg=0, ax=None, plotGBs=False, plotColourBar=True, cmap=None, vmin=None, vmax=None, clabel=''):
         """Plot grain map with grains filled with average value of from any DIC map data
 
         Args:
@@ -606,22 +582,25 @@ class Map(base.Map):
         if len(grainData) != len(grainIds):
             raise Exception("Must be 1 value for each grain in grainData.")
 
-        grainMap = np.full([self.yDim, self.xDim], bg)
+        grainMap = np.full([self.yDim, self.xDim], bg, dtype=grainData.dtype)
         for grainId, grainValue in zip(grainIds, grainData):
             grain = self.grainList[grainId]
             for coord in grain.coordList:
                 grainMap[coord[1], coord[0]] = grainValue
 
-        plt.figure()
-        plt.imshow(grainMap, vmin=vmin, vmax=vmax, cmap=cmap)
+        if ax is None:
+            plt.figure()
+            ax = plt.gca()
+
+        im = ax.imshow(grainMap, vmin=vmin, vmax=vmax, cmap=cmap)
 
         if plotColourBar:
-            plt.colorbar(label=clabel)
+            plt.colorbar(im, ax=ax, label=clabel)
 
         if plotGBs:
             self.plotGBs()
 
-    def plotGrainAvIPF(self, mapData, direction, plotColourBar=True, vmin=None, vmax=None, clabel=''):
+    def plotGrainAvIPF(self, mapData, direction, ax=None, plotColourBar=True, vmin=None, vmax=None, clabel=''):
         """Plot IPF of grain reference (average) orientations with points coloured
         by grain average values from map data.
 
@@ -644,8 +623,12 @@ class Map(base.Map):
         for grainId, grain in enumerate(self.grainList):
             grainOri[grainId] = grain.ebsdGrain.refOri
 
-        Quat.plotIPF(grainOri, direction, self.ebsdMap.crystalSym, c=grainAvData,
-                     marker='o', vmin=vmin, vmax=vmax)
+        if ax is None:
+            plt.figure()
+            ax = plt.gca()
+
+        Quat.plotIPF(grainOri, direction, self.ebsdMap.crystalSym, ax=ax,
+                     c=grainAvData, marker='o', vmin=vmin, vmax=vmax)
 
         if plotColourBar:
             plt.colorbar(label=clabel)
@@ -696,7 +679,7 @@ class Map(base.Map):
 
     def findGrains(self, minGrainSize=10):
         print("Finding grains in DIC map...", end="")
-        
+
         # Check a EBSD map is linked
         self.checkEbsdLinked()
 
@@ -746,8 +729,9 @@ class Map(base.Map):
             self.grainList[i].ebsdGrainId = modeId[0] - 1
             self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
             self.grainList[i].ebsdMap = self.ebsdMap
-            
+
         print("\r", end="")
+
         return
 
     def floodFill(self, x, y, grainIndex):
@@ -817,7 +801,7 @@ class Grain(base.Grain):
         self.maxShearList.append(maxShear)
 
     def plotMaxShear(self, plotPercent=True, plotSlipTraces=False, plotShearBands=False,
-                     vmin=None, vmax=None, cmap="viridis", ax=None):
+                     vmin=None, vmax=None, cmap="viridis", ax=None, scaleBar=False):
 
         multiplier = 100 if plotPercent else 1
         x0, y0, xmax, ymax = self.extremeCoords
@@ -843,6 +827,17 @@ class Grain(base.Grain):
 
         if plotShearBands:
             self.plotSlipBands(grainMaxShear, ax=ax)
+            
+        if scaleBar:
+            if self.dicMap.strainScale is None:
+                raise Exception("First set image scale using setScale")
+            else:
+                
+                scalebar = ScaleBar(self.dicMap.strainScale*(1e-6))
+                if ax is None:
+                    plt.gca().add_artist(scalebar)
+                else:
+                    ax.add_artist(scalebar)
 
     @property
     def slipTraces(self):

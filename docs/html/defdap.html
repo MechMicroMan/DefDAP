@@ -1,0 +1,1873 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>DefDAP API documentation &#8212; DefDAP 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="DefDAP Installation" href="installation.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="DefDAP Installation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="defdap-api-documentation">
+<h1>DefDAP API documentation<a class="headerlink" href="#defdap-api-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-defdap.base">
+<span id="defdap-base-module"></span><h2>defdap.base module<a class="headerlink" href="#module-defdap.base" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="defdap.base.Grain">
+<em class="property">class </em><code class="descclassname">defdap.base.</code><code class="descname">Grain</code><a class="reference internal" href="_modules/defdap/base.html#Grain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Grain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="attribute">
+<dt id="defdap.base.Grain.centreCoords">
+<code class="descname">centreCoords</code><a class="headerlink" href="#defdap.base.Grain.centreCoords" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.base.Grain.extremeCoords">
+<code class="descname">extremeCoords</code><a class="headerlink" href="#defdap.base.Grain.extremeCoords" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Grain.grainData">
+<code class="descname">grainData</code><span class="sig-paren">(</span><em>mapData</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Grain.grainData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Grain.grainData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes this grains data from the given map data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mapData</strong> (<em>np.array</em>) – Array of map data. This must be cropped!</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Array containing this grains values from the given map data</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">np.array</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Grain.grainMapData">
+<code class="descname">grainMapData</code><span class="sig-paren">(</span><em>mapData</em>, <em>bg=nan</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Grain.grainMapData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Grain.grainMapData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a map of this grain only from the given map data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mapData</strong> (<em>np.array</em>) – Array of map data. This must be cropped!</li>
+<li><strong>bg</strong> (<em>float</em><em>, </em><em>optional</em>) – Value to fill the backgraound with. Must be same dtype as input.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Map of this grains data</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Grain.grainMapDataCoarse">
+<code class="descname">grainMapDataCoarse</code><span class="sig-paren">(</span><em>mapData</em>, <em>kernelSize=2</em>, <em>bg=nan</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Grain.grainMapDataCoarse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Grain.grainMapDataCoarse" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Creates a coarsed map of this grain only from the given map data.</dt>
+<dd>Data is coarsened using a kenel at each pixel in the grain using only this grains data.</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mapData</strong> (<em>np.array</em>) – Array of map data. This must be cropped!</li>
+<li><strong>kernelSize</strong> (<em>int</em><em>, </em><em>optional</em>) – Size of kernel as the number of pixels to dilate by i.e 1 gives a 3x3 kernel.</li>
+<li><strong>bg</strong> (<em>float</em><em>, </em><em>optional</em>) – Value to fill the backgraound with. Must be same dtype as input.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Map of this grains coarsened data</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Grain.grainOutline">
+<code class="descname">grainOutline</code><span class="sig-paren">(</span><em>bg=nan</em>, <em>fg=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Grain.grainOutline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Grain.grainOutline" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Grain.plotGrainData">
+<code class="descname">plotGrainData</code><span class="sig-paren">(</span><em>mapData</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>clabel=''</em>, <em>cmap='viridis'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Grain.plotGrainData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Grain.plotGrainData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a map of this grain only from the given map data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mapData</strong> (<em>np.array</em>) – Array of map data. This must be cropped!</li>
+<li><strong>vmin</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum value of colour scale</li>
+<li><strong>vmax</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum value for colour scale</li>
+<li><strong>clabel</strong> (<em>str</em><em>, </em><em>optional</em>) – Colour bar label text</li>
+<li><strong>cmap</strong> (<em>str</em><em>, </em><em>optional</em>) – Colour map to use, default is viridis.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Grain.plotOutline">
+<code class="descname">plotOutline</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Grain.plotOutline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Grain.plotOutline" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Grain.plotSlipTraces">
+<code class="descname">plotSlipTraces</code><span class="sig-paren">(</span><em>colours=None</em>, <em>ax=None</em>, <em>pos=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Grain.plotSlipTraces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Grain.plotSlipTraces" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="defdap.base.Map">
+<em class="property">class </em><code class="descclassname">defdap.base.</code><code class="descname">Map</code><a class="reference internal" href="_modules/defdap/base.html#Map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="defdap.base.Map.buildNeighbourNetwork">
+<code class="descname">buildNeighbourNetwork</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.buildNeighbourNetwork"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.buildNeighbourNetwork" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Map.calcProxigram">
+<code class="descname">calcProxigram</code><span class="sig-paren">(</span><em>numTrials=500</em>, <em>forceCalc=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.calcProxigram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.calcProxigram" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Map.checkGrainsDetected">
+<code class="descname">checkGrainsDetected</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.checkGrainsDetected"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.checkGrainsDetected" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if grains have been detected</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns True if grains detected</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal notranslate"><span class="pre">Exception</span></code> – if grains not detected</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Map.clickGrainNeighbours">
+<code class="descname">clickGrainNeighbours</code><span class="sig-paren">(</span><em>event</em>, <em>map</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.clickGrainNeighbours"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.clickGrainNeighbours" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Map.clickHomog">
+<code class="descname">clickHomog</code><span class="sig-paren">(</span><em>event</em>, <em>binSize=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.clickHomog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.clickHomog" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Map.displayNeighbours">
+<code class="descname">displayNeighbours</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.displayNeighbours"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.displayNeighbours" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Map.highlightGrains">
+<code class="descname">highlightGrains</code><span class="sig-paren">(</span><em>grainIds</em>, <em>grainColours</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.highlightGrains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.highlightGrains" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Map.plotGBs">
+<code class="descname">plotGBs</code><span class="sig-paren">(</span><em>ax=None</em>, <em>colour='white'</em>, <em>dilate=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.plotGBs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.plotGBs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.base.Map.proxigram">
+<code class="descname">proxigram</code><a class="headerlink" href="#defdap.base.Map.proxigram" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Map.setHomogPoint">
+<code class="descname">setHomogPoint</code><span class="sig-paren">(</span><em>binSize=1</em>, <em>points=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.setHomogPoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.setHomogPoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.base.Map.updateHomogPoint">
+<code class="descname">updateHomogPoint</code><span class="sig-paren">(</span><em>homogID</em>, <em>newPoint=None</em>, <em>delta=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.updateHomogPoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.updateHomogPoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update a homog by either over wrting it with a new point or
+incrementing the current values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>homogID</strong> (<em>int</em>) – ID (place in list) of point to update or -1 for all</li>
+<li><strong>newPoint</strong> (<em>tuple</em><em>, </em><em>optional</em>) – New point</li>
+<li><strong>delta</strong> (<em>tuple</em><em>, </em><em>optional</em>) – Increments to current point (dx, dy)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="defdap.base.SlipSystem">
+<em class="property">class </em><code class="descclassname">defdap.base.</code><code class="descname">SlipSystem</code><span class="sig-paren">(</span><em>slipPlane</em>, <em>slipDir</em>, <em>crystalSym</em>, <em>cOverA=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#SlipSystem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.SlipSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="staticmethod">
+<dt id="defdap.base.SlipSystem.groupSlipSystems">
+<em class="property">static </em><code class="descname">groupSlipSystems</code><span class="sig-paren">(</span><em>slipSystems</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#SlipSystem.groupSlipSystems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.SlipSystem.groupSlipSystems" title="Permalink to this definition">¶</a></dt>
+<dd><p>Groups slip systems by there slip plane.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>slipSytems</strong> (<em>list</em><em>(</em><a class="reference internal" href="#defdap.base.SlipSystem" title="defdap.base.SlipSystem"><em>SlipSystem</em></a><em>)</em>) – A list of slip systems</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A list of list of slip systems grouped slip plane.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list(list(<a class="reference internal" href="#defdap.base.SlipSystem" title="defdap.base.SlipSystem">SlipSystem</a>))</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.base.SlipSystem.lMatrix">
+<em class="property">static </em><code class="descname">lMatrix</code><span class="sig-paren">(</span><em>a</em>, <em>b</em>, <em>c</em>, <em>alpha</em>, <em>beta</em>, <em>gamma</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#SlipSystem.lMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.SlipSystem.lMatrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.base.SlipSystem.loadSlipSystems">
+<em class="property">static </em><code class="descname">loadSlipSystems</code><span class="sig-paren">(</span><em>filepath</em>, <em>crystalSym</em>, <em>cOverA=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#SlipSystem.loadSlipSystems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.SlipSystem.loadSlipSystems" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Load in slip systems from file. 3 integers for slip plane normal and</dt>
+<dd>3 for slip direction. Returns a list of list of slip systems
+grouped by slip plane.</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filepath</strong> (<em>string</em>) – Path to file containing slip systems</li>
+<li><strong>crystalSym</strong> (<em>string</em>) – The crystal symmetry (“cubic” or “hexagonal”)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A list of list of slip systems grouped slip plane.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first">list(list(<a class="reference internal" href="#defdap.base.SlipSystem" title="defdap.base.SlipSystem">SlipSystem</a>))</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal notranslate"><span class="pre">IOError</span></code> – Raised if not 6/8 integers per line</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.base.SlipSystem.qMatrix">
+<em class="property">static </em><code class="descname">qMatrix</code><span class="sig-paren">(</span><em>lMatrix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#SlipSystem.qMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.SlipSystem.qMatrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.base.SlipSystem.slipDir">
+<code class="descname">slipDir</code><a class="headerlink" href="#defdap.base.SlipSystem.slipDir" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.base.SlipSystem.slipDirLabel">
+<code class="descname">slipDirLabel</code><a class="headerlink" href="#defdap.base.SlipSystem.slipDirLabel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.base.SlipSystem.slipPlane">
+<code class="descname">slipPlane</code><a class="headerlink" href="#defdap.base.SlipSystem.slipPlane" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.base.SlipSystem.slipPlaneLabel">
+<code class="descname">slipPlaneLabel</code><a class="headerlink" href="#defdap.base.SlipSystem.slipPlaneLabel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-defdap.ebsd">
+<span id="defdap-ebsd-module"></span><h2>defdap.ebsd module<a class="headerlink" href="#module-defdap.ebsd" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="defdap.ebsd.Grain">
+<em class="property">class </em><code class="descclassname">defdap.ebsd.</code><code class="descname">Grain</code><span class="sig-paren">(</span><em>ebsdMap</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Grain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Grain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#defdap.base.Grain" title="defdap.base.Grain"><code class="xref py py-class docutils literal notranslate"><span class="pre">defdap.base.Grain</span></code></a></p>
+<dl class="method">
+<dt id="defdap.ebsd.Grain.addPoint">
+<code class="descname">addPoint</code><span class="sig-paren">(</span><em>coord</em>, <em>quat</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Grain.addPoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Grain.addPoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Grain.buildMisOriList">
+<code class="descname">buildMisOriList</code><span class="sig-paren">(</span><em>calcAxis=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Grain.buildMisOriList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Grain.buildMisOriList" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Grain.calcAverageOri">
+<code class="descname">calcAverageOri</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Grain.calcAverageOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Grain.calcAverageOri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Grain.calcAverageSchmidFactors">
+<code class="descname">calcAverageSchmidFactors</code><span class="sig-paren">(</span><em>loadVector=array([0</em>, <em>0</em>, <em>1])</em>, <em>slipSystems=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Grain.calcAverageSchmidFactors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Grain.calcAverageSchmidFactors" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Grain.calcSlipTraces">
+<code class="descname">calcSlipTraces</code><span class="sig-paren">(</span><em>slipSystems=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Grain.calcSlipTraces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Grain.calcSlipTraces" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Grain.plotMisOri">
+<code class="descname">plotMisOri</code><span class="sig-paren">(</span><em>component=0, vmin=None, vmax=None, vRange=[None, None, None], cmap=['viridis', 'bwr'], plotSlipTraces=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Grain.plotMisOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Grain.plotMisOri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Grain.plotOriSpread">
+<code class="descname">plotOriSpread</code><span class="sig-paren">(</span><em>direction=array([0</em>, <em>0</em>, <em>1])</em>, <em>marker='.'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Grain.plotOriSpread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Grain.plotOriSpread" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Grain.plotRefOri">
+<code class="descname">plotRefOri</code><span class="sig-paren">(</span><em>direction=array([0</em>, <em>0</em>, <em>1])</em>, <em>marker='+'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Grain.plotRefOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Grain.plotRefOri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Grain.printSlipTraces">
+<code class="descname">printSlipTraces</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Grain.printSlipTraces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Grain.printSlipTraces" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print a list of slip planes (with colours) and slip directions</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.ebsd.Grain.slipTraces">
+<code class="descname">slipTraces</code><a class="headerlink" href="#defdap.ebsd.Grain.slipTraces" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="defdap.ebsd.Linker">
+<em class="property">class </em><code class="descclassname">defdap.ebsd.</code><code class="descname">Linker</code><span class="sig-paren">(</span><em>maps</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Linker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Linker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for linking multiple ebsd maps of the same region for analysis of deformation</p>
+<dl class="attribute">
+<dt id="defdap.ebsd.Linker.ebsdMaps">
+<code class="descname">ebsdMaps</code><a class="headerlink" href="#defdap.ebsd.Linker.ebsdMaps" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of ebsd.Map objects that are linked</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list(<a class="reference internal" href="#defdap.ebsd.Map" title="defdap.ebsd.Map">ebsd.Map</a>)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.ebsd.Linker.links">
+<code class="descname">links</code><a class="headerlink" href="#defdap.ebsd.Linker.links" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of grain link. Each link is stored as a tuple of grain IDs (one from each
+map stored in same order of maps)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.ebsd.Linker.numMaps">
+<code class="descname">numMaps</code><a class="headerlink" href="#defdap.ebsd.Linker.numMaps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of linked maps</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">TYPE</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Linker.clickGrainGuess">
+<code class="descname">clickGrainGuess</code><span class="sig-paren">(</span><em>event</em>, <em>currentEbsdMap</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Linker.clickGrainGuess"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Linker.clickGrainGuess" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Linker.clickSetOrigin">
+<code class="descname">clickSetOrigin</code><span class="sig-paren">(</span><em>event</em>, <em>currentEbsdMap</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Linker.clickSetOrigin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Linker.clickSetOrigin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Linker.makeLink">
+<code class="descname">makeLink</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Linker.makeLink"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Linker.makeLink" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Linker.resetLinks">
+<code class="descname">resetLinks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Linker.resetLinks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Linker.resetLinks" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Linker.setAvOriFromInitial">
+<code class="descname">setAvOriFromInitial</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Linker.setAvOriFromInitial"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Linker.setAvOriFromInitial" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Linker.setOrigin">
+<code class="descname">setOrigin</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Linker.setOrigin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Linker.setOrigin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Linker.startLinking">
+<code class="descname">startLinking</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Linker.startLinking"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Linker.startLinking" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Linker.updateMisOri">
+<code class="descname">updateMisOri</code><span class="sig-paren">(</span><em>calcAxis=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Linker.updateMisOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Linker.updateMisOri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="defdap.ebsd.Map">
+<em class="property">class </em><code class="descclassname">defdap.ebsd.</code><code class="descname">Map</code><span class="sig-paren">(</span><em>fileName</em>, <em>crystalSym</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#defdap.base.Map" title="defdap.base.Map"><code class="xref py py-class docutils literal notranslate"><span class="pre">defdap.base.Map</span></code></a></p>
+<p>Summary</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>averageSchmidFactor</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>binData</strong> (<em>TYPE</em>) – imported binary data</li>
+<li><strong>boundaries</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>cacheEulerMap</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>crystalSym</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>currGrainId</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>grainList</strong> (<em>list</em>) – Description</li>
+<li><strong>grains</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>homogPoints</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>misOri</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>misOriAxis</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>origin</strong> (<em>tuple</em>) – Description</li>
+<li><strong>plotDefault</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>quatArray</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>slipSystems</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>stepSize</strong> (<em>TYPE</em>) – Description</li>
+<li><strong>xDim</strong> (<em>int</em>) – x dimension of map</li>
+<li><strong>yDim</strong> (<em>int</em>) – y dimension of map</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="defdap.ebsd.Map.buildQuatArray">
+<code class="descname">buildQuatArray</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.buildQuatArray"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.buildQuatArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build quaternion array</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.calcAverageGrainSchmidFactors">
+<code class="descname">calcAverageGrainSchmidFactors</code><span class="sig-paren">(</span><em>loadVector=array([0</em>, <em>0</em>, <em>1])</em>, <em>slipSystems=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcAverageGrainSchmidFactors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcAverageGrainSchmidFactors" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.calcGrainAvOris">
+<code class="descname">calcGrainAvOris</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcGrainAvOris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcGrainAvOris" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.calcGrainMisOri">
+<code class="descname">calcGrainMisOri</code><span class="sig-paren">(</span><em>calcAxis=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcGrainMisOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcGrainMisOri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate grain misorientation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>calcAxis</strong> – Calculate the misorientation axis also</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.calcKam">
+<code class="descname">calcKam</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcKam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcKam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates Kernel Average Misorientaion (KAM) for the EBSD map. Crystal symmetric
+equivalences are not considered. Stores result in self.kam.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.checkDataLoaded">
+<code class="descname">checkDataLoaded</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.checkDataLoaded"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.checkDataLoaded" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if EBSD data is loaded</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if data loaded</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.clickGrainId">
+<code class="descname">clickGrainId</code><span class="sig-paren">(</span><em>event</em>, <em>displaySelected</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.clickGrainId"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.clickGrainId" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.findBoundaries">
+<code class="descname">findBoundaries</code><span class="sig-paren">(</span><em>boundDef=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.findBoundaries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.findBoundaries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find grain boundaries</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>boundDef</strong> (<em>float</em>) – critical misorientation</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.findGrains">
+<code class="descname">findGrains</code><span class="sig-paren">(</span><em>minGrainSize=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.findGrains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.findGrains" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find grains and assign ids</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>minGrainSize</strong> – Minimum grain area in pixels</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.findPhaseBoundaries">
+<code class="descname">findPhaseBoundaries</code><span class="sig-paren">(</span><em>treatNonIndexedAs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.findPhaseBoundaries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.findPhaseBoundaries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds boundaries in the phase map</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>treatNonIndexedAs</strong> – value to assign to non-indexed points, defaults to -1</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.floodFill">
+<code class="descname">floodFill</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>grainIndex</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.floodFill"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.floodFill" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.loadData">
+<code class="descname">loadData</code><span class="sig-paren">(</span><em>fileName</em>, <em>crystalSym</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.loadData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.loadData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load EBSD data from file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fileName</strong> (<em>str</em>) – Path to file, including name, excluding extension</li>
+<li><strong>crystalSym</strong> (<em>str</em>) – Crystal structure, ‘cubic’ or ‘hexagonal’</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.loadSlipSystems">
+<code class="descname">loadSlipSystems</code><span class="sig-paren">(</span><em>filepath</em>, <em>cOverA=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.loadSlipSystems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.loadSlipSystems" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.locateGrainID">
+<code class="descname">locateGrainID</code><span class="sig-paren">(</span><em>clickEvent=None</em>, <em>displaySelected=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.locateGrainID"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.locateGrainID" title="Permalink to this definition">¶</a></dt>
+<dd><p>Interactive plot for identifying grains</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>displaySelected</strong> – Plot slip traces for selected grain</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.plotAverageGrainSchmidFactorsMap">
+<code class="descname">plotAverageGrainSchmidFactorsMap</code><span class="sig-paren">(</span><em>plotGBs=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.plotAverageGrainSchmidFactorsMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.plotAverageGrainSchmidFactorsMap" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>plotGBs</strong> – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.plotBandContrastMap">
+<code class="descname">plotBandContrastMap</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.plotBandContrastMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.plotBandContrastMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot band contrast map</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.plotBoundaryMap">
+<code class="descname">plotBoundaryMap</code><span class="sig-paren">(</span><em>dilate=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.plotBoundaryMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.plotBoundaryMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot grain boundary map</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dilate</strong> – Dilate boundary by one pixel</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.plotDefault">
+<code class="descname">plotDefault</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.plotDefault"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.plotDefault" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.plotEulerMap">
+<code class="descname">plotEulerMap</code><span class="sig-paren">(</span><em>updateCurrent=False</em>, <em>highlightGrains=None</em>, <em>highlightColours=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.plotEulerMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.plotEulerMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot an orientation map in Euler colouring</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>updateCurrent</strong> (<em>bool</em>) – Description (optional)</li>
+<li><strong>highlightGrains</strong> (<em>list</em>) – Grain ids of grains to highlight (optional)</li>
+<li><strong>highlightColours</strong> (<em>str</em>) – Colour to highlight grain (optional)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.plotGrainMap">
+<code class="descname">plotGrainMap</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.plotGrainMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.plotGrainMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a map with grains coloured</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Figure</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.plotKamMap">
+<code class="descname">plotKamMap</code><span class="sig-paren">(</span><em>vmin=None</em>, <em>vmax=None</em>, <em>cmap='viridis'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.plotKamMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.plotKamMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot Kernel Average Misorientaion (KAM) for the EBSD map.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>vmin</strong> (<em>float</em>) – Minimum of colour scale (optional)</li>
+<li><strong>vmax</strong> (<em>float</em>) – Maximum of colour scale (optional)</li>
+<li><strong>cmap</strong> (<em>str</em>) – Colour map (optional)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.plotMisOriMap">
+<code class="descname">plotMisOriMap</code><span class="sig-paren">(</span><em>component=0</em>, <em>plotGBs=False</em>, <em>boundaryColour='black'</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>cmap='viridis'</em>, <em>cBarLabel='ROD (degrees)'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.plotMisOriMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.plotMisOriMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot misorientation map</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>component</strong> – 0: misorientation, 1, 2, 3: rotation about x, y, z</li>
+<li><strong>plotGBs</strong> – Plot grain boundaries</li>
+<li><strong>boundaryColour</strong> – Colour of grain boundary</li>
+<li><strong>vmin</strong> (<em>float</em>) – Minimum of colour scale (optional)</li>
+<li><strong>vmax</strong> (<em>float</em>) – Maximum of colour scale (optional)</li>
+<li><strong>cmap</strong> (<em>str</em>) – Colour map (optional)</li>
+<li><strong>cBarLabel</strong> – Label for colour bar</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Figure</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.plotPhaseBoundaryMap">
+<code class="descname">plotPhaseBoundaryMap</code><span class="sig-paren">(</span><em>dilate=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.plotPhaseBoundaryMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.plotPhaseBoundaryMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot phase boundary map</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dilate</strong> – Dilate boundary by one pixel</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.plotPhaseMap">
+<code class="descname">plotPhaseMap</code><span class="sig-paren">(</span><em>cmap='viridis'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.plotPhaseMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.plotPhaseMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a phase map</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cmap</strong> (<em>str</em>) – Colour map (optional)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.ebsd.Map.printSlipSystems">
+<code class="descname">printSlipSystems</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.printSlipSystems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.printSlipSystems" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print a list of slip planes (with colours) and slip directions</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-defdap.fepx">
+<span id="defdap-fepx-module"></span><h2>defdap.fepx module<a class="headerlink" href="#module-defdap.fepx" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="defdap.fepx.Mesh">
+<em class="property">class </em><code class="descclassname">defdap.fepx.</code><code class="descname">Mesh</code><span class="sig-paren">(</span><em>name</em>, <em>meshDir='./'</em>, <em>dataDir='./'</em>, <em>grainFilename=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="defdap.fepx.Mesh.calcGradient">
+<code class="descname">calcGradient</code><span class="sig-paren">(</span><em>inDataKey</em>, <em>outDataKey</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.calcGradient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.calcGradient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate gradient of simulation data wrt initial coordinates</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>inDataKey</strong> (<em>string</em>) – Sim data key to caluclate gradient of</li>
+<li><strong>outDataKey</strong> (<em>string</em>) – Sim data key to store result</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.calcGrainAverage">
+<code class="descname">calcGrainAverage</code><span class="sig-paren">(</span><em>inDataKey</em>, <em>outDataKey=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.calcGrainAverage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.calcGrainAverage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate grain avergae of elemnet data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>inDataKey</strong> (<em>str</em>) – Data key of input data</li>
+<li><strong>outDataKey</strong> (<em>None</em><em>, </em><em>optional</em>) – Data key to save data to. If none given then the data is returned from the function</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Grain average data or nothing if outDataKey specified.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.calcMeshSize">
+<code class="descname">calcMeshSize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.calcMeshSize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.calcMeshSize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.calcMisori">
+<code class="descname">calcMisori</code><span class="sig-paren">(</span><em>frameNums</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.calcMisori"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.calcMisori" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.fepx.Mesh.combineFiles">
+<em class="property">static </em><code class="descname">combineFiles</code><span class="sig-paren">(</span><em>baseDir</em>, <em>inDirs</em>, <em>outDir</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.combineFiles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.combineFiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine output files from multiple simulations. If a simulation was run in smaller parts</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>baseDir</strong> (<em>string</em>) – Base directory of whole simulation. No trailing slash</li>
+<li><strong>inDirs</strong> (<em>List</em><em>(</em><em>string</em><em>)</em>) – List of simulation directory names to
+combine (baseDir/inDir). No trailing slash</li>
+<li><strong>outDir</strong> (<em>string</em>) – Directory to output combined files to (baseDir/outDir)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.constructVtkMesh">
+<code class="descname">constructVtkMesh</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.constructVtkMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.constructVtkMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create VTK mesh using initial (undeformaed) node positions</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">VTK mesh</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">vtkUnstructuredGrid</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.createSimData">
+<code class="descname">createSimData</code><span class="sig-paren">(</span><em>dataKey</em>, <em>data</em>, <em>isNotVector=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.createSimData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.createSimData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadAngleData">
+<code class="descname">loadAngleData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadAngleData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadAngleData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadArchSimData">
+<code class="descname">loadArchSimData</code><span class="sig-paren">(</span><em>dataKey</em>, <em>saveDir=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadArchSimData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadArchSimData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadBackstressData">
+<code class="descname">loadBackstressData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadBackstressData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadBackstressData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadEffDefRateData">
+<code class="descname">loadEffDefRateData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadEffDefRateData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadEffDefRateData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadEffPlasticDefRateData">
+<code class="descname">loadEffPlasticDefRateData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadEffPlasticDefRateData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadEffPlasticDefRateData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadEqvPlasticStrainData">
+<code class="descname">loadEqvPlasticStrainData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadEqvPlasticStrainData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadEqvPlasticStrainData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadEqvStrainData">
+<code class="descname">loadEqvStrainData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadEqvStrainData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadEqvStrainData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadFrameData">
+<code class="descname">loadFrameData</code><span class="sig-paren">(</span><em>dataName</em>, <em>initialIncd</em>, <em>usecols=None</em>, <em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em>, <em>numSlipSys=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadFrameData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadFrameData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadHardnessData">
+<code class="descname">loadHardnessData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em>, <em>numSlipSys=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadHardnessData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadHardnessData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadMeshElStatsData">
+<code class="descname">loadMeshElStatsData</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadMeshElStatsData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadMeshElStatsData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadNodePosData">
+<code class="descname">loadNodePosData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadNodePosData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadNodePosData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadNodeVelData">
+<code class="descname">loadNodeVelData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadNodeVelData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadNodeVelData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadShearRateData">
+<code class="descname">loadShearRateData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em>, <em>numSlipSys=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadShearRateData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadShearRateData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadSimData">
+<code class="descname">loadSimData</code><span class="sig-paren">(</span><em>dataKeys</em>, <em>forceLoad=False</em>, <em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em>, <em>numSlipSys=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadSimData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadSimData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadStrainData">
+<code class="descname">loadStrainData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadStrainData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadStrainData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.loadStressData">
+<code class="descname">loadStressData</code><span class="sig-paren">(</span><em>frameNums=-1</em>, <em>numProcs=-1</em>, <em>numFrames=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.loadStressData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.loadStressData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.nodeToElmtData">
+<code class="descname">nodeToElmtData</code><span class="sig-paren">(</span><em>inDataKey</em>, <em>outDataKey</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.nodeToElmtData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.nodeToElmtData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert node data to element data using VTK framework</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>inDataKey</strong> (<em>string</em>) – Sim data key to convert</li>
+<li><strong>outDataKey</strong> (<em>string</em>) – Sim data key to store result</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.removeSimData">
+<code class="descname">removeSimData</code><span class="sig-paren">(</span><em>dataKey</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.removeSimData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.removeSimData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.saveArchSimData">
+<code class="descname">saveArchSimData</code><span class="sig-paren">(</span><em>dataKey</em>, <em>saveDir=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.saveArchSimData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.saveArchSimData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.setSimParams">
+<code class="descname">setSimParams</code><span class="sig-paren">(</span><em>numProcs=-1</em>, <em>numFrames=-1</em>, <em>numSlipSys=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.setSimParams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.setSimParams" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.simDataInfo">
+<code class="descname">simDataInfo</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.simDataInfo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.simDataInfo" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Mesh.simDataKeys">
+<code class="descname">simDataKeys</code><a class="headerlink" href="#defdap.fepx.Mesh.simDataKeys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Mesh.simDataKeysNotVector">
+<code class="descname">simDataKeysNotVector</code><a class="headerlink" href="#defdap.fepx.Mesh.simDataKeysNotVector" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Mesh.simDataKeysNotVectorStatic">
+<code class="descname">simDataKeysNotVectorStatic</code><em class="property"> = ('angle',)</em><a class="headerlink" href="#defdap.fepx.Mesh.simDataKeysNotVectorStatic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Mesh.simDataKeysStatic">
+<code class="descname">simDataKeysStatic</code><em class="property"> = ('nodePos', 'nodeVel', 'angle', 'hardness', 'strain', 'stress', 'shearRate', 'effDefRate', 'effPlasticDefRate', 'eqvStrain', 'eqvPlasticStrain', 'backstress')</em><a class="headerlink" href="#defdap.fepx.Mesh.simDataKeysStatic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.simMetaData">
+<code class="descname">simMetaData</code><span class="sig-paren">(</span><em>dataKey</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.simMetaData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.simMetaData" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Produces a dictionary of metadata for the given datakey. Meta data consists of:</dt>
+<dd><ul class="first last simple">
+<li>dataKey (string)</li>
+<li>includesInitial (bool)</li>
+<li>numComponents (int)</li>
+<li>numFrames (int)</li>
+<li>nodeData (bool): True if node data</li>
+<li>elmtData (bool): True if element data</li>
+<li>grainData (bool): True if grain data</li>
+<li>shape (tuple): shape of data array</li>
+<li>notVector (bool): True if the data components do not represent a vector</li>
+</ul>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dataKey</strong> (<em>string</em>) – Sim datakey</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Metadata</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Mesh.writeVTU">
+<code class="descname">writeVTU</code><span class="sig-paren">(</span><em>fileName</em>, <em>frameNums</em>, <em>outputs</em>, <em>times=None</em>, <em>useInitialNodePos=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Mesh.writeVTU"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Mesh.writeVTU" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write data out to VTK compatible files. Files are output to the data directory.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>fileName</strong> (<em>string</em>) – Base name of output files.</li>
+<li><strong>frameNums</strong> (<em>lst</em><em>(</em><em>int</em><em>)</em>) – The simlation frames to output. Either an integer for a single
+frame, a list of ints for many or -1 for all. 0 is intial and 1 is first sim output</li>
+<li><strong>outputs</strong> (<em>list</em><em>(</em><em>string</em><em>)</em>) – The properties to be output. Current options are misOri, gammadot,
+backstress and elStats.</li>
+<li><strong>times</strong> (<em>list</em><em>(</em><em>float</em><em>)</em><em>, </em><em>optional</em>) – The time at each frame (only used for labeling)</li>
+<li><strong>useInitialNodePos</strong> (<em>bool</em><em>, </em><em>optional</em>) – If false uses updateded node positions from each frame. Default: True.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="defdap.fepx.Surface">
+<em class="property">class </em><code class="descclassname">defdap.fepx.</code><code class="descname">Surface</code><span class="sig-paren">(</span><em>surfNum</em>, <em>mesh</em>, <em>numElmts</em>, <em>elmtIDs</em>, <em>elmtCon</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Surface"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Surface" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="defdap.fepx.Surface.animateSimData">
+<code class="descname">animateSimData</code><span class="sig-paren">(</span><em>dataKey</em>, <em>plotType='image'</em>, <em>component=0</em>, <em>plotGBs=False</em>, <em>plotMesh=False</em>, <em>label=''</em>, <em>cmap='viridis'</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>invertData=False</em>, <em>saveVid=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Surface.animateSimData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Surface.animateSimData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.elmtEdges">
+<code class="descname">elmtEdges</code><a class="headerlink" href="#defdap.fepx.Surface.elmtEdges" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.elmtGrain">
+<code class="descname">elmtGrain</code><a class="headerlink" href="#defdap.fepx.Surface.elmtGrain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an array of grain IDs for elements in the surface (note grain IDs are 1 based)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.elmtGrainLayer">
+<code class="descname">elmtGrainLayer</code><a class="headerlink" href="#defdap.fepx.Surface.elmtGrainLayer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an array of grain IDs for elements in the surface (note grain IDs are 1 based)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.elmtIDsLayer">
+<code class="descname">elmtIDsLayer</code><a class="headerlink" href="#defdap.fepx.Surface.elmtIDsLayer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.elmtNeighbours">
+<code class="descname">elmtNeighbours</code><a class="headerlink" href="#defdap.fepx.Surface.elmtNeighbours" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.grainEdges">
+<code class="descname">grainEdges</code><a class="headerlink" href="#defdap.fepx.Surface.grainEdges" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.grainIDs">
+<code class="descname">grainIDs</code><a class="headerlink" href="#defdap.fepx.Surface.grainIDs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an array of grain IDs included in the surface</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.grainIDsLayer">
+<code class="descname">grainIDsLayer</code><a class="headerlink" href="#defdap.fepx.Surface.grainIDsLayer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an array of grain IDs included in the surface</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.meshEdges">
+<code class="descname">meshEdges</code><a class="headerlink" href="#defdap.fepx.Surface.meshEdges" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.neighbourNetwork">
+<code class="descname">neighbourNetwork</code><a class="headerlink" href="#defdap.fepx.Surface.neighbourNetwork" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Surface.plotGBs">
+<code class="descname">plotGBs</code><span class="sig-paren">(</span><em>colour=None</em>, <em>linewidth=None</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Surface.plotGBs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Surface.plotGBs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Surface.plotGrainIDs">
+<code class="descname">plotGrainIDs</code><span class="sig-paren">(</span><em>ax=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Surface.plotGrainIDs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Surface.plotGrainIDs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Surface.plotMesh">
+<code class="descname">plotMesh</code><span class="sig-paren">(</span><em>colour=None</em>, <em>linewidth=None</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Surface.plotMesh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Surface.plotMesh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Surface.plotSimData">
+<code class="descname">plotSimData</code><span class="sig-paren">(</span><em>dataKey</em>, <em>plotType='image'</em>, <em>component=0</em>, <em>frameNum=1</em>, <em>plotGBs=False</em>, <em>plotMesh=False</em>, <em>label=''</em>, <em>cmap='viridis'</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>invertData=False</em>, <em>returnFig=False</em>, <em>inputFig=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Surface.plotSimData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Surface.plotSimData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.fepx.Surface.plotStressStrain">
+<code class="descname">plotStressStrain</code><span class="sig-paren">(</span><em>meshDims=(1</em>, <em>1</em>, <em>0.2)</em>, <em>velocity=-0.01</em>, <em>revIncs=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/fepx.html#Surface.plotStressStrain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.fepx.Surface.plotStressStrain" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.fepx.Surface.surfaceNormal">
+<code class="descname">surfaceNormal</code><a class="headerlink" href="#defdap.fepx.Surface.surfaceNormal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-defdap.hrdic">
+<span id="defdap-hrdic-module"></span><h2>defdap.hrdic module<a class="headerlink" href="#module-defdap.hrdic" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="defdap.hrdic.Grain">
+<em class="property">class </em><code class="descclassname">defdap.hrdic.</code><code class="descname">Grain</code><span class="sig-paren">(</span><em>dicMap</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Grain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Grain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#defdap.base.Grain" title="defdap.base.Grain"><code class="xref py py-class docutils literal notranslate"><span class="pre">defdap.base.Grain</span></code></a></p>
+<dl class="method">
+<dt id="defdap.hrdic.Grain.addPoint">
+<code class="descname">addPoint</code><span class="sig-paren">(</span><em>coord</em>, <em>maxShear</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Grain.addPoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Grain.addPoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Grain.calcSlipBands">
+<code class="descname">calcSlipBands</code><span class="sig-paren">(</span><em>grainMapData</em>, <em>thres=0.3</em>, <em>min_dist=30</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Grain.calcSlipBands"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Grain.calcSlipBands" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use Radon transform to detect slip band angles</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>grainMapData</strong> (<em>numpy.array</em>) – Data to find bands in</li>
+<li><strong>thres</strong> (<em>float</em><em>, </em><em>optional</em>) – Normalised threshold for peaks</li>
+<li><strong>min_dist</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum angle between bands</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Detected slip band angles</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list(float)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Grain.calcSlipTraces">
+<code class="descname">calcSlipTraces</code><span class="sig-paren">(</span><em>slipSystems=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Grain.calcSlipTraces"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Grain.calcSlipTraces" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Grain.plotMaxShear">
+<code class="descname">plotMaxShear</code><span class="sig-paren">(</span><em>plotPercent=True</em>, <em>plotSlipTraces=False</em>, <em>plotShearBands=False</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>cmap='viridis'</em>, <em>ax=None</em>, <em>scaleBar=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Grain.plotMaxShear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Grain.plotMaxShear" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Grain.plotSlipBands">
+<code class="descname">plotSlipBands</code><span class="sig-paren">(</span><em>grainMapData</em>, <em>ax=None</em>, <em>thres=0.3</em>, <em>min_dist=30</em>, <em>slipBandAngles=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Grain.plotSlipBands"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Grain.plotSlipBands" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.hrdic.Grain.slipTraces">
+<code class="descname">slipTraces</code><a class="headerlink" href="#defdap.hrdic.Grain.slipTraces" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="defdap.hrdic.Map">
+<em class="property">class </em><code class="descclassname">defdap.hrdic.</code><code class="descname">Map</code><span class="sig-paren">(</span><em>path</em>, <em>fname</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#defdap.base.Map" title="defdap.base.Map"><code class="xref py py-class docutils literal notranslate"><span class="pre">defdap.base.Map</span></code></a></p>
+<dl class="attribute">
+<dt id="defdap.hrdic.Map.boundaries">
+<code class="descname">boundaries</code><a class="headerlink" href="#defdap.hrdic.Map.boundaries" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.calcGrainAv">
+<code class="descname">calcGrainAv</code><span class="sig-paren">(</span><em>mapData</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.calcGrainAv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.calcGrainAv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate grain average of any DIC map data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mapData</strong> (<em>np.array</em>) – Array of map data to grain average. This must be cropped!</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Array containing the grain average values</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">np.array</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.checkEbsdLinked">
+<code class="descname">checkEbsdLinked</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.checkEbsdLinked"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.checkEbsdLinked" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if an EBSD map has been linked.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns True if EBSD map linked</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal notranslate"><span class="pre">Exception</span></code> – if EBSD map not linked</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.clickGrainId">
+<code class="descname">clickGrainId</code><span class="sig-paren">(</span><em>event</em>, <em>displaySelected</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.clickGrainId"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.clickGrainId" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.crop">
+<code class="descname">crop</code><span class="sig-paren">(</span><em>mapData</em>, <em>binned=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.crop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.crop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.findGrains">
+<code class="descname">findGrains</code><span class="sig-paren">(</span><em>minGrainSize=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.findGrains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.findGrains" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.floodFill">
+<code class="descname">floodFill</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>grainIndex</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.floodFill"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.floodFill" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.linkEbsdMap">
+<code class="descname">linkEbsdMap</code><span class="sig-paren">(</span><em>ebsdMap</em>, <em>transformType='affine'</em>, <em>order=2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.linkEbsdMap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.linkEbsdMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the transformation required to align EBSD dataset to DIC</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>ebsdMap</strong> (<a class="reference internal" href="#defdap.ebsd.Map" title="defdap.ebsd.Map"><em>ebsd.Map</em></a>) – EBSD map object to link</li>
+<li><strong>transformType</strong> (<em>string</em><em>, </em><em>optional</em>) – affine, piecewiseAffine or polynomial</li>
+<li><strong>order</strong> (<em>int</em><em>, </em><em>optional</em>) – Order of polynomial transform to apply</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.locateGrainID">
+<code class="descname">locateGrainID</code><span class="sig-paren">(</span><em>clickEvent=None</em>, <em>displaySelected=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.locateGrainID"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.locateGrainID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.plotDefault">
+<code class="descname">plotDefault</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.plotDefault"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.plotDefault" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.plotGrainAv">
+<code class="descname">plotGrainAv</code><span class="sig-paren">(</span><em>mapData</em>, <em>plotGBs=False</em>, <em>plotColourBar=True</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>clabel=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.plotGrainAv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.plotGrainAv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot grain map with grains filled with average value of from any DIC map data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mapData</strong> (<em>np.array</em>) – Array of map data to grain average. This must be cropped!</li>
+<li><strong>plotGBs</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to True to draw grain boundaries</li>
+<li><strong>plotColourBar</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to Flase to exclude the colour bar</li>
+<li><strong>vmin</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum value of colour scale</li>
+<li><strong>vmax</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum value for colour scale</li>
+<li><strong>clabel</strong> (<em>str</em><em>, </em><em>optional</em>) – Colour bar label text</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.plotGrainAvIPF">
+<code class="descname">plotGrainAvIPF</code><span class="sig-paren">(</span><em>mapData</em>, <em>direction</em>, <em>ax=None</em>, <em>plotColourBar=True</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>clabel=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.plotGrainAvIPF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.plotGrainAvIPF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot IPF of grain reference (average) orientations with points coloured
+by grain average values from map data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mapData</strong> (<em>np.array</em>) – Array of map data to grain average. This must be cropped!</li>
+<li><strong>direction</strong> (<em>np.array</em>) – Vector of reference direction for the IPF</li>
+<li><strong>plotColourBar</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to Flase to exclude the colour bar</li>
+<li><strong>vmin</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum value of colour scale</li>
+<li><strong>vmax</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum value for colour scale</li>
+<li><strong>clabel</strong> (<em>str</em><em>, </em><em>optional</em>) – Colour bar label text</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.plotGrainAvMaxShear">
+<code class="descname">plotGrainAvMaxShear</code><span class="sig-paren">(</span><em>plotGBs=False</em>, <em>plotColourBar=True</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>clabel=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.plotGrainAvMaxShear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.plotGrainAvMaxShear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot grain map with grains filled with average value of max shear.
+This uses the max shear values stored in grain objects, to plot other data
+use plotGrainAv().</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>plotGBs</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to True to draw grain boundaries</li>
+<li><strong>plotColourBar</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to Flase to exclude the colour bar</li>
+<li><strong>vmin</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum value of colour scale</li>
+<li><strong>vmax</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum value for colour scale</li>
+<li><strong>clabel</strong> (<em>str</em><em>, </em><em>optional</em>) – Colour bar label text</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.plotGrainData">
+<code class="descname">plotGrainData</code><span class="sig-paren">(</span><em>grainData</em>, <em>grainIds=-1</em>, <em>bg=0</em>, <em>ax=None</em>, <em>plotGBs=False</em>, <em>plotColourBar=True</em>, <em>cmap=None</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>clabel=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.plotGrainData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.plotGrainData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot grain map with grains filled with average value of from any DIC map data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>grainData</strong> (<em>np.array</em>) – Data value for each grain</li>
+<li><strong>grainIds</strong> (<em>iterable</em>) – Grain IDs of each grain to plot, -1 for all grains</li>
+<li><strong>bg</strong> (<em>float</em><em>, </em><em>optional</em>) – Background value for areas with no grain data.</li>
+<li><strong>plotGBs</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to True to draw grain boundaries</li>
+<li><strong>plotColourBar</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to Flase to exclude the colour bar</li>
+<li><strong>cmap</strong> (<em>str</em><em>, </em><em>optional</em>) – Colour map to use</li>
+<li><strong>vmin</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum value of colour scale</li>
+<li><strong>vmax</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum value for colour scale</li>
+<li><strong>clabel</strong> (<em>str</em><em>, </em><em>optional</em>) – Colour bar label text</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.plotGrainNumbers">
+<code class="descname">plotGrainNumbers</code><span class="sig-paren">(</span><em>dilate=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.plotGrainNumbers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.plotGrainNumbers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a map with grains numbered</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dilate</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to true to dilate boundaries by one pixel</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.plotMaxShear">
+<code class="descname">plotMaxShear</code><span class="sig-paren">(</span><em>ax=None</em>, <em>plotGBs=False</em>, <em>dilateBoundaries=False</em>, <em>boundaryColour='white'</em>, <em>plotSlipTraces=False</em>, <em>plotPercent=False</em>, <em>scaleBar=False</em>, <em>updateCurrent=False</em>, <em>highlightGrains=None</em>, <em>highlightColours=None</em>, <em>plotColourBar=False</em>, <em>vmin=None</em>, <em>vmax=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.plotMaxShear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.plotMaxShear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a map of maximum shear strain</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>plotGBs</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to true to overlay grain boundaries</li>
+<li><strong>dilateBoundaries</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to true to dilate boundaries by one pixel</li>
+<li><strong>boundaryColour</strong> (<em>string</em><em>, </em><em>optional</em>) – Colour of boundaries</li>
+<li><strong>plotSlipTraces</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to true to plot slip traces for each grain</li>
+<li><strong>plotPercent</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to true to plot maps using percentage</li>
+<li><strong>plotColourBar</strong> (<em>bool</em><em>, </em><em>optional</em>) – Set to true to plot colour bar</li>
+<li><strong>vmin</strong> (<em>bool</em><em>, </em><em>optional</em>) – Minimum value to plot</li>
+<li><strong>vmax</strong> (<em>bool</em><em>, </em><em>optional</em>) – Maximum value to plot</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.plotPattern">
+<code class="descname">plotPattern</code><span class="sig-paren">(</span><em>updateCurrent=False</em>, <em>vmin=None</em>, <em>vmax=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.plotPattern"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.plotPattern" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot BSE image of Map. For use with setting homog points</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.printStatsTable">
+<code class="descname">printStatsTable</code><span class="sig-paren">(</span><em>percentiles</em>, <em>components</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.printStatsTable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.printStatsTable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print out statistics table for a DIC map</p>
+<p>percentiles(list) list of percentiles to print (number, Min, Mean or Max)
+components(list of str) lis of map components to print i.e. f11, mss</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.retrieveName">
+<code class="descname">retrieveName</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.retrieveName"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.retrieveName" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the first name assigned to the a map, as a string</p>
+<p>var(obj) variable to get name of</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.setCrop">
+<code class="descname">setCrop</code><span class="sig-paren">(</span><em>xMin=None</em>, <em>xMax=None</em>, <em>yMin=None</em>, <em>yMax=None</em>, <em>updateHomogPoints=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.setCrop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.setCrop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a crop for the DIC map</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>xMin</strong> (<em>int</em>) – Distance to crop from left in pixels</li>
+<li><strong>xMax</strong> (<em>int</em>) – Distance to crop from right in pixels</li>
+<li><strong>yMin</strong> (<em>int</em>) – Distance to crop from top in pixels</li>
+<li><strong>yMax</strong> (<em>int</em>) – Distance to crop from bottom in pixels</li>
+<li><strong>updateHomogPoints</strong> (<em>bool</em><em>, </em><em>optional</em>) – Change homologous points to reflect crop</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.setHomogPoint">
+<code class="descname">setHomogPoint</code><span class="sig-paren">(</span><em>points=None</em>, <em>display=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.setHomogPoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.setHomogPoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.setPatternPath">
+<code class="descname">setPatternPath</code><span class="sig-paren">(</span><em>filePath</em>, <em>windowSize</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.setPatternPath"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.setPatternPath" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set path of BSE image of pattern. filePath is relative to the path set when constructing.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.setScale">
+<code class="descname">setScale</code><span class="sig-paren">(</span><em>micrometrePerPixel</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.setScale"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.setScale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the scale of the map</p>
+<p>micrometrePerPixel(float) length of pixel in original BSE image in micrometres</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.hrdic.Map.strainScale">
+<code class="descname">strainScale</code><a class="headerlink" href="#defdap.hrdic.Map.strainScale" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.hrdic.Map.warpToDicFrame">
+<code class="descname">warpToDicFrame</code><span class="sig-paren">(</span><em>mapData</em>, <em>cropImage=True</em>, <em>order=1</em>, <em>preserve_range=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.warpToDicFrame"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.warpToDicFrame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Warps a map to the DIC frame</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Map (i.e. EBSD map) warped to the DIC frame</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first">warpedMap</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mapData</strong> (<em>map</em>) – data to warp</li>
+<li><strong>cropImage</strong> (<em>bool</em><em>, </em><em>optional</em>) – </li>
+<li><strong>order</strong> (<em>int</em><em>, </em><em>optional</em>) – order of interpolation (0: Nearest-neighbor, 1: Bi-linear…)</li>
+<li><strong>preserve_range</strong> (<em>bool</em><em>, </em><em>optional</em>) – keep the original range of values</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-defdap.quat">
+<span id="defdap-quat-module"></span><h2>defdap.quat module<a class="headerlink" href="#module-defdap.quat" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="defdap.quat.Quat">
+<em class="property">class </em><code class="descclassname">defdap.quat.</code><code class="descname">Quat</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.calcAverageOri">
+<em class="property">static </em><code class="descname">calcAverageOri</code><span class="sig-paren">(</span><em>quatComps</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.calcAverageOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.calcAverageOri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.calcMisOri">
+<em class="property">static </em><code class="descname">calcMisOri</code><span class="sig-paren">(</span><em>quatComps</em>, <em>refOri</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.calcMisOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.calcMisOri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.calcSymEqvs">
+<em class="property">static </em><code class="descname">calcSymEqvs</code><span class="sig-paren">(</span><em>quats</em>, <em>symGroup</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.calcSymEqvs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.calcSymEqvs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="defdap.quat.Quat.conjugate">
+<code class="descname">conjugate</code><a class="headerlink" href="#defdap.quat.Quat.conjugate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.createManyQuats">
+<em class="property">static </em><code class="descname">createManyQuats</code><span class="sig-paren">(</span><em>eulerArray</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.createManyQuats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.createManyQuats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a an array of quats from an array of Euler angles</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>eulerArray</strong> (<em>array</em>) – Size 3 x n x … x m</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.quat.Quat.dot">
+<code class="descname">dot</code><span class="sig-paren">(</span><em>right</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.dot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.quat.Quat.eulerAngles">
+<code class="descname">eulerAngles</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.eulerAngles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.eulerAngles" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="defdap.quat.Quat.fromAxisAngle">
+<em class="property">classmethod </em><code class="descname">fromAxisAngle</code><span class="sig-paren">(</span><em>axis</em>, <em>angle</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.fromAxisAngle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.fromAxisAngle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a quat object from an axis angle pair</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>axis</strong> (<em>np.array size 3</em>) – Axis of rotation</li>
+<li><strong>angle</strong> (<em>float</em>) – Rotation arround axis (radians)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Initialised Quat object</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat">Quat</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.labelPoint">
+<em class="property">static </em><code class="descname">labelPoint</code><span class="sig-paren">(</span><em>point</em>, <em>label</em>, <em>projection=None</em>, <em>ax=None</em>, <em>padX=0</em>, <em>padY=0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.labelPoint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.labelPoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.quat.Quat.misOri">
+<code class="descname">misOri</code><span class="sig-paren">(</span><em>right</em>, <em>symGroup</em>, <em>returnQuat=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.misOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.misOri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate misorientation angle between 2 orientations taking
+into account the symmetries of the crystal structure.
+Angle is 2*arccos(output).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rigth</strong> (<em>quat</em>) – Orientation to find misorientation to</li>
+<li><strong>symGroup</strong> (<em>str</em>) – Crystal type (cubic, hexagonal)</li>
+<li><strong>returnQuat</strong> (<em>int</em>) – What to return</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><dl class="docutils">
+<dt>returnQuat = 0 - misorientation</dt>
+<dd><p class="first last">returnQuat = 1 - symmetric equivalent with min misorientation
+returnQuat = 2 - both</p>
+</dd>
+</dl>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">various</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.quat.Quat.misOriAxis">
+<code class="descname">misOriAxis</code><span class="sig-paren">(</span><em>right</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.misOriAxis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.misOriAxis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate misorientation axis between 2 orientations.
+This does not consider symmetries of the crystal structure.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rigth</strong> (<em>quat</em>) – Orientation to find misorientation axis to</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">axis of misorientation</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="defdap.quat.Quat.norm">
+<code class="descname">norm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.norm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.norm" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.quat.Quat.normalise">
+<code class="descname">normalise</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.normalise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.normalise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.plotIPF">
+<em class="property">static </em><code class="descname">plotIPF</code><span class="sig-paren">(</span><em>quats</em>, <em>direction</em>, <em>symGroup</em>, <em>ax=None</em>, <em>markerColour='red'</em>, <em>markerSize=40</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.plotIPF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.plotIPF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot crystal orientations on an IPF</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>quats</strong> (<em>list</em>) – Lits of quats to plot on the IPF</li>
+<li><strong>direction</strong> (<em>array</em>) – Sample direction for IPF</li>
+<li><strong>symGroup</strong> (<em>str</em>) – Crystal type (cubic, hexagonal)</li>
+<li><strong>ax</strong> (<em>str</em>) – Axis to plot to</li>
+<li><strong>markerColour</strong> (<em>str</em>) – Marker colour (or two colours for halp and half)</li>
+<li><strong>markerSize</strong> (<em>int</em>) – Size of marker to plot</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.plotLine">
+<em class="property">static </em><code class="descname">plotLine</code><span class="sig-paren">(</span><em>startPoint</em>, <em>endPoint</em>, <em>plotSymmetries=False</em>, <em>symGroup=None</em>, <em>res=100</em>, <em>projection=None</em>, <em>ax=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.plotLine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.plotLine" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.plotPoleAxis">
+<em class="property">static </em><code class="descname">plotPoleAxis</code><span class="sig-paren">(</span><em>plotType</em>, <em>symGroup</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.plotPoleAxis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.plotPoleAxis" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.polarAngles">
+<em class="property">static </em><code class="descname">polarAngles</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>z</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.polarAngles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.polarAngles" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.quat.Quat.rotMatrix">
+<code class="descname">rotMatrix</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.rotMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.rotMatrix" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.stereoProject">
+<em class="property">static </em><code class="descname">stereoProject</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.stereoProject"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.stereoProject" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="defdap.quat.Quat.symEqv">
+<em class="property">static </em><code class="descname">symEqv</code><span class="sig-paren">(</span><em>group</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.symEqv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.symEqv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="defdap.quat.Quat.transformVector">
+<code class="descname">transformVector</code><span class="sig-paren">(</span><em>vector</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.transformVector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.transformVector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms vector by the quaternion. For EBSD quaterions this
+is a transformation from sample space to crystal space. Perform
+on conjugate of quaternion for crystal to sample.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>vector</strong> (<em>numpy.ndarray</em>) – Vector to transform</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Transformed vector</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">numpy.ndarray</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">DefDAP API documentation</a><ul>
+<li><a class="reference internal" href="#module-defdap.base">defdap.base module</a></li>
+<li><a class="reference internal" href="#module-defdap.ebsd">defdap.ebsd module</a></li>
+<li><a class="reference internal" href="#module-defdap.fepx">defdap.fepx module</a></li>
+<li><a class="reference internal" href="#module-defdap.hrdic">defdap.hrdic module</a></li>
+<li><a class="reference internal" href="#module-defdap.quat">defdap.quat module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="installation.html"
+                        title="previous chapter">DefDAP Installation</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/defdap.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="DefDAP Installation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2019, Michael Atkinson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.4.
+    </div>
+  </body>
+</html>

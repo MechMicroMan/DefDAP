@@ -1,0 +1,985 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>defdap.hrdic &#8212; DefDAP 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for defdap.hrdic</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">matplotlib_scalebar.scalebar</span> <span class="k">import</span> <span class="n">ScaleBar</span>
+
+<span class="kn">from</span> <span class="nn">skimage</span> <span class="k">import</span> <span class="n">transform</span> <span class="k">as</span> <span class="n">tf</span>
+<span class="kn">from</span> <span class="nn">skimage</span> <span class="k">import</span> <span class="n">morphology</span> <span class="k">as</span> <span class="n">mph</span>
+
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="k">import</span> <span class="n">mode</span>
+
+<span class="kn">import</span> <span class="nn">peakutils</span>
+
+<span class="kn">from</span> <span class="nn">defdap</span> <span class="k">import</span> <span class="n">base</span>
+<span class="kn">from</span> <span class="nn">defdap.quat</span> <span class="k">import</span> <span class="n">Quat</span>
+
+
+<div class="viewcode-block" id="Map"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map">[docs]</a><span class="k">class</span> <span class="nc">Map</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Map</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">fname</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialise class and import DIC data from file</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path(str): Path to file</span>
+<span class="sd">            fname(str): Name of file including extension</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Call base class constructor</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Map</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loading DIC data...&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Initialise variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span> <span class="o">=</span> <span class="kc">None</span>                 <span class="c1"># EBSD map linked to DIC map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span> <span class="o">=</span> <span class="kc">None</span>           <span class="c1"># Transform from EBSD to DIC coordinates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransformInv</span> <span class="o">=</span> <span class="kc">None</span>        <span class="c1"># Transform from DIC to EBSD coordinates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span> <span class="o">=</span> <span class="kc">None</span>             <span class="c1"># ID of last selected grain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdGrainIds</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">patternImPath</span> <span class="o">=</span> <span class="kc">None</span>           <span class="c1"># Path to BSE image of map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">windowSize</span> <span class="o">=</span> <span class="kc">None</span>              <span class="c1"># Window size for map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotHomog</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotMaxShear</span>  <span class="c1"># Use max shear map for defining homologous points</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">highlightAlpha</span> <span class="o">=</span> <span class="mf">0.6</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bseScale</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>                    <span class="c1"># file path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fname</span> <span class="o">=</span> <span class="n">fname</span>                  <span class="c1"># file name</span>
+
+        <span class="c1"># Load metadata</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">format</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)</span>    <span class="c1"># Software name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>              <span class="c1"># Software version</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">binning</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>         <span class="c1"># Sub-window width in pixels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xdimfile</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>        <span class="c1"># size of map along x (from header)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ydimfile</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>        <span class="c1"># size of map along y (from header)</span>
+
+        <span class="c1"># Load data</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">fname</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>           <span class="c1"># x coordinates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>           <span class="c1"># y coordinates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>           <span class="c1"># x displacement</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span>           <span class="c1"># y displacement</span>
+
+        <span class="c1"># Calculate size of map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xdim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">xc</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">xc</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span>
+                        <span class="nb">min</span><span class="p">(</span><span class="nb">abs</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xc</span><span class="p">))))</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># size of map along x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ydim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">yc</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">yc</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span>
+                        <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yc</span><span class="p">))))</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># size of map along y</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xdim</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xdimfile</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ydim</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ydimfile</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Dimensions of data and header do not match&quot;</span><span class="p">)</span>
+
+        <span class="c1"># *dim are full size of data. *Dim are size after cropping</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xdim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ydim</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xd</span><span class="p">)</span>     <span class="c1"># u (displacement component along x)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yd</span><span class="p">)</span>     <span class="c1"># v (displacement component along x)</span>
+        <span class="n">xDispGrad</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grad</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x_map</span><span class="p">)</span>
+        <span class="n">yDispGrad</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grad</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y_map</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f11</span> <span class="o">=</span> <span class="n">xDispGrad</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>         <span class="c1"># f11</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f22</span> <span class="o">=</span> <span class="n">yDispGrad</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>         <span class="c1"># f22</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f12</span> <span class="o">=</span> <span class="n">xDispGrad</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>             <span class="c1"># f12</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f21</span> <span class="o">=</span> <span class="n">yDispGrad</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>             <span class="c1"># f21</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_shear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((((</span><span class="bp">self</span><span class="o">.</span><span class="n">f11</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">f22</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span>
+                                 <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">f12</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">f21</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>   <span class="c1"># max shear component</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mapshape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_shear</span><span class="p">)</span>                    <span class="c1"># map shape</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>      <span class="c1"># crop distances (default all zeros)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">Loaded </span><span class="si">{0}</span><span class="s2"> </span><span class="si">{1}</span><span class="s2"> data (dimensions: </span><span class="si">{2}</span><span class="s2"> x </span><span class="si">{3}</span><span class="s2"> pixels, sub-window size: </span><span class="si">{4}</span><span class="s2"> x </span><span class="si">{4}</span><span class="s2"> pixels)&quot;</span><span class="o">.</span>
+              <span class="nb">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xdimfile</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ydimfile</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">binning</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Map.plotDefault"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotDefault">[docs]</a>    <span class="k">def</span> <span class="nf">plotDefault</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotMaxShear</span><span class="p">(</span><span class="n">plotGBs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_col</span><span class="p">):</span>
+        <span class="n">data_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data_col</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ydim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xdim</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data_map</span>
+
+    <span class="k">def</span> <span class="nf">_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_map</span><span class="p">):</span>
+        <span class="n">grad_step</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">abs</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xc</span><span class="p">))))</span>
+        <span class="n">data_grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">data_map</span><span class="p">,</span> <span class="n">grad_step</span><span class="p">,</span> <span class="n">grad_step</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data_grad</span>
+
+<div class="viewcode-block" id="Map.retrieveName"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.retrieveName">[docs]</a>    <span class="k">def</span> <span class="nf">retrieveName</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets the first name assigned to the a map, as a string</span>
+
+<span class="sd">        var(obj) variable to get name of</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">fi</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()):</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">var_name</span> <span class="k">for</span> <span class="n">var_name</span><span class="p">,</span> <span class="n">var_val</span> <span class="ow">in</span> <span class="n">fi</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">f_locals</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">var_val</span> <span class="ow">is</span> <span class="bp">self</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Map.setScale"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.setScale">[docs]</a>    <span class="k">def</span> <span class="nf">setScale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">micrometrePerPixel</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the scale of the map</span>
+
+<span class="sd">        micrometrePerPixel(float) length of pixel in original BSE image in micrometres</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bseScale</span> <span class="o">=</span> <span class="n">micrometrePerPixel</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">strainScale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bseScale</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">bseScale</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">binning</span>
+
+<div class="viewcode-block" id="Map.printStatsTable"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.printStatsTable">[docs]</a>    <span class="k">def</span> <span class="nf">printStatsTable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">percentiles</span><span class="p">,</span> <span class="n">components</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Print out statistics table for a DIC map</span>
+
+<span class="sd">        percentiles(list) list of percentiles to print (number, Min, Mean or Max)</span>
+<span class="sd">        components(list of str) lis of map components to print i.e. f11, mss</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Print map info</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[1m&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>    <span class="c1"># START BOLD</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{0}</span><span class="s2"> (dimensions: </span><span class="si">{1}</span><span class="s2"> x </span><span class="si">{2}</span><span class="s2"> pixels, sub-window size: </span><span class="si">{3}</span><span class="s2"> x </span><span class="si">{3}</span><span class="s2"> pixels, number of points: </span><span class="si">{4}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">retrieveName</span><span class="p">(),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">xdimfile</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ydimfile</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">binning</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">xdimfile</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ydimfile</span>
+        <span class="p">))</span>
+
+        <span class="c1"># Print table header</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Component</span><span class="se">\t</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(),</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">percentiles</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="s1">&#39;Min&#39;</span> <span class="ow">or</span> <span class="n">x</span> <span class="o">==</span> <span class="s1">&#39;Mean&#39;</span> <span class="ow">or</span> <span class="n">x</span> <span class="o">==</span> <span class="s1">&#39;Max&#39;</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{0}</span><span class="se">\t</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;P</span><span class="si">{0}</span><span class="se">\t</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[0m&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>    <span class="c1"># END BOLD</span>
+        <span class="nb">print</span><span class="p">()</span>
+
+        <span class="c1"># Print table</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+            <span class="n">selmap</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s1">&#39;mss&#39;</span><span class="p">:</span>
+                <span class="n">selmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_shear</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s1">&#39;f11&#39;</span><span class="p">:</span>
+                <span class="n">selmap</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f11</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s1">&#39;f12&#39;</span><span class="p">:</span>
+                <span class="n">selmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f12</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s1">&#39;f21&#39;</span><span class="p">:</span>
+                <span class="n">selmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f21</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s1">&#39;f22&#39;</span><span class="p">:</span>
+                <span class="n">selmap</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f22</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+            <span class="n">plist</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">percentiles</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">p</span> <span class="o">==</span> <span class="s1">&#39;Min&#39;</span><span class="p">:</span>
+                    <span class="n">plist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">selmap</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="n">p</span> <span class="o">==</span> <span class="s1">&#39;Mean&#39;</span><span class="p">:</span>
+                    <span class="n">plist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">selmap</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="n">p</span> <span class="o">==</span> <span class="s1">&#39;Max&#39;</span><span class="p">:</span>
+                    <span class="n">plist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">selmap</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">plist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">selmap</span><span class="p">,</span> <span class="n">p</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{0}</span><span class="se">\t\t</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">plist</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{0:.2f}</span><span class="se">\t</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">l</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Map.setCrop"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.setCrop">[docs]</a>    <span class="k">def</span> <span class="nf">setCrop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xMin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">xMax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">yMin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">yMax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">updateHomogPoints</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set a crop for the DIC map</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            xMin(int): Distance to crop from left in pixels</span>
+<span class="sd">            xMax(int): Distance to crop from right in pixels</span>
+<span class="sd">            yMin(int): Distance to crop from top in pixels</span>
+<span class="sd">            yMax(int): Distance to crop from bottom in pixels</span>
+<span class="sd">            updateHomogPoints (bool, optional): Change homologous points to reflect crop</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># changes in homog points</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># update crop distances</span>
+        <span class="k">if</span> <span class="n">xMin</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">updateHomogPoints</span><span class="p">:</span>
+                <span class="n">dx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="nb">int</span><span class="p">(</span><span class="n">xMin</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">xMin</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">xMax</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">xMax</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">yMin</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">updateHomogPoints</span><span class="p">:</span>
+                <span class="n">dy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="nb">int</span><span class="p">(</span><span class="n">yMin</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">yMin</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">yMax</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">yMax</span><span class="p">)</span>
+
+        <span class="c1"># update homogo points if required</span>
+        <span class="k">if</span> <span class="n">updateHomogPoints</span> <span class="ow">and</span> <span class="p">(</span><span class="n">dx</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">dy</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">updateHomogPoint</span><span class="p">(</span><span class="n">homogID</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">))</span>
+
+        <span class="c1"># set new cropped dimensions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xdim</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ydim</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Map.crop"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.crop">[docs]</a>    <span class="k">def</span> <span class="nf">crop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapData</span><span class="p">,</span> <span class="n">binned</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">binned</span><span class="p">:</span>
+            <span class="n">multiplier</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">multiplier</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">windowSize</span>
+
+        <span class="k">return</span> <span class="n">mapData</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">multiplier</span><span class="p">):</span><span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ydim</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">multiplier</span><span class="p">),</span>
+                       <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">multiplier</span><span class="p">):</span><span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">xdim</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">multiplier</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="Map.setHomogPoint"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.setHomogPoint">[docs]</a>    <span class="k">def</span> <span class="nf">setHomogPoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        
+        <span class="k">if</span> <span class="n">points</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">homogPoints</span> <span class="o">=</span> <span class="n">points</span>
+            
+        <span class="k">if</span> <span class="n">points</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">display</span> <span class="o">=</span> <span class="s2">&quot;maxshear&quot;</span>
+
+            <span class="c1"># Set plot dafault to display selected image</span>
+            <span class="n">display</span> <span class="o">=</span> <span class="n">display</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">display</span> <span class="o">==</span> <span class="s2">&quot;bse&quot;</span> <span class="ow">or</span> <span class="n">display</span> <span class="o">==</span> <span class="s2">&quot;pattern&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">plotHomog</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotPattern</span>
+                <span class="n">binSize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">windowSize</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">plotHomog</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotMaxShear</span>
+                <span class="n">binSize</span> <span class="o">=</span> <span class="mi">1</span>
+
+            <span class="c1"># Call set homog points from base class setting the bin size</span>
+            <span class="nb">super</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">setHomogPoint</span><span class="p">(</span><span class="n">binSize</span><span class="o">=</span><span class="n">binSize</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="n">points</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Map.linkEbsdMap"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.linkEbsdMap">[docs]</a>    <span class="k">def</span> <span class="nf">linkEbsdMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ebsdMap</span><span class="p">,</span> <span class="n">transformType</span><span class="o">=</span><span class="s2">&quot;affine&quot;</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculates the transformation required to align EBSD dataset to DIC</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ebsdMap(ebsd.Map): EBSD map object to link</span>
+<span class="sd">            transformType(string, optional): affine, piecewiseAffine or polynomial</span>
+<span class="sd">            order(int, optional): Order of polynomial transform to apply</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span> <span class="o">=</span> <span class="n">ebsdMap</span>
+        <span class="k">if</span> <span class="n">transformType</span> <span class="o">==</span> <span class="s2">&quot;piecewiseAffine&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">PiecewiseAffineTransform</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransformInv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span><span class="o">.</span><span class="n">inverse</span>
+        <span class="k">elif</span> <span class="n">transformType</span> <span class="o">==</span> <span class="s2">&quot;polynomial&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">PolynomialTransform</span><span class="p">()</span>
+            <span class="c1"># You can&#39;t calculate the inverse of a polynomial transform so have to estimate</span>
+            <span class="c1"># by swapping source and destination homog points</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransformInv</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">PolynomialTransform</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransformInv</span><span class="o">.</span><span class="n">estimate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">homogPoints</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">homogPoints</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>
+            <span class="c1"># calculate transform from EBSD to DIC frame</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span><span class="o">.</span><span class="n">estimate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">homogPoints</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">homogPoints</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">AffineTransform</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransformInv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span><span class="o">.</span><span class="n">inverse</span>
+
+        <span class="c1"># calculate transform from EBSD to DIC frame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span><span class="o">.</span><span class="n">estimate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">homogPoints</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">homogPoints</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Map.checkEbsdLinked"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.checkEbsdLinked">[docs]</a>    <span class="k">def</span> <span class="nf">checkEbsdLinked</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if an EBSD map has been linked.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: Returns True if EBSD map linked</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception: if EBSD map not linked</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;No EBSD map linked.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="Map.warpToDicFrame"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.warpToDicFrame">[docs]</a>    <span class="k">def</span> <span class="nf">warpToDicFrame</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapData</span><span class="p">,</span> <span class="n">cropImage</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">preserve_range</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Warps a map to the DIC frame</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            warpedMap: Map (i.e. EBSD map) warped to the DIC frame</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mapData(map): data to warp</span>
+<span class="sd">            cropImage(bool, optional):</span>
+<span class="sd">            order(int, optional): order of interpolation (0: Nearest-neighbor, 1: Bi-linear...)</span>
+<span class="sd">            preserve_range(bool, optional): keep the original range of values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check a EBSD map is linked</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkEbsdLinked</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">cropImage</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">tf</span><span class="o">.</span><span class="n">AffineTransform</span><span class="p">):</span>
+            <span class="c1"># crop to size of DIC map</span>
+            <span class="n">outputShape</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">)</span>
+            <span class="c1"># warp the map</span>
+            <span class="n">warpedMap</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">warp</span><span class="p">(</span><span class="n">mapData</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span><span class="p">,</span> <span class="n">output_shape</span><span class="o">=</span><span class="n">outputShape</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="n">preserve_range</span><span class="o">=</span><span class="n">preserve_range</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># copy ebsd transform and change translation to give an extra 5% border</span>
+            <span class="c1"># to show the entire image after rotation/shearing</span>
+            <span class="n">tempEbsdTransform</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">AffineTransform</span><span class="p">(</span><span class="n">matrix</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span><span class="o">.</span><span class="n">params</span><span class="p">))</span>
+            <span class="n">tempEbsdTransform</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.05</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mapData</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+            <span class="c1"># output the entire warped image with 5% border (add some extra to fix a bug)</span>
+            <span class="n">outputShape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mapData</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1.4</span> <span class="o">/</span> <span class="n">tempEbsdTransform</span><span class="o">.</span><span class="n">scale</span>
+
+            <span class="c1"># warp the map</span>
+            <span class="n">warpedMap</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">warp</span><span class="p">(</span><span class="n">mapData</span><span class="p">,</span> <span class="n">tempEbsdTransform</span><span class="p">,</span> <span class="n">output_shape</span><span class="o">=</span><span class="n">outputShape</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span> <span class="n">preserve_range</span><span class="o">=</span><span class="n">preserve_range</span><span class="p">)</span>
+
+        <span class="c1"># return map</span>
+        <span class="k">return</span> <span class="n">warpedMap</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">boundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Check a EBSD map is linked</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkEbsdLinked</span><span class="p">()</span>
+
+        <span class="c1"># image is returned cropped if a piecewise transform is being used</span>
+        <span class="n">boundaries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">warpToDicFrame</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">boundaries</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="n">cropImage</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.1</span>
+
+        <span class="n">boundaries</span> <span class="o">=</span> <span class="n">mph</span><span class="o">.</span><span class="n">skeletonize</span><span class="p">(</span><span class="n">boundaries</span><span class="p">)</span>
+        <span class="n">mph</span><span class="o">.</span><span class="n">remove_small_objects</span><span class="p">(</span><span class="n">boundaries</span><span class="p">,</span> <span class="n">min_size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">in_place</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># crop image if it is a simple affine transform</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span><span class="p">)</span> <span class="ow">is</span> <span class="n">tf</span><span class="o">.</span><span class="n">AffineTransform</span><span class="p">:</span>
+            <span class="c1"># need to apply the translation of ebsd transform and remove 5% border</span>
+            <span class="n">crop</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+            <span class="n">crop</span> <span class="o">+=</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">boundaries</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="c1"># the crop is defined in EBSD coords so need to transform it</span>
+            <span class="n">transformMatrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransform</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">crop</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">transformMatrix</span><span class="p">),</span> <span class="n">crop</span><span class="p">)</span>
+            <span class="n">crop</span> <span class="o">=</span> <span class="n">crop</span><span class="o">.</span><span class="n">round</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+            <span class="n">boundaries</span> <span class="o">=</span> <span class="n">boundaries</span><span class="p">[</span><span class="n">crop</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span><span class="n">crop</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span>
+                                    <span class="n">crop</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">crop</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">]</span>
+
+        <span class="n">boundaries</span> <span class="o">=</span> <span class="o">-</span><span class="n">boundaries</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">boundaries</span>
+
+<div class="viewcode-block" id="Map.setPatternPath"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.setPatternPath">[docs]</a>    <span class="k">def</span> <span class="nf">setPatternPath</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filePath</span><span class="p">,</span> <span class="n">windowSize</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set path of BSE image of pattern. filePath is relative to the path set when constructing.&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">patternImPath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">+</span> <span class="n">filePath</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">windowSize</span> <span class="o">=</span> <span class="n">windowSize</span></div>
+
+<div class="viewcode-block" id="Map.plotPattern"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotPattern">[docs]</a>    <span class="k">def</span> <span class="nf">plotPattern</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">updateCurrent</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot BSE image of Map. For use with setting homog points&quot;&quot;&quot;</span>
+
+        <span class="c1"># Check image path is set</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">patternImPath</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">updateCurrent</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+            <span class="n">bseImage</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">patternImPath</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">bseImage</span><span class="p">,</span> <span class="n">binned</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;First set path to pattern image.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Map.plotGrainNumbers"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotGrainNumbers">[docs]</a>    <span class="k">def</span> <span class="nf">plotGrainNumbers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dilate</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot a map with grains numbered</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dilate(bool, optional): Set to true to dilate boundaries by one pixel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">grainID</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">)):</span>
+            <span class="n">xmiddle</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">grainID</span><span class="p">]</span><span class="o">.</span><span class="n">extremeCoords</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">grainID</span><span class="p">]</span><span class="o">.</span><span class="n">extremeCoords</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="n">ymiddle</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">grainID</span><span class="p">]</span><span class="o">.</span><span class="n">extremeCoords</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">grainID</span><span class="p">]</span><span class="o">.</span><span class="n">extremeCoords</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">xmiddle</span><span class="p">,</span> <span class="n">ymiddle</span><span class="p">,</span> <span class="n">grainID</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotGBs</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">,</span> <span class="n">colour</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">dilate</span><span class="o">=</span><span class="n">dilate</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Map.plotMaxShear"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotMaxShear">[docs]</a>    <span class="k">def</span> <span class="nf">plotMaxShear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plotGBs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dilateBoundaries</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">boundaryColour</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">plotSlipTraces</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plotPercent</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                     <span class="n">scaleBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">updateCurrent</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">highlightGrains</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">highlightColours</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                     <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot a map of maximum shear strain</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            plotGBs(bool, optional): Set to true to overlay grain boundaries</span>
+<span class="sd">            dilateBoundaries(bool, optional): Set to true to dilate boundaries by one pixel</span>
+<span class="sd">            boundaryColour(string, optional): Colour of boundaries</span>
+<span class="sd">            plotSlipTraces(bool, optional): Set to true to plot slip traces for each grain</span>
+<span class="sd">            plotPercent(bool, optional): Set to true to plot maps using percentage</span>
+<span class="sd">            plotColourBar(bool, optional): Set to true to plot colour bar</span>
+<span class="sd">            vmin(bool, optional): Minimum value to plot</span>
+<span class="sd">            vmax(bool, optional): Maximum value to plot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">updateCurrent</span><span class="p">:</span>
+            <span class="c1"># self.fig, self.ax = plt.subplots(figsize=(5.75, 4))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span>
+            
+            
+        <span class="n">multiplier</span> <span class="o">=</span> <span class="mi">100</span> <span class="k">if</span> <span class="n">plotPercent</span> <span class="k">else</span> <span class="mi">1</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_shear</span><span class="p">)</span> <span class="o">*</span> <span class="n">multiplier</span><span class="p">,</span>
+                             <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;viridis&#39;</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;None&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">plotColourBar</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">plotPercent</span><span class="p">:</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Effective shear strain (%)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Effective shear strain&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">plotGBs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotGBs</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">,</span> <span class="n">colour</span><span class="o">=</span><span class="n">boundaryColour</span><span class="p">,</span> <span class="n">dilate</span><span class="o">=</span><span class="n">dilateBoundaries</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">highlightGrains</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">highlightGrains</span><span class="p">(</span><span class="n">highlightGrains</span><span class="p">,</span> <span class="n">highlightColours</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">scaleBar</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">strainScale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;First set image scale using setScale&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">scalebar</span> <span class="o">=</span> <span class="n">ScaleBar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">strainScale</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1e-6</span><span class="p">))</span>  <span class="c1"># 1 pixel = 0.2 meter</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">add_artist</span><span class="p">(</span><span class="n">scalebar</span><span class="p">)</span>
+
+        <span class="c1"># # plot slip traces</span>
+        <span class="c1"># if plotSlipTraces:</span>
+        <span class="c1">#     # Check that grains have been detected in the map</span>
+        <span class="c1">#     self.checkGrainsDetected()</span>
+
+        <span class="c1">#     numGrains = len(self.grainList)</span>
+        <span class="c1">#     numSS = len(self.ebsdMap.slipSystems)</span>
+        <span class="c1">#     grainSizeData = np.zeros((numGrains, 4))</span>
+        <span class="c1">#     slipTraceData = np.zeros((numGrains, numSS, 2))</span>
+
+        <span class="c1">#     i = 0   # keep track of number of slip traces</span>
+        <span class="c1">#     for grain in self.grainList:</span>
+        <span class="c1">#         if len(grain) &lt; 1000:</span>
+        <span class="c1">#             continue</span>
+
+        <span class="c1">#         # x0, y0, xmax, ymax</span>
+        <span class="c1">#         grainSizeData[i, 0], grainSizeData[i, 1], grainSizeData[i, 2], grainSizeData[i, 3] = grain.extremeCoords</span>
+
+        <span class="c1">#         for j, slipTrace in enumerate(grain.slipTraces()):</span>
+        <span class="c1">#             slipTraceData[i, j, 0:2] = slipTrace[0:2]</span>
+
+        <span class="c1">#         i += 1</span>
+
+        <span class="c1">#     grainSizeData = grainSizeData[0:i, :]</span>
+        <span class="c1">#     slipTraceData = slipTraceData[0:i, :, :]</span>
+
+        <span class="c1">#     scale = 4 / ((grainSizeData[:, 2] - grainSizeData[:, 0]) / self.xDim +</span>
+        <span class="c1">#                  (grainSizeData[:, 3] - grainSizeData[:, 1]) / self.xDim)</span>
+
+        <span class="c1">#     xPos = grainSizeData[:, 0] + (grainSizeData[:, 2] - grainSizeData[:, 0]) / 2</span>
+        <span class="c1">#     yPos = grainSizeData[:, 1] + (grainSizeData[:, 3] - grainSizeData[:, 1]) / 2</span>
+
+        <span class="c1">#     colours = self.ebsdMap.slipTraceColours</span>
+
+        <span class="c1">#     for i, colour in enumerate(colours[0:numSS]):</span>
+        <span class="c1">#         self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1],</span>
+        <span class="c1">#                        scale=scale, pivot=&quot;middle&quot;, color=colour, headwidth=1,</span>
+        <span class="c1">#                        headlength=0, width=0.002)</span>
+
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.plotGrainAvMaxShear"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotGrainAvMaxShear">[docs]</a>    <span class="k">def</span> <span class="nf">plotGrainAvMaxShear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plotGBs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">clabel</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot grain map with grains filled with average value of max shear.</span>
+<span class="sd">        This uses the max shear values stored in grain objects, to plot other data</span>
+<span class="sd">        use plotGrainAv().</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            plotGBs (bool, optional): Set to True to draw grain boundaries</span>
+<span class="sd">            plotColourBar (bool, optional): Set to Flase to exclude the colour bar</span>
+<span class="sd">            vmin (float, optional): Minimum value of colour scale</span>
+<span class="sd">            vmax (float, optional): Maximum value for colour scale</span>
+<span class="sd">            clabel (str, optional): Colour bar label text</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+
+        <span class="n">grainAvMaxShear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">grain</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">:</span>
+            <span class="n">avMaxShear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">maxShearList</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">grain</span><span class="o">.</span><span class="n">coordList</span><span class="p">:</span>
+                <span class="n">grainAvMaxShear</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">avMaxShear</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">grainAvMaxShear</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmin</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">plotColourBar</span><span class="p">:</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;Effective shear strain (%)&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">plotGBs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotGBs</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Map.calcGrainAv"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.calcGrainAv">[docs]</a>    <span class="k">def</span> <span class="nf">calcGrainAv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapData</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate grain average of any DIC map data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mapData (np.array): Array of map data to grain average. This must be cropped!</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.array: Array containing the grain average values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="n">grainAvData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">grainId</span><span class="p">,</span> <span class="n">grain</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">):</span>
+            <span class="n">grainData</span> <span class="o">=</span> <span class="n">grain</span><span class="o">.</span><span class="n">grainData</span><span class="p">(</span><span class="n">mapData</span><span class="p">)</span>
+            <span class="n">grainAvData</span><span class="p">[</span><span class="n">grainId</span><span class="p">]</span> <span class="o">=</span> <span class="n">grainData</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">grainAvData</span></div>
+
+<div class="viewcode-block" id="Map.plotGrainAv"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotGrainAv">[docs]</a>    <span class="k">def</span> <span class="nf">plotGrainAv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapData</span><span class="p">,</span> <span class="n">plotGBs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">clabel</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot grain map with grains filled with average value of from any DIC map data</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mapData (np.array): Array of map data to grain average. This must be cropped!</span>
+<span class="sd">            plotGBs (bool, optional): Set to True to draw grain boundaries</span>
+<span class="sd">            plotColourBar (bool, optional): Set to Flase to exclude the colour bar</span>
+<span class="sd">            vmin (float, optional): Minimum value of colour scale</span>
+<span class="sd">            vmax (float, optional): Maximum value for colour scale</span>
+<span class="sd">            clabel (str, optional): Colour bar label text</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">grainAvData</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calcGrainAv</span><span class="p">(</span><span class="n">mapData</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotGrainData</span><span class="p">(</span>
+            <span class="n">grainAvData</span><span class="p">,</span>
+            <span class="n">grainIds</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">plotGBs</span><span class="o">=</span><span class="n">plotGBs</span><span class="p">,</span>
+            <span class="n">plotColourBar</span><span class="o">=</span><span class="n">plotColourBar</span><span class="p">,</span>
+            <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span>
+            <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span>
+            <span class="n">clabel</span><span class="o">=</span><span class="n">clabel</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Map.plotGrainData"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotGrainData">[docs]</a>    <span class="k">def</span> <span class="nf">plotGrainData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grainData</span><span class="p">,</span> <span class="n">grainIds</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">bg</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plotGBs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">clabel</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot grain map with grains filled with average value of from any DIC map data</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            grainData (np.array): Data value for each grain</span>
+<span class="sd">            grainIds (iterable): Grain IDs of each grain to plot, -1 for all grains</span>
+<span class="sd">            bg (float, optional): Background value for areas with no grain data.</span>
+<span class="sd">            plotGBs (bool, optional): Set to True to draw grain boundaries</span>
+<span class="sd">            plotColourBar (bool, optional): Set to Flase to exclude the colour bar</span>
+<span class="sd">            cmap (str, optional): Colour map to use</span>
+<span class="sd">            vmin (float, optional): Minimum value of colour scale</span>
+<span class="sd">            vmax (float, optional): Maximum value for colour scale</span>
+<span class="sd">            clabel (str, optional): Colour bar label text</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">grainIds</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span> <span class="ow">and</span> <span class="n">grainIds</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">grainIds</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">grainData</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">grainIds</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Must be 1 value for each grain in grainData.&quot;</span><span class="p">)</span>
+
+        <span class="n">grainMap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">],</span> <span class="n">bg</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">grainData</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">grainId</span><span class="p">,</span> <span class="n">grainValue</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">grainIds</span><span class="p">,</span> <span class="n">grainData</span><span class="p">):</span>
+            <span class="n">grain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">grainId</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">grain</span><span class="o">.</span><span class="n">coordList</span><span class="p">:</span>
+                <span class="n">grainMap</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">grainValue</span>
+
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+
+        <span class="n">im</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">grainMap</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">plotColourBar</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">clabel</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">plotGBs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotGBs</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Map.plotGrainAvIPF"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotGrainAvIPF">[docs]</a>    <span class="k">def</span> <span class="nf">plotGrainAvIPF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapData</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">clabel</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot IPF of grain reference (average) orientations with points coloured</span>
+<span class="sd">        by grain average values from map data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mapData (np.array): Array of map data to grain average. This must be cropped!</span>
+<span class="sd">            direction (np.array): Vector of reference direction for the IPF</span>
+<span class="sd">            plotColourBar (bool, optional): Set to Flase to exclude the colour bar</span>
+<span class="sd">            vmin (float, optional): Minimum value of colour scale</span>
+<span class="sd">            vmax (float, optional): Maximum value for colour scale</span>
+<span class="sd">            clabel (str, optional): Colour bar label text</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">grainAvData</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calcGrainAv</span><span class="p">(</span><span class="n">mapData</span><span class="p">)</span>
+
+        <span class="n">grainOri</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">Quat</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">grainId</span><span class="p">,</span> <span class="n">grain</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">):</span>
+            <span class="n">grainOri</span><span class="p">[</span><span class="n">grainId</span><span class="p">]</span> <span class="o">=</span> <span class="n">grain</span><span class="o">.</span><span class="n">ebsdGrain</span><span class="o">.</span><span class="n">refOri</span>
+
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+
+        <span class="n">Quat</span><span class="o">.</span><span class="n">plotIPF</span><span class="p">(</span><span class="n">grainOri</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">crystalSym</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                     <span class="n">c</span><span class="o">=</span><span class="n">grainAvData</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">plotColourBar</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">clabel</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Map.locateGrainID"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.locateGrainID">[docs]</a>    <span class="k">def</span> <span class="nf">locateGrainID</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">clickEvent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">displaySelected</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="c1"># reset current selected grain and plot max shear map with click handler</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotMaxShear</span><span class="p">(</span><span class="n">plotGBs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">clickEvent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># default click handler which highlights grain and prints id</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_connect</span><span class="p">(</span>
+                <span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span>
+                <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">clickGrainId</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">displaySelected</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># click handler loaded in as parameter. Pass current map object to it.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_connect</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">clickEvent</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+
+        <span class="c1"># unset figure for plotting grains</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainFig</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainAx</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="Map.clickGrainId"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.clickGrainId">[docs]</a>    <span class="k">def</span> <span class="nf">clickGrainId</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">displaySelected</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">inaxes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># grain id of selected grain</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">ydata</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">xdata</span><span class="p">)]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Grain ID: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">))</span>
+
+            <span class="c1"># clear current axis and redraw map with highlighted grain overlay</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotMaxShear</span><span class="p">(</span><span class="n">plotGBs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">updateCurrent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">highlightGrains</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">],</span>
+                              <span class="n">highlightColours</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;green&#39;</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">displaySelected</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainFig</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">grainFig</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainAx</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">]</span><span class="o">.</span><span class="n">calcSlipTraces</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainAx</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">]</span><span class="o">.</span><span class="n">plotMaxShear</span><span class="p">(</span><span class="n">plotSlipTraces</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                              <span class="n">plotShearBands</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                              <span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">grainAx</span><span class="p">,</span>
+                                                              <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainFig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Map.findGrains"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.findGrains">[docs]</a>    <span class="k">def</span> <span class="nf">findGrains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">minGrainSize</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Finding grains in DIC map...&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check a EBSD map is linked</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkEbsdLinked</span><span class="p">()</span>
+
+        <span class="c1"># Initialise the grain map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grains</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundaries</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># List of points where no grain has been set yet</span>
+        <span class="n">unknownPoints</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grains</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># Start counter for grains</span>
+        <span class="n">grainIndex</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Loop until all points (except boundaries) have been assigned to a grain or ignored</span>
+        <span class="k">while</span> <span class="n">unknownPoints</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Flood fill first unknown point and return grain object</span>
+            <span class="n">currentGrain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">floodFill</span><span class="p">(</span><span class="n">unknownPoints</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">unknownPoints</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">grainIndex</span><span class="p">)</span>
+
+            <span class="n">grainSize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">currentGrain</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">grainSize</span> <span class="o">&lt;</span> <span class="n">minGrainSize</span><span class="p">:</span>
+                <span class="c1"># if grain size less than minimum, ignore grain and set values in grain map to -2</span>
+                <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">currentGrain</span><span class="o">.</span><span class="n">coordList</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># add grain and size to lists and increment grain label</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">currentGrain</span><span class="p">)</span>
+                <span class="n">grainIndex</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># update unknown points</span>
+            <span class="n">unknownPoints</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grains</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Now link grains to those in ebsd Map</span>
+        <span class="c1"># Warp DIC grain map to EBSD frame</span>
+        <span class="n">dicGrains</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grains</span>
+        <span class="n">warpedDicGrains</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">warp</span><span class="p">(</span><span class="n">dicGrains</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransformInv</span><span class="p">,</span>
+                                  <span class="n">output_shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">xDim</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+        <span class="c1"># Initalise list to store ID of corresponding grain in EBSD map. Also stored in grain objects</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdGrainIds</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">)):</span>
+            <span class="c1"># Find grain by masking the native ebsd grain image with selected grain from</span>
+            <span class="c1"># the warped dic grain image. The modal value is the EBSD grain label.</span>
+            <span class="n">modeId</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">warpedDicGrains</span> <span class="o">==</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">ebsdGrainIds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">modeId</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">ebsdGrainId</span> <span class="o">=</span> <span class="n">modeId</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">ebsdGrain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">modeId</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">ebsdMap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.floodFill"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.floodFill">[docs]</a>    <span class="k">def</span> <span class="nf">floodFill</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">grainIndex</span><span class="p">):</span>
+        <span class="n">currentGrain</span> <span class="o">=</span> <span class="n">Grain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="n">currentGrain</span><span class="o">.</span><span class="n">addPoint</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_shear</span><span class="p">[</span><span class="n">y</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+
+        <span class="n">edge</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)]</span>
+        <span class="n">grain</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="n">grainIndex</span>
+        <span class="k">while</span> <span class="n">edge</span><span class="p">:</span>
+            <span class="n">newedge</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="n">edge</span><span class="p">:</span>
+                <span class="n">moves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span>
+                                  <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span>
+                                  <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+                                  <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)])</span>
+
+                <span class="n">movesIndexShift</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">moves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">moves</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">movesIndexShift</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">elif</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">moves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">moves</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">movesIndexShift</span> <span class="o">=</span> <span class="mi">1</span>
+
+                <span class="k">if</span> <span class="n">y</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">moves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">moves</span><span class="p">,</span> <span class="mi">3</span> <span class="o">-</span> <span class="n">movesIndexShift</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">y</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">moves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">moves</span><span class="p">,</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">movesIndexShift</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="ow">in</span> <span class="n">moves</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">currentGrain</span><span class="o">.</span><span class="n">addPoint</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_shear</span><span class="p">[</span><span class="n">y</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                                                                     <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+                        <span class="n">newedge</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+                        <span class="n">grain</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">grainIndex</span>
+                    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="p">(</span><span class="n">s</span> <span class="o">&gt;</span> <span class="n">x</span> <span class="ow">or</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="n">y</span><span class="p">):</span>
+                        <span class="n">currentGrain</span><span class="o">.</span><span class="n">addPoint</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_shear</span><span class="p">[</span><span class="n">y</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                                                                     <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+                        <span class="n">grain</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">grainIndex</span>
+
+            <span class="k">if</span> <span class="n">newedge</span> <span class="o">==</span> <span class="p">[]:</span>
+                <span class="k">return</span> <span class="n">currentGrain</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">edge</span> <span class="o">=</span> <span class="n">newedge</span></div></div>
+
+
+<div class="viewcode-block" id="Grain"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain">[docs]</a><span class="k">class</span> <span class="nc">Grain</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Grain</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dicMap</span><span class="p">):</span>
+        <span class="c1"># Call base class constructor</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Grain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dicMap</span> <span class="o">=</span> <span class="n">dicMap</span>       <span class="c1"># dic map this grain is a member of</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maxShearList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdGrain</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># coord is a tuple (x, y)</span>
+<div class="viewcode-block" id="Grain.addPoint"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain.addPoint">[docs]</a>    <span class="k">def</span> <span class="nf">addPoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">maxShear</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coordList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maxShearList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">maxShear</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Grain.plotMaxShear"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain.plotMaxShear">[docs]</a>    <span class="k">def</span> <span class="nf">plotMaxShear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plotPercent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">plotSlipTraces</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plotShearBands</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                     <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scaleBar</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+
+        <span class="n">multiplier</span> <span class="o">=</span> <span class="mi">100</span> <span class="k">if</span> <span class="n">plotPercent</span> <span class="k">else</span> <span class="mi">1</span>
+        <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extremeCoords</span>
+
+        <span class="c1"># initialise array with nans so area not in grain displays white</span>
+        <span class="n">grainMaxShear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">y0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">-</span> <span class="n">x0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">coord</span><span class="p">,</span> <span class="n">maxShear</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordList</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxShearList</span><span class="p">):</span>
+            <span class="n">grainMaxShear</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y0</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x0</span><span class="p">]</span> <span class="o">=</span> <span class="n">maxShear</span>
+
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">grainMaxShear</span> <span class="o">*</span> <span class="n">multiplier</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;Effective shear strain (%)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">([])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">([])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">grainMaxShear</span> <span class="o">*</span> <span class="n">multiplier</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">)</span>
+            <span class="c1"># ax.colorbar()</span>
+
+        <span class="k">if</span> <span class="n">plotSlipTraces</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotSlipTraces</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">plotShearBands</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotShearBands</span><span class="p">(</span><span class="n">grainMaxShear</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+            
+        <span class="k">if</span> <span class="n">scaleBar</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dicMap</span><span class="o">.</span><span class="n">strainScale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;First set image scale using setScale&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                
+                <span class="n">scalebar</span> <span class="o">=</span> <span class="n">ScaleBar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dicMap</span><span class="o">.</span><span class="n">strainScale</span><span class="o">*</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">add_artist</span><span class="p">(</span><span class="n">scalebar</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ax</span><span class="o">.</span><span class="n">add_artist</span><span class="p">(</span><span class="n">scalebar</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">slipTraces</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdGrain</span><span class="o">.</span><span class="n">slipTraces</span>
+
+<div class="viewcode-block" id="Grain.calcSlipTraces"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain.calcSlipTraces">[docs]</a>    <span class="k">def</span> <span class="nf">calcSlipTraces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slipSystems</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdGrain</span><span class="o">.</span><span class="n">calcSlipTraces</span><span class="p">(</span><span class="n">slipSystems</span><span class="o">=</span><span class="n">slipSystems</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Grain.calcSlipBands"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain.calcSlipBands">[docs]</a>    <span class="k">def</span> <span class="nf">calcSlipBands</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grainMapData</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="mi">30</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Use Radon transform to detect slip band angles</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            grainMapData (numpy.array): Data to find bands in</span>
+<span class="sd">            thres (float, optional): Normalised threshold for peaks</span>
+<span class="sd">            min_dist (int, optional): Minimum angle between bands</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list(float): Detected slip band angles</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">grainMapData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">grainMapData</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">grainMapData</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Negeative values in data, taking absolute value.&quot;</span><span class="p">)</span>
+            <span class="c1"># grainMapData = grainMapData**2</span>
+            <span class="n">grainMapData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">grainMapData</span><span class="p">)</span>
+
+        <span class="n">sin_map</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">radon</span><span class="p">(</span><span class="n">grainMapData</span><span class="p">,</span> <span class="n">circle</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">profile</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">sin_map</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">180</span><span class="p">)</span>
+
+        <span class="n">indexes</span> <span class="o">=</span> <span class="n">peakutils</span><span class="o">.</span><span class="n">indexes</span><span class="p">(</span><span class="n">profile</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="n">thres</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="n">min_dist</span><span class="p">)</span>
+        <span class="n">peaks</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">indexes</span><span class="p">]</span>
+        <span class="c1"># peaks = peakutils.interpolate(x, profile, ind=indexes)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Number of bands detected: </span><span class="si">{:}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">peaks</span><span class="p">)))</span>
+
+        <span class="n">slipBandAngles</span> <span class="o">=</span> <span class="n">peaks</span>
+        <span class="n">slipBandAngles</span> <span class="o">=</span> <span class="n">slipBandAngles</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span>
+
+        <span class="k">return</span> <span class="n">slipBandAngles</span></div>
+
+<div class="viewcode-block" id="Grain.plotSlipBands"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain.plotSlipBands">[docs]</a>    <span class="k">def</span> <span class="nf">plotSlipBands</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grainMapData</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">slipBandAngles</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">slipBandAngles</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">slipBandAngles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calcSlipBands</span><span class="p">(</span><span class="n">grainMapData</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="n">thres</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="n">min_dist</span><span class="p">)</span>
+        <span class="n">slipBandVectors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">slipBandAngles</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">slipBandAngles</span><span class="p">)))</span>
+
+        <span class="n">xPos</span><span class="p">,</span> <span class="n">yPos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">centreCoords</span>
+
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">quiver</span><span class="p">(</span>
+                <span class="n">xPos</span><span class="p">,</span> <span class="n">yPos</span><span class="p">,</span>
+                <span class="n">slipBandVectors</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">slipBandVectors</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">pivot</span><span class="o">=</span><span class="s2">&quot;middle&quot;</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="s1">&#39;yellow&#39;</span><span class="p">,</span> <span class="n">headwidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">headlength</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">quiver</span><span class="p">(</span>
+                <span class="n">xPos</span><span class="p">,</span> <span class="n">yPos</span><span class="p">,</span>
+                <span class="n">slipBandVectors</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">slipBandVectors</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">pivot</span><span class="o">=</span><span class="s2">&quot;middle&quot;</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="s1">&#39;yellow&#39;</span><span class="p">,</span> <span class="n">headwidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">headlength</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">slipBandAngles</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2019, Michael Atkinson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.4.
+    </div>
+  </body>
+</html>

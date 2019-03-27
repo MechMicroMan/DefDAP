@@ -11,10 +11,10 @@ from IPython.display import clear_output
 
 import pyevtk.vtk
 
-# import vtk
-# from vtk.util import numpy_support as vnp
+import vtk
+from vtk.util import numpy_support as vnp
 
-from .quat import Quat
+from defdap.quat import Quat
 
 
 class Mesh(object):
@@ -986,7 +986,7 @@ class Surface(object):
             self._elmtIDsLayer = np.array(surfaceElmtIDs)
 
         return self._elmtIDsLayer
-    
+
     @property
     def elmtGrainLayer(self):
         """Returns an array of grain IDs for elements in the surface (note grain IDs are 1 based)

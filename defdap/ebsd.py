@@ -5,16 +5,16 @@ from matplotlib.widgets import Button
 from skimage import morphology as mph
 
 import copy
-import os
-import pdb
-from .quat import Quat
-from . import base
+
+from defdap.io import EBSDDataLoader
+from defdap.quat import Quat
+from defdap import base
 
 
 class Map(base.Map):
     """Summary
 
-    Attributes:
+    Args:
         averageSchmidFactor (TYPE): Description
         binData (TYPE): imported binary data
         boundaries (TYPE): Description
@@ -35,12 +35,13 @@ class Map(base.Map):
         yDim (int): y dimension of map
     """
 
-    def __init__(self, fileName, crystalSym):
-        """Initialise class and import DIC data from file
+    def __init__(self, fileName, crystalSym, dataType=None):
+        """Initialise class
 
-        Args:
-            filename(str): Path to file, including name, excluding extension
-            crystalSym(str): Crystal sturcture, 'cubic' or 'hexagonal'
+        :param fileName: Path to file, including name, excluding extension
+        :type fileName: str
+        :param crystalSym: Crystal structure, 'cubic' or 'hexagonal'
+        :type crystalSym: str
         """
 
         # Call base class constructor
@@ -52,13 +53,15 @@ class Map(base.Map):
         self.xDim = None                    # (int) dimensions of maps
         self.yDim = None
         self.stepSize = None                # (float) step size
-        self.binData = None                 # imported binary data
+        self.eulerAngleArray = None
+        self.bandContrastArray = None
         self.quatArray = None               # (array) array of quaterions for each point of map
         self.numPhases = None               # (int) number of phases
         self.phaseArray = None              # (array) map of phase ids
         self.phaseNames = []                # (array) array of phase names
         self.boundaries = None              # (array) map of boundaries. -1 for a boundary, 0 otherwise
         self.phaseBoundaries = None         # (array) map of phase boundaries. -1 for boundary, 0 otherwise
+        self.cacheEulerMap = None
         self.grains = None                  # (array) map of grains
         self.grainList = None               # (list) list of grains
         self.misOri = None                  # (array) map of misorientation
@@ -73,144 +76,86 @@ class Map(base.Map):
         self.GND = None                     # GND scalar map
         self.Nye = None                     # 3x3 Nye tensor at each point
 
+        self.fig = None
+        self.ax = None
+
         self.plotHomog = self.plotEulerMap  # Use euler map for defining homologous points
         self.highlightAlpha = 1
-        if os.path.isfile(fileName + ".cpr"):
-            self.loadData(fileName, crystalSym)
-        elif os.path.isfile(fileName + ".ctf"):
-            self.loadDatactf(fileName, crystalSym) 
-        else:
-            raise Exception("Can't find file")   
-        return
+
+        self.loadData(fileName, crystalSym, dataType=dataType)
 
     def plotDefault(self, *args, **kwargs):
         self.plotEulerMap(*args, **kwargs)
 
-    def loadData(self, fileName, crystalSym):
-        # open meta data file and read in x and y dimensions and phase names
-        metaFile = open(fileName + ".cpr", 'r')
-        for line in metaFile:
-            if line[:6] == 'xCells':
-                self.xDim = int(line[7:])
-            elif line[:6] == 'yCells':
-                self.yDim = int(line[7:])
-            elif line[:9] == 'GridDistX':
-                self.stepSize = float(line[10:])
-            elif line[:8] == '[Phases]':
-                self.numPhases = int(next(metaFile)[6:])
-            elif line[:6] == '[Phase':
-                self.phaseNames.append(next(metaFile)[14:].strip('\n'))
+    def loadData(self, fileName, crystalSym, dataType=None):
+        """
+        Load EBSD data from file
 
-        if len(self.phaseNames) != self.numPhases:
-            print("Error with cpr file. Number of phases mismatch.")
+        :param fileName: Path to file, including name, excluding extension
+        :type fileName: str
+        :param crystalSym: Crystal structure, 'cubic' or 'hexagonal'
+        :type crystalSym: str
+        """
+        dataType = "OxfordBinary" if dataType is None else dataType
 
-        metaFile.close()
-        # now read the binary .crc file
-        fmt_np = np.dtype([('Phase', 'b'),
-                           ('Eulers', [('ph1', 'f'),
-                                       ('phi', 'f'),
-                                       ('ph2', 'f')]),
-                           ('mad', 'f'),
-                           ('IB2', 'uint8'),
-                           ('IB3', 'uint8'),
-                           ('IB4', 'uint8'),
-                           ('IB5', 'uint8'),
-                           ('IB6', 'f')])
-        # for ctf files that have been converted using channel 5
-        # CHANGE BACK!!!!!!!
-        # fmt_np = np.dtype([('Phase', 'b'),
-        #                    ('Eulers', [('ph1', 'f'),
-        #                                ('phi', 'f'),
-        #                                ('ph2', 'f')]),
-        #                    ('mad', 'f'),
-        #                    ('IB2', 'uint8'),
-        #                    ('IB3', 'uint8'),
-        #                    ('IB4', 'uint8'),
-        #                    ('IB5', 'uint8')])
-        self.binData = np.fromfile(fileName + ".crc", fmt_np, count=-1)
+        dataLoader = EBSDDataLoader()
+        if dataType == "OxfordBinary":
+            metadataDict, dataDict = dataLoader.loadOxfordCPR(fileName)
+        elif dataType == "OxfordText":
+            raise Exception("Oxford text loader coming soon...")
+        else:
+            raise Exception("No loader found for this EBSD data.")
+
+        self.xDim = metadataDict['xDim']
+        self.yDim = metadataDict['yDim']
+        self.stepSize = metadataDict['stepSize']
+        self.numPhases = metadataDict['numPhases']
+        self.phaseNames = metadataDict['phaseNames']
+
+        self.eulerAngleArray = dataDict['eulerAngle']
+        self.bandContrastArray = dataDict['bandContrast']
+        self.phaseArray = dataDict['phase']
+
         self.crystalSym = crystalSym
-        self.phaseArray = np.reshape(self.binData[('Phase')], (self.yDim, self.xDim))
-
+        
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
               format(self.xDim, self.yDim, self.stepSize))
 
-        return
-    
-    def loadDatactf(self, fileName, crystalSym):
-        # open meta data file and read in x and y dimensions and phase names: ctf version
-        with open(fileName + ".ctf", 'r') as header:
-            lines = [next(header) for x in range(15)]
-            
-        for line in lines:
-            if line[:6] == 'XCells':
-                self.xDim = int(line[7:])
-            elif line[:6] == 'YCells':
-                self.yDim = int(line[7:])
-            elif line[:5] == 'XStep':
-                self.stepSize = float(line[6:])
-            elif line[:6] == 'Phases':
-                self.numPhases = int(line[7:])
-
-        '''if len(self.phaseNames) != self.numPhases:
-            print("Error with cpr file. Number of phases mismatch.")
-            '''
-
-        header.close()
-        # now read the binary .crc file
-        fmt_np = np.dtype([('Phase', 'b'),
-                           ('x','f'),
-                           ('y','f'),
-                           ('Eulers', [('ph1', 'f'),
-                                       ('phi', 'f'),
-                                       ('ph2', 'f')]),
-                           ('mad', 'f'),
-                           ('IB2', 'uint8')])
-        #                   ('IB3', 'uint8'),
-        #                   ('IB4', 'uint8'),
-        #                   ('IB5', 'uint8'),
-        #                   ('IB6', 'f')])
-        
-        self.binData = np.loadtxt(fileName + ".ctf", fmt_np, delimiter='\t', skiprows=15, usecols=(0,1,2,5,6,7,8,9))
-        self.crystalSym = crystalSym
-        self.phaseArray = np.reshape(self.binData[('Phase')], (self.yDim, self.xDim))
-        self.binData['Eulers']['ph1']=self.binData['Eulers']['ph1']*np.pi/180.0
-        self.binData['Eulers']['phi']=self.binData['Eulers']['phi']*np.pi/180.0
-        self.binData['Eulers']['ph2']=self.binData['Eulers']['ph2']*np.pi/180.0
-        
-        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
-              format(self.xDim, self.yDim, self.stepSize))
-        
-        return
-    
     def plotBandContrastMap(self):
+        """
+        Plot band contrast map
+        """
         self.checkDataLoaded()
 
-        bcmap = np.reshape(self.binData[('IB2')], (self.yDim, self.xDim))
-        plt.imshow(bcmap, cmap='gray')
+        plt.imshow(self.bandContrastArray, cmap='gray')
         plt.colorbar()
         return
 
     def plotEulerMap(self, updateCurrent=False, highlightGrains=None, highlightColours=None):
-        """Plots an orientation map in Euler colouring
+        """Plot an orientation map in Euler colouring
 
-        Args:
-            updateCurrent (bool, optional): Description
-            highlightGrains (List int, optional): Grain ids of grains to highlight
+        :param updateCurrent: Description (optional)
+        :type updateCurrent: bool
+        :param highlightGrains: Grain ids of grains to highlight (optional)
+        :type highlightGrains: list
+        :param highlightColours: Colour to highlight grain (optional)
+        :type highlightColours: str
         """
         self.checkDataLoaded()
 
-        if not updateCurrent:
-            emap = np.transpose(np.array([self.binData['Eulers']['ph1'],
-                                          self.binData['Eulers']['phi'],
-                                          self.binData['Eulers']['ph2']]))
-            # this is the normalization for the
+        if (not updateCurrent) or self.cacheEulerMap is None:
+            eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
+
+            # this is the normalisation
             norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]), (self.yDim, self.xDim))
             norm = np.reshape(norm, (self.yDim, self.xDim, 3))
-            eumap = np.reshape(emap, (self.yDim, self.xDim, 3))
-            # make non-indexed points green
-            eumap = np.where(eumap != [0., 0., 0.], eumap, [0., 1., 0.])
 
-            self.cacheEulerMap = eumap / norm
+            # make non-indexed points green
+            eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
+
+            eulerMap /= norm
+
+            self.cacheEulerMap = eulerMap
             self.fig, self.ax = plt.subplots()
 
         self.ax.imshow(self.cacheEulerMap, aspect='equal')
@@ -224,10 +169,10 @@ class Map(base.Map):
         Quat.plotIPFmap(self.quatArray, direction, self.crystalSym)
 
     def plotPhaseMap(self, cmap='viridis'):
-        """Plots a phase map
+        """Plot a phase map
 
-        Args:
-            cmap(str, optional): Colour map
+        :param cmap: Colour map (optional)
+        :type cmap: str
         """
         values = [-1] + list(range(1, self.numPhases + 1))
         names = ["Non-indexed"] + self.phaseNames
@@ -279,12 +224,14 @@ class Map(base.Map):
         self.kam[self.kam > 1] = 1
 
     def plotKamMap(self, vmin=None, vmax=None, cmap="viridis"):
-        """Plots Kernel Average Misorientaion (KAM) for the EBSD map.
+        """Plot Kernel Average Misorientaion (KAM) for the EBSD map.
 
-        Args:
-            vmin (float, optional): Minimum of colour scale.
-            vmax (float, optional): Maximum of colour scale.
-            cmap (str, optional): Colourmap to show data with.
+        :param vmin: Minimum of colour scale (optional)
+        :type vmin: float
+        :param vmax: Maximum of colour scale (optional)
+        :type vmax: float
+        :param cmap: Colour map (optional)
+        :type cmap: str
         """
         self.calcKam()
         # Convert to degrees and plot
@@ -396,30 +343,37 @@ class Map(base.Map):
         plt.show()
 
     def checkDataLoaded(self):
-        if self.binData is None:
+        """ Checks if EBSD data is loaded
+
+        :return: True if data loaded
+        """
+        if self.eulerAngleArray is None:
             raise Exception("Data not loaded")
         return True
 
     def buildQuatArray(self):
+        """
+        Build quaternion array
+        """
         print("Building quaternion array...", end="")
 
         self.checkDataLoaded()
 
         if self.quatArray is None:
-            eulerArray = self.binData[('Eulers')]
-            # reshape to map dimensions
-            eulerArray = eulerArray.reshape((self.yDim, self.xDim))
-            # this flattens the structures the Euler angles are stored into a normal array
-            eulerArray = np.array(eulerArray.tolist())
-            eulerArray = eulerArray.transpose((2, 0, 1))
             # create the array of quat objects
-            self.quatArray = Quat.createManyQuats(eulerArray)
+            self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
 
         print("\r", end="")
 
         return
 
     def findBoundaries(self, boundDef=10):
+        """
+        Find grain boundaries
+
+        :param boundDef: critical misorientation
+        :type boundDef: float
+        """
         self.buildQuatArray()
         print("Finding boundaries...", end="")
 
@@ -484,15 +438,20 @@ class Map(base.Map):
         print("\r", end="")
         return
 
-    def findPhaseBoundaries(self):
+    def findPhaseBoundaries(self, treatNonIndexedAs=None):
         """Finds boundaries in the phase map
-        """
 
+        :param treatNonIndexedAs: value to assign to non-indexed points, defaults to -1
+        """
         print("Finding phase boundaries...", end="")
 
         # make new array shifted by one to left and up
         phaseArrayShifted = np.full((self.yDim, self.xDim), -3)
         phaseArrayShifted[:-1, :-1] = self.phaseArray[1:, 1:]
+        
+        if treatNonIndexedAs:
+            self.phaseArray[self.phaseArray == -1] = treatNonIndexedAs
+            phaseArrayShifted[phaseArrayShifted == -1] = treatNonIndexedAs
 
         # where shifted array not equal to starting array, set to -1
         self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
@@ -501,7 +460,9 @@ class Map(base.Map):
         print("\r", end="")
 
     def plotPhaseBoundaryMap(self, dilate=False):
-        """Plots phase boundary map
+        """Plot phase boundary map
+
+        :param dilate: Dilate boundary by one pixel
         """
 
         plt.figure()
@@ -515,7 +476,9 @@ class Map(base.Map):
         plt.colorbar()
 
     def plotBoundaryMap(self, dilate=False):
-        """Plots grain boundary map
+        """Plot grain boundary map
+
+        :param dilate: Dilate boundary by one pixel
         """
         plt.figure()
 
@@ -528,6 +491,11 @@ class Map(base.Map):
         plt.colorbar()
 
     def findGrains(self, minGrainSize=10):
+        """
+        Find grains and assign ids
+
+        :param minGrainSize: Minimum grain area in pixels
+        """
         print("Finding grains...", end="")
 
         # Initialise the grain map
@@ -557,16 +525,28 @@ class Map(base.Map):
 
             # update unknown points
             unknownPoints = np.where(self.grains == 0)
+
         print("\r", end="")
+
         return
 
     def plotGrainMap(self):
+        """
+        Plot a map with grains coloured
+
+        :return: Figure
+        """
         plt.figure()
         plt.imshow(self.grains)
         plt.colorbar()
         return
 
-    def locateGrainID(self, clickEvent=None):
+    def locateGrainID(self, clickEvent=None, displaySelected=False):
+        """
+        Interactive plot for identifying grains
+
+        :param displaySelected: Plot slip traces for selected grain
+        """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
@@ -575,12 +555,19 @@ class Map(base.Map):
         self.plotEulerMap()
         if clickEvent is None:
             # default click handler which highlights grain and prints id
-            self.fig.canvas.mpl_connect('button_press_event', self.clickGrainId)
+            self.fig.canvas.mpl_connect(
+                'button_press_event',
+                lambda x: self.clickGrainId(x, displaySelected)
+            )
         else:
-            # click handler loaded from linker classs. Pass current ebsd map to it.
+            # click handler loaded in as parameter. Pass current map object to it.
             self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
 
-    def clickGrainId(self, event):
+        # unset figure for plotting grains
+        self.grainFig = None
+        self.grainAx = None
+
+    def clickGrainId(self, event, displaySelected):
         if event.inaxes is not None:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
@@ -590,6 +577,14 @@ class Map(base.Map):
             self.ax.clear()
             self.plotEulerMap(updateCurrent=True, highlightGrains=[self.currGrainId])
             self.fig.canvas.draw()
+
+            if displaySelected:
+                if self.grainFig is None:
+                    self.grainFig, self.grainAx = plt.subplots()
+                self.grainList[self.currGrainId].calcSlipTraces()
+                self.grainAx.clear()
+                self.grainList[self.currGrainId].plotSlipTraces(ax=self.grainAx)
+                self.grainFig.canvas.draw()
 
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self)
@@ -643,6 +638,12 @@ class Map(base.Map):
             grain.calcAverageOri()
 
     def calcGrainMisOri(self, calcAxis=False):
+        """
+        Calculate grain misorientation
+
+        :param calcAxis: Calculate the misorientation axis also
+        :return:
+        """
         print("Calculating grain misorientations...", end="")
 
         # Check that grains have been detected in the map
@@ -652,10 +653,26 @@ class Map(base.Map):
             grain.buildMisOriList(calcAxis=calcAxis)
 
         print("\r", end="")
+
         return
 
     def plotMisOriMap(self, component=0, plotGBs=False, boundaryColour='black', vmin=None, vmax=None,
                       cmap="viridis", cBarLabel="ROD (degrees)"):
+        """
+        Plot misorientation map
+
+        :param component: 0: misorientation, 1, 2, 3: rotation about x, y, z
+        :param plotGBs: Plot grain boundaries
+        :param boundaryColour: Colour of grain boundary
+        :param vmin: Minimum of colour scale (optional)
+        :type vmin: float
+        :param vmax: Maximum of colour scale (optional)
+        :type vmax: float
+        :param cmap: Colour map (optional)
+        :type cmap: str
+        :param cBarLabel: Label for colour bar
+        :return: Figure
+        """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
@@ -686,15 +703,37 @@ class Map(base.Map):
         return
 
     def loadSlipSystems(self, filepath, cOverA=None):
-        self.slipSystems, self.slipTraceColours = base.SlipSystem.loadSlipSystems(filepath, self.crystalSym, cOverA=cOverA)
+        """
+        Load slip system definitions from file
+
+        :param filepath: File path to slip system definition txt file
+        :param cOverA: cOverA ratio (for hexagonal)
+        """
+        self.slipSystems, self.slipTraceColours = base.SlipSystem.loadSlipSystems(filepath,
+                                                                                  self.crystalSym, cOverA=cOverA)
 
         if self.grainList is not None:
             for grain in self.grainList:
                 grain.slipSystems = self.slipSystems
 
-    def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
-        print("Calculating grain average Schmid factors...", end="")
+    def printSlipSystems(self):
+        """
+        Print a list of slip planes (with colours) and slip directions
+        """
+        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems, self.slipTraceColours)):
+            print('Plane {0}: {1}\tColour: {2}'.format(i, ssGroup[0].slipPlaneLabel, colour))
+            for j, ss in enumerate(ssGroup):
+                print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
 
+    def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
+        """
+        Calculates Schmid factors for all slip systems, for all grains, based on average grain orientation
+
+        :param loadVector: Loading vector, i.e. [1, 0, 0]
+        :param slipSystems: Slip systems
+        """
+        print("Calculating grain average Schmid factors...", end="")
+  
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
@@ -703,18 +742,51 @@ class Map(base.Map):
 
         print("\r", end="")
 
-    def plotAverageGrainSchmidFactorsMap(self, plotGBs=True):
+    def plotAverageGrainSchmidFactorsMap(self, plotGBs=True, boundaryColour='black', dilateBoundaries=False,
+                                         planes=None, directions=None):
+        """
+        Plot maximum Schmid factor map, based on average grain orientation (for all slip systems unless specified)
+
+        :param planes: Plane ID(s) to consider (optional)
+        :type planes: list
+        :param directions: Direction ID(s) to consider (optional)
+        :type directions: list
+        :param plotGBs: Plots grain boundaries if True
+        :param boundaryColour:  Colour of grain boundaries
+        :param dilateBoundaries: Dilates grain boundaries if True
+        :type boundaryColour: string
+        :return:
+        """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
-
         self.averageSchmidFactor = np.zeros([self.yDim, self.xDim])
 
+        if self[0].averageSchmidFactors is None:
+            raise Exception("Run 'calcAverageGrainSchmidFactors' first")
+
         for grain in self.grainList:
-            # max Schmid factor
-            currentSchmidFactor = np.array(grain.averageSchmidFactors).flatten().max()
-            # currentSchmidFactor = grain.averageSchmidFactors[0][0]
+
+            currentSchmidFactor = []
+
+            if planes is not None:
+
+                # Error catching
+                if np.max(planes) > len(self.slipSystems) - 1:
+                    raise Exception("Check plane IDs exists, IDs range from 0 to {0}".format(len(self.slipSystems) - 1))
+
+                for plane in planes:
+                    if directions is not None:
+                        for direction in directions:
+                            currentSchmidFactor.append(grain.averageSchmidFactors[plane][direction])
+                    elif directions is None:
+                        currentSchmidFactor.append(grain.averageSchmidFactors[plane])
+                currentSchmidFactor = [max(s) for s in zip(*currentSchmidFactor)]
+            elif planes is None:
+                currentSchmidFactor = [max(s) for s in zip(*grain.averageSchmidFactors)]
+
+            # Fill grain with colour
             for coord in grain.coordList:
-                self.averageSchmidFactor[coord[1], coord[0]] = currentSchmidFactor
+                self.averageSchmidFactor[coord[1], coord[0]] = currentSchmidFactor[0]
 
         self.averageSchmidFactor[self.averageSchmidFactor == 0] = 0.5
 
@@ -723,7 +795,7 @@ class Map(base.Map):
         plt.colorbar(label="Schmid factor")
 
         if plotGBs:
-            self.plotGBs()
+            self.plotGBs(colour=boundaryColour, dilate=dilateBoundaries)
 
         return
 
@@ -872,6 +944,12 @@ class Grain(base.Grain):
 
     # define load axis as unit vector
     def calcAverageSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
+        """
+        Calculate Schmid factors for grain, using average orientation
+
+        :param loadVector: Loading vector, i.e. [1, 0, 0]
+        :param slipSystems: Slip systems
+        """
         if slipSystems is None:
             slipSystems = self.slipSystems
         if self.refOri is None:
@@ -904,6 +982,20 @@ class Grain(base.Grain):
             self.calcSlipTraces()
 
         return self.slipTraceAngles
+
+    def printSlipTraces(self):
+        """
+        Print a list of slip planes (with colours) and slip directions
+        """
+
+        self.calcSlipTraces()
+        self.calcAverageSchmidFactors()
+
+        for ssGroup, colour, sfGroup, slipTrace in zip(self.slipSystems, self.ebsdMap.slipTraceColours,
+                                                       self.averageSchmidFactors, self.slipTraces):
+            print('{0}\tColour: {1}\tAngle: {2:.2f}'.format(ssGroup[0].slipPlaneLabel, colour, slipTrace * 180 / np.pi))
+            for ss, sf in zip(ssGroup, sfGroup):
+                print('  {0}   SF: {1:.3f}'.format(ss.slipDirLabel, sf))
 
     def calcSlipTraces(self, slipSystems=None):
         if slipSystems is None:

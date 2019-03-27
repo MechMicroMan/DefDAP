@@ -53,20 +53,25 @@ class Map(object):
         else:
             plt.imshow(boundariesImage, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
 
-    def setHomogPoint(self, binSize=1):
-        self.selPoint = None
+    def setHomogPoint(self, binSize=1, points=None):
+        
+        if points is not None:
+            self.homogPoints = points
+            
+        if points is None:
+            self.selPoint = None
 
-        self.plotHomog()
-        # Plot stored homogo points if there are any
-        if len(self.homogPoints) > 0:
-            homogPoints = np.array(self.homogPoints) * binSize
-            self.ax.scatter(x=homogPoints[:, 0], y=homogPoints[:, 1], c='y', s=60)
+            self.plotHomog()
+            # Plot stored homogo points if there are any
+            if len(self.homogPoints) > 0:
+                homogPoints = np.array(self.homogPoints) * binSize
+                self.ax.scatter(x=homogPoints[:, 0], y=homogPoints[:, 1], c='y', s=60)
 
-        btnAx = self.fig.add_axes([0.8, 0.0, 0.1, 0.07])
-        Button(btnAx, 'Save point', color='0.85', hovercolor='0.95')
+            btnAx = self.fig.add_axes([0.8, 0.0, 0.1, 0.07])
+            Button(btnAx, 'Save point', color='0.85', hovercolor='0.95')
 
-        # connect click handler
-        self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickHomog(x, binSize=binSize))
+            # connect click handler
+            self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickHomog(x, binSize=binSize))
 
     def clickHomog(self, event, binSize=1):
         if event.inaxes is not None:
