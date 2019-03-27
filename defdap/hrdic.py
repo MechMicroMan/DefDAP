@@ -57,11 +57,11 @@ class Map(base.Map):
         self.fname = fname                  # file name
 
         self.loadData(path, fname, dataType=dataType)
-
+  
         # *dim are full size of data. *Dim are size after cropping
         self.xDim = self.xdim
         self.yDim = self.ydim
-
+        
         self.x_map = self._map(self.xd)     # u (displacement component along x)
         self.y_map = self._map(self.yd)     # v (displacement component along x)
         xDispGrad = self._grad(self.x_map)
@@ -233,7 +233,6 @@ class Map(base.Map):
             multiplier = 1
         else:
             multiplier = self.windowSize
-
         return mapData[int(self.cropDists[1, 0] * multiplier):int((self.ydim - self.cropDists[1, 1]) * multiplier),
                        int(self.cropDists[0, 0] * multiplier):int((self.xdim - self.cropDists[0, 1]) * multiplier)]
 
@@ -401,7 +400,7 @@ class Map(base.Map):
 
     def plotMaxShear(self, ax=None, plotGBs=False, dilateBoundaries=False, boundaryColour='white', plotSlipTraces=False, plotPercent=False,
                      scaleBar=False, updateCurrent=False, highlightGrains=None, highlightColours=None,
-                     plotColourBar=False, vmin=None, vmax=None):
+                     plotColourBar=False, vmin=None, vmax=0.1):
         """Plot a map of maximum shear strain
 
         Args:
@@ -715,7 +714,7 @@ class Map(base.Map):
         # Now link grains to those in ebsd Map
         # Warp DIC grain map to EBSD frame
         dicGrains = self.grains
-        warpedDicGrains = tf.warp(dicGrains.astype(float), self.ebsdTransformInv,
+        warpedDicGrains = tf.warp(np.ascontiguousarray(dicGrains.astype(float)), self.ebsdTransformInv,
                                   output_shape=(self.ebsdMap.yDim, self.ebsdMap.xDim), order=0).astype(int)
 
         # Initalise list to store ID of corresponding grain in EBSD map. Also stored in grain objects
@@ -827,7 +826,7 @@ class Grain(base.Grain):
             self.plotSlipTraces(ax=ax)
 
         if plotShearBands:
-            self.plotShearBands(grainMaxShear, ax=ax)
+            self.plotSlipBands(grainMaxShear, ax=ax)
             
         if scaleBar:
             if self.dicMap.strainScale is None:
@@ -847,7 +846,7 @@ class Grain(base.Grain):
     def calcSlipTraces(self, slipSystems=None):
         self.ebsdGrain.calcSlipTraces(slipSystems=slipSystems)
 
-    def calcSlipBands(self, grainMapData, thres=0.3, min_dist=30):
+    def calcSlipBands(self, grainMapData, thres=0.4, min_dist=30):
         """Use Radon transform to detect slip band angles
 
         Args:
@@ -861,23 +860,33 @@ class Grain(base.Grain):
         grainMapData = np.nan_to_num(grainMapData)
 
         if grainMapData.min() < 0:
-            print("Negeative values in data, taking absolute value.")
+            print("Negative values in data, taking absolute value.")
             # grainMapData = grainMapData**2
             grainMapData = np.abs(grainMapData)
-
+        suppGMD = np.zeros(grainMapData.shape) #array to hold shape / support of grain
+        suppGMD[grainMapData!=0]=1
         sin_map = tf.radon(grainMapData, circle=False)
-        profile = np.max(sin_map, axis=0)
+        #profile = np.max(sin_map, axis=0) # old method
+        supp_map = tf.radon(suppGMD, circle=False)
+        supp_1 = np.zeros(supp_map.shape)
+        supp_1[supp_map>0]=1
+        mindiam = np.min(np.sum(supp_1, axis=0), axis=0) # minimum diameter of grain
+        crop_map = np.zeros(sin_map.shape)
+        # only consider radon rays that cut grain with mindiam*2/3 or more, and scale by length of the cut
+        crop_map[supp_map>mindiam*2/3] = sin_map[supp_map>mindiam*2/3]/supp_map[supp_map>mindiam*2/3] 
+        supp_crop = np.zeros(crop_map.shape)
+        supp_crop[crop_map>0] = 1
+        profile = np.sum(crop_map**4, axis=0) / np.sum(supp_crop, axis=0) # raise to power to accentuate local peaks
 
         x = np.arange(180)
 
-        indexes = peakutils.indexes(profile, thres=thres, min_dist=min_dist)
+        indexes = peakutils.indexes(profile, thres=thres, min_dist=min_dist, thres_abs=False)
         peaks = x[indexes]
         # peaks = peakutils.interpolate(x, profile, ind=indexes)
         print("Number of bands detected: {:}".format(len(peaks)))
 
         slipBandAngles = peaks
         slipBandAngles = slipBandAngles * np.pi / 180
-
         return slipBandAngles
 
     def plotSlipBands(self, grainMapData, ax=None, thres=0.3, min_dist=30, slipBandAngles=None):

@@ -283,9 +283,9 @@ class Quat(object):
         return quats
 
     @staticmethod
-    def calcSymEqvs(quats, symGroup):
+    def calcSymEqvs(quats, symGroup, dtype=np.float):
         syms = Quat.symEqv(symGroup)
-        quatComps = np.empty((len(syms), 4, len(quats)))
+        quatComps = np.empty((len(syms), 4, len(quats)), dtype=dtype)
 
         # store quat components in array
         for i, quat in enumerate(quats):
@@ -347,7 +347,7 @@ class Quat(object):
         return minMisOris, minQuatComps
 
     @staticmethod
-    def polarAngles(x, y, z):
+    def polarAngles(x, y, z):      # spherical coordinates as per Wikipedia
         mod = np.sqrt(x**2 + y**2 + z**2)
         x = x / mod
         y = y / mod
@@ -355,7 +355,7 @@ class Quat(object):
 
         # alpha - angle with z axis
         alpha = np.arccos(z)
-        # beta - angle around z axis
+        # beta - angle around z axis from x in anticlockwise as per ISO
         beta = np.arctan2(y, x)
 
         return alpha, beta
@@ -564,14 +564,126 @@ class Quat(object):
         if ax is None:
             ax = plt.gca()
 
+        alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup)
+
+        # project onto equatorial plane
+        xp, yp = Quat.stereoProject(alphaFund, betaFund)
+
         # Plot IPF axis
         Quat.plotPoleAxis("IPF", symGroup, projection=projection, ax=ax)
 
+        # plot poles
+        # plot markers with 'half and half' colour
+        if type(markerColour) == str:
+            markerColour = [markerColour]
+
+        if len(markerColour) == 1:
+            ax.scatter(xp, yp, c=markerColour, **plotParams)
+        elif len(markerColour) == 2:
+            pos = (xp, yp)
+            r1 = 0.5
+            r2 = r1 + 0.5
+            markerSize = np.sqrt(markerSize)
+
+            x = [0] + np.cos(np.linspace(0, 2 * np.pi * r1, 10)).tolist()
+            y = [0] + np.sin(np.linspace(0, 2 * np.pi * r1, 10)).tolist()
+            xy1 = list(zip(x, y))
+
+            x = [0] + np.cos(np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 10)).tolist()
+            y = [0] + np.sin(np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 10)).tolist()
+            xy2 = list(zip(x, y))
+
+            ax.scatter(pos[0], pos[1], marker=(xy1, 0), s=markerSize, c=markerColour[0], **plotParams)
+            ax.scatter(pos[0], pos[1], marker=(xy2, 0), s=markerSize, c=markerColour[1], **plotParams)
+        else:
+            raise Exception("specify one colour for solid markers or list two for 'half and half'")
+
+    @staticmethod
+    def plotIPFmap(quatArray, direction, symGroup, **kwargs):
+        # quats is an nxm array of quaternion orientations; symGroup must be "cubic"
+        plotParams = {}
+        plotParams.update(kwargs)
+
+        # flatten quat array to single dimension
+        mapShape = quatArray.shape
+        quats = quatArray.flatten()
+
+        # calculate IPF colours
+        IPFcolours = Quat.calcIPFcolours(quats, direction, symGroup)
+
+        # reshape back to 2d array
+        IPFcolours = np.reshape(IPFcolours, mapShape + (3, ))
+
+        # plot map
+        plt.imshow(IPFcolours, **kwargs)
+        plt.show()
+
+    @staticmethod
+    def calcIPFcolours(quats, direction, symGroup):
+        numQuats = len(quats)
+
+        # Calculating as float32 seems to speed this up
+        alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup, dtype=np.float32)
+
+        # revert to cartesians
+        # at some this should be changed to have the quats dimention last to fit with numpys row major storage
+        # direction vector in cartesians. Changes this to float32 causes errors in arccos, so leave to default to 64
+        dirvec = np.empty((numQuats, 3))
+        dirvec[:, 0] = np.sin(alphaFund) * np.cos(betaFund)
+        dirvec[:, 1] = np.sin(alphaFund) * np.sin(betaFund)
+        dirvec[:, 2] = np.cos(alphaFund)
+        rvect = np.matlib.repmat([0., 0., 1.], numQuats, 1)
+        gvect = np.matlib.repmat([1., 0., 1.] / np.sqrt(2), numQuats, 1)
+        bvect = np.matlib.repmat([1., 1., 1.] / np.sqrt(3), numQuats, 1)
+        rgb = np.zeros((numQuats, 3))
+
+        # Red Component; these subroutines are converted from Stephen Cluff's IPF_rgbcalc.m (BYU)
+        RDirPlane = np.cross(dirvec, rvect)
+        GBplane = np.cross(bvect, gvect)
+        Rintersect = np.cross(RDirPlane, GBplane)
+        NORM = np.sqrt(np.power(Rintersect[:, 0], 2) + np.power(Rintersect[:, 1], 2) + np.power(Rintersect[:, 2], 2))
+        Rintersect[NORM != 0, :] = np.divide(Rintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+
+        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Rintersect))
+        Rintersect[temp > (np.pi / 2), :] = Rintersect[temp > (np.pi / 2), :] * -1
+        rgb[:, 0] = np.divide(np.arccos(np.einsum("ij,ij->i", dirvec, Rintersect)), np.arccos(np.einsum("ij,ij->i", rvect, Rintersect)))
+
+        # Green Component
+        GDirPlane = np.cross(dirvec, gvect)
+        RBplane = np.cross(rvect, bvect)
+        Gintersect = np.cross(GDirPlane, RBplane)
+        NORM = np.sqrt(np.power(Gintersect[:, 0], 2) + np.power(Gintersect[:, 1], 2) + np.power(Gintersect[:, 2], 2))
+        Gintersect[NORM != 0, :] = np.divide(Gintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+
+        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Gintersect))
+        Gintersect[temp > (np.pi / 2), :] = Gintersect[temp > (np.pi / 2), :] * -1
+        rgb[:, 1] = np.divide(np.arccos(np.einsum("ij,ij->i", dirvec, Gintersect)), np.arccos(np.einsum("ij,ij->i", gvect, Gintersect)))
+
+        # Blue Component
+        BDirPlane = np.cross(dirvec, bvect)
+        RGplane = np.cross(gvect, rvect)
+        Bintersect = np.cross(BDirPlane, RGplane)
+        NORM = np.sqrt(np.power(Bintersect[:, 0], 2) + np.power(Bintersect[:, 1], 2) + np.power(Bintersect[:, 2], 2))
+        Bintersect[NORM != 0, :] = np.divide(Bintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+
+        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Bintersect))
+        Bintersect[temp > (np.pi / 2), :] = Bintersect[temp > (np.pi / 2), :] * -1
+        rgb[:, 2] = np.divide(np.arccos(np.einsum("ij,ij->i", dirvec, Bintersect)), np.arccos(np.einsum("ij,ij->i", bvect, Bintersect)))
+
+        rgb = np.divide(rgb, np.transpose(np.matlib.repmat(np.amax(rgb, 1), 3, 1)))
+
+        return rgb
+
+    @staticmethod
+    def calcFundDirs(quats, direction, symGroup, dtype=np.float):
+        # convert direction to float array
+        direction = np.array(direction, dtype=dtype)
+
         # get array of symmetry operations. shape - (numSym, 4, numQuats)
-        quatCompsSym = Quat.calcSymEqvs(quats, symGroup)
+        quatCompsSym = Quat.calcSymEqvs(quats, symGroup, dtype=dtype)
 
         # array to store crytal directions for all orientations and symmetries
-        directionCrystal = np.empty((3, quatCompsSym.shape[0], quatCompsSym.shape[2]))
+        directionCrystal = np.empty((3, quatCompsSym.shape[0], quatCompsSym.shape[2]), dtype=dtype)
 
         # temp variables to use bleow
         quatDotVec = (quatCompsSym[:, 1, :] * direction[0] +
@@ -619,6 +731,7 @@ class Quat(object):
 
             # now of symmetric equivalents left we want the one with minimum alpha
             # loop over different orientations
+            # this seems quite slow so might be worth finding a different way to do it
             for i in range(trialPoles.shape[1]):
                 # create array of indexes of poles kept in previous step
                 trialPoleIdxs = np.arange(trialPoles.shape[0])[trialPoles[:, i]]
@@ -646,34 +759,7 @@ class Quat(object):
         else:
             raise Exception("symGroup must be cubic or hexagonal")
 
-        # project onto equatorial plane
-        xp, yp = projection(alphaFund, betaFund)
-
-        # plot poles
-        # plot markers with 'half and half' colour
-        if type(markerColour) == str:
-            markerColour = [markerColour]
-
-        if len(markerColour) == 1:
-            ax.scatter(xp, yp, c=markerColour, **plotParams)
-        elif len(markerColour) == 2:
-            pos = (xp, yp)
-            r1 = 0.5
-            r2 = r1 + 0.5
-            markerSize = np.sqrt(markerSize)
-
-            x = [0] + np.cos(np.linspace(0, 2 * np.pi * r1, 10)).tolist()
-            y = [0] + np.sin(np.linspace(0, 2 * np.pi * r1, 10)).tolist()
-            xy1 = list(zip(x, y))
-
-            x = [0] + np.cos(np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 10)).tolist()
-            y = [0] + np.sin(np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 10)).tolist()
-            xy2 = list(zip(x, y))
-
-            ax.scatter(pos[0], pos[1], marker=(xy1, 0), s=markerSize, c=markerColour[0], **plotParams)
-            ax.scatter(pos[0], pos[1], marker=(xy2, 0), s=markerSize, c=markerColour[1], **plotParams)
-        else:
-            raise Exception("specify one colour for solid markers or list two for 'half and half'")
+        return alphaFund, betaFund
 
     @staticmethod
     def symEqv(group):
