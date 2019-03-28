@@ -102,7 +102,7 @@ class Map(base.Map):
         if dataType == "OxfordBinary":
             metadataDict, dataDict = dataLoader.loadOxfordCPR(fileName)
         elif dataType == "OxfordText":
-            raise Exception("Oxford text loader coming soon...")
+            metadataDict, dataDict = dataLoader.loadOxfordCTF(fileName)
         else:
             raise Exception("No loader found for this EBSD data.")
 

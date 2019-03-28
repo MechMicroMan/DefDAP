@@ -22,11 +22,10 @@ class EBSDDataLoader(object):
         if len(self.loadedMetadata['phaseNames']) != self.loadedMetadata['numPhases']:
             print("Number of phases mismatch.")
 
-    def checkData(self):
+    def checkData(self, binData):
         return
 
     def loadOxfordCPR(self, fileName, fileDir=""):
-
         # open meta data file and read in x and y dimensions and phase names
         filePathBase = "{:}{:}".format(fileDir, fileName)
         filePath = "{:}.cpr".format(filePathBase)
@@ -47,6 +46,7 @@ class EBSDDataLoader(object):
                 self.loadedMetadata['phaseNames'].append(next(metadataFile)[14:].strip('\n'))
 
         metadataFile.close()
+
         self.checkMetadata()
 
         # now read the binary .crc file
@@ -62,6 +62,8 @@ class EBSDDataLoader(object):
                            ('IB5', 'uint8'),
                            ('IB6', 'f')])
         binData = np.fromfile(filePath, fmt_np, count=-1)
+
+        self.checkData(binData)
 
         self.loadedData['bandContrast'] = np.reshape(
             binData['BC'],
@@ -81,7 +83,72 @@ class EBSDDataLoader(object):
         eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
         self.loadedData['eulerAngle'] = eulerAngles
 
-        self.checkData()
+        return self.loadedMetadata, self.loadedData
+
+    def loadOxfordCTF(self, fileName, fileDir=""):
+        # open data file and read in metadata
+        filePathBase = "{:}{:}".format(fileDir, fileName)
+        filePath = "{:}.ctf".format(filePathBase)
+        dataFile = open(filePath, 'r')
+
+        for i, line in enumerate(dataFile):
+            if line[:6] == 'XCells':
+                xDim = int(line[7:])
+                self.loadedMetadata['xDim'] = xDim
+            elif line[:6] == 'YCells':
+                yDim = int(line[7:])
+                self.loadedMetadata['yDim'] = yDim
+            elif line[:5] == 'XStep':
+                self.loadedMetadata['stepSize'] = float(line[6:])
+            elif line[:6] == 'Phases':
+                numPhases = int(line[7:])
+                self.loadedMetadata['numPhases'] = numPhases
+                for j in range(numPhases):
+                    self.loadedMetadata['phaseNames'].append(
+                        next(dataFile).split()[2]
+                    )
+                numHeaderLines = i + j + 3
+                # phases are last in the header so break out the loop
+                break
+
+        dataFile.close()
+
+        self.checkMetadata()
+
+        # now read the data from file
+        fmt_np = np.dtype([
+            ('Phase', 'b'),
+            ('Eulers', [('ph1', 'f'),
+                        ('phi', 'f'),
+                        ('ph2', 'f')]),
+            ('MAD', 'f'),
+            ('BC', 'uint8')
+        ])
+        binData = np.loadtxt(
+            filePath, fmt_np, delimiter='\t',
+            skiprows=numHeaderLines, usecols=(0, 5, 6, 7, 8, 9)
+        )
+
+        self.checkData(binData)
+
+        self.loadedData['bandContrast'] = np.reshape(
+            binData['BC'],
+            (yDim, xDim)
+        )
+
+        self.loadedData['phase'] = np.reshape(
+            binData['Phase'],
+            (yDim, xDim)
+        )
+
+        eulerAngles = np.reshape(
+            binData['Eulers'],
+            (yDim, xDim)
+        )
+        # flatten the structures the Euler angles are stored into a
+        # normal array
+        eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
+        self.loadedData['eulerAngle'] = eulerAngles * np.pi / 180.
 
         return self.loadedMetadata, self.loadedData
 
