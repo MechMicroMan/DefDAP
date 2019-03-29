@@ -423,13 +423,13 @@ class Quat(object):
         return projection
 
     @staticmethod
-    def plotLine(startPoint, endPoint, plotSymmetries=False, symGroup=None, res=100, projection=None, ax=None, **kwargs):
+    def plotLine(startPoint, endPoint, plotSymmetries=False, symGroup=None,
+                 res=100, projection=None, ax=None, **kwargs):
         projection = Quat._validateProjection(projection)
         if ax is None:
             ax = plt.gca()
 
-        lines = []
-        lines.append((startPoint, endPoint))
+        lines = [(startPoint, endPoint)]
         if plotSymmetries:
             if symGroup is None:
                 raise Exception("Please provide a symGroup")
