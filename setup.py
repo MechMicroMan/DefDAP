@@ -13,8 +13,6 @@ setup(
 					  'pandas',
 					  'peakutils',
 					  'matplotlib_scalebar',
-					  'vtk',
-					  'pyevtk',
 					  'IPython',
 					  'jupyter']
 )
