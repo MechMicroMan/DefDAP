@@ -374,13 +374,18 @@ class Grain(object):
                 )
 
     def grainData(self, mapData):
-        """Takes this grains data from the given map data
+        """
+        Extract this grains data from the given map data.
 
-        Args:
-            mapData (np.array): Array of map data. This must be cropped!
+        Parameters
+        ----------
+        mapData : numpy.ndarray
+            Array of map data. This must be cropped!
 
-        Returns:
-            np.array: Array containing this grains values from the given map data
+        Returns
+        -------
+        numpy.ndarray
+            Array containing this grains values from the given map data.
         """
         grainData = np.zeros(len(self), dtype=mapData.dtype)
 
@@ -390,14 +395,21 @@ class Grain(object):
         return grainData
 
     def grainMapData(self, mapData, bg=np.nan):
-        """Creates a map of this grain only from the given map data
+        """
+        Extract a single grain map from the given map data.
 
-        Args:
-            mapData (np.array): Array of map data. This must be cropped!
-            bg (float, optional): Value to fill the backgraound with. Must be same dtype as input.
+        Parameters
+        ----------
+        mapData : numpy.ndarray
+            Array of map data. This must be cropped!
+        bg : various, optional
+            Value to fill the backgraound with. Must be same dtype as
+            input array.
 
-        Returns:
-            np.array: Map of this grains data
+        Returns
+        -------
+        numpy.ndarray
+            Grain map extracted from given data.
         """
         grainData = self.grainData(mapData)
         x0, y0, xmax, ymax = self.extremeCoords
@@ -410,16 +422,26 @@ class Grain(object):
         return grainMapData
 
     def grainMapDataCoarse(self, mapData, kernelSize=2, bg=np.nan):
-        """Creates a coarsed map of this grain only from the given map data.
-           Data is coarsened using a kenel at each pixel in the grain using only this grains data.
+        """
+        Create a coarsed data map of this grain only from the given map
+        data. Data is coarsened using a kenel at each pixel in the
+        grain using only data in this grain.
 
-        Args:
-            mapData (np.array): Array of map data. This must be cropped!
-            kernelSize (int, optional): Size of kernel as the number of pixels to dilate by i.e 1 gives a 3x3 kernel.
-            bg (float, optional): Value to fill the backgraound with. Must be same dtype as input.
+        Parameters
+        ----------
+        mapData : numpy.ndarray
+            Array of map data. This must be cropped!
+        kernelSize : int, optional
+            Size of kernel as the number of pixels to dilate by i.e 1
+            gives a 3x3 kernel.
+        bg : various, optional
+            Value to fill the backgraound with. Must be same dtype as
+            input array.
 
-        Returns:
-            np.array: Map of this grains coarsened data
+        Returns
+        -------
+        numpy.ndarray
+            Map of this grains coarsened data.
         """
         grainMapData = self.grainMapData(mapData)
         grainMapDataCoarse = np.full_like(grainMapData, np.nan)
@@ -448,14 +470,21 @@ class Grain(object):
         return grainMapDataCoarse
 
     def plotGrainData(self, mapData, vmin=None, vmax=None, clabel='', cmap='viridis'):
-        """Plot a map of this grain only from the given map data.
+        """
+        Plot a map of this grain from the given map data.
 
-        Args:
-            mapData (np.array): Array of map data. This must be cropped!
-            vmin (float, optional): Minimum value of colour scale
-            vmax (float, optional): Maximum value for colour scale
-            clabel (str, optional): Colour bar label text
-            cmap (str, optional): Colour map to use, default is viridis.
+        Parameters
+        ----------
+        mapData : numpy.ndarray
+            Array of map data. This must be cropped!
+        vmin : float, optional
+            Minimum value of colour scale
+        vmax : float, optional
+            Minimum value of colour scale
+        clabel : str, optional
+            Colour bar label text
+        cmap : str, optional
+            Colour map to use, default is viridis
         """
         grainMapData = self.grainMapData(mapData)
 
@@ -465,8 +494,6 @@ class Grain(object):
         plt.colorbar(label=clabel)
         plt.xticks([])
         plt.yticks([])
-
-        return grainMapData
 
 
 class SlipSystem(object):
@@ -640,7 +667,7 @@ class SlipSystem(object):
 
     @staticmethod
     def qMatrix(lMatrix):
-        # Construct matix of reciprocal lattice zectors to transform plane normals
+        # Construct matrix of reciprocal lattice zectors to transform plane normals
         # See C. T. Young and J. L. Lytton, J. Appl. Phys., vol. 43, no. 4, pp. 1408–1417, 1972.
         a = lMatrix[:, 0]
         b = lMatrix[:, 1]
