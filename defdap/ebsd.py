@@ -12,27 +12,62 @@ from defdap import base
 
 
 class Map(base.Map):
-    """Summary
+    """
+    Class to encapsulate EBSD data and useful analysis and plotting
+    methods.
 
-    Args:
-        averageSchmidFactor (TYPE): Description
-        binData (TYPE): imported binary data
-        boundaries (TYPE): Description
-        cacheEulerMap (TYPE): Description
-        crystalSym (TYPE): Description
-        currGrainId (TYPE): Description
-        grainList (list): Description
-        grains (TYPE): Description
-        homogPoints (TYPE): Description
-        misOri (TYPE): Description
-        misOriAxis (TYPE): Description
-        origin (tuple): Description
-        plotDefault (TYPE): Description
-        quatArray (TYPE): Description
-        slipSystems (TYPE): Description
-        stepSize (TYPE): Description
-        xDim (int): x dimension of map
-        yDim (int): y dimension of map
+    Attributes
+    ----------
+    crystalSym : str
+        symmetry of material e.g. "cubic", "hexagonal"
+    xDim : int
+        size of map in x direction
+    yDim : int
+        size of map in y direction
+    stepSize : float
+        step size
+    eulerAngleArray
+    bandContrastArray
+    quatArray : numpy.ndarray
+        array of quaterions for each point of map
+    numPhases : int
+        number of phases
+    phaseArray : numpy.ndarray
+        map of phase ids
+    phaseNames : list(str)
+        list of phase names
+    boundaries : numpy.ndarray
+        map of boundaries. -1 for a boundary, 0 otherwise
+    phaseBoundaries : numpy.ndarray
+        map of phase boundaries. -1 for boundary, 0 otherwise
+    cacheEulerMap
+    grains : numpy.ndarray
+        map of grains
+    grainList : list(defdap.ebsd.Grain)
+        list of grains
+    misOri : numpy.ndarray
+        map of misorientation
+    misOriAxis : list(numpy.ndarray)
+        map of misorientation axis components
+    kam : numpy.ndarray
+        map of kam
+    averageSchmidFactor : numpy.ndarray
+        map of average Schmid factor
+    slipSystems : list(list(slipSystems))
+        slip systems grouped by slip plane
+    slipTraceColours list(str)
+        colours used when plotting slip traces
+    currGrainId : int
+        ID of last selected grain
+    origin : tuple(int)
+        Map origin (y, x). Used by linker class where origin is a
+        homologue point of the maps
+    GND
+        GND scalar map
+    Nye
+        3x3 Nye tensor at each point
+    fig
+    ax
     """
 
     def __init__(self, fileName, crystalSym, dataType=None):
@@ -53,37 +88,37 @@ class Map(base.Map):
 
         print("Loading EBSD data...", end="")
 
-        self.crystalSym = None              # (str) symmetry of material e.g. "cubic", "hexagonal"
-        self.xDim = None                    # (int) dimensions of maps
+        self.crystalSym = None
+        self.xDim = None
         self.yDim = None
-        self.stepSize = None                # (float) step size
+        self.stepSize = None
         self.eulerAngleArray = None
         self.bandContrastArray = None
-        self.quatArray = None               # (array) array of quaterions for each point of map
-        self.numPhases = None               # (int) number of phases
-        self.phaseArray = None              # (array) map of phase ids
-        self.phaseNames = []                # (array) array of phase names
-        self.boundaries = None              # (array) map of boundaries. -1 for a boundary, 0 otherwise
-        self.phaseBoundaries = None         # (array) map of phase boundaries. -1 for boundary, 0 otherwise
+        self.quatArray = None
+        self.numPhases = None
+        self.phaseArray = None
+        self.phaseNames = []
+        self.boundaries = None
+        self.phaseBoundaries = None
         self.cacheEulerMap = None
-        self.grains = None                  # (array) map of grains
-        self.grainList = None               # (list) list of grains
-        self.misOri = None                  # (array) map of misorientation
-        self.misOriAxis = None              # (list of arrays) map of misorientation axis components
-        self.kam = None                     # (array) map of kam
-        self.averageSchmidFactor = None     # (array) map of average Schmid factor
-        self.slipSystems = None             # (list(list(slipSystems))) slip systems grouped by slip plane
-        self.slipTraceColours = None        # (list) colours used when plotting slip traces
-        self.currGrainId = None             # (int) ID of last selected grain
-        self.origin = (0, 0)                # Map origin (y, x). Used by linker class where origin is a
-                                            # homologue point of the maps
-        self.GND = None                     # GND scalar map
-        self.Nye = None                     # 3x3 Nye tensor at each point
+        self.grains = None
+        self.grainList = None
+        self.misOri = None
+        self.misOriAxis = None
+        self.kam = None
+        self.averageSchmidFactor = None
+        self.slipSystems = None
+        self.slipTraceColours = None
+        self.currGrainId = None
+        self.origin = (0, 0)
+        self.GND = None
+        self.Nye = None
 
         self.fig = None
         self.ax = None
 
-        self.plotHomog = self.plotEulerMap  # Use euler map for defining homologous points
+        # Use euler map for defining homologous points
+        self.plotHomog = self.plotEulerMap
         self.highlightAlpha = 1
 
         self.loadData(fileName, crystalSym, dataType=dataType)
