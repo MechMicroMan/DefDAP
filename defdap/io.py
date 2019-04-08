@@ -19,77 +19,69 @@ class EBSDDataLoader(object):
         }
 
     def checkMetadata(self):
-        if (len(self.loadedMetadata['phaseNames']) !=
-                self.loadedMetadata['numPhases']):
+        if len(self.loadedMetadata['phaseNames']) != self.loadedMetadata['numPhases']:
             print("Number of phases mismatch.")
+            raise AssertionError
 
     def checkData(self, binData):
         return
 
-    def loadOxfordCPR(self, fileName, fileDir=""):
-        # open meta data file and read in x and y dimensions and phase names
-        filePathBase = "{:}{:}".format(fileDir, fileName)
-        filePath = "{:}.cpr".format(filePathBase)
-        metadataFile = open(filePath, 'r')
+    def loadOxfordCPR(self, file_path):
+        """ A .cpr file is a metadata file describing EBSD data.
+        This function opens the cpr file, reading in the x and y dimensions and phase names."""
 
-        for line in metadataFile:
-            if line[:6] == 'xCells':
-                xDim = int(line[7:])
+        cpr_path = "{}.cpr".format(file_path)
+        cpr_file = open(cpr_path, 'r')
+
+        for line in cpr_file:
+            if 'xCells' in line:
+                xDim = int(line.split("=")[-1])
                 self.loadedMetadata['xDim'] = xDim
-            elif line[:6] == 'yCells':
-                yDim = int(line[7:])
+            elif 'yCells' in line:
+                yDim = int(line.split("=")[-1])
                 self.loadedMetadata['yDim'] = yDim
-            elif line[:9] == 'GridDistX':
-                self.loadedMetadata['stepSize'] = float(line[10:])
-            elif line[:8] == '[Phases]':
-                self.loadedMetadata['numPhases'] = int(next(metadataFile)[6:])
-            elif line[:6] == '[Phase':
-                self.loadedMetadata['phaseNames'].append(
-                    next(metadataFile)[14:].strip('\n')
-                )
+            elif 'GridDistX' in line:
+                self.loadedMetadata['stepSize'] = float(line.split("=")[-1])
+            elif '[Phases]' in line:
+                self.loadedMetadata['numPhases'] = int(next(cpr_file).split("=")[-1])
+            elif '[Phase' in line:
+                phase_name = next(cpr_file).split("=")[-1].strip('\n')
+                self.loadedMetadata['phaseNames'].append(phase_name)
 
-        metadataFile.close()
+        cpr_file.close()
 
         self.checkMetadata()
 
+        return self.loadedMetadata
+
+    def read_crc(self, file_path):
+        xDim = self.loadedMetadata['yDim']
+        yDim = self.loadedMetadata['yDim']
+
         # now read the binary .crc file
-        filePath = "{:}.crc".format(filePathBase)
+        crc_path = "{}.crc".format(file_path)
         fmt_np = np.dtype([('Phase', 'b'),
-                           ('Eulers', [('ph1', 'f'),
-                                       ('phi', 'f'),
-                                       ('ph2', 'f')]),
+                           ('Eulers', [('ph1', 'f'), ('phi', 'f'), ('ph2', 'f')]),
                            ('MAD', 'f'),
                            ('BC', 'uint8'),
                            ('IB3', 'uint8'),
                            ('IB4', 'uint8'),
                            ('IB5', 'uint8'),
                            ('IB6', 'f')])
-        binData = np.fromfile(filePath, fmt_np, count=-1)
-
+        binData = np.fromfile(crc_path, fmt_np, count=-1)
         self.checkData(binData)
-
-        self.loadedData['bandContrast'] = np.reshape(
-            binData['BC'],
-            (yDim, xDim)
-        )
-
-        self.loadedData['phase'] = np.reshape(
-            binData['Phase'],
-            (yDim, xDim)
-        )
-
-        eulerAngles = np.reshape(
-            binData['Eulers'],
-            (yDim, xDim)
-        )
-        # flatten the structures the Euler angles are stored into a
-        # normal array
+        self.loadedData['bandContrast'] = np.reshape(binData['BC'], (yDim, xDim))
+        self.loadedData['phase'] = np.reshape(binData['Phase'], (yDim, xDim))
+        eulerAngles = np.reshape(binData['Eulers'], (yDim, xDim))
+        # flatten the structures so that the Euler angles are stored into a normal array
         eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
         self.loadedData['eulerAngle'] = eulerAngles
-
-        return self.loadedMetadata, self.loadedData
+        return self.loadedData
 
     def loadOxfordCTF(self, fileName, fileDir=""):
+        """ A .ctf file is a HKL single orientation file. This is a data file generated
+        by the Oxford EBSD instrument."""
+
         # open data file and read in metadata
         filePathBase = "{:}{:}".format(fileDir, fileName)
         filePath = "{:}.ctf".format(filePathBase)
