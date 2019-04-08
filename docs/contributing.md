@@ -13,11 +13,11 @@ The schematic below shows the intended structure of the branches in this reposit
 1. Making an 'issue' first is recommended when adding a new feature or fixing a bug, especially if you're not sure how to go about the change. Advice can then be given on the best way forward.
 2. Using your local git client (GitHub Desktop is easy to use), checkout the 'develop' branch by selecting it (making sure you 'Pull Origin' after).
 3. Create a new branch with an appropriate name, using underscores where appropriate, for example new_feature
-3. Make any changes necessary in your favourite editor (PyCharm is recommended).
-4. Test to make sure the feature works correctly in your Jupyter Notebook.
-5. Commit the change to your new branch using the 'Commit to new_feature' button and include a descriptive title and description for the commit, making sure you click 'Push origin' when this is done.
-6. Make additional commits if necessary.
-7. Raise a pull request.
+4. Make any changes necessary in your favourite editor (PyCharm is recommended).
+5. Test to make sure the feature works correctly in your Jupyter Notebook.
+6. Commit the change to your new branch using the 'Commit to new_feature' button and include a descriptive title and description for the commit, making sure you click 'Push origin' when this is done.
+7. Make additional commits if necessary.
+8. Raise a pull request.
 
 ## Additional notes
 
@@ -28,4 +28,4 @@ The schematic below shows the intended structure of the branches in this reposit
 
 ## Documentation
 
-Where possible, update and\or include documentation at the beginning of the function with any changes you make to the code. Add references if required. This is important so that other people can use your code and so that we can validate any methods you use. We are following the [NumPy Docs Style Guide](https://docs.scipy.org/doc/numpy-1.15.0/docs/howto_document.html), but you can use any of the documentation in the code as an example. Add comments where it is not clear what you have done.
+Where possible, update or add documentation at the beginning of the function you are making or changing, adding references if required. This is important so that other people know how to use your code and so that we can validate any methods you use. We are following the [NumPy Docs Style Guide](https://docs.scipy.org/doc/numpy-1.15.0/docs/howto_document.html), but you can use any of the documentation in the code as an example. Add comments where it is not clear what you have done.
