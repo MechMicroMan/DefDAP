@@ -24,4 +24,8 @@ The schematic below shows the intended structure of the branches in this reposit
 - Always make a branch from 'develop', don't try to make a branch from 'master' or any feature branch.
 - You will not be able to complete a pull request into 'develop' without a review by Mike or Rhys.
 - Try to avoid adding any dependencies to the code, if you do need to, add a comment to your 'issue' with the details.
-- Where possible, update and\or include documentation with any changes you make to the code.
+
+
+## Documentation
+
+Where possible, update and\or include documentation at the beginning of the function with any changes you make to the code. Add references if required. This is important so that other people can use your code and so that we can validate any methods you use. We are following the [NumPy Docs Style Guide](https://docs.scipy.org/doc/numpy-1.15.0/docs/howto_document.html), but you can use any of the documentation in the code as an example. Add comments where it is not clear what you have done.
