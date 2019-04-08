@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pathlib
 
 
 class EBSDDataLoader(object):
@@ -31,6 +32,9 @@ class EBSDDataLoader(object):
         This function opens the cpr file, reading in the x and y dimensions and phase names."""
 
         cpr_path = "{}.cpr".format(file_path)
+        if not pathlib.Path(cpr_path).is_file():
+            raise FileNotFoundError("Cannot open file {}".format(cpr_path))
+
         cpr_file = open(cpr_path, 'r')
 
         for line in cpr_file:
@@ -55,11 +59,14 @@ class EBSDDataLoader(object):
         return self.loadedMetadata
 
     def read_crc(self, file_path):
-        xDim = self.loadedMetadata['yDim']
+        xDim = self.loadedMetadata['xDim']
         yDim = self.loadedMetadata['yDim']
 
         # now read the binary .crc file
         crc_path = "{}.crc".format(file_path)
+        if not pathlib.Path(crc_path).is_file():
+            raise FileNotFoundError("Cannot open file {}".format(crc_path))
+
         fmt_np = np.dtype([('Phase', 'b'),
                            ('Eulers', [('ph1', 'f'), ('phi', 'f'), ('ph2', 'f')]),
                            ('MAD', 'f'),
