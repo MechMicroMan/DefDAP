@@ -1,5 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
+
+from defdap import plotting
 
 
 class Quat(object):
@@ -123,10 +124,10 @@ class Quat(object):
 
     # show components when the quat is printed
     def __repr__(self):
-        return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
+        return "[{:.4f}, {:.4f}, {:.4f}, {:.4f}]".format(*self.quatCoef)
 
     def __str__(self):
-        return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
+        return self.__repr__()
 
     def _plotIPF(self, direction, symGroup, **kwargs):
         Quat.plotIPF([self], direction, symGroup, **kwargs)
@@ -181,7 +182,7 @@ class Quat(object):
     # also the inverse if this is a unit quaterion
     @property
     def conjugate(self):
-        return Quat(self.quatCoef[0], -self.quatCoef[1], -self.quatCoef[2], -self.quatCoef[3])
+        return Quat(self[0], -self[1], -self[2], -self[3])
 
     def transformVector(self, vector):
         """Transforms vector by the quaternion. For EBSD quaterions this
@@ -361,189 +362,8 @@ class Quat(object):
         return alpha, beta
 
     @staticmethod
-    def stereoProject(*args):
-        if len(args) == 3:
-            alpha, beta = Quat.polarAngles(args[0], args[1], args[2])
-        elif len(args) == 2:
-            alpha, beta = args
-        else:
-            raise Exception("3 arguments for pole directions and 2 for polar angles.")
-
-        alphaComp = np.tan(alpha / 2)
-        xp = alphaComp * np.cos(beta)
-        yp = alphaComp * np.sin(beta)
-
-        return xp, yp
-
-    @staticmethod
-    def lambertProject(*args):
-        if len(args) == 3:
-            alpha, beta = Quat.polarAngles(args[0], args[1], args[2])
-        elif len(args) == 2:
-            alpha, beta = args
-        else:
-            raise Exception("3 arguments for pole directions and 2 for polar angles.")
-
-        alphaComp = np.sqrt(2 * (1 - np.cos(alpha)))
-        xp = alphaComp * np.cos(beta)
-        yp = alphaComp * np.sin(beta)
-
-        return xp, yp
-
-    @staticmethod
-    def _validateProjection(projectionIn, validateDefault=False):
-        if validateDefault:
-            defaultProjection = None
-        else:
-            defaultProjection = Quat._validateProjection(Quat.defaultProjection, validateDefault=True)
-
-        if projectionIn is None:
-            projection = defaultProjection
-
-        elif type(projectionIn) is str:
-            projectionName = projectionIn.replace(" ", "").lower()
-            if projectionName in ["lambert", "equalarea"]:
-                projection = Quat.lambertProject
-            elif projectionName in ["stereographic", "stereo", "equalangle"]:
-                projection = Quat.stereoProject
-            else:
-                print("Unknown projection name, using default")
-                projection = defaultProjection
-
-        elif callable(projectionIn):
-            projection = projectionIn
-
-        else:
-            print("Unknown projection, using default")
-            projection = defaultProjection
-
-        if projection is None:
-            raise Exception("Problem with default projection.")
-
-        return projection
-
-    @staticmethod
-    def plotLine(startPoint, endPoint, plotSymmetries=False, symGroup=None,
-                 res=100, projection=None, ax=None, **kwargs):
-        projection = Quat._validateProjection(projection)
-        if ax is None:
-            ax = plt.gca()
-
-        lines = [(startPoint, endPoint)]
-        if plotSymmetries:
-            if symGroup is None:
-                raise Exception("Please provide a symGroup")
-            for symm in Quat.symEqv(symGroup)[1:]:
-                startPointSymm = symm.transformVector(startPoint).astype(int)
-                endPointSymm = symm.transformVector(endPoint).astype(int)
-
-                if startPointSymm[2] < 0:
-                    startPointSymm *= -1
-                if endPointSymm[2] < 0:
-                    endPointSymm *= -1
-
-                lines.append((startPointSymm, endPointSymm))
-
-        linePoints = np.zeros((3, res), dtype=float)
-        for line in lines:
-            for i in range(3):
-                if line[0][i] == line[1][i]:
-                    linePoints[i] = np.full(res, line[0][i])
-                else:
-                    linePoints[i] = np.linspace(line[0][i], line[1][i], res)
-
-            xp, yp = projection(linePoints[0], linePoints[1], linePoints[2])
-            ax.plot(xp, yp, **kwargs)
-
-    @staticmethod
-    def labelPoint(point, label, projection=None, ax=None, padX=0, padY=0, **kwargs):
-        projection = Quat._validateProjection(projection)
-        if ax is None:
-            ax = plt.gca()
-
-        xp, yp = projection(point[0], point[1], point[2])
-        ax.text(xp + padX, yp + padY, label, **kwargs)
-
-    @staticmethod
-    def plotPoleAxis(plotType, symGroup, projection=None, ax=None):
-        projection = Quat._validateProjection(projection)
-        if ax is None:
-            ax = plt.gca()
-
-        if plotType == "IPF" and symGroup == "cubic":
-            # line between [001] and [111]
-            Quat.plotLine(
-                np.array([0, 0, 1]), np.array([1, 1, 1]),
-                projection=projection, ax=ax, c='k', lw=2
-            )
-
-            # line between [001] and [101]
-            Quat.plotLine(
-                np.array([0, 0, 1]), np.array([1, 0, 1]),
-                projection=projection, ax=ax, c='k', lw=2
-            )
-
-            # line between [101] and [111]
-            Quat.plotLine(
-                np.array([1, 0, 1]), np.array([1, 1, 1]),
-                projection=projection, ax=ax, c='k', lw=2
-            )
-
-            # label poles
-            Quat.labelPoint(
-                np.array([0, 0, 1]), '001',
-                projection=projection, ax=ax, padY=-0.005, va='top', ha='center'
-            )
-            Quat.labelPoint(
-                np.array([1, 0, 1]), '101',
-                projection=projection, ax=ax, padY=-0.005, va='top', ha='center'
-            )
-            Quat.labelPoint(
-                np.array([1, 1, 1]), '111',
-                projection=projection, ax=ax, padY=0.005, va='bottom', ha='center'
-            )
-
-        elif plotType == "IPF" and symGroup == "hexagonal":
-            # line between [0001] and [10-10] ([001] and [210]) - converted to cubic axes
-            Quat.plotLine(
-                np.array([0, 0, 1]), np.array([np.sqrt(3), 1, 0]),
-                projection=projection, ax=ax, c='k', lw=2
-            )
-
-            # line between [0001] and [2-1-10] ([001] and [100]) - converted to cubic axes
-            Quat.plotLine(
-                np.array([0, 0, 1]), np.array([1, 0, 0]),
-                projection=projection, ax=ax, c='k', lw=2
-            )
-
-            # line between [2-1-10] and [10-10] ([100] and [210]) - converted to cubic axes
-            Quat.plotLine(
-                np.array([1, 0, 0]), np.array([np.sqrt(3), 1, 0]),
-                projection=projection, ax=ax, c='k', lw=2
-            )
-
-            # label poles
-            Quat.labelPoint(
-                np.array([0, 0, 1]), '0001',
-                projection=projection, ax=ax, padY=-0.008, va='top', ha='center'
-            )
-            Quat.labelPoint(
-                np.array([1, 0, 0]), '2-1-10',
-                projection=projection, ax=ax, padY=-0.008, va='top', ha='center'
-            )
-            Quat.labelPoint(
-                np.array([np.sqrt(3), 1, 0]), '10-10',
-                projection=projection, ax=ax, padY=0.008, va='bottom', ha='center'
-            )
-
-        else:
-            raise Exception("Only works for cubic and hexagonal IPFs")
-
-        ax.axis('equal')
-        ax.axis('off')
-
-    @staticmethod
-    def plotIPF(quats, direction, symGroup, projection=None, ax=None, markerColour=None, markerSize=40, **kwargs):
+    def plotIPF(quats, direction, symGroup, projection=None, ax=None,
+                markerColour=None, markerSize=40, **kwargs):
         """
         Plot IPF of orientations for specified sample diection.
 
@@ -566,65 +386,15 @@ class Quat(object):
         kwargs
             All other arguments are passed to the matplotlib scatter call
         """
-        projection = Quat._validateProjection(projection)
         plotParams = {'marker': '+'}
         plotParams.update(kwargs)
-        if ax is None:
-            ax = plt.gca()
 
         alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup)
 
-        # project onto equatorial plane
-        xp, yp = Quat.stereoProject(alphaFund, betaFund)
+        plot = plotting.PolePlot("IPF", symGroup, projection=projection, ax=ax)
+        plot.addPoints(alphaFund, betaFund, markerColour, markerSize, **plotParams)
 
-        # Plot IPF axis
-        Quat.plotPoleAxis("IPF", symGroup, projection=projection, ax=ax)
-
-        # plot poles
-        # plot markers with 'half and half' colour
-        if type(markerColour) is str:
-            markerColour = [markerColour]
-
-        if markerColour is None:
-            ax.scatter(xp, yp, **plotParams)
-        elif len(markerColour) == 2:
-            pos = (xp, yp)
-            r1 = 0.5
-            r2 = r1 + 0.5
-            markerSize = np.sqrt(markerSize)
-
-            x = [0] + np.cos(np.linspace(0, 2 * np.pi * r1, 10)).tolist()
-            y = [0] + np.sin(np.linspace(0, 2 * np.pi * r1, 10)).tolist()
-            xy1 = list(zip(x, y))
-
-            x = [0] + np.cos(np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 10)).tolist()
-            y = [0] + np.sin(np.linspace(2 * np.pi * r1, 2 * np.pi * r2, 10)).tolist()
-            xy2 = list(zip(x, y))
-
-            ax.scatter(pos[0], pos[1], marker=(xy1, 0), s=markerSize, c=markerColour[0], **plotParams)
-            ax.scatter(pos[0], pos[1], marker=(xy2, 0), s=markerSize, c=markerColour[1], **plotParams)
-        else:
-            raise Exception("specify one colour for solid markers or list two for 'half and half'")
-
-    @staticmethod
-    def plotIPFmap(quatArray, direction, symGroup, **kwargs):
-        # quats is an nxm array of quaternion orientations; symGroup must be "cubic"
-        plotParams = {}
-        plotParams.update(kwargs)
-
-        # flatten quat array to single dimension
-        mapShape = quatArray.shape
-        quats = quatArray.flatten()
-
-        # calculate IPF colours
-        IPFcolours = Quat.calcIPFcolours(quats, direction, symGroup)
-
-        # reshape back to 2d array
-        IPFcolours = np.reshape(IPFcolours, mapShape + (3, ))
-
-        # plot map
-        plt.imshow(IPFcolours, **kwargs)
-        plt.show()
+        return plot
 
     @staticmethod
     def calcIPFcolours(quats, direction, symGroup):
@@ -634,8 +404,10 @@ class Quat(object):
         alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup, dtype=np.float32)
 
         # revert to cartesians
-        # at some this should be changed to have the quats dimention last to fit with numpys row major storage
-        # direction vector in cartesians. Changes this to float32 causes errors in arccos, so leave to default to 64
+        # at some this should be changed to have the quats dimention
+        # last to fit with numpys row major storage direction vector in
+        # cartesians. Changes this to float32 causes errors in arccos,
+        # so leave to default to 64
         dirvec = np.empty((numQuats, 3))
         dirvec[:, 0] = np.sin(alphaFund) * np.cos(betaFund)
         dirvec[:, 1] = np.sin(alphaFund) * np.sin(betaFund)
@@ -645,7 +417,8 @@ class Quat(object):
         bvect = np.matlib.repmat([1., 1., 1.] / np.sqrt(3), numQuats, 1)
         rgb = np.zeros((numQuats, 3))
 
-        # Red Component; these subroutines are converted from Stephen Cluff's IPF_rgbcalc.m (BYU)
+        # Red Component; these subroutines are converted from
+        # Stephen Cluff's IPF_rgbcalc.m (BYU)
         RDirPlane = np.cross(dirvec, rvect)
         GBplane = np.cross(bvect, gvect)
         Rintersect = np.cross(RDirPlane, GBplane)

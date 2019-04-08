@@ -9,6 +9,7 @@ import copy
 from defdap.io import EBSDDataLoader
 from defdap.quat import Quat
 from defdap import base
+from defdap import plotting
 
 
 class Map(base.Map):
@@ -164,14 +165,17 @@ class Map(base.Map):
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
               format(self.xDim, self.yDim, self.stepSize))
 
-    def plotBandContrastMap(self):
+    def plotBandContrastMap(self, ax=None):
         """
         Plot band contrast map
         """
         self.checkDataLoaded()
 
-        plt.imshow(self.bandContrastArray, cmap='gray')
-        plt.colorbar()
+        plot = plotting.MapPlot(self, ax=ax)
+        plot.addMap(self.bandContrastArray, cmap='grey')
+        plot.addColourBar("Band contrast")
+
+        return plot
 
     def plotEulerMap(self, updateCurrent=False, highlightGrains=None,
                      highlightColours=None):
@@ -211,10 +215,20 @@ class Map(base.Map):
         if highlightGrains is not None:
             self.highlightGrains(highlightGrains, highlightColours)
 
-    def plotIPFmap(self, direction):
-        Quat.plotIPFmap(self.quatArray, direction, self.crystalSym)
+    def plotIPFmap(self, direction, ax=ax, **kwargs):
+        # calculate IPF colours
+        IPFcolours = Quat.calcIPFcolours(self.quatArray.flatten(),
+                                         direction, self.crystalSym)
 
-    def plotPhaseMap(self, cmap='viridis'):
+        # reshape back to map shape array
+        IPFcolours = np.reshape(IPFcolours, (self.yDim, self.xDim, 3))
+
+        plot = plotting.MapPlot(self, ax=ax)
+        plot.addMap(IPFcolours, **kwargs)
+
+        return plot
+
+    def plotPhaseMap(self, ax=None, cmap=None):
         """
         Plot a phase map.
 
@@ -223,20 +237,17 @@ class Map(base.Map):
         cmap : str, optional
             Colour scale to plot with.
         """
-        values = [-1] + list(range(1, self.numPhases + 1))
-        names = ["Non-indexed"] + self.phaseNames
+        phaseIDs = [-1] + list(range(1, self.numPhases + 1))
+        phaseNames = ["Non-indexed"] + self.phaseNames
 
-        plt.figure(figsize=(10, 6))
-        im = plt.imshow(self.phaseArray, cmap=cmap, vmin=-1, vmax=self.numPhases)
+        plot = plotting.MapPlot(self, ax=ax)
 
-        # Find colour values for phases
-        colors = [im.cmap(im.norm(value)) for value in values]
+        plot.addMap(self.phaseArray, cmap=cmap, vmin=-1, vmax=self.numPhases)
 
-        # Get colour patches for each phase and make legend
-        patches = [mpl.patches.Patch(color=colors[i], label=names[i]) for i in range(len(values))]
-        plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        plot.addLegend(phaseIDs, phaseNames,
+                       bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
-        plt.show()
+        return plot
 
     def calcKam(self):
         """

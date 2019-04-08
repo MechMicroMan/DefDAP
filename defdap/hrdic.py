@@ -13,6 +13,7 @@ import peakutils
 from defdap.io import DICDataLoader
 from defdap import base
 from defdap.quat import Quat
+from defdap import plotting
 
 
 class Map(base.Map):
@@ -363,7 +364,8 @@ class Map(base.Map):
         return boundaries
 
     def setPatternPath(self, filePath, windowSize):
-        """Set path of BSE image of pattern. filePath is relative to the path set when constructing."""
+        """Set path of BSE image of pattern. filePath is relative to
+        the path set when constructing."""
 
         self.patternImPath = self.path + filePath
         self.windowSize = windowSize
@@ -377,7 +379,8 @@ class Map(base.Map):
                 self.fig, self.ax = plt.subplots()
 
             bseImage = plt.imread(self.patternImPath)
-            self.ax.imshow(self.crop(bseImage, binned=False), cmap='gray', vmin=vmin, vmax=vmax)
+            self.ax.imshow(self.crop(bseImage, binned=False), cmap='gray',
+                           vmin=vmin, vmax=vmax)
 
         else:
             raise Exception("First set path to pattern image.")
@@ -386,101 +389,81 @@ class Map(base.Map):
         """Plot a map with grains numbered
 
         Args:
-            dilate(bool, optional): Set to true to dilate boundaries by one pixel
+            dilate(bool, optional): Set to true to dilate boundaries by
+            one pixel
         """
 
         self.fig, self.ax = plt.subplots()
 
         for grainID in range(0, len(self.grainList)):
-            xmiddle = (self.grainList[grainID].extremeCoords[2] + self.grainList[grainID].extremeCoords[0]) / 2
-            ymiddle = (self.grainList[grainID].extremeCoords[3] + self.grainList[grainID].extremeCoords[1]) / 2
+            xmiddle = (self.grainList[grainID].extremeCoords[2] +
+                       self.grainList[grainID].extremeCoords[0]) / 2
+            ymiddle = (self.grainList[grainID].extremeCoords[3] +
+                       self.grainList[grainID].extremeCoords[1]) / 2
             self.ax.text(xmiddle, ymiddle, grainID, fontsize=10)
 
         self.plotGBs(ax=self.ax, colour='black', dilate=dilate)
 
-    def plotMaxShear(self, ax=None, plotGBs=False, dilateBoundaries=False,
-                     boundaryColour='white', plotSlipTraces=False, plotPercent=False,
-                     scaleBar=False, updateCurrent=False, highlightGrains=None, highlightColours=None,
-                     plotColourBar=False, vmin=None, vmax=0.1):
-        """Plot a map of maximum shear strain
-
-        Args:
-            plotGBs(bool, optional): Set to true to overlay grain boundaries
-            dilateBoundaries(bool, optional): Set to true to dilate boundaries by one pixel
-            boundaryColour(string, optional): Colour of boundaries
-            plotSlipTraces(bool, optional): Set to true to plot slip traces for each grain
-            plotPercent(bool, optional): Set to true to plot maps using percentage
-            plotColourBar(bool, optional): Set to true to plot colour bar
-            vmin(bool, optional): Minimum value to plot
-            vmax(bool, optional): Maximum value to plot
+    def plotMaxShear(
+            self, ax=None, updateCurrent=False,
+            plotColourBar=False, vmin=None, vmax=0.1, cmap=None,
+            plotGBs=False, dilateBoundaries=False, boundaryColour=None,
+            plotScaleBar=False,
+            highlightGrains=None, highlightColours=None
+    ):
         """
+        Plot a map of maximum shear strain
+
+        Parameters
+        ----------
+        plotColourBar : bool, optional
+            Add a colourbar to plot
+        vmin : float, optional
+            Minimum value for colour scale, default is max value of data
+        vmax : float, optional
+            Maximum value for colour scale, default is min value of data
+        cmap
+        plotGBs : bool, optional
+            Add grain boundaries to the plot
+        dilateBoundaries : bool, optional
+        boundaryColour
+        plotScaleBar : bool, optional
+            Add scale bar to plot
+        highlightGrains
+
+        highlightColours
+        ax
+        updateCurrent : bool, optional
+        """
+
+        plot = plotting.MapPlot(self, ax=ax)
+        plot.addMap(self.crop(self.max_shear), cmap=cmap, vmin=vmin, vmax=vmax)
+
+        if plotColourBar:
+            plot.addColourBar("Effective shear strain")
+
+        if plotGBs:
+            plot.addGBs(colour=boundaryColour, dilate=dilateBoundaries)
+
+        if highlightGrains is not None:
+            plot.addGrainHighlights(highlightGrains,
+                                    grainColours=highlightColours)
+
+        if plotScaleBar:
+            if self.strainScale is None:
+                raise Exception("First set image scale using setScale")
+            else:
+                plot.addScaleBar(self.strainScale * 1e-6)
+
+
+
         if not updateCurrent:
             # self.fig, self.ax = plt.subplots(figsize=(5.75, 4))
             self.fig, self.ax = plt.subplots()
         if ax is not None:
             self.ax = ax
 
-        multiplier = 100 if plotPercent else 1
-        img = self.ax.imshow(self.crop(self.max_shear) * multiplier,
-                             cmap='viridis', interpolation='None', vmin=vmin, vmax=vmax)
-        if plotColourBar:
-            if plotPercent:
-                plt.colorbar(img, ax=self.ax, label="Effective shear strain (%)")
-            plt.colorbar(img, ax=self.ax, label="Effective shear strain")
-
-        if plotGBs:
-            self.plotGBs(ax=self.ax, colour=boundaryColour, dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            self.highlightGrains(highlightGrains, highlightColours)
-
-        if scaleBar:
-            if self.strainScale is None:
-                raise Exception("First set image scale using setScale")
-            else:
-                scalebar = ScaleBar(self.strainScale * (1e-6))  # 1 pixel = 0.2 meter
-                plt.gca().add_artist(scalebar)
-
-        # # plot slip traces
-        # if plotSlipTraces:
-        #     # Check that grains have been detected in the map
-        #     self.checkGrainsDetected()
-
-        #     numGrains = len(self.grainList)
-        #     numSS = len(self.ebsdMap.slipSystems)
-        #     grainSizeData = np.zeros((numGrains, 4))
-        #     slipTraceData = np.zeros((numGrains, numSS, 2))
-
-        #     i = 0   # keep track of number of slip traces
-        #     for grain in self.grainList:
-        #         if len(grain) < 1000:
-        #             continue
-
-        #         # x0, y0, xmax, ymax
-        #         grainSizeData[i, 0], grainSizeData[i, 1], grainSizeData[i, 2], grainSizeData[i, 3] = grain.extremeCoords
-
-        #         for j, slipTrace in enumerate(grain.slipTraces()):
-        #             slipTraceData[i, j, 0:2] = slipTrace[0:2]
-
-        #         i += 1
-
-        #     grainSizeData = grainSizeData[0:i, :]
-        #     slipTraceData = slipTraceData[0:i, :, :]
-
-        #     scale = 4 / ((grainSizeData[:, 2] - grainSizeData[:, 0]) / self.xDim +
-        #                  (grainSizeData[:, 3] - grainSizeData[:, 1]) / self.xDim)
-
-        #     xPos = grainSizeData[:, 0] + (grainSizeData[:, 2] - grainSizeData[:, 0]) / 2
-        #     yPos = grainSizeData[:, 1] + (grainSizeData[:, 3] - grainSizeData[:, 1]) / 2
-
-        #     colours = self.ebsdMap.slipTraceColours
-
-        #     for i, colour in enumerate(colours[0:numSS]):
-        #         self.ax.quiver(xPos, yPos, slipTraceData[:, i, 0], slipTraceData[:, i, 1],
-        #                        scale=scale, pivot="middle", color=colour, headwidth=1,
-        #                        headlength=0, width=0.002)
-
-        return
+        return plot
 
     def plotGrainAvMaxShear(self, plotGBs=False, plotColourBar=True, vmin=None, vmax=None, clabel=''):
         """Plot grain map with grains filled with average value of max shear.
