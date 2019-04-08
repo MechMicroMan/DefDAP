@@ -27,10 +27,10 @@ class EBSDDataLoader(object):
     def checkData(self, binData):
         return
 
-    def loadOxfordCPR(self, file_path):
+    def loadOxfordCPR(self, file_name, file_dir=""):
         """ A .cpr file is a metadata file describing EBSD data.
         This function opens the cpr file, reading in the x and y dimensions and phase names."""
-
+        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
         cpr_path = "{}.cpr".format(file_path)
         if not pathlib.Path(cpr_path).is_file():
             raise FileNotFoundError("Cannot open file {}".format(cpr_path))
@@ -58,11 +58,12 @@ class EBSDDataLoader(object):
 
         return self.loadedMetadata
 
-    def read_crc(self, file_path):
+    def read_crc(self, file_name, file_dir=""):
+        """Read binary EBSD data from a .crc file"""
         xDim = self.loadedMetadata['xDim']
         yDim = self.loadedMetadata['yDim']
 
-        # now read the binary .crc file
+        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
         crc_path = "{}.crc".format(file_path)
         if not pathlib.Path(crc_path).is_file():
             raise FileNotFoundError("Cannot open file {}".format(crc_path))
@@ -189,14 +190,17 @@ class DICDataLoader(object):
             (coords.max() - coords.min()) / max(abs(np.diff(coords))) + 1
         )
 
-        if ((xdim != self.loadedMetadata['xDim']) or
-                (ydim != self.loadedMetadata['yDim'])):
-            raise Exception("Dimensions of data and header do not match")
+        assert xdim == self.loadedMetadata['xDim'], "Dimensions of data and header do not match"
+        assert ydim == self.loadedMetadata['yDim'], "Dimensions of data and header do not match"
 
-    def loadDavisTXT(self, fileName, fileDir=""):
+    def loadDavisMetadata(self, fileName, fileDir=""):
         # Load metadata
-        filePath = "{:}{:}".format(fileDir, fileName)
-        with open(filePath, 'r') as f:
+        file_path = "{}{}".format(fileDir, fileName)
+
+        if not pathlib.Path(file_path).is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_path))
+
+        with open(file_path, 'r') as f:
             header = f.readline()
         metadata = header.split()
 
@@ -211,9 +215,14 @@ class DICDataLoader(object):
 
         self.checkMetadata()
 
-        # Load data
+        return self.loadedMetadata
 
-        data = pd.read_table(filePath, delimiter='\t', skiprows=1, header=None)
+    def loadDavisData(self, file_name, file_directory=""):
+        file_path = pathlib.Path(file_directory) / pathlib.Path(file_name)
+        if not file_path.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_path))
+
+        data = pd.read_table(file_path, delimiter='\t', skiprows=1, header=None)
         # x and y coordinates
         self.loadedData['xc'] = data.values[:, 0]
         self.loadedData['yc'] = data.values[:, 1]
@@ -223,4 +232,4 @@ class DICDataLoader(object):
 
         self.checkData()
 
-        return self.loadedMetadata, self.loadedData
+        return self.loadedData

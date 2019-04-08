@@ -6,7 +6,7 @@ from skimage import morphology as mph
 
 import copy
 
-from defdap.io import EBSDDataLoader
+from defdap.file_readers import EBSDDataLoader
 from defdap.quat import Quat
 from defdap import base
 
