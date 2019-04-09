@@ -6,7 +6,7 @@ from skimage import morphology as mph
 
 import copy
 
-from defdap.io import EBSDDataLoader
+from defdap.file_readers import EBSDDataLoader
 from defdap.quat import Quat
 from defdap import base
 
@@ -139,11 +139,13 @@ class Map(base.Map):
         dataType : str, {'OxfordBinary', 'OxfordText'}
             Format of EBSD data file
         """
-        dataType = "OxfordBinary" if dataType is None else dataType
+        if dataType is None:
+            dataType = "OxfordBinary"
 
         dataLoader = EBSDDataLoader()
         if dataType == "OxfordBinary":
-            metadataDict, dataDict = dataLoader.loadOxfordCPR(fileName)
+            metadataDict = dataLoader.loadOxfordCPR(fileName)
+            dataDict = dataLoader.loadOxfordCRC(fileName)
         elif dataType == "OxfordText":
             metadataDict, dataDict = dataLoader.loadOxfordCTF(fileName)
         else:
@@ -161,8 +163,8 @@ class Map(base.Map):
 
         self.crystalSym = crystalSym
 
-        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
-              format(self.xDim, self.yDim, self.stepSize))
+        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step "
+              "size: {2} um)".format(self.xDim, self.yDim, self.stepSize))
 
     def plotBandContrastMap(self):
         """

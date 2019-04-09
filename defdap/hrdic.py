@@ -10,7 +10,7 @@ from scipy.stats import mode
 
 import peakutils
 
-from defdap.io import DICDataLoader
+from defdap.file_readers import DICDataLoader
 from defdap import base
 from defdap.quat import Quat
 
@@ -88,7 +88,8 @@ class Map(base.Map):
 
         dataLoader = DICDataLoader()
         if dataType == "DavisText":
-            metadataDict, dataDict = dataLoader.loadDavisTXT(fileName, fileDir=fileDir)
+            metadataDict = dataLoader.loadDavisMetadata(fileName, fileDir)
+            dataDict = dataLoader.loadDavisData(fileName, fileDir)
         else:
             raise Exception("No loader found for this DIC data.")
 
