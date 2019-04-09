@@ -166,6 +166,19 @@ class Map(base.Map):
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step "
               "size: {2} um)".format(self.xDim, self.yDim, self.stepSize))
 
+    def flipData(self):
+        """
+        Flip data about the horizontal and transform quats
+        """
+        self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
+        self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
+        self.phaseArray = self.phaseArray[::-1, ::-1]
+        self.buildQuatArray()
+
+        for i in range(self.xDim):
+            for j in range(self.yDim):
+                self.quatArray[j, i] = self.quatArray[j, i] * Quat.fromAxisAngle(np.array([1, 0, 0]), np.pi)
+
     def plotBandContrastMap(self):
         """
         Plot band contrast map
