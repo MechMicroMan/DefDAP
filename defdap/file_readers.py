@@ -70,6 +70,7 @@ class EBSDDataLoader(object):
         dataFormat = np.dtype([
             ('Phase', 'b'),
             ('Eulers', [('ph1', 'f'), ('phi', 'f'), ('ph2', 'f')]),
+            ('MAD', 'f'),
             ('BC', 'uint8'),
             ('IB3', 'uint8'),
             ('IB4', 'uint8'),
