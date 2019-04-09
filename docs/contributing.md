@@ -2,6 +2,12 @@
 
 We welcome any improvements made to this package, but please follow the guidelines below when making changes.
 
+## Coding style
+
+In this project we (try) to follow the PEP8 standard for formatting python code with 2 notable exceptions:
+- Function and variable names are in mixed case e.g myFirstFunction
+- The 79 character line length limit is seen more as a guideline than rule. Code is split across lines where possible and to improve readability. Line length should never excede 119 characters. All documentation should be split to lines of less than 73 characters.
+
 ## Repository Structure
 
 The schematic below shows the intended structure of the branches in this repository. The 'master' branch will be committed to at regular intervals by an administrator and each release will be given a tag with a version number. This is the first branch that is visible and we (will eventually) have controls in place to ensure this branch always works correctly. The 'develop' branch contains new features which may not be significant enough to form part of the 'master' branch just yet. The final type of branch is the feature branch (green), such as 'feture_1' and 'feature_2'. This is where you come in! If you would like to make a new feature or fix a bug, simply make a branch from develop with a reasonable name and make a start on any changes you would like to make. Don't be afraid of breaking anything at this point, there are controls in place to help make sure buggy code does not make it into 'develop' or 'master'.
