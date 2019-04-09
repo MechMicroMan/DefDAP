@@ -27,14 +27,16 @@ class TestEBSDDataLoader:
 
     @staticmethod
     def test_check_metadata_good(data_loader):
-        """The check_metadata method should pass silently if phaseNames and numPhases match."""
+        """The check_metadata method should pass silently if phaseNames
+        and numPhases match."""
         data_loader.loadedMetadata["phaseNames"] = ["1", "2", "3"]
         data_loader.loadedMetadata["numPhases"] = 3
         assert data_loader.checkMetadata() is None
 
     @staticmethod
     def test_check_metadata_bad(data_loader):
-        """The check_metadata method should fail if phaseNames and numPhases do not match."""
+        """The check_metadata method should fail if phaseNames and
+        numPhases do not match."""
         data_loader.loadedMetadata["phaseNames"] = ["1", "2"]
         data_loader.loadedMetadata["numPhases"] = 3
         with pytest.raises(AssertionError):
@@ -57,8 +59,8 @@ class TestEBSDDataLoader:
             data_loader.loadOxfordCPR("badger")
 
     @staticmethod
-    def test_read_crc_good_file(metadata_loaded):
-        metadata_loaded.read_crc(EXAMPLE_DIC)
+    def test_load_oxford_crc_good_file(metadata_loaded):
+        metadata_loaded.loadOxfordCRC(EXAMPLE_DIC)
         x_dim = metadata_loaded.loadedMetadata["xDim"]
         y_dim = metadata_loaded.loadedMetadata["yDim"]
         assert metadata_loaded.loadedData['bandContrast'].shape == (y_dim, x_dim)
@@ -73,9 +75,9 @@ class TestEBSDDataLoader:
         assert isinstance(metadata_loaded.loadedData['eulerAngle'][0][0][0], np.float64)
 
     @staticmethod
-    def test_read_crc_bad(metadata_loaded):
+    def test_load_oxford_crc_bad(metadata_loaded):
         with pytest.raises(FileNotFoundError):
-            metadata_loaded.read_crc("badger")
+            metadata_loaded.loadOxfordCRC("badger")
 
 
 class TestDICDataLoader:

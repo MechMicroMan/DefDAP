@@ -27,85 +27,98 @@ class EBSDDataLoader(object):
     def checkData(self, binData):
         return
 
-    def loadOxfordCPR(self, file_name, file_dir=""):
+    def loadOxfordCPR(self, fileName, fileDir=""):
         """ A .cpr file is a metadata file describing EBSD data.
-        This function opens the cpr file, reading in the x and y dimensions and phase names."""
-        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
-        cpr_path = "{}.cpr".format(file_path)
-        if not pathlib.Path(cpr_path).is_file():
-            raise FileNotFoundError("Cannot open file {}".format(cpr_path))
+        This function opens the cpr file, reading in the x and y
+        dimensions and phase names."""
+        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
+        cprPath = "{}.cpr".format(filePath)
+        if not pathlib.Path(cprPath).is_file():
+            raise FileNotFoundError("Cannot open file {}".format(cprPath))
 
-        cpr_file = open(cpr_path, 'r')
+        cprFile = open(cprPath, 'r')
 
-        for line in cpr_file:
+        for line in cprFile:
             if 'xCells' in line:
-                xDim = int(line.split("=")[-1])
-                self.loadedMetadata['xDim'] = xDim
+                self.loadedMetadata['xDim'] = int(line.split("=")[-1])
             elif 'yCells' in line:
-                yDim = int(line.split("=")[-1])
-                self.loadedMetadata['yDim'] = yDim
+                self.loadedMetadata['yDim'] = int(line.split("=")[-1])
             elif 'GridDistX' in line:
                 self.loadedMetadata['stepSize'] = float(line.split("=")[-1])
             elif '[Phases]' in line:
-                self.loadedMetadata['numPhases'] = int(next(cpr_file).split("=")[-1])
+                self.loadedMetadata['numPhases'] = int(next(cprFile).split("=")[-1])
             elif '[Phase' in line:
-                phase_name = next(cpr_file).split("=")[-1].strip('\n')
-                self.loadedMetadata['phaseNames'].append(phase_name)
+                phaseName = next(cprFile).split("=")[-1].strip('\n')
+                self.loadedMetadata['phaseNames'].append(phaseName)
 
-        cpr_file.close()
+        cprFile.close()
 
         self.checkMetadata()
 
         return self.loadedMetadata
 
-    def read_crc(self, file_name, file_dir=""):
+    def loadOxfordCRC(self, fileName, fileDir=""):
         """Read binary EBSD data from a .crc file"""
         xDim = self.loadedMetadata['xDim']
         yDim = self.loadedMetadata['yDim']
 
-        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
-        crc_path = "{}.crc".format(file_path)
-        if not pathlib.Path(crc_path).is_file():
-            raise FileNotFoundError("Cannot open file {}".format(crc_path))
+        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
+        crcPath = "{}.crc".format(filePath)
+        if not pathlib.Path(crcPath).is_file():
+            raise FileNotFoundError("Cannot open file {}".format(crcPath))
 
-        fmt_np = np.dtype([('Phase', 'b'),
-                           ('Eulers', [('ph1', 'f'), ('phi', 'f'), ('ph2', 'f')]),
-                           ('MAD', 'f'),
-                           ('BC', 'uint8'),
-                           ('IB3', 'uint8'),
-                           ('IB4', 'uint8'),
-                           ('IB5', 'uint8'),
-                           ('IB6', 'f')])
-        binData = np.fromfile(crc_path, fmt_np, count=-1)
+        dataFormat = np.dtype([
+            ('Phase', 'b'),
+            ('Eulers', [('ph1', 'f'), ('phi', 'f'), ('ph2', 'f')]),
+            ('BC', 'uint8'),
+            ('IB3', 'uint8'),
+            ('IB4', 'uint8'),
+            ('IB5', 'uint8'),
+            ('IB6', 'f')
+        ])
+        binData = np.fromfile(crcPath, dataFormat, count=-1)
+
         self.checkData(binData)
-        self.loadedData['bandContrast'] = np.reshape(binData['BC'], (yDim, xDim))
-        self.loadedData['phase'] = np.reshape(binData['Phase'], (yDim, xDim))
-        eulerAngles = np.reshape(binData['Eulers'], (yDim, xDim))
-        # flatten the structures so that the Euler angles are stored into a normal array
+
+        self.loadedData['bandContrast'] = np.reshape(
+            binData['BC'], (yDim, xDim)
+        )
+        self.loadedData['phase'] = np.reshape(
+            binData['Phase'], (yDim, xDim)
+        )
+        eulerAngles = np.reshape(
+            binData['Eulers'], (yDim, xDim)
+        )
+        # flatten the structures so that the Euler angles are stored
+        # into a normal array
         eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
         self.loadedData['eulerAngle'] = eulerAngles
+
         return self.loadedData
 
     def loadOxfordCTF(self, fileName, fileDir=""):
-        """ A .ctf file is a HKL single orientation file. This is a data file generated
-        by the Oxford EBSD instrument."""
+        """ A .ctf file is a HKL single orientation file. This is a
+        data file generated by the Oxford EBSD instrument."""
 
         # open data file and read in metadata
-        filePathBase = "{:}{:}".format(fileDir, fileName)
-        filePath = "{:}.ctf".format(filePathBase)
-        dataFile = open(filePath, 'r')
+        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
+        ctfPath = "{}.ctf".format(filePath)
+        if not pathlib.Path(ctfPath).is_file():
+            raise FileNotFoundError("Cannot open file {}".format(ctfPath))
 
-        for i, line in enumerate(dataFile):
-            if line[:6] == 'XCells':
-                xDim = int(line[7:])
+        ctfFile = open(ctfPath, 'r')
+
+        for i, line in enumerate(ctfFile):
+            if 'XCells' in line:
+                xDim = int(line.split()[-1])
                 self.loadedMetadata['xDim'] = xDim
-            elif line[:6] == 'YCells':
-                yDim = int(line[7:])
+            elif 'YCells' in line:
+                yDim = int(line.split()[-1])
                 self.loadedMetadata['yDim'] = yDim
-            elif line[:5] == 'XStep':
-                self.loadedMetadata['stepSize'] = float(line[6:])
-            elif line[:6] == 'Phases':
-                numPhases = int(line[7:])
+            elif 'XStep' in line:
+                self.loadedMetadata['stepSize'] = float(line.split()[-1])
+            elif 'Phases' in line:
+                numPhases = int(line.split()[-1])
                 self.loadedMetadata['numPhases'] = numPhases
                 for j in range(numPhases):
                     self.loadedMetadata['phaseNames'].append(
@@ -115,39 +128,32 @@ class EBSDDataLoader(object):
                 # phases are last in the header so break out the loop
                 break
 
-        dataFile.close()
+        ctfFile.close()
 
         self.checkMetadata()
 
         # now read the data from file
-        fmt_np = np.dtype([
+        dataFormat = np.dtype([
             ('Phase', 'b'),
-            ('Eulers', [('ph1', 'f'),
-                        ('phi', 'f'),
-                        ('ph2', 'f')]),
+            ('Eulers', [('ph1', 'f'), ('phi', 'f'), ('ph2', 'f')]),
             ('MAD', 'f'),
             ('BC', 'uint8')
         ])
         binData = np.loadtxt(
-            filePath, fmt_np, delimiter='\t',
+            filePath, dataFormat, delimiter='\t',
             skiprows=numHeaderLines, usecols=(0, 5, 6, 7, 8, 9)
         )
 
         self.checkData(binData)
 
         self.loadedData['bandContrast'] = np.reshape(
-            binData['BC'],
-            (yDim, xDim)
+            binData['BC'], (yDim, xDim)
         )
-
         self.loadedData['phase'] = np.reshape(
-            binData['Phase'],
-            (yDim, xDim)
+            binData['Phase'], (yDim, xDim)
         )
-
         eulerAngles = np.reshape(
-            binData['Eulers'],
-            (yDim, xDim)
+            binData['Eulers'], (yDim, xDim)
         )
         # flatten the structures the Euler angles are stored into a
         # normal array
@@ -195,12 +201,11 @@ class DICDataLoader(object):
 
     def loadDavisMetadata(self, fileName, fileDir=""):
         # Load metadata
-        file_path = "{}{}".format(fileDir, fileName)
+        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
+        if not filePath.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        if not pathlib.Path(file_path).is_file():
-            raise FileNotFoundError("Cannot open file {}".format(file_path))
-
-        with open(file_path, 'r') as f:
+        with open(filePath, 'r') as f:
             header = f.readline()
         metadata = header.split()
 
@@ -217,12 +222,12 @@ class DICDataLoader(object):
 
         return self.loadedMetadata
 
-    def loadDavisData(self, file_name, file_directory=""):
-        file_path = pathlib.Path(file_directory) / pathlib.Path(file_name)
-        if not file_path.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(file_path))
+    def loadDavisData(self, fileName, fileDir=""):
+        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
+        if not filePath.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        data = pd.read_table(file_path, delimiter='\t', skiprows=1, header=None)
+        data = pd.read_table(filePath, delimiter='\t', skiprows=1, header=None)
         # x and y coordinates
         self.loadedData['xc'] = data.values[:, 0]
         self.loadedData['yc'] = data.values[:, 1]

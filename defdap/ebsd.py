@@ -145,7 +145,7 @@ class Map(base.Map):
         dataLoader = EBSDDataLoader()
         if dataType == "OxfordBinary":
             metadataDict = dataLoader.loadOxfordCPR(fileName)
-            dataDict = dataLoader.read_crc(fileName)
+            dataDict = dataLoader.loadOxfordCRC(fileName)
         elif dataType == "OxfordText":
             metadataDict, dataDict = dataLoader.loadOxfordCTF(fileName)
         else:
@@ -163,8 +163,8 @@ class Map(base.Map):
 
         self.crystalSym = crystalSym
 
-        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
-              format(self.xDim, self.yDim, self.stepSize))
+        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step "
+              "size: {2} um)".format(self.xDim, self.yDim, self.stepSize))
 
     def plotBandContrastMap(self):
         """
