@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 from skimage import morphology as mph
@@ -103,7 +102,6 @@ class Map(base.Map):
         self.phaseBoundaries = None
         self.cacheEulerMap = None
         self.grains = None
-        self.grainList = None
         self.misOri = None
         self.misOriAxis = None
         self.kam = None
@@ -177,13 +175,24 @@ class Map(base.Map):
 
         return plot
 
-    def plotEulerMap(self, updateCurrent=False, highlightGrains=None,
-                     highlightColours=None):
+    def plotEulerMap(
+        self, ax=None, updateCurrent=False,  makeInteractive=False,
+        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
+        plotScaleBar=False,
+        highlightGrains=None, highlightColours=None, **kwargs
+    ):
         """
         Plot an orientation map in Euler colouring
 
         Parameters
         ----------
+        ax
+        makeInteractive
+        plotGBs
+        dilateBoundaries
+        boundaryColour
+        plotScaleBar
+        kwargs
         updateCurrent : bool, optional
 
         highlightGrains : iterable(int), optional
@@ -195,27 +204,50 @@ class Map(base.Map):
         """
         self.checkDataLoaded()
 
-        if (not updateCurrent) or self.cacheEulerMap is None:
-            eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
+        eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
 
-            # this is the normalisation
-            norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]), (self.yDim, self.xDim))
-            norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+        # this is the normalisation
+        norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]),
+                       (self.yDim, self.xDim))
+        norm = np.reshape(norm, (self.yDim, self.xDim, 3))
 
-            # make non-indexed points green
-            eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
+        # make non-indexed points green
+        eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
+        eulerMap /= norm
 
-            eulerMap /= norm
+        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
+        plot.addMap(eulerMap, **kwargs)
 
-            self.cacheEulerMap = eulerMap
-            self.fig, self.ax = plt.subplots()
-
-        self.ax.imshow(self.cacheEulerMap, aspect='equal')
+        if plotGBs:
+            plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
 
         if highlightGrains is not None:
-            self.highlightGrains(highlightGrains, highlightColours)
+            plot.addGrainHighlights(highlightGrains,
+                                    grainColours=highlightColours)
 
-    def plotIPFmap(self, direction, ax=ax, **kwargs):
+        if plotScaleBar:
+            plot.addScaleBar(self.stepSize * 1e-6)
+
+        return plot
+
+        # if (not updateCurrent) or self.cacheEulerMap is None:
+        #     eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
+        #
+        #     # this is the normalisation
+        #     norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]), (self.yDim, self.xDim))
+        #     norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+        #
+        #     # make non-indexed points green
+        #     eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
+        #
+        #     eulerMap /= norm
+        #
+        #     self.cacheEulerMap = eulerMap
+        #     self.fig, self.ax = plt.subplots()
+
+        # self.ax.imshow(self.cacheEulerMap, aspect='equal')
+
+    def plotIPFmap(self, direction, ax=None, **kwargs):
         # calculate IPF colours
         IPFcolours = Quat.calcIPFcolours(self.quatArray.flatten(),
                                          direction, self.crystalSym)
@@ -263,7 +295,7 @@ class Map(base.Map):
 
         self.kam = np.empty((self.yDim, self.xDim))
 
-        # Start with rows. Caluculate misorientation with neigbouring rows.
+        # Start with rows. Calculate misorientation with neighbouring rows.
         # First and last row only in one direction
         self.kam[0, :] = abs(np.einsum("ij,ij->j", quatComps[:, 0, :], quatComps[:, 1, :]))
         self.kam[-1, :] = abs(np.einsum("ij,ij->j", quatComps[:, -1, :], quatComps[:, -2, :]))
@@ -282,15 +314,7 @@ class Map(base.Map):
 
         self.kam /= 2
         self.kam[self.kam > 1] = 1
-        """Plot Kernel Average Misorientaion (KAM) for the EBSD map.
 
-        :param vmin: Minimum of colour scale (optional)
-        :type vmin: float
-        :param vmax: Maximum of colour scale (optional)
-        :type vmax: float
-        :param cmap: Colour map (optional)
-        :type cmap: str
-        """
     def plotKamMap(self, vmin=None, vmax=None, cmap="viridis"):
         """
         Plot Kernel Average Misorientaion (KAM) for the EBSD map.
@@ -646,39 +670,50 @@ class Map(base.Map):
 
         # reset current selected grain and plot euler map with click handler
         self.currGrainId = None
-        self.plotEulerMap()
+        plot = self.plotEulerMap(makeInteractive=True)
         if clickEvent is None:
             # default click handler which highlights grain and prints id
-            self.fig.canvas.mpl_connect(
+            plot.addEventHandler(
                 'button_press_event',
-                lambda x: self.clickGrainId(x, displaySelected)
+                lambda event, plot: self.clickGrainId(event, plot, displaySelected)
             )
+            # self.fig.canvas.mpl_connect(
+            #     'button_press_event',
+            #     lambda x: self.clickGrainId(x, displaySelected)
+            # )
         else:
             # click handler loaded in as parameter. Pass current map object to it.
-            self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
+            plot.addEventHandler('button_press_event', lambda x: clickEvent(x, self))
+            # self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
+
+        self.currPlot = plot
+        return plot
 
         # unset figure for plotting grains
-        self.grainFig = None
-        self.grainAx = None
+        # self.grainFig = None
+        # self.grainAx = None
 
-    def clickGrainId(self, event, displaySelected):
+    def clickGrainId(self, event, plot, displaySelected):
         if event.inaxes is not None:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
             print("Grain ID: {}".format(self.currGrainId))
 
-            # clear current axis and redraw euler map with highlighted grain overlay
-            self.ax.clear()
-            self.plotEulerMap(updateCurrent=True, highlightGrains=[self.currGrainId])
-            self.fig.canvas.draw()
+            plot.addGrainHighlights([self.currGrainId], alpha=1.)
+            # plot.fig.canvas.draw()
 
-            if displaySelected:
-                if self.grainFig is None:
-                    self.grainFig, self.grainAx = plt.subplots()
-                self.grainList[self.currGrainId].calcSlipTraces()
-                self.grainAx.clear()
-                self.grainList[self.currGrainId].plotSlipTraces(ax=self.grainAx)
-                self.grainFig.canvas.draw()
+            # clear current axis and redraw euler map with highlighted grain overlay
+            # self.ax.clear()
+            # self.plotEulerMap(updateCurrent=True, highlightGrains=[self.currGrainId])
+            # self.fig.canvas.draw()
+
+            # if displaySelected:
+            #     if self.grainFig is None:
+            #         self.grainFig, self.grainAx = plt.subplots()
+            #     self.grainList[self.currGrainId].calcSlipTraces()
+            #     self.grainAx.clear()
+            #     self.grainList[self.currGrainId].plotSlipTraces(ax=self.grainAx)
+            #     self.grainFig.canvas.draw()
 
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self)

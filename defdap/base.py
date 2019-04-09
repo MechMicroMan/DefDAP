@@ -1,14 +1,15 @@
 import numpy as np
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
-import skimage.morphology as mph
+
+from defdap import plotting
 
 
 class Map(object):
 
     def __init__(self):
+        self.grainList = None
         self.homogPoints = []
         self.selPoint = None
 
@@ -37,21 +38,18 @@ class Map(object):
             raise Exception("No grains detected.")
         return True
 
-    def plotGBs(self, ax=None, colour='white', dilate=False):
-        # create colourmap for boundaries and plot. colourmap goes transparent white to opaque white/colour
-        cmap1 = mpl.colors.LinearSegmentedColormap.from_list('my_cmap', ['white', colour], 256)
-        cmap1._init()
-        cmap1._lut[:, -1] = np.linspace(0, 1, cmap1.N + 3)
+    def plotGrainNumbers(self, dilateBoundaries=False, ax=None, **kwargs):
+        """Plot a map with grains numbered
 
-        boundariesImage = -self.boundaries
+        Args:
+            dilateBoundaries(bool, optional): Set to true to dilate
+            boundaries by one pixel
+        """
+        plot = plotting.MapPlot(self, ax=ax)
+        plot.addGBs(colour='black', dilate=dilateBoundaries)
+        plot.addGrainNumbers(**kwargs)
 
-        if dilate:
-            boundariesImage = mph.binary_dilation(boundariesImage)
-
-        if ax is not None:
-            ax.imshow(boundariesImage, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
-        else:
-            plt.imshow(boundariesImage, cmap=cmap1, interpolation='None', vmin=0, vmax=1)
+        return plot
 
     def setHomogPoint(self, binSize=1, points=None):
         
@@ -140,36 +138,6 @@ class Map(object):
                 newPoint = tuple(newPoint)
 
             self.homogPoints[homogID] = newPoint
-
-    def highlightGrains(self, grainIds, grainColours):
-        if grainColours is None:
-            grainColours = ['white']
-
-        outline = np.zeros((self.yDim, self.xDim), dtype=int)
-        for i, grainId in enumerate(grainIds, start=1):
-            if i > len(grainColours):
-                i = len(grainColours)
-            # outline of highlighted grain
-            grainOutline = self.grainList[grainId].grainOutline(bg=0, fg=i)
-            x0, y0, xmax, ymax = self.grainList[grainId].extremeCoords
-
-            # use logical of same are in entire area to ensure neigbouring grains display correctly
-            # grainOutline = np.logical_or(outline[y0:ymax + 1, x0:xmax + 1], grainOutline).astype(int)
-            # outline[y0:ymax + 1, x0:xmax + 1] = grainOutline
-
-            outline[y0:ymax + 1, x0:xmax + 1] = outline[y0:ymax + 1, x0:xmax + 1] + grainOutline
-
-        grainColours.insert(0, 'white')
-
-        # Custom colour map where 0 is tranparent white for bg and 255 is opaque white for fg
-        cmap1 = mpl.colors.ListedColormap(grainColours)
-        cmap1._init()
-        alpha = np.full(cmap1.N + 3, self.highlightAlpha)
-        alpha[0] = 0
-        cmap1._lut[:, -1] = alpha
-
-        self.ax.imshow(outline, interpolation='none', cmap=cmap1)
-        return
 
     def buildNeighbourNetwork(self):
         # Construct a list of neighbours
@@ -307,28 +275,55 @@ class Map(object):
 class Grain(object):
 
     def __init__(self):
-        self.coordList = []         # list of coords stored as tuples (x, y). These are corrds in a cropped image if crop exists
+        # list of coords stored as tuples (x, y). These are corrds in a
+        # cropped image if crop exists.
+        self.coordList = []
 
     def __len__(self):
         return len(self.coordList)
 
     @property
     def extremeCoords(self):
-        unzippedCoordlist = list(zip(*self.coordList))
-        x0 = min(unzippedCoordlist[0])
-        y0 = min(unzippedCoordlist[1])
-        xmax = max(unzippedCoordlist[0])
-        ymax = max(unzippedCoordlist[1])
+        coords = np.array(self.coordList, dtype=int)
+
+        x0, y0 = coords.min(axis=0)
+        xmax, ymax = coords.max(axis=0)
 
         return x0, y0, xmax, ymax
 
-    @property
-    def centreCoords(self):
-        x0, y0, xmax, ymax = self.extremeCoords
-        xCentre = int((xmax - x0) / 2)
-        yCentre = int((ymax - y0) / 2)
+    def centreCoords(self, centreType="box", grainCoords=True):
+        """
+        Calculates the centre of the grain, either as the centre of the
+        bounding box or the grains centre of mass.
 
-        return xCentre, yCentre
+        Parameters
+        ----------
+        centreType : str, optional, {'box', 'com'}
+            Set how to calculate the centre. Either 'box' for centre of
+            boundiing box or 'com' for centre of mass. Default is 'box'.
+        grainCoords : bool, optional
+            If set True the centre is returned in the grain coordinates
+            otherwise in the map coordinates. Defaults is grain.
+
+        Returns
+        -------
+        int, int
+            Coordinates of centre of grain
+        """
+        x0, y0, xmax, ymax = self.extremeCoords
+        if centreType == "box":
+            xCentre = round((xmax + x0) / 2)
+            yCentre = round((ymax + y0) / 2)
+        elif centreType == "com":
+            xCentre, yCentre = np.array(self.coordList).mean(axis=0).round()
+        else:
+            raise ValueError("centreType must be box or com")
+
+        if grainCoords:
+            xCentre -= x0
+            yCentre -= y0
+
+        return int(xCentre), int(yCentre)
 
     def grainOutline(self, bg=np.nan, fg=0):
         x0, y0, xmax, ymax = self.extremeCoords
@@ -351,7 +346,7 @@ class Grain(object):
             colours = self.ebsdMap.slipTraceColours
 
         if pos is None:
-            pos = self.centreCoords
+            pos = self.centreCoords()
 
         for i, slipTraceAngle in enumerate(self.slipTraces):
             slipTrace = np.array((-np.sin(slipTraceAngle), np.cos(slipTraceAngle)))

@@ -4,8 +4,6 @@ from defdap import plotting
 
 
 class Quat(object):
-    defaultProjection = "stereographic"
-
     def __init__(self, *args, **kwargs):
         self.quatCoef = np.zeros(4, dtype=float)
         # construct with Bunge euler angles (radians, ZXZ)
@@ -392,7 +390,9 @@ class Quat(object):
         alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup)
 
         plot = plotting.PolePlot("IPF", symGroup, projection=projection, ax=ax)
-        plot.addPoints(alphaFund, betaFund, markerColour, markerSize, **plotParams)
+        plot.addPoints(alphaFund, betaFund,
+                       markerColour=markerColour, markerSize=markerSize,
+                       **plotParams)
 
         return plot
 

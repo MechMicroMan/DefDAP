@@ -5,11 +5,11 @@ from matplotlib_scalebar.scalebar import ScaleBar
 
 from skimage import morphology as mph
 
-from defdap.quat import Quat
+from defdap import quat
 
 
 class Plot(object):
-    def __init__(self, fig, ax, makeInteractive):
+    def __init__(self, ax, fig=None, makeInteractive=False):
 
         self.interactive = makeInteractive
         if makeInteractive:
@@ -21,17 +21,28 @@ class Plot(object):
         else:
             self.fig = fig
             # TODO: flag for new figure
-            self.ax = plt.gca() if ax is None else ax
+            if ax is None:
+                self.fig, self.ax = plt.subplots()
+            else:
+                self.ax = ax
+
+    def addEventHandler(self, eventName, eventHandler):
+        if not self.interactive:
+            raise Exception("Plot must be interactive")
+
+        self.fig.canvas.mpl_connect(eventName, lambda event: eventHandler(event, self))
+
 
 class MapPlot(Plot):
     def __init__(self, callingMap, fig=None, ax=None, makeInteractive=False):
-        super(MapPlot, self).__init__(fig, ax, makeInteractive)
+        super(MapPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
 
         self.callingMap = callingMap
         self.imgLayers = []
+        self.highlightsLayer = None
 
-        ax.set_xticks([])
-        ax.set_yticks([])
+        self.ax.set_xticks([])
+        self.ax.set_yticks([])
 
     def addMap(self, mapData, vmin=None, vmax=None, cmap='viridis', **kwargs):
 
@@ -50,7 +61,7 @@ class MapPlot(Plot):
         scalebar = ScaleBar(scale)
         self.ax.add_artist(scalebar)
 
-    def addGBs(self, colour='white', dilate=False):
+    def addGrainBoundaries(self, colour='white', dilate=False):
         boundariesImage = -self.callingMap.boundaries
 
         if dilate:
@@ -77,16 +88,18 @@ class MapPlot(Plot):
         if alpha is None:
             alpha = self.highlightAlpha
 
-        cMap = self.callingMap
+        xDim = self.callingMap.xDim
+        yDim = self.callingMap.yDim
 
-        outline = np.zeros((cMap.yDim, cMap.xDim), dtype=int)
+        outline = np.zeros((yDim, xDim), dtype=int)
         for i, grainId in enumerate(grainIds, start=1):
             if i > len(grainColours):
                 i = len(grainColours)
 
             # outline of highlighted grain
-            grainOutline = cMap.grainList[grainId].grainOutline(bg=0, fg=i)
-            x0, y0, xmax, ymax = cMap.grainList[grainId].extremeCoords
+            grain = self.callingMap.grainList[grainId]
+            grainOutline = grain.grainOutline(bg=0, fg=i)
+            x0, y0, xmax, ymax = grain.extremeCoords
 
             # add to highlight image
             outline[y0:ymax + 1, x0:xmax + 1] += grainOutline
@@ -96,14 +109,30 @@ class MapPlot(Plot):
         grainColours.insert(0, 'white')
         hightlightsCmap = mpl.colors.ListedColormap(grainColours)
         hightlightsCmap._init()
-        alphaMap = np.full(cmap1.N + 3, alpha)
+        alphaMap = np.full(hightlightsCmap.N + 3, alpha)
         alphaMap[0] = 0
         hightlightsCmap._lut[:, -1] = alphaMap
 
-        img = self.ax.imshow(outline, interpolation='none',
-                             cmap=hightlightsCmap)
+        if self.highlightsLayer is None:
+            img = self.ax.imshow(outline, interpolation='none',
+                                 cmap=hightlightsCmap)
+            self.highlightsLayer = len(self.imgLayers)
+            self.imgLayers.append(img)
+        else:
+            img = self.imgLayers[self.highlightsLayer]
+            img.set_data(outline)
+            img.set_cmap(hightlightsCmap)
+            self.fig.canvas.draw()
 
         return img
+
+    def addGrainNumbers(self, fontsize=10, **kwargs):
+        for grainID, grain in enumerate(self.callingMap):
+            xCentre, yCentre = grain.centreCoords(centreType="com",
+                                                  grainCoords=False)
+
+            self.ax.text(xCentre, yCentre, grainID,
+                         fontsize=fontsize, **kwargs)
 
     def addLegend(self, values, lables, layer=0, **kwargs):
         # Find colour values for given values
@@ -177,7 +206,7 @@ class PolePlot(Plot):
     def addLine(self, startPoint, endPoint, plotSyms=False, res=100, **kwargs):
         lines = [(startPoint, endPoint)]
         if plotSyms:
-            for symm in Quat.symEqv(self.crystalSym)[1:]:
+            for symm in quat.Quat.symEqv(self.crystalSym)[1:]:
                 startPointSymm = symm.transformVector(startPoint).astype(int)
                 endPointSymm = symm.transformVector(endPoint).astype(int)
 
@@ -201,7 +230,7 @@ class PolePlot(Plot):
         xp, yp = self.projection(*point)
         self.ax.text(xp + padX, yp + padY, label, **kwargs)
 
-    def addPoints(self, alpha, beta, markerColour=None, **kwargs):
+    def addPoints(self, alpha, beta, markerColour=None, markerSize=None, **kwargs):
         # project onto equatorial plane
         xp, yp = self.projection(alpha, beta)
 
@@ -239,7 +268,7 @@ class PolePlot(Plot):
             defaultProjection = None
         else:
             defaultProjection = PolePlot._validateProjection(
-                Quat.defaultProjection, validateDefault=True
+                PolePlot.defaultProjection, validateDefault=True
             )
 
         if projectionIn is None:
@@ -270,7 +299,7 @@ class PolePlot(Plot):
     @staticmethod
     def stereoProject(*args):
         if len(args) == 3:
-            alpha, beta = Quat.polarAngles(args[0], args[1], args[2])
+            alpha, beta = quat.Quat.polarAngles(args[0], args[1], args[2])
         elif len(args) == 2:
             alpha, beta = args
         else:
@@ -285,7 +314,7 @@ class PolePlot(Plot):
     @staticmethod
     def lambertProject(*args):
         if len(args) == 3:
-            alpha, beta = Quat.polarAngles(args[0], args[1], args[2])
+            alpha, beta = quat.Quat.polarAngles(args[0], args[1], args[2])
         elif len(args) == 2:
             alpha, beta = args
         else:
@@ -298,8 +327,34 @@ class PolePlot(Plot):
         return xp, yp
 
 
-class HistPlot(Plot)
-    def __init__(self, plotType,  ax=None):
+class HistPlot(Plot):
+    def __init__(self, plotType="linear", ax=None, density=True):
         super(HistPlot, self).__init__(ax)
 
-        self.plotType = plotType
+        if plotType in ["linear", "log"]:
+            self.plotType = plotType
+        else:
+            raise ValueError("plotType must be linear or log.")
+
+        self.density = bool(density)
+
+        # set y-axis label
+        yLabel = "Normalised frequency" if self.density else "Frequency"
+        if self.plotType is "log":
+            yLabel = "ln({})".format(yLabel)
+        ax.ax.set_ylabel(yLabel)
+
+    def addHist(self, data, bins=None, range=None, line='o', label=None, **kwargs):
+
+        hist = np.histogram(data.flatten(), bins=bins, range=range,
+                            density=self.density)
+
+        yVals = hist[0]
+        if self.plotType is "log":
+            yVals = np.log(yVals)
+        xVals = 0.5 * (hist[1][1:] + hist[1][:-1])
+
+        self.ax.plot(xVals, yVals, line, label=label, **kwargs)
+
+    def addLegend(self, **kwargs):
+        self.ax.legend(**kwargs)

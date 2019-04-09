@@ -46,7 +46,6 @@ class Map(base.Map):
         self.ebsdMap = None                 # EBSD map linked to DIC map
         self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
         self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
-        self.grainList = None
         self.currGrainId = None             # ID of last selected grain
         self.ebsdGrainIds = None
         self.patternImPath = None           # Path to BSE image of map
@@ -385,31 +384,12 @@ class Map(base.Map):
         else:
             raise Exception("First set path to pattern image.")
 
-    def plotGrainNumbers(self, dilate=False):
-        """Plot a map with grains numbered
-
-        Args:
-            dilate(bool, optional): Set to true to dilate boundaries by
-            one pixel
-        """
-
-        self.fig, self.ax = plt.subplots()
-
-        for grainID in range(0, len(self.grainList)):
-            xmiddle = (self.grainList[grainID].extremeCoords[2] +
-                       self.grainList[grainID].extremeCoords[0]) / 2
-            ymiddle = (self.grainList[grainID].extremeCoords[3] +
-                       self.grainList[grainID].extremeCoords[1]) / 2
-            self.ax.text(xmiddle, ymiddle, grainID, fontsize=10)
-
-        self.plotGBs(ax=self.ax, colour='black', dilate=dilate)
-
     def plotMaxShear(
-            self, ax=None, updateCurrent=False,
-            plotColourBar=False, vmin=None, vmax=0.1, cmap=None,
-            plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-            plotScaleBar=False,
-            highlightGrains=None, highlightColours=None
+        self, ax=None, updateCurrent=False,
+        plotColourBar=False, vmin=None, vmax=0.1, cmap=None,
+        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
+        plotScaleBar=False,
+        highlightGrains=None, highlightColours=None
     ):
         """
         Plot a map of maximum shear strain
@@ -443,7 +423,7 @@ class Map(base.Map):
             plot.addColourBar("Effective shear strain")
 
         if plotGBs:
-            plot.addGBs(colour=boundaryColour, dilate=dilateBoundaries)
+            plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
 
         if highlightGrains is not None:
             plot.addGrainHighlights(highlightGrains,
