@@ -166,7 +166,7 @@ class Map(base.Map):
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step "
               "size: {2} um)".format(self.xDim, self.yDim, self.stepSize))
 
-    def flipData(self):
+    def transformData(self):
         """
         Flip data about the horizontal and transform quats
         """
