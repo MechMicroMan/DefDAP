@@ -26,6 +26,10 @@ A set of scripts for dealing with EBSD and HRDIC data.
 
 - For more help, see the documentation under /docs/html
 
+## Contributing
+
+- For information about contributing see the [guidelines](/docs/contributing.md)
+
 ## Credits
 
 The software uses the following open source packages:
