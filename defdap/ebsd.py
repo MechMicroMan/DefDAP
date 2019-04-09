@@ -174,10 +174,11 @@ class Map(base.Map):
         self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
         self.phaseArray = self.phaseArray[::-1, ::-1]
         self.buildQuatArray()
-
+        
+        transformQuat = Quat.fromAxisAngle(np.array([1, 0, 0]), np.pi)
         for i in range(self.xDim):
             for j in range(self.yDim):
-                self.quatArray[j, i] = self.quatArray[j, i] * Quat.fromAxisAngle(np.array([1, 0, 0]), np.pi)
+                self.quatArray[j, i] = self.quatArray[j, i] * transformQuat
 
     def plotBandContrastMap(self):
         """
