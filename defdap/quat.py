@@ -6,26 +6,34 @@ class Quat(object):
     defaultProjection = "stereographic"
 
     def __init__(self, *args, **kwargs):
-        self.quatCoef = np.zeros(4, dtype=float)
+        """
+        Create a quat object from 3 Bunge euler angles, 4 quat coefficients or an array of 4 quat coefficients
+        """
         # construct with Bunge euler angles (radians, ZXZ)
         if len(args) == 3:
             ph1 = args[0]
             phi = args[1]
             ph2 = args[2]
 
-            self.quatCoef[0] = np.cos(phi / 2.0) * np.cos((ph1 + ph2) / 2.0)
-            self.quatCoef[1] = -np.sin(phi / 2.0) * np.cos((ph1 - ph2) / 2.0)
-            self.quatCoef[2] = -np.sin(phi / 2.0) * np.sin((ph1 - ph2) / 2.0)
-            self.quatCoef[3] = -np.cos(phi / 2.0) * np.sin((ph1 + ph2) / 2.0)
+            self.quatCoef = np.array([np.cos(phi / 2.0) * np.cos((ph1 + ph2) / 2.0),
+                                      -np.sin(phi / 2.0) * np.cos((ph1 - ph2) / 2.0),
+                                      -np.sin(phi / 2.0) * np.sin((ph1 - ph2) / 2.0),
+                                      -np.cos(phi / 2.0) * np.sin((ph1 + ph2) / 2.0)],
+                                     dtype=float)
+
         # construct with array of quat coefficients
         elif len(args) == 1:
-            self.quatCoef = args[0]
+            if len(args[0]) == 4:
+                self.quatCoef = np.array(args[0], dtype=float)
+            else:
+                raise Exception("Arrays should have 4 elements, use 3 arguments for Euler angles")
+
         # construct with quat coefficients
         elif len(args) == 4:
-            self.quatCoef[0] = args[0]
-            self.quatCoef[1] = args[1]
-            self.quatCoef[2] = args[2]
-            self.quatCoef[3] = args[3]
+            self.quatCoef = np.array([args[0], args[1], args[2], args[3]], dtype=float)
+        elif len(args) > 4 or len(args) ==2:
+            raise Exception("Incorrect argument length\n"
+                            "Allowable inputs are Bunge euler angles, array of quat coeffs or quat coeffs")
 
         if self.quatCoef[0] < 0:
             self.quatCoef = self.quatCoef * -1
@@ -39,7 +47,7 @@ class Quat(object):
 
         Args:
             axis (np.array size 3): Axis of rotation
-            angle (float): Rotation arround axis (radians)
+            angle (float): Rotation around axis (radians)
 
         Returns:
             Quat: Initialised Quat object
