@@ -210,9 +210,15 @@ class Map(base.Map):
         if (not updateCurrent) or self.cacheEulerMap is None:
             eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
 
-            # this is the normalisation
-            norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]), (self.yDim, self.xDim))
-            norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+            # this is the normalisation - different for different crystal symmetries!
+            if self.crystalSym == 'cubic':
+                norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]), (self.yDim, self.xDim))
+                norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+            elif self.crystalSym == 'hexagonal':
+                norm = np.tile(np.array([np.pi, np.pi, np.pi / 3]), (self.yDim, self.xDim))
+                norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+            else:
+                Exception("Only hexagonal and cubic symGroup supported")
 
             # make non-indexed points green
             eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])

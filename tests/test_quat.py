@@ -11,7 +11,7 @@ def testInitDimension(inputLength):
     with pytest.raises(Exception):
         defdap.quat.Quat(tuple(range(inputLength)))
 
-# Check quatCoef is correct after initialisation with a Eulers
+# Check quatCoef is correct after initialisation with Eulers
 @pytest.mark.parametrize('ph1, phi, ph2, expectedOutput', [
     (np.pi, np.pi, np.pi, [0, 1., 0, 0]),
     (np.pi/2., np.pi, np.pi, [0, np.cos(np.pi/4.), -np.cos(np.pi/4.), 0]),
