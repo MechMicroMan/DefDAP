@@ -1,7 +1,6 @@
 import numpy as np
 
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
 
 from defdap import plotting
 
@@ -11,7 +10,6 @@ class Map(object):
     def __init__(self):
         self.grainList = None
         self.homogPoints = []
-        self.selPoint = None
 
         self.proxigramArr = None
 
@@ -46,62 +44,121 @@ class Map(object):
             boundaries by one pixel
         """
         plot = plotting.MapPlot(self, ax=ax)
-        plot.addGBs(colour='black', dilate=dilateBoundaries)
+        plot.addGrainBoundaries(colour='black', dilate=dilateBoundaries)
         plot.addGrainNumbers(**kwargs)
 
         return plot
 
+    def locateGrainID(self, clickEvent=None, displaySelected=False, **kwargs):
+        """
+        Interactive plot for identifying grains
+
+        :param displaySelected: Plot slip traces for selected grain
+        """
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
+        # reset current selected grain and plot euler map with click handler
+        self.currGrainId = None
+        plot = self.plotDefault(makeInteractive=True, **kwargs)
+        if clickEvent is None:
+            # default click handler which highlights grain and prints id
+            plot.addEventHandler(
+                'button_press_event',
+                lambda e, p: self.clickGrainID(e, p, displaySelected)
+            )
+        else:
+            # click handler loaded in as parameter. Pass current map object to it.
+            plot.addEventHandler(
+                'button_press_event',
+                lambda e, p: clickEvent(e, p, self)
+            )
+
+        self.currPlot = plot
+
+        # if displaySelected:
+        #     self.grainPlot =
+
+        return plot
+
+        # unset figure for plotting grains
+        # self.grainFig = None
+        # self.grainAx = None
+
+    def clickGrainID(self, event, plot, displaySelected):
+        if event.inaxes is plot.ax:
+            # grain id of selected grain
+            self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
+            print("Grain ID: {}".format(self.currGrainId))
+
+            # update the grain highlights layer in the plot
+            plot.addGrainHighlights([self.currGrainId], alpha=self.highlightAlpha)
+
+            # TODO: Display selected grain plot
+            # if displaySelected:
+            #     if self.grainFig is None:
+            #         self.grainFig, self.grainAx = plt.subplots()
+            #     self.grainList[self.currGrainId].calcSlipTraces()
+            #     self.grainAx.clear()
+            #     self.grainList[self.currGrainId].plotSlipTraces(ax=self.grainAx)
+            #     self.grainFig.canvas.draw()
+    #
+    #         if displaySelected:
+    #             if self.grainFig is None:
+    #                 self.grainFig, self.grainAx = plt.subplots()
+    #             self.grainList[self.currGrainId].calcSlipTraces()
+    #             self.grainAx.clear()
+    #             self.grainList[self.currGrainId].plotMaxShear(plotSlipTraces=True,
+    #                                                           plotSlipBands=True,
+    #                                                           ax=self.grainAx,
+    #                                                           **kwargs)
+    #             self.grainFig.canvas.draw()
+
     def setHomogPoint(self, binSize=1, points=None):
-        
-        if points is not None:
-            self.homogPoints = points
-            
         if points is None:
-            self.selPoint = None
-
-            self.plotHomog()
+            plot = self.plotHomog(makeInteractive=True)
             # Plot stored homogo points if there are any
             if len(self.homogPoints) > 0:
                 homogPoints = np.array(self.homogPoints) * binSize
-                self.ax.scatter(x=homogPoints[:, 0], y=homogPoints[:, 1], c='y', s=60)
+                plot.addPoints(homogPoints[:, 0], homogPoints[:, 1], c='y', s=60)
+            else:
+                # add empty points layer to update later
+                plot.addPoints([None], [None], c='y', s=60)
 
-            btnAx = self.fig.add_axes([0.8, 0.0, 0.1, 0.07])
-            Button(btnAx, 'Save point', color='0.85', hovercolor='0.95')
+            # add empty points layer for current selected point
+            plot.addPoints([None], [None], c='w',s=60, marker='x')
 
-            # connect click handler
-            self.fig.canvas.mpl_connect('button_press_event', lambda x: self.clickHomog(x, binSize=binSize))
+            plot.addEventHandler('button_press_event', self.clickHomog)
 
-    def clickHomog(self, event, binSize=1):
-        if event.inaxes is not None:
-            # save current zoom state of axis
-            currXLim = self.ax.get_xlim()
-            currYLim = self.ax.get_ylim()
+            plot.addButton(
+                "Save point",
+                lambda e, p: self.clickSaveHomog(e, p, binSize),
+                color="0.85", hovercolor="blue"
+            )
+        else:
+            self.homogPoints = points
 
-            # clear current axis and redraw map
-            self.ax.clear()
-            self.plotHomog(updateCurrent=True)
+    def clickHomog(self, event, plot):
+        if event.inaxes is plot.ax:
+            plot.addPoints([int(event.xdata)], [int(event.ydata)], updateLayer=1)
 
-            if event.inaxes is self.fig.axes[0]:
-                # axis 0 then is a click on the map. Update selected point and plot
-                self.selPoint = (int(event.xdata), int(event.ydata))
-                self.ax.scatter(x=self.selPoint[0], y=self.selPoint[1], c='w', s=60, marker='x')
+    def clickSaveHomog(self, event, plot, binSize):
+        # get the selected point
+        points = plot.imgLayers[plot.pointsLayerIDs[1]]
+        selPoint = points.get_offsets()[0]
 
-            elif (event.inaxes is self.fig.axes[1]) and (self.selPoint is not None):
-                # axis 1 then is a click on the button. Check if a point is selected and add to list
-                self.selPoint = tuple(int(round(x / binSize)) for x in self.selPoint)
-                self.homogPoints.append(self.selPoint)
-                self.selPoint = None
+        # Check if a point is selected
+        if selPoint[0] is not None and selPoint[1] is not None:
+            # remove selected point from plot
+            plot.addPoints([None], [None], updateLayer=1)
 
-            # Plot stored homogo points if there are any
-            if len(self.homogPoints) > 0:
-                homogPoints = np.array(self.homogPoints) * binSize
-                self.ax.scatter(x=homogPoints[:, 0], y=homogPoints[:, 1], c='y', s=60)
+            # then scale and add to homog points list
+            selPoint = tuple((selPoint / binSize).round().astype(int))
+            self.homogPoints.append(selPoint)
 
-            # Set zoom state back and redraw axis
-            self.ax.set_xlim(currXLim)
-            self.ax.set_ylim(currYLim)
-
-            self.fig.canvas.draw()
+            # update the plotted homog points
+            homogPoints = np.array(self.homogPoints) * binSize
+            plot.addPoints(homogPoints[:, 0], homogPoints[:, 1], updateLayer=0)
 
     def updateHomogPoint(self, homogID, newPoint=None, delta=None):
         """Update a homog by either over wrting it with a new point or
@@ -340,33 +397,6 @@ class Grain(object):
         plt.figure()
         plt.imshow(self.grainOutline(), interpolation='none')
         plt.colorbar()
-
-    def plotSlipTraces(self, colours=None, ax=None, pos=None):
-        if colours is None:
-            colours = self.ebsdMap.slipTraceColours
-
-        if pos is None:
-            pos = self.centreCoords()
-
-        for i, slipTraceAngle in enumerate(self.slipTraces):
-            slipTrace = np.array((-np.sin(slipTraceAngle), np.cos(slipTraceAngle)))
-            colour = colours[len(colours) - 1] if i >= len(colours) else colours[i]
-            if ax is None:
-                plt.quiver(
-                    pos[0], pos[1],
-                    slipTrace[0], slipTrace[1],
-                    scale=1, pivot="middle",
-                    color=colour, headwidth=1,
-                    headlength=0
-                )
-            else:
-                ax.quiver(
-                    pos[0], pos[1],
-                    slipTrace[0], slipTrace[1],
-                    scale=1, pivot="middle",
-                    color=colour, headwidth=1,
-                    headlength=0
-                )
 
     def grainData(self, mapData):
         """
