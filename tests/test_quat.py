@@ -3,7 +3,7 @@ import numpy as np
 
 import defdap.quat
 
-
+## Initialisation
 # Quat initialisation should raise a DimensionError if not length 1, 3, 4
 @pytest.mark.parametrize('inputLength',
                          [2, 5, 6])
@@ -30,8 +30,8 @@ def testInitEuler(ph1, phi, ph2, expectedOutput):
 # Check quatCoef is correct after initialisation with quat array
 @pytest.mark.parametrize('testValues, expectedOutput', [
     ([0, 0, 0, 0], [0, 0, 0, 0]),
-    ([1, 2, 3, 4], [1, 2, 3, 4]),
-    ([-0.5, -0.5, 1, 2], [0.5, 0.5, -1, -2]),
+    ([1., 2., 3., 4.], [1., 2., 3., 4.]),
+    ([-0.5, -0.5, 1, 2], [0.5, 0.5, -1., -2.]),
 ])
 def testInitArray(testValues, expectedOutput):
     returnedQuat = defdap.quat.Quat(testValues).quatCoef
@@ -53,26 +53,56 @@ def testShortArray(input):
     with pytest.raises(Exception):
         defdap.quat.Quat(input)
 
-# Check for ValueError if quat not initialised with numbers
+# Check for error if quat not initialised with numbers
 @pytest.mark.parametrize('input', [[1, 3, 1, 'l']])
 def testInitStrArray(input):
     with pytest.raises(ValueError):
         defdap.quat.Quat(input)
 
+# Check for error if quat not initialised with numbers
 @pytest.mark.parametrize('a1, a2, a3, a4', [(1, 3, 1, 'l')])
 def testInitStrCoeff(a1, a2, a3, a4):
     with pytest.raises(ValueError):
         defdap.quat.Quat(a1, a2, a3, a4)
 
+# Check for error if quat not initialised with numbers
 @pytest.mark.parametrize('ph1, phi, ph2', [(1,2,'l')])
 def testInitStrEul(ph1, phi, ph2):
     with pytest.raises(TypeError):
         defdap.quat.Quat(ph1, phi, ph2)
 
+## fromAxisAngle
+# Check quatCoef is correct for given axis and angle
+@pytest.mark.parametrize('axis, angle, expectedOutput', [
+    ([1, 0, 0], np.pi, [0, 1, 0, 0]),
+    ([1, 1, 0], -np.pi/2, [np.sin(np.pi/4), -0.5, -0.5, 0]),
+    ([1, -1, 0], -np.pi/2, [np.sin(np.pi/4), -0.5, 0.5, 0]),
+    ([1, -1, -1], -np.pi/2, [np.sin(np.pi/4), -0.4082483, 0.4082483, 0.4082483]),
+
+])
+def testFromAxisAngle(axis, angle, expectedOutput):
+    returnedQuat = defdap.quat.Quat.fromAxisAngle(axis, angle).quatCoef
+    assert np.allclose(returnedQuat, expectedOutput, atol=1e-4)
+
+# String in axis should give error
+@pytest.mark.parametrize('axis, angle,', [
+    ([1, 0, 'l'], 20)
+])
+def testFromAxisAngleStr(axis, angle):
+    with pytest.raises(ValueError):
+        defdap.quat.Quat.fromAxisAngle(axis, angle)
+
+# String in angle should give error
+@pytest.mark.parametrize('axis, angle,', [
+    ([1, 0, 1], 'l')
+])
+def testFromAxisAngleStr2(axis, angle):
+    with pytest.raises(TypeError):
+        defdap.quat.Quat.fromAxisAngle(axis, angle)
+
+
 
 ''' Functions left to test
-
-fromAxisAngle(cls, axis, angle):
 eulerAngles(self):
 rotMatrix(self):
 __repr__(self):
@@ -106,5 +136,4 @@ plotIPFmap(quatArray, direction, symGroup, **kwargs)
 calcIPFcolours(quats, direction, symGroup)
 calcFundDirs(quats, direction, symGroup, dtype=np.float)
 symEqv(group)
-
 '''
