@@ -170,9 +170,9 @@ class Map(base.Map):
         """
         Flip data about the horizontal and transform quats
         """
-        self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
-        self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
-        self.phaseArray = self.phaseArray[::-1, ::-1]
+        self.eulerAngleArray = self.eulerAngleArray[:, ::-1, :]
+        self.bandContrastArray = self.bandContrastArray[::-1, :]
+        self.phaseArray = self.phaseArray[::-1, :]
         self.buildQuatArray()
         
         transformQuat = Quat.fromAxisAngle(np.array([1, 0, 0]), np.pi)
