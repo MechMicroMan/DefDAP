@@ -33,7 +33,7 @@ class Quat(object):
             self.quatCoef = np.array([args[0], args[1], args[2], args[3]], dtype=float)
         elif len(args) > 4 or len(args) ==2:
             raise Exception("Incorrect argument length\n"
-                            "Allowable inputs are Bunge euler angles, array of quat coeffs or quat coeffs")
+                            "Allowable inputs are 3 Bunge euler angles, array of quat coeffs or quat coeffs")
 
         if self.quatCoef[0] < 0:
             self.quatCoef = self.quatCoef * -1
@@ -52,6 +52,7 @@ class Quat(object):
         Returns:
             Quat: Initialised Quat object
         """
+
         # normalise the axis vector
         axis = axis / np.sqrt(np.dot(axis, axis))
         # calculate quat coefficients
@@ -63,11 +64,15 @@ class Quat(object):
         return cls(quatCoef)
 
     def eulerAngles(self):
-        # See Melcher, a. Unser, A. Reichhardt, M. Nestler, B. Conversion of EBSD data by a
-        # quaternion based algorithm to be used for grain structure simulations
-        # or
-        # Rowenhorst, D et al. Consistent representations of and conversions between 3D rotations
-        # P = +1
+        """Calculate euler angles for quat
+
+        Returns:
+            eulers (np.array size 3): Bunge euler angles (in radians)
+
+        References:
+            Melcher A. et al., 'Conversion of EBSD data by a quaternion based algorithm
+            to be used for grain structure simulations', Technische Mechanik, 30(4)401 – 413
+        """
 
         eulers = np.empty(3, dtype=float)
 
