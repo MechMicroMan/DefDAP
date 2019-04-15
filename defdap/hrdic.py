@@ -28,7 +28,7 @@ class Map(base.Map):
         # Call base class constructor
         super(Map, self).__init__()
 
-        print("Loading DIC data...", end="")
+        print("\rLoading DIC data...", end="")
 
         # Initialise variables
         self.format = None      # Software name
@@ -679,7 +679,7 @@ class Map(base.Map):
                 self.grainFig.canvas.draw()
 
     def findGrains(self, minGrainSize=10):
-        print("Finding grains in DIC map...", end="")
+        print("\rFinding grains in DIC map...", end="")
 
         # Check a EBSD map is linked
         self.checkEbsdLinked()
@@ -731,7 +731,7 @@ class Map(base.Map):
             self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
             self.grainList[i].ebsdMap = self.ebsdMap
 
-        print("\r", end="")
+        print("\rDone                                               ", end="")
 
         return
 

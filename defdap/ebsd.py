@@ -86,7 +86,7 @@ class Map(base.Map):
         # Call base class constructor
         super(Map, self).__init__()
 
-        print("Loading EBSD data...", end="")
+        print("\rLoading EBSD data...", end="")
 
         self.crystalSym = None
         self.xDim = None
@@ -168,17 +168,19 @@ class Map(base.Map):
 
     def transformData(self):
         """
-        Flip data about the horizontal and transform quats
+        Rotate map by 180 degrees and transform quats
         """
-        self.eulerAngleArray = self.eulerAngleArray[:, ::-1, :]
-        self.bandContrastArray = self.bandContrastArray[::-1, :]
-        self.phaseArray = self.phaseArray[::-1, :]
+        print("\rTransforming EBSD data...", end="")
+        self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
+        self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
+        self.phaseArray = self.phaseArray[::-1, ::-1]
         self.buildQuatArray()
         
-        transformQuat = Quat.fromAxisAngle(np.array([1, 0, 0]), np.pi)
+        transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi)
         for i in range(self.xDim):
             for j in range(self.yDim):
                 self.quatArray[j, i] = self.quatArray[j, i] * transformQuat
+        print("\rDone                                               ", end="")
 
     def plotBandContrastMap(self):
         """
@@ -293,15 +295,7 @@ class Map(base.Map):
 
         self.kam /= 2
         self.kam[self.kam > 1] = 1
-        """Plot Kernel Average Misorientaion (KAM) for the EBSD map.
 
-        :param vmin: Minimum of colour scale (optional)
-        :type vmin: float
-        :param vmax: Maximum of colour scale (optional)
-        :type vmax: float
-        :param cmap: Colour map (optional)
-        :type cmap: str
-        """
     def plotKamMap(self, vmin=None, vmax=None, cmap="viridis"):
         """
         Plot Kernel Average Misorientaion (KAM) for the EBSD map.
@@ -328,7 +322,7 @@ class Map(base.Map):
         Stores result in self.Nye and self.GND.
         """
         self.buildQuatArray()
-        print("Finding boundaries...", end="")
+        print("\rFinding boundaries...", end="")
         syms = Quat.symEqv(self.crystalSym)
         numSyms = len(syms)
 
@@ -458,7 +452,7 @@ class Map(base.Map):
         """
         Build quaternion array
         """
-        print("Building quaternion array...", end="")
+        print("\rBuilding quaternion array...", end="")
 
         self.checkDataLoaded()
 
@@ -466,7 +460,7 @@ class Map(base.Map):
             # create the array of quat objects
             self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
 
-        print("\r", end="")
+        print("\rDone                                               ", end="")
 
         return
 
@@ -478,7 +472,7 @@ class Map(base.Map):
         :type boundDef: float
         """
         self.buildQuatArray()
-        print("Finding boundaries...", end="")
+        print("\rFinding boundaries...", end="")
 
         syms = Quat.symEqv(self.crystalSym)
         numSyms = len(syms)
@@ -538,7 +532,7 @@ class Map(base.Map):
                 if (misOrix[j, i] > boundDef) or (misOriy[j, i] > boundDef):
                     self.boundaries[j, i] = -1
 
-        print("\r", end="")
+        print("\rDone                                               ", end="")
         return
 
     def findPhaseBoundaries(self, treatNonIndexedAs=None):
@@ -546,7 +540,7 @@ class Map(base.Map):
 
         :param treatNonIndexedAs: value to assign to non-indexed points, defaults to -1
         """
-        print("Finding phase boundaries...", end="")
+        print("\rFinding phase boundaries...", end="")
 
         # make new array shifted by one to left and up
         phaseArrayShifted = np.full((self.yDim, self.xDim), -3)
@@ -560,7 +554,7 @@ class Map(base.Map):
         self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
         self.phaseBoundaries = np.where(np.not_equal(self.phaseArray, phaseArrayShifted), -1, 0)
 
-        print("\r", end="")
+        print("\rDone                                               ", end="")
 
     def plotPhaseBoundaryMap(self, dilate=False):
         """Plot phase boundary map
@@ -599,7 +593,7 @@ class Map(base.Map):
 
         :param minGrainSize: Minimum grain area in pixels
         """
-        print("Finding grains...", end="")
+        print("\rFinding grains...", end="")
 
         # Initialise the grain map
         self.grains = np.copy(self.boundaries)
@@ -631,7 +625,7 @@ class Map(base.Map):
             # update unknown points
             unknownPoints = np.where(self.grains == 0)
 
-        print("\r", end="")
+        print("\rDone                                               ", end="")
 
         return
 
@@ -749,7 +743,7 @@ class Map(base.Map):
         :param calcAxis: Calculate the misorientation axis also
         :return:
         """
-        print("Calculating grain misorientations...", end="")
+        print("\rCalculating grain misorientations...", end="")
 
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
@@ -757,7 +751,7 @@ class Map(base.Map):
         for grain in self.grainList:
             grain.buildMisOriList(calcAxis=calcAxis)
 
-        print("\r", end="")
+        print("\rDone                                               ", end="")
 
         return
 
@@ -837,7 +831,7 @@ class Map(base.Map):
         :param loadVector: Loading vector, i.e. [1, 0, 0]
         :param slipSystems: Slip systems
         """
-        print("Calculating grain average Schmid factors...", end="")
+        print("\rCalculating grain average Schmid factors...", end="")
 
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
@@ -845,7 +839,7 @@ class Map(base.Map):
         for grain in self.grainList:
             grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
 
-        print("\r", end="")
+        print("\rDone                                               ", end="")
 
     def plotAverageGrainSchmidFactorsMap(self, plotGBs=True, boundaryColour='black', dilateBoundaries=False,
                                          planes=None, directions=None):
