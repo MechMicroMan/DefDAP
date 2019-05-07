@@ -119,8 +119,10 @@ class Map(base.Map):
 
         self.loadData(fileName, crystalSym, dataType=dataType)
 
-    def plotDefault(self, *args, **kwargs):
-        return self.plotEulerMap(*args, **kwargs)
+    @property
+    def plotDefault(self):
+        # return self.plotEulerMap(*args, **kwargs)
+        return lambda *args, **kwargs: self.plotEulerMap(*args, **kwargs)
 
     def loadData(self, fileName, crystalSym, dataType=None):
         """
@@ -159,6 +161,10 @@ class Map(base.Map):
 
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
               format(self.xDim, self.yDim, self.stepSize))
+
+    @property
+    def scale(self):
+        return self.stepSize
 
     def plotBandContrastMap(self, ax=None):
         """
@@ -222,7 +228,7 @@ class Map(base.Map):
             plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
 
         if plotScaleBar:
-            plot.addScaleBar(self.stepSize * 1e-6)
+            plot.addScaleBar()
 
         return plot
 
@@ -250,7 +256,7 @@ class Map(base.Map):
             plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
 
         if plotScaleBar:
-            plot.addScaleBar(self.stepSize * 1e-6)
+            plot.addScaleBar()
 
         return plot
 
@@ -347,7 +353,7 @@ class Map(base.Map):
                                     grainColours=highlightColours)
 
         if plotScaleBar:
-            plot.addScaleBar(self.stepSize * 1e-6)
+            plot.addScaleBar()
 
         return plot
 
@@ -494,7 +500,7 @@ class Map(base.Map):
                                     grainColours=highlightColours)
 
         if plotScaleBar:
-            plot.addScaleBar(self.stepSize * 1e-6)
+            plot.addScaleBar()
 
         return plot
 
@@ -620,7 +626,7 @@ class Map(base.Map):
 
         :param dilate: Dilate boundary by one pixel
         """
-
+        # TODO: update phase boundaries
         plt.figure()
 
         boundariesImage = -self.phaseBoundaries
@@ -633,8 +639,9 @@ class Map(base.Map):
 
     def plotBoundaryMap(
         self, ax=None, makeInteractive=False,
-        dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False
+        dilateBoundaries=False, boundaryColour='black',
+        plotScaleBar=False,
+        highlightGrains=None, highlightColours=None
     ):
         """Plot grain boundary map
 
@@ -648,7 +655,7 @@ class Map(base.Map):
                                     grainColours=highlightColours)
 
         if plotScaleBar:
-            plot.addScaleBar(self.stepSize * 1e-6)
+            plot.addScaleBar()
 
         return plot
 
@@ -721,7 +728,7 @@ class Map(base.Map):
                                     grainColours=highlightColours)
 
         if plotScaleBar:
-            plot.addScaleBar(self.stepSize * 1e-6)
+            plot.addScaleBar()
 
         return plot
 
@@ -855,7 +862,7 @@ class Map(base.Map):
                                     grainColours=highlightColours)
 
         if plotScaleBar:
-            plot.addScaleBar(self.stepSize * 1e-6)
+            plot.addScaleBar()
 
         return plot
 
@@ -900,8 +907,13 @@ class Map(base.Map):
 
         print("\r", end="")
 
-    def plotAverageGrainSchmidFactorsMap(self, plotGBs=True, boundaryColour='black', dilateBoundaries=False,
-                                         planes=None, directions=None):
+    def plotAverageGrainSchmidFactorsMap(
+        self, planes=None, directions=None, ax=None, makeInteractive=False,
+        plotColourBar=False, vmin=0, vmax=0.5, cmap="gray",
+        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
+        plotScaleBar=False,
+        highlightGrains=None, highlightColours=None, **kwargs
+    ):
         """
         Plot maximum Schmid factor map, based on average grain orientation (for all slip systems unless specified)
 
@@ -948,14 +960,24 @@ class Map(base.Map):
 
         self.averageSchmidFactor[self.averageSchmidFactor == 0] = 0.5
 
-        plt.figure()
-        plt.imshow(self.averageSchmidFactor, interpolation='none', cmap='gray', vmin=0, vmax=0.5)
-        plt.colorbar(label="Schmid factor")
+        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
+        plot.addMap(self.averageSchmidFactor, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+
+        if plotColourBar:
+            plot.addColourBar("Schmid factor")
 
         if plotGBs:
-            self.plotGBs(colour=boundaryColour, dilate=dilateBoundaries)
+            plot.addGrainBoundaries(colour=boundaryColour,
+                                    dilate=dilateBoundaries)
 
-        return
+        if highlightGrains is not None:
+            plot.addGrainHighlights(highlightGrains,
+                                    grainColours=highlightColours)
+
+        if plotScaleBar:
+            plot.addScaleBar()
+
+        return plot
 
 
 class Grain(base.Grain):
@@ -967,6 +989,7 @@ class Grain(base.Grain):
         self.crystalSym = ebsdMap.crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
         self.slipSystems = ebsdMap.slipSystems
         self.ebsdMap = ebsdMap                  # ebsd map this grain is a member of
+        self.ownerMap = ebsdMap
         self.quatList = []                      # list of quats
         self.misOriList = None                  # list of misOri at each point in grain
         self.misOriAxisList = None              # list of misOri axes at each point in grain
@@ -1030,24 +1053,37 @@ class Grain(base.Grain):
             for row in misOriAxis.transpose():
                 self.misOriAxisList.append(row)
 
-    def plotRefOri(self, direction=np.array([0, 0, 1]), **kwargs):
+    def plotRefOri(self, direction=np.array([0, 0, 1]), plot=None, **kwargs):
         plotParams = {'marker': '+'}
         plotParams.update(kwargs)
-        Quat.plotIPF([self.refOri], direction, self.crystalSym, **plotParams)
+        Quat.plotIPF([self.refOri], direction, self.crystalSym, plot=plot,
+                     **plotParams)
 
-    def plotOriSpread(self, direction=np.array([0, 0, 1]), **kwargs):
+    def plotOriSpread(self, direction=np.array([0, 0, 1]), plot=None, **kwargs):
         plotParams = {'marker': '.'}
         plotParams.update(kwargs)
-        Quat.plotIPF(self.quatList, direction, self.crystalSym, **plotParams)
+        Quat.plotIPF(self.quatList, direction, self.crystalSym, plot=plot,
+                     **plotParams)
 
     # component
     # 0 = misOri
     # {1-3} = misOri axis {1-3}
     # 4 = all
     # 5 = all axis
-    def plotMisOri(self, component=0, vmin=None, vmax=None,
-                   vRange=[None, None, None], cmap=["viridis", "bwr"],
-                   plotSlipTraces=False):
+    def plotMisOri(
+        self, component=0,
+            vmin=None, vmax=None, vRange=[None, None, None],
+        cmap=["viridis", "bwr"], plotSlipTraces=False,
+
+            # self, component=0, ax=None,
+            # plotColourBar=False, vmin=None, vmax=None, cmap=None,
+            # plotGBs=False, dilateBoundaries=False, boundaryColour=None,
+            # plotScaleBar=False, plotSlipTraces=False, **kwargs,
+            #
+            # self, ax=None, plotColourBar=False, vmin=None, vmax=None,
+            # cmap=None,
+
+    ):
         component = int(component)
 
         x0, y0, xmax, ymax = self.extremeCoords

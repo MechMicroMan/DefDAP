@@ -1,7 +1,5 @@
 import numpy as np
 
-import matplotlib.pyplot as plt
-
 from defdap import plotting
 
 
@@ -12,6 +10,8 @@ class Map(object):
         self.homogPoints = []
 
         self.proxigramArr = None
+
+        self.grainPlot = None
 
     def __len__(self):
         return len(self.grainList)
@@ -68,22 +68,14 @@ class Map(object):
                 lambda e, p: self.clickGrainID(e, p, displaySelected)
             )
         else:
-            # click handler loaded in as parameter. Pass current map object to it.
-            plot.addEventHandler(
-                'button_press_event',
-                lambda e, p: clickEvent(e, p, self)
-            )
-
-        self.currPlot = plot
+            # click handler loaded in as parameter. Pass current map
+            # object to it.
+            plot.addEventHandler('button_press_event', clickEvent)
 
         # if displaySelected:
         #     self.grainPlot =
 
         return plot
-
-        # unset figure for plotting grains
-        # self.grainFig = None
-        # self.grainAx = None
 
     def clickGrainID(self, event, plot, displaySelected):
         if event.inaxes is plot.ax:
@@ -94,25 +86,14 @@ class Map(object):
             # update the grain highlights layer in the plot
             plot.addGrainHighlights([self.currGrainId], alpha=self.highlightAlpha)
 
-            # TODO: Display selected grain plot
-            # if displaySelected:
-            #     if self.grainFig is None:
-            #         self.grainFig, self.grainAx = plt.subplots()
-            #     self.grainList[self.currGrainId].calcSlipTraces()
-            #     self.grainAx.clear()
-            #     self.grainList[self.currGrainId].plotSlipTraces(ax=self.grainAx)
-            #     self.grainFig.canvas.draw()
-    #
-    #         if displaySelected:
-    #             if self.grainFig is None:
-    #                 self.grainFig, self.grainAx = plt.subplots()
-    #             self.grainList[self.currGrainId].calcSlipTraces()
-    #             self.grainAx.clear()
-    #             self.grainList[self.currGrainId].plotMaxShear(plotSlipTraces=True,
-    #                                                           plotSlipBands=True,
-    #                                                           ax=self.grainAx,
-    #                                                           **kwargs)
-    #             self.grainFig.canvas.draw()
+            # TODO: Check display selected works for ebsd map
+            if displaySelected:
+                currGrain = self[self.currGrainId]
+                if self.grainPlot is None or not self.grainPlot.exists:
+                    self.grainPlot = currGrain.plotDefault(makeInteractive=True)
+                else:
+                    self.grainPlot.clear()
+                    currGrain.plotDefault(plot=self.grainPlot)
 
     def setHomogPoint(self, binSize=1, points=None):
         if points is None:
@@ -242,35 +223,33 @@ class Map(object):
     def displayNeighbours(self):
         self.locateGrainID(clickEvent=self.clickGrainNeighbours)
 
-    def clickGrainNeighbours(self, event, map):
-        if event.inaxes is not None:
+    def clickGrainNeighbours(self, event, plot):
+        if event.inaxes is plot.ax:
             # grain id of selected grain
             grainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
             if grainId < 0:
                 return
             self.currGrainId = grainId
 
-            # clear current axis and redraw euler map with highlighted grain overlay
-            self.ax.clear()
-            highlightGrains = [self.currGrainId] + list(self.neighbourNetwork.neighbors(self.currGrainId))
+            # find first and second nearest neighbours
+            firstNeighbours = list(self.neighbourNetwork.neighbors(self.currGrainId))
 
             secondNeighbours = []
-
-            for firstNeighbour in list(self.neighbourNetwork.neighbors(self.currGrainId)):
+            for firstNeighbour in firstNeighbours:
                 trialSecondNeighbours = list(self.neighbourNetwork.neighbors(firstNeighbour))
                 for secondNeighbour in trialSecondNeighbours:
-                    if secondNeighbour not in highlightGrains and secondNeighbour not in secondNeighbours:
+                    if (secondNeighbour not in highlightGrains and
+                            secondNeighbour not in secondNeighbours):
                         secondNeighbours.append(secondNeighbour)
-
-            highlightColours = ['white']
-            highlightColours.extend(['yellow'] * (len(highlightGrains) - 1))
-            highlightColours.append('green')
-
             highlightGrains.extend(secondNeighbours)
 
-            self.plotDefault(updateCurrent=True, highlightGrains=highlightGrains,
-                             highlightColours=highlightColours)
-            self.fig.canvas.draw()
+            highlightGrains = [self.currGrainId] + firstNeighbours + secondNeighbours
+            highlightColours = ['white']
+            highlightColours.extend(['yellow'] * len(firstNeighbours))
+            highlightColours.append('green')
+
+            # update the grain highlights layer in the plot
+            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
 
     @property
     def proxigram(self):
@@ -298,7 +277,8 @@ class Map(object):
         for index, value in np.ndenumerate(proxBoundaries):
             if value == -1:
                 indexBoundaries.append(index)
-        # add 0.5 to boundary coordiantes as they are placed on the bottom right edge pixels of grains
+        # add 0.5 to boundary coordiantes as they are placed on the
+        # bottom right edge pixels of grains
         indexBoundaries = np.array(indexBoundaries) + 0.5
 
         # array of x and y coordinate of each pixel in the map
@@ -308,8 +288,9 @@ class Map(object):
         # array to store trial distance from each boundary point
         trialDistances = np.full((numTrials + 1, proxShape[0], proxShape[1]), 1000, dtype=float)
 
-        # loop over each boundary point (p) and calcuale distance from p to all points in the map
-        # store minimum once numTrails have been made and start a new batch of trials
+        # loop over each boundary point (p) and calculate distance from
+        # p to all points in the map store minimum once numTrails have
+        # been made and start a new batch of trials
         print("Calculating proxigram ", end='')
         numBoundaryPoints = len(indexBoundaries)
         j = 1
@@ -332,7 +313,7 @@ class Map(object):
 class Grain(object):
 
     def __init__(self):
-        # list of coords stored as tuples (x, y). These are corrds in a
+        # list of coords stored as tuples (x, y). These are coords in a
         # cropped image if crop exists.
         self.coordList = []
 
@@ -393,10 +374,14 @@ class Grain(object):
 
         return outline
 
-    def plotOutline(self):
-        plt.figure()
-        plt.imshow(self.grainOutline(), interpolation='none')
-        plt.colorbar()
+    def plotOutline(self, ax=None, plotScaleBar=False, **kwargs):
+        plot = plotting.GrainPlot(self, ax=ax)
+        plot.addMap(self.grainOutline(), **kwargs)
+
+        if plotScaleBar:
+            plot.addScaleBar()
+
+        return plot
 
     def grainData(self, mapData):
         """
@@ -494,7 +479,11 @@ class Grain(object):
 
         return grainMapDataCoarse
 
-    def plotGrainData(self, mapData, vmin=None, vmax=None, clabel='', cmap='viridis'):
+    def plotGrainData(
+        self, mapData, ax=None,
+        plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
+        plotScaleBar=False, plotSlipTraces=False, plotSlipBands=False, **kwargs
+    ):
         """
         Plot a map of this grain from the given map data.
 
@@ -506,19 +495,29 @@ class Grain(object):
             Minimum value of colour scale
         vmax : float, optional
             Minimum value of colour scale
-        clabel : str, optional
+        cLabel : str, optional
             Colour bar label text
         cmap : str, optional
             Colour map to use, default is viridis
         """
         grainMapData = self.grainMapData(mapData)
 
-        plt.figure()
-        plt.imshow(grainMapData, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap)
+        plot = plotting.GrainPlot(self, ax=ax)
+        plot.addMap(grainMapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
-        plt.colorbar(label=clabel)
-        plt.xticks([])
-        plt.yticks([])
+        if plotColourBar:
+            plot.addColourBar(cLabel)
+
+        if plotScaleBar:
+            plot.addScaleBar()
+
+        if plotSlipTraces:
+            plot.addSlipTraces()
+
+        if plotSlipBands:
+            plot.addSlipBands(grainMapData)
+
+        return plot
 
 
 class SlipSystem(object):

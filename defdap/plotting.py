@@ -8,6 +8,7 @@ from matplotlib_scalebar.scalebar import ScaleBar
 from skimage import morphology as mph
 
 from defdap import quat
+# TODO: add plot parameter to add to current figure
 
 
 class Plot(object):
@@ -28,22 +29,42 @@ class Plot(object):
                 self.fig, self.ax = plt.subplots()
             else:
                 self.ax = ax
+        self.colourBar = None
 
-    def addEventHandler(self, eventName, eventHandler):
+    def checkInteractive(self):
         if not self.interactive:
             raise Exception("Plot must be interactive")
+
+    def addEventHandler(self, eventName, eventHandler):
+        self.checkInteractive()
 
         self.fig.canvas.mpl_connect(eventName, lambda e: eventHandler(e, self))
 
     def addButton(self, label, clickHandler, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
-        if not self.interactive:
-            raise Exception("Plot must be interactive")
+        self.checkInteractive()
 
         btnAx = self.fig.add_axes(loc)
         btn = Button(btnAx, label, **kwargs)
         btn.on_clicked(lambda e: clickHandler(e, self))
 
         self.btnStore.append(btn)
+
+    @property
+    def exists(self):
+        self.checkInteractive()
+
+        return plt.fignum_exists(self.fig.number)
+
+    def clear(self):
+        self.checkInteractive()
+
+        self.ax.clear()
+        if self.colourBar is not None:
+            self.colourBar.remove()
+        self.draw()
+
+    def draw(self):
+        self.fig.canvas.draw()
 
 
 class MapPlot(Plot):
@@ -62,6 +83,7 @@ class MapPlot(Plot):
 
         img = self.ax.imshow(mapData, vmin=vmin, vmax=vmax,
                              interpolation='None', cmap=cmap, **kwargs)
+        self.draw()
 
         self.imgLayers.append(img)
 
@@ -69,11 +91,12 @@ class MapPlot(Plot):
 
     def addColourBar(self, label, layer=0, **kwargs):
         img = self.imgLayers[layer]
-        plt.colorbar(img, ax=self.ax, label=label, **kwargs)
+        self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
 
-    def addScaleBar(self, scale):
-        scalebar = ScaleBar(scale)
-        self.ax.add_artist(scalebar)
+    def addScaleBar(self, scale=None):
+        if scale is None:
+            scale = self.callingMap.scale * 1e-6
+        self.ax.add_artist(ScaleBar(scale))
 
     def addGrainBoundaries(self, colour=None, dilate=False):
         if colour is None:
@@ -94,6 +117,7 @@ class MapPlot(Plot):
 
         img = self.ax.imshow(boundariesImage, cmap=boundariesCmap,
                              interpolation='None', vmin=0, vmax=1)
+        self.draw()
 
         self.imgLayers.append(img)
 
@@ -142,7 +166,7 @@ class MapPlot(Plot):
             img.set_data(outline)
             img.set_cmap(hightlightsCmap)
 
-        self.fig.canvas.draw()
+        self.draw()
 
         return img
 
@@ -153,6 +177,7 @@ class MapPlot(Plot):
 
             self.ax.text(xCentre, yCentre, grainID,
                          fontsize=fontsize, **kwargs)
+        self.draw()
 
     def addLegend(self, values, lables, layer=0, **kwargs):
         # Find colour values for given values
@@ -176,14 +201,14 @@ class MapPlot(Plot):
             points = self.imgLayers[self.pointsLayerIDs[updateLayer]]
             points.set_offsets(np.hstack((x[:, np.newaxis], y[:, np.newaxis])))
 
-        self.fig.canvas.draw()
+        self.draw()
 
         return points
 
 
 class GrainPlot(Plot):
-    def __init__(self, callingGrain, fig=None, ax=None):
-        super(GrainPlot, self).__init__(ax, fig=fig)
+    def __init__(self, callingGrain, fig=None, ax=None, makeInteractive=False):
+        super(GrainPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
 
         self.callingGrain = callingGrain
         self.imgLayers = []
@@ -194,6 +219,7 @@ class GrainPlot(Plot):
     def addMap(self, mapData, vmin=None, vmax=None, cmap='viridis', **kwargs):
         img = self.ax.imshow(mapData, vmin=vmin, vmax=vmax,
                              interpolation='None', cmap=cmap, **kwargs)
+        self.draw()
 
         self.imgLayers.append(img)
 
@@ -201,11 +227,12 @@ class GrainPlot(Plot):
 
     def addColourBar(self, label, layer=0, **kwargs):
         img = self.imgLayers[layer]
-        plt.colorbar(img, ax=self.ax, label=label, **kwargs)
+        self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
 
-    def addScaleBar(self, scale):
-        scalebar = ScaleBar(scale)
-        self.ax.add_artist(scalebar)
+    def addScaleBar(self, scale=None):
+        if scale is None:
+            scale = self.callingGrain.ownerMap.scale * 1e-6
+        self.ax.add_artist(ScaleBar(scale))
 
     def addTraces(self, angles, colours, pos=None, **kwargs):
         if pos is None:
@@ -221,6 +248,7 @@ class GrainPlot(Plot):
                 color=colour, headwidth=1,
                 headlength=0, **kwargs
             )
+            self.draw()
 
     def addSlipTraces(self, colours=None, pos=None, **kwargs):
         if colours is None:
@@ -324,9 +352,9 @@ class PolePlot(Plot):
         xp, yp = self.projection(*point)
         self.ax.text(xp + padX, yp + padY, label, **kwargs)
 
-    def addPoints(self, alpha, beta, markerColour=None, markerSize=None, **kwargs):
+    def addPoints(self, alphaAng, betaAng, markerColour=None, markerSize=None, **kwargs):
         # project onto equatorial plane
-        xp, yp = self.projection(alpha, beta)
+        xp, yp = self.projection(alphaAng, betaAng)
 
         # plot poles
         # plot markers with 'half and half' colour
@@ -365,7 +393,7 @@ class PolePlot(Plot):
 
     def addColourBar(self, label, layer=0, **kwargs):
         img = self.imgLayers[layer]
-        plt.colorbar(img, ax=self.ax, label=label, **kwargs)
+        self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
 
     @staticmethod
     def _validateProjection(projectionIn, validateDefault=False):
