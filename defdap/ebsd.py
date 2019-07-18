@@ -7,6 +7,7 @@ import copy
 
 from defdap.io import EBSDDataLoader
 from defdap.quat import Quat
+from defdap.crystal import SlipSystem
 from defdap import base
 from defdap import plotting
 
@@ -873,7 +874,7 @@ class Map(base.Map):
         :param filepath: File path to slip system definition txt file
         :param cOverA: cOverA ratio (for hexagonal)
         """
-        self.slipSystems, self.slipTraceColours = base.SlipSystem.loadSlipSystems(
+        self.slipSystems, self.slipTraceColours = SlipSystem.loadSlipSystems(
             filepath, self.crystalSym, cOverA=cOverA
         )
 
