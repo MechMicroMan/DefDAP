@@ -35,7 +35,7 @@ class Map(base.Map):
         # Initialise variables
         self.format = None      # Software name
         self.version = None     # Software version
-        self.binning = None     # Sub-window width in pixels
+        self.binning = None     # Sub-window size in pixels
         self.xdim = None        # size of map along x (from header)
         self.ydim = None        # size of map along y (from header)
 
@@ -50,10 +50,13 @@ class Map(base.Map):
         self.currGrainId = None             # ID of last selected grain
         self.ebsdGrainIds = None
         self.patternImPath = None           # Path to BSE image of map
-        self.windowSize = None              # Window size for map
         self.plotHomog = self.plotMaxShear  # Use max shear map for defining homologous points
         self.highlightAlpha = 0.6
-        self.bseScale = None
+        self.bseScale = None                # size of a pixel in the correlated images
+        self.patScale = None                # size of pixel in loaded
+        # pattern relative to pixel size of dic data i.e 1 means they
+        # are the same size and 2 means the pixels in the pattern are
+        # half the size of the dic data.
         self.path = path                    # file path
         self.fname = fname                  # file name
 
@@ -243,7 +246,7 @@ class Map(base.Map):
         if binned:
             multiplier = 1
         else:
-            multiplier = self.windowSize
+            multiplier = self.patScale
 
         minY = int(self.cropDists[1, 0] * multiplier)
         maxY = int((self.ydim - self.cropDists[1, 1]) * multiplier)
@@ -266,7 +269,7 @@ class Map(base.Map):
             display = display.lower().replace(" ", "")
             if display == "bse" or display == "pattern":
                 self.plotHomog = self.plotPattern
-                binSize = self.windowSize
+                binSize = self.patScale
             else:
                 self.plotHomog = self.plotMaxShear
                 binSize = 1
@@ -405,15 +408,18 @@ class Map(base.Map):
         the path set when constructing."""
 
         self.patternImPath = self.path + filePath
-        self.windowSize = windowSize
+        self.patScale = windowSize
 
     def plotPattern(self, **kwargs):
         """Plot BSE image of Map. For use with setting homog points"""
         # Set default plot parameters then update with any input
         plotParams = {
-            'cmap': 'gray',
-            'scale': self.scale / self.windowSize * 1e-6
+            'cmap': 'gray'
         }
+        try:
+            plotParams['scale'] = self.scale / self.patScale * 1e-6
+        except(ValueError):
+            pass
         plotParams.update(kwargs)
 
         # Check image path is set
