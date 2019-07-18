@@ -801,15 +801,16 @@ class Map(base.Map):
 
         return plot
 
-    def loadSlipSystems(self, filepath, cOverA=None):
+    def loadSlipSystems(self, name, cOverA=None):
         """
         Load slip system definitions from file
 
-        :param filepath: File path to slip system definition txt file
+        :param name: name of the slip system file (without file
+        extension) stored in the defdap install dir or path to a file
         :param cOverA: cOverA ratio (for hexagonal)
         """
         self.slipSystems, self.slipTraceColours = SlipSystem.loadSlipSystems(
-            filepath, self.crystalSym, cOverA=cOverA
+            name, self.crystalSym, cOverA=cOverA
         )
 
         if self.grainList is not None:

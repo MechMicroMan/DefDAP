@@ -128,7 +128,7 @@ class MapPlot(Plot):
         if grainColours is None:
             grainColours = ['white']
         if alpha is None:
-            alpha = self.highlightAlpha
+            alpha = self.callingMap.highlightAlpha
 
         xDim = self.callingMap.xDim
         yDim = self.callingMap.yDim
@@ -212,7 +212,8 @@ class MapPlot(Plot):
         plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
         plotGBs=False, dilateBoundaries=False, boundaryColour=None,
         plotScaleBar=False, scale=None,
-        highlightGrains=None, highlightColours=None, **kwargs
+        highlightGrains=None, highlightColours=None, highlightAlpha=None,
+        **kwargs
     ):
         plot = cls(callingMap, fig=fig, ax=ax, makeInteractive=makeInteractive)
         if mapData is not None:
@@ -225,7 +226,10 @@ class MapPlot(Plot):
             plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
 
         if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
+            plot.addGrainHighlights(
+                highlightGrains,
+                grainColours=highlightColours, alpha=highlightAlpha
+            )
 
         if plotScaleBar:
             plot.addScaleBar(scale=scale)

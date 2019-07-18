@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 
@@ -38,7 +39,8 @@ class SlipSystem(object):
         else:
             raise Exception("Only cubic and hexagonal currently supported.")
 
-    # overload ==. Two slip systems are equal if they have the same slip plane in miller
+    # overload ==. Two slip systems are equal if they have the same slip
+    # plane in miller
     def __eq__(self, right):
         return np.all(self.slipPlaneMiller == right.slipPlaneMiller)
 
@@ -67,27 +69,48 @@ class SlipSystem(object):
             return "[{:d}{:d}{:d}]".format(slipDir[0], slipDir[1], slipDir[2])
 
     @staticmethod
-    def loadSlipSystems(filepath, crystalSym, cOverA=None):
-        """Load in slip systems from file. 3 integers for slip plane normal and
-           3 for slip direction. Returns a list of list of slip systems
-           grouped by slip plane.
+    def loadSlipSystems(name, crystalSym, cOverA=None):
+        """Load in slip systems from file. 3 integers for slip plane
+        normal and 3 for slip direction. Returns a list of list of slip
+        systems grouped by slip plane.
 
         Args:
-            filepath (string): Path to file containing slip systems
+            name (string): name of the slip system file (without file
+            extension) stored in the defdap install dir or path to a file
             crystalSym (string): The crystal symmetry ("cubic" or "hexagonal")
+            cOverA (float, optional): c over a ratio for hexagonal crystals
 
         Returns:
-            list(list(SlipSystem)): A list of list of slip systems grouped slip plane.
+            list(list(SlipSystem)): A list of list of slip systems
+            grouped slip plane.
 
         Raises:
             IOError: Raised if not 6/8 integers per line
         """
 
-        f = open(filepath)
-        f.readline()
-        colours = f.readline().strip()
-        slipTraceColours = colours.split(',')
-        f.close()
+
+        # try and load from package dir first
+        try:
+            fileExt = ".txt"
+            packageDir, _ = os.path.split(__file__)
+            filepath = "{:}/slip_systems/{:}{:}".format(
+                packageDir, name, fileExt
+            )
+
+            slipSystemFile = open(filepath)
+
+        except(FileNotFoundError):
+            # if it doesn't exist in the package dir try and load the path
+            try:
+                filepath = name
+
+                slipSystemFile = open(filepath)
+            except(FileNotFoundError):
+                raise(FileNotFoundError("Couldn't find the slip systems file"))
+
+        slipSystemFile.readline()
+        slipTraceColours = slipSystemFile.readline().strip().split(',')
+        slipSystemFile.close()
 
         if crystalSym == "hexagonal":
             vectSize = 4
@@ -101,7 +124,10 @@ class SlipSystem(object):
         # Create list of slip system objects
         slipSystems = []
         for row in ssData:
-            slipSystems.append(SlipSystem(row[0:vectSize], row[vectSize:2 * vectSize], crystalSym, cOverA=cOverA))
+            slipSystems.append(SlipSystem(
+                row[0:vectSize], row[vectSize:2 * vectSize],
+                crystalSym, cOverA=cOverA
+            ))
 
         # Group slip sytems by slip plane
         groupedSlipSystems = SlipSystem.groupSlipSystems(slipSystems)
