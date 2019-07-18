@@ -205,6 +205,33 @@ class MapPlot(Plot):
 
         return points
 
+    @classmethod
+    def create(
+        cls, callingMap, mapData,
+        fig=None, ax=None, makeInteractive=False,
+        plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
+        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
+        plotScaleBar=False, scale=None,
+        highlightGrains=None, highlightColours=None, **kwargs
+    ):
+        plot = cls(callingMap, fig=fig, ax=ax, makeInteractive=makeInteractive)
+        if mapData is not None:
+            plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+
+        if plotColourBar:
+            plot.addColourBar(cLabel)
+
+        if plotGBs:
+            plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
+
+        if highlightGrains is not None:
+            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
+
+        if plotScaleBar:
+            plot.addScaleBar(scale=scale)
+
+        return plot
+
 
 class GrainPlot(Plot):
     def __init__(self, callingGrain, fig=None, ax=None, makeInteractive=False):
@@ -264,12 +291,38 @@ class GrainPlot(Plot):
 
         self.addTraces(slipBandAngles, ["yellow"], pos=pos, **kwargs)
 
+    @classmethod
+    def create(
+        cls, callingGrain, mapData,
+        fig=None, ax=None, makeInteractive=False,
+        plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
+        plotScaleBar=False, scale=None,
+        plotSlipTraces=False, plotSlipBands=False, **kwargs
+    ):
+        plot = cls(callingGrain, fig=fig, ax=ax, makeInteractive=makeInteractive)
+        plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+
+        if plotColourBar:
+            plot.addColourBar(cLabel)
+
+        if plotScaleBar:
+            plot.addScaleBar(scale=scale)
+
+        if plotSlipTraces:
+            plot.addSlipTraces()
+
+        if plotSlipBands:
+            plot.addSlipBands(mapData)
+
+        return plot
+
 
 class PolePlot(Plot):
     defaultProjection = "stereographic"
 
-    def __init__(self, plotType, crystalSym, projection=None, ax=None):
-        super(PolePlot, self).__init__(ax)
+    def __init__(self, plotType, crystalSym, projection=None,
+                 fig=None, ax=None, makeInteractive=False):
+        super(PolePlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
 
         self.plotType = plotType
         self.crystalSym = crystalSym

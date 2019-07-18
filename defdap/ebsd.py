@@ -9,7 +9,8 @@ from defdap.io import EBSDDataLoader
 from defdap.quat import Quat
 from defdap.crystal import SlipSystem
 from defdap import base
-from defdap import plotting
+
+from defdap.plotting import MapPlot, GrainPlot
 
 
 class Map(base.Map):
@@ -43,7 +44,9 @@ class Map(base.Map):
         map of phase boundaries. -1 for boundary, 0 otherwise
     cacheEulerMap
     grains : numpy.ndarray
-        map of grains
+        map of grains. Grain numbers start at 1 here but everywhere else
+        grainID starts at 0. Regions that are smaller than the minimum
+        grain size are given value -2.
     grainList : list(defdap.ebsd.Grain)
         list of grains
     misOri : numpy.ndarray
@@ -160,31 +163,32 @@ class Map(base.Map):
 
         self.crystalSym = crystalSym
 
-        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step size: {2} um)".
-              format(self.xDim, self.yDim, self.stepSize))
+        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step "
+              "size: {2} um)".format(self.xDim, self.yDim, self.stepSize))
 
     @property
     def scale(self):
         return self.stepSize
 
-    def plotBandContrastMap(self, ax=None):
+    def plotBandContrastMap(self, **kwargs):
         """
         Plot band contrast map
         """
         self.checkDataLoaded()
 
-        plot = plotting.MapPlot(self, ax=ax)
-        plot.addMap(self.bandContrastArray, cmap='grey')
-        plot.addColourBar("Band contrast")
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True,
+            'cmap:': 'grey',
+            'cLabel': "Band contrast"
+        }
+        plotParams.update(kwargs)
+
+        plot = MapPlot.create(self, self.bandContrastArray, **plotParams)
 
         return plot
 
-    def plotEulerMap(
-        self, ax=None, makeInteractive=False,
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
-    ):
+    def plotEulerMap(self, **kwargs):
         """
         Plot an orientation map in Euler colouring
 
@@ -208,60 +212,42 @@ class Map(base.Map):
         """
         self.checkDataLoaded()
 
-        eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
+        # Set default plot parameters then update with any input
+        plotParams = {}
+        plotParams.update(kwargs)
 
+        eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
         # this is the normalisation
         norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]),
                        (self.yDim, self.xDim))
         norm = np.reshape(norm, (self.yDim, self.xDim, 3))
-
         # make non-indexed points green
         eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
         eulerMap /= norm
 
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(eulerMap, **kwargs)
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
+        plot = MapPlot.create(self, eulerMap, **plotParams)
 
         return plot
 
-    def plotIPFMap(
-        self, direction, ax=None, makeInteractive=False,
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
+    def plotIPFMap(self, direction, **kwargs):
+        # Set default plot parameters then update with any input
+        plotParams = {}
+        plotParams.update(kwargs)
 
-    ):
         # calculate IPF colours
-        IPFcolours = Quat.calcIPFcolours(self.quatArray.flatten(),
-                                         direction, self.crystalSym)
-
+        IPFcolours = Quat.calcIPFcolours(
+            self.quatArray.flatten(),
+            direction,
+            self.crystalSym
+        )
         # reshape back to map shape array
         IPFcolours = np.reshape(IPFcolours, (self.yDim, self.xDim, 3))
 
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(IPFcolours, **kwargs)
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
+        plot = MapPlot.create(self, IPFcolours, **plotParams)
 
         return plot
 
-    def plotPhaseMap(self, ax=None, cmap=None):
+    def plotPhaseMap(self, **kwargs):
         """
         Plot a phase map.
 
@@ -270,15 +256,21 @@ class Map(base.Map):
         cmap : str, optional
             Colour scale to plot with.
         """
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'vmin': -1,
+            'vmax': self.numPhases
+        }
+        plotParams.update(kwargs)
+
+        plot = MapPlot.create(self, self.phaseArray, **plotParams)
+
+        # add a legend to the plot
         phaseIDs = [-1] + list(range(1, self.numPhases + 1))
         phaseNames = ["Non-indexed"] + self.phaseNames
-
-        plot = plotting.MapPlot(self, ax=ax)
-
-        plot.addMap(self.phaseArray, cmap=cmap, vmin=-1, vmax=self.numPhases)
-
         plot.addLegend(phaseIDs, phaseNames,
-                       bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+                       bbox_to_anchor=(1.05, 1),
+                       loc=2, borderaxespad=0.)
 
         return plot
 
@@ -316,13 +308,7 @@ class Map(base.Map):
         self.kam /= 2
         self.kam[self.kam > 1] = 1
 
-    def plotKamMap(
-        self, ax=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None,
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
-    ):
+    def plotKamMap(self, **kwargs):
         """
         Plot Kernel Average Misorientaion (KAM) for the EBSD map.
 
@@ -335,26 +321,18 @@ class Map(base.Map):
         cmap : str, optional
             Colour scale to plot with.
         """
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True,
+            'cLabel': "Kernel average misorientation (KAM) ($^\circ$)"
+        }
+        plotParams.update(kwargs)
+
         self.calcKam()
         # Convert to degrees and plot
         kam = 2 * np.arccos(self.kam) * 180 / np.pi
 
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(kam, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
-
-        if plotColourBar:
-            plot.addColourBar("Kernel average misorientation (KAM) ($^\circ$)")
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour,
-                                    dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains,
-                                    grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
+        plot = MapPlot.create(self, kam, **plotParams)
 
         return plot
 
@@ -477,31 +455,17 @@ class Map(base.Map):
         self.GND = alpha_total9
         self.Nye = alpha
 
-    def plotGNDMap(
-        self, ax=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None,
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
-    ):
+    def plotGNDMap(self, **kwargs):
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True,
+            'cLabel': "Geometrically necessary dislocation (GND) content"
+        }
+        plotParams.update(kwargs)
+
         self.calcNye()
 
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(np.log10(self.GND), cmap=cmap, vmin=vmin, vmax=vmax)
-
-        if plotColourBar:
-            plot.addColourBar("Geometrically necessary dislocation (GND) content")
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour,
-                                    dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains,
-                                    grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
+        plot = MapPlot.create(self, np.log10(self.GND), **plotParams)
 
         return plot
 
@@ -622,41 +586,40 @@ class Map(base.Map):
 
         print("\r", end="")
 
-    def plotPhaseBoundaryMap(self, dilate=False):
+    def plotPhaseBoundaryMap(self, dilate=False, **kwargs):
         """Plot phase boundary map
 
         :param dilate: Dilate boundary by one pixel
         """
-        # TODO: update phase boundaries
-        plt.figure()
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'vmax': 1,
+            'plotColourBar': True,
+            'cmap': 'grey'
+        }
+        plotParams.update(kwargs)
 
         boundariesImage = -self.phaseBoundaries
-
         if dilate:
-            boundariesImage = mph.binary_dilation(-self.phaseBoundaries)
+            boundariesImage = mph.binary_dilation(boundariesImage)
 
-        plt.imshow(boundariesImage, vmax=1, cmap='gray')
-        plt.colorbar()
+        plot = MapPlot.create(self, boundariesImage, **plotParams)
 
-    def plotBoundaryMap(
-        self, ax=None, makeInteractive=False,
-        dilateBoundaries=False, boundaryColour='black',
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None
-    ):
+        return plot
+
+    def plotBoundaryMap(self, **kwargs):
         """Plot grain boundary map
 
         :param dilate: Dilate boundary by one pixel
         """
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotGBs': True,
+            'boundaryColour': 'black'
+        }
+        plotParams.update(kwargs)
 
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains,
-                                    grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
+        plot = MapPlot.create(self, None, **plotParams)
 
         return plot
 
@@ -702,34 +665,19 @@ class Map(base.Map):
 
         return
 
-    def plotGrainMap(
-        self, ax=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None,
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
-    ):
+    def plotGrainMap(self, **kwargs):
         """
         Plot a map with grains coloured
 
         :return: Figure
         """
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(self.grains, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'cLabel': "Grain number"
+        }
+        plotParams.update(kwargs)
 
-        if plotColourBar:
-            plot.addColourBar("Grain number")
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour,
-                                    dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains,
-                                    grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
+        plot = MapPlot.create(self, self.grains, **plotParams)
 
         return plot
 
@@ -803,14 +751,7 @@ class Map(base.Map):
 
         return
 
-    def plotMisOriMap(
-        self, component=0, ax=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None,
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
-
-    ):
+    def plotMisOriMap(self, component=0, **kwargs):
         """
         Plot misorientation map
 
@@ -826,6 +767,7 @@ class Map(base.Map):
         :param cBarLabel: Label for colour bar
         :return: Figure
         """
+
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
@@ -848,22 +790,14 @@ class Map(base.Map):
             misOri = np.arccos(self.misOri) * 360 / np.pi
             cLabel = "Grain reference orienation deviation (GROD) ($^\circ$)"
 
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(misOri, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True,
+            'cLabel': cLabel
+        }
+        plotParams.update(kwargs)
 
-        if plotColourBar:
-            plot.addColourBar(cLabel)
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour,
-                                    dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains,
-                                    grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
+        plot = MapPlot.create(self, misOri, **plotParams)
 
         return plot
 
@@ -908,13 +842,8 @@ class Map(base.Map):
 
         print("\r", end="")
 
-    def plotAverageGrainSchmidFactorsMap(
-        self, planes=None, directions=None, ax=None, makeInteractive=False,
-        plotColourBar=False, vmin=0, vmax=0.5, cmap="gray",
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
-    ):
+    def plotAverageGrainSchmidFactorsMap(self, planes=None, directions=None,
+                                         **kwargs):
         """
         Plot maximum Schmid factor map, based on average grain orientation (for all slip systems unless specified)
 
@@ -928,6 +857,16 @@ class Map(base.Map):
         :type boundaryColour: string
         :return:
         """
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'vmin': 0,
+            'vmax': 0.5,
+            'cmap': 'gray',
+            'plotColourBar': True,
+            'cLabel': "Schmid factor"
+        }
+        plotParams.update(kwargs)
+
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
         self.averageSchmidFactor = np.zeros([self.yDim, self.xDim])
@@ -936,23 +875,23 @@ class Map(base.Map):
             raise Exception("Run 'calcAverageGrainSchmidFactors' first")
 
         for grain in self.grainList:
-
             currentSchmidFactor = []
 
             if planes is not None:
-
                 # Error catching
                 if np.max(planes) > len(self.slipSystems) - 1:
-                    raise Exception("Check plane IDs exists, IDs range from 0 to {0}".format(len(self.slipSystems) - 1))
+                    raise Exception("Check plane IDs exists, IDs range from 0 "
+                                    "to {0}".format(len(self.slipSystems) - 1))
 
                 for plane in planes:
                     if directions is not None:
                         for direction in directions:
                             currentSchmidFactor.append(grain.averageSchmidFactors[plane][direction])
-                    elif directions is None:
+                    else:
                         currentSchmidFactor.append(grain.averageSchmidFactors[plane])
+                # TODO: what is this doing?
                 currentSchmidFactor = [max(s) for s in zip(*currentSchmidFactor)]
-            elif planes is None:
+            else:
                 currentSchmidFactor = [max(s) for s in zip(*grain.averageSchmidFactors)]
 
             # Fill grain with colour
@@ -961,22 +900,7 @@ class Map(base.Map):
 
         self.averageSchmidFactor[self.averageSchmidFactor == 0] = 0.5
 
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(self.averageSchmidFactor, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
-
-        if plotColourBar:
-            plot.addColourBar("Schmid factor")
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour,
-                                    dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains,
-                                    grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
+        plot = MapPlot.create(self, self.averageSchmidFactor, **plotParams)
 
         return plot
 
@@ -1069,78 +993,68 @@ class Grain(base.Grain):
     # component
     # 0 = misOri
     # {1-3} = misOri axis {1-3}
-    # 4 = all
-    # 5 = all axis
-    def plotMisOri(
-        self, component=0,
-            vmin=None, vmax=None, vRange=[None, None, None],
-        cmap=["viridis", "bwr"], plotSlipTraces=False,
-
-            # self, component=0, ax=None,
-            # plotColourBar=False, vmin=None, vmax=None, cmap=None,
-            # plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-            # plotScaleBar=False, plotSlipTraces=False, **kwargs,
-            #
-            # self, ax=None, plotColourBar=False, vmin=None, vmax=None,
-            # cmap=None,
-
-    ):
+    def plotMisOri(self, component=0, **kwargs):
         component = int(component)
 
-        x0, y0, xmax, ymax = self.extremeCoords
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True
+        }
+        if component == 0:
+            plotParams['cLabel'] = "Grain reference orientation " \
+                                   "deviation (GROD) ($^\circ$)"
+            plotData = 2 * np.arccos(self.misOriList)
 
-        if component in [4, 5]:
-            # subplots
-            grainMisOri = np.full((4, ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
-
-            for coord, misOri, misOriAxis in zip(self.coordList,
-                                                 np.arccos(self.misOriList) * 360 / np.pi,
-                                                 np.array(self.misOriAxisList) * 180 / np.pi):
-                grainMisOri[0, coord[1] - y0, coord[0] - x0] = misOri
-                grainMisOri[1:4, coord[1] - y0, coord[0] - x0] = misOriAxis
-
-            f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-
-            img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vmin, vmax=vmax)
-            plt.colorbar(img, ax=ax1, label="Grain misorientation ($^\circ$)")
-            vmin = None if vRange[0] is None else -vRange[0]
-            img = ax2.imshow(grainMisOri[1], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[0])
-            plt.colorbar(img, ax=ax2, label="x rotation ($^\circ$)")
-            vmin = None if vRange[0] is None else -vRange[1]
-            img = ax3.imshow(grainMisOri[2], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[1])
-            plt.colorbar(img, ax=ax3, label="y rotation ($^\circ$)")
-            vmin = None if vRange[0] is None else -vRange[2]
-            img = ax4.imshow(grainMisOri[3], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[2])
-            plt.colorbar(img, ax=ax4, label="z rotation ($^\circ$)")
-
-            for ax in (ax1, ax2, ax3, ax4):
-                ax.set_xticks([])
-                ax.set_yticks([])
+        elif 0 < component < 4:
+            plotParams['cLabel'] = "Rotation around {:} ($^\circ$)".format(
+                ['X', 'Y', 'Z'][component-1]
+            )
+            plotData = np.array(self.misOriAxisList)[:, component-1]
 
         else:
-            # single plot
-            # initialise array with nans so area not in grain displays white
-            grainMisOri = np.full((ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
+            raise ValueError("Component must between 0 and 3")
+        plotParams.update(kwargs)
 
-            if component in [1, 2, 3]:
-                plotData = np.array(self.misOriAxisList)[:, component - 1] * 180 / np.pi
-            else:
-                plotData = np.arccos(self.misOriList) * 360 / np.pi
+        plotData *= 180 / np.pi
+        plot = self.plotGrainData(grainData=plotData, **plotParams)
 
-            for coord, misOri in zip(self.coordList, plotData):
-                grainMisOri[coord[1] - y0, coord[0] - x0] = misOri
+        return plot
 
-            plt.figure()
-            plt.imshow(grainMisOri, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap[0])
-
-            plt.colorbar(label="ROD (degrees)")
-            plt.xticks([])
-            plt.yticks([])
-
-            if plotSlipTraces:
-                self.plotSlipTraces()
-
-        return
+    # def plotMisOriMulti(self, vmin=None, vmax=None, vRange=(None, None, None),
+        # cmap=("viridis", "bwr")):
+        #
+        # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+        #
+        # # TODO: Update plot grain misori method
+        #
+        # # subplots
+        # grainMisOri = np.full((4, ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
+        #
+        # for coord, misOri, misOriAxis in zip(self.coordList,
+        #                                      np.arccos(self.misOriList) * 360 / np.pi,
+        #                                      np.array(self.misOriAxisList) * 180 / np.pi):
+        #     grainMisOri[0, coord[1] - y0, coord[0] - x0] = misOri
+        #     grainMisOri[1:4, coord[1] - y0, coord[0] - x0] = misOriAxis
+        #
+        # f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+        #
+        # img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vmin, vmax=vmax)
+        # plt.colorbar(img, ax=ax1, label="Grain misorientation ($^\circ$)")
+        # vmin = None if vRange[0] is None else -vRange[0]
+        # img = ax2.imshow(grainMisOri[1], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[0])
+        # plt.colorbar(img, ax=ax2, label="x rotation ($^\circ$)")
+        # vmin = None if vRange[0] is None else -vRange[1]
+        # img = ax3.imshow(grainMisOri[2], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[1])
+        # plt.colorbar(img, ax=ax3, label="y rotation ($^\circ$)")
+        # vmin = None if vRange[0] is None else -vRange[2]
+        # img = ax4.imshow(grainMisOri[3], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[2])
+        # plt.colorbar(img, ax=ax4, label="z rotation ($^\circ$)")
+        #
+        # for ax in (ax1, ax2, ax3, ax4):
+        #     ax.set_xticks([])
+        #     ax.set_yticks([])
+        #
+        # return
 
     # define load axis as unit vector
     def calcAverageSchmidFactors(self, loadVector=np.array([0, 0, 1]),
@@ -1204,7 +1118,7 @@ class Grain(base.Grain):
         if self.refOri is None:
             self.calcAverageOri()
 
-        screenPlaneNorm = np.array((0, 0, 1))   # in sample frame
+        screenPlaneNorm = np.array((0, 0, 1))   # in sample orientation frame
 
         grainAvOri = self.refOri   # orientation of grain
 

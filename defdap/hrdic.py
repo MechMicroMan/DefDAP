@@ -14,6 +14,8 @@ from defdap import base
 from defdap.quat import Quat
 from defdap import plotting
 
+from defdap.plotting import MapPlot, GrainPlot
+
 
 class Map(base.Map):
 
@@ -84,6 +86,10 @@ class Map(base.Map):
         # return self.plotMaxShear(plotGBs=True, *args, **kwargs)
         return lambda *args, **kwargs: self.plotMaxShear(plotGBs=True, *args, **kwargs)
 
+    @property
+    def crystalSym(self):
+        return self.ebsdMap.crystalSym
+
     def loadData(self, fileDir, fileName, dataType=None):
         dataType = "DavisText" if dataType is None else dataType
 
@@ -149,7 +155,8 @@ class Map(base.Map):
 
         # Print map info
         print('\033[1m', end='')    # START BOLD
-        print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} x {3} pixels, number of points: {4})\n".format(
+        print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} "
+              "x {3} pixels, number of points: {4})\n".format(
             self.retrieveName(),
             self.xDim,
             self.yDim,
@@ -237,8 +244,14 @@ class Map(base.Map):
             multiplier = 1
         else:
             multiplier = self.windowSize
-        return mapData[int(self.cropDists[1, 0] * multiplier):int((self.ydim - self.cropDists[1, 1]) * multiplier),
-                       int(self.cropDists[0, 0] * multiplier):int((self.xdim - self.cropDists[0, 1]) * multiplier)]
+
+        minY = int(self.cropDists[1, 0] * multiplier)
+        maxY = int((self.ydim - self.cropDists[1, 1]) * multiplier)
+
+        minX = int(self.cropDists[0, 0] * multiplier)
+        maxX = int((self.xdim - self.cropDists[0, 1]) * multiplier)
+
+        return mapData[minY:maxY, minX:maxX]
 
     def setHomogPoint(self, points=None, display=None):
         
@@ -276,19 +289,31 @@ class Map(base.Map):
             self.ebsdTransformInv = self.ebsdTransform.inverse
         elif transformType == "polynomial":
             self.ebsdTransform = tf.PolynomialTransform()
-            # You can't calculate the inverse of a polynomial transform so have to estimate
-            # by swapping source and destination homog points
+            # You can't calculate the inverse of a polynomial transform
+            # so have to estimate by swapping source and destination
+            # homog points
             self.ebsdTransformInv = tf.PolynomialTransform()
-            self.ebsdTransformInv.estimate(np.array(self.ebsdMap.homogPoints), np.array(self.homogPoints), order=order)
+            self.ebsdTransformInv.estimate(
+                np.array(self.ebsdMap.homogPoints),
+                np.array(self.homogPoints),
+                order=order
+            )
             # calculate transform from EBSD to DIC frame
-            self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints), order=order)
+            self.ebsdTransform.estimate(
+                np.array(self.homogPoints),
+                np.array(self.ebsdMap.homogPoints),
+                order=order
+            )
             return
         else:
             self.ebsdTransform = tf.AffineTransform()
             self.ebsdTransformInv = self.ebsdTransform.inverse
 
         # calculate transform from EBSD to DIC frame
-        self.ebsdTransform.estimate(np.array(self.homogPoints), np.array(self.ebsdMap.homogPoints))
+        self.ebsdTransform.estimate(
+            np.array(self.homogPoints),
+            np.array(self.ebsdMap.homogPoints)
+        )
 
     def checkEbsdLinked(self):
         """Check if an EBSD map has been linked.
@@ -328,12 +353,13 @@ class Map(base.Map):
                 order=order, preserve_range=preserve_range
             )
         else:
-            # copy ebsd transform and change translation to give an extra 5% border
-            # to show the entire image after rotation/shearing
+            # copy ebsd transform and change translation to give an extra
+            # 5% border to show the entire image after rotation/shearing
             tempEbsdTransform = tf.AffineTransform(matrix=np.copy(self.ebsdTransform.params))
             tempEbsdTransform.params[0:2, 2] = -0.05 * np.array(mapData.shape)
 
-            # output the entire warped image with 5% border (add some extra to fix a bug)
+            # output the entire warped image with 5% border (add some
+            # extra to fix a bug)
             outputShape = np.array(mapData.shape) * 1.4 / tempEbsdTransform.scale
 
             # warp the map
@@ -381,37 +407,27 @@ class Map(base.Map):
         self.patternImPath = self.path + filePath
         self.windowSize = windowSize
 
-    def plotPattern(
-        self, ax=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap="gray",
-        plotScaleBar=False, **kwargs
-    ):
+    def plotPattern(self, **kwargs):
         """Plot BSE image of Map. For use with setting homog points"""
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'cmap': 'gray',
+            'scale': self.scale / self.windowSize * 1e-6
+        }
+        plotParams.update(kwargs)
+
         # Check image path is set
-        if self.patternImPath is not None:
-            bseImage = imread(self.patternImPath)
-
-            plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-            plot.addMap(self.crop(bseImage, binned=False), cmap=cmap,
-                        vmin=vmin, vmax=vmax, **kwargs)
-
-            if plotColourBar:
-                plot.addColourBar("")
-
-            if plotScaleBar:
-                plot.addScaleBar(scale=self.scale / self.windowSize * 1e-6)
-
-            return plot
-        else:
+        if self.patternImPath is None:
             raise Exception("First set path to pattern image.")
 
-    def plotMaxShear(
-        self, ax=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None,
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
-    ):
+        bseImage = imread(self.patternImPath)
+        bseImage = self.crop(bseImage, binned=False)
+
+        plot = MapPlot.create(self, bseImage, **plotParams)
+
+        return plot
+
+    def plotMaxShear(self, **kwargs):
         """
         Plot a map of maximum shear strain
 
@@ -436,55 +452,18 @@ class Map(base.Map):
         ax
         updateCurrent : bool, optional
         """
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True,
+            'cLabel': "Effective shear strain"
+        }
+        plotParams.update(kwargs)
 
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(self.crop(self.max_shear), cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
-
-        if plotColourBar:
-            plot.addColourBar("Effective shear strain")
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
+        plot = MapPlot.create(self, self.crop(self.max_shear), **plotParams)
 
         return plot
 
-    def plotMapData(
-        self, mapData, ax=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
-    ):
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
-
-        if plotColourBar:
-            plot.addColourBar(cLabel)
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
-
-        return plot
-
-    def plotGrainAvMaxShear(
-        self, ax=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None,
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
-    ):
+    def plotGrainAvMaxShear(self, **kwargs):
         """Plot grain map with grains filled with average value of max shear.
         This uses the max shear values stored in grain objects, to plot other data
         use plotGrainAv().
@@ -496,164 +475,15 @@ class Map(base.Map):
             vmax (float, optional): Maximum value for colour scale
             cLabel (str, optional): Colour bar label text
         """
-        # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'cLabel': "Effective shear strain"
+        }
+        plotParams.update(kwargs)
 
-        grainAvMaxShear = np.zeros([self.yDim, self.xDim])
-        for grain in self.grainList:
-            avMaxShear = np.array(grain.maxShearList).mean()
-
-            for coord in grain.coordList:
-                grainAvMaxShear[coord[1], coord[0]] = avMaxShear
-
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(grainAvMaxShear, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
-
-        if plotColourBar:
-            plot.addColourBar("Effective shear strain")
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
-
-        return plot
-
-    def calcGrainAv(self, mapData):
-        """Calculate grain average of any DIC map data.
-
-        Args:
-            mapData (np.array): Array of map data to grain average. This must be cropped!
-
-        Returns:
-            np.array: Array containing the grain average values
-        """
-        # Check that grains have been detected in the map
-        self.checkGrainsDetected()
-
-        grainAvData = np.zeros(len(self))
-
-        for grainId, grain in enumerate(self.grainList):
-            grainData = grain.grainData(mapData)
-            grainAvData[grainId] = grainData.mean()
-
-        return grainAvData
-
-    def plotGrainAv(self, mapData, plotGBs=False, plotColourBar=True, vmin=None, vmax=None, cLabel=''):
-        """Plot grain map with grains filled with average value of from any DIC map data
-
-        Args:
-            mapData (np.array): Array of map data to grain average. This must be cropped!
-            plotGBs (bool, optional): Set to True to draw grain boundaries
-            plotColourBar (bool, optional): Set to Flase to exclude the colour bar
-            vmin (float, optional): Minimum value of colour scale
-            vmax (float, optional): Maximum value for colour scale
-            cLabel (str, optional): Colour bar label text
-        """
-        # TODO: fix parmeters
-        grainAvData = self.calcGrainAv(mapData)
-
-        plot = self.plotGrainData(
-            grainAvData,
-            grainIds=-1,
-            plotGBs=plotGBs,
-            plotColourBar=plotColourBar,
-            vmin=vmin,
-            vmax=vmax,
-            cLabel=cLabel
+        plot = self.plotGrainDataMap(
+            mapData=self.crop(self.max_shear), **plotParams
         )
-
-        return plot
-
-    def plotGrainData(
-        self, grainData, grainIds=-1, bg=0, ax=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel=None,
-        plotGBs=False, dilateBoundaries=False, boundaryColour=None,
-        plotScaleBar=False,
-        highlightGrains=None, highlightColours=None, **kwargs
-    ):
-        """Plot grain map with grains filled with average value of from any DIC map data
-
-        Args:
-            grainData (np.array): Data value for each grain
-            grainIds (iterable): Grain IDs of each grain to plot, -1 for all grains
-            bg (float, optional): Background value for areas with no grain data.
-            plotGBs (bool, optional): Set to True to draw grain boundaries
-            plotColourBar (bool, optional): Set to Flase to exclude the colour bar
-            cmap (str, optional): Colour map to use
-            vmin (float, optional): Minimum value of colour scale
-            vmax (float, optional): Maximum value for colour scale
-            cLabel (str, optional): Colour bar label text
-        """
-        # Check that grains have been detected in the map
-        self.checkGrainsDetected()
-
-        if type(grainIds) is int and grainIds == -1:
-            grainIds = range(len(self))
-
-        if len(grainData) != len(grainIds):
-            raise Exception("Must be 1 value for each grain in grainData.")
-
-        grainMap = np.full([self.yDim, self.xDim], bg, dtype=grainData.dtype)
-        for grainId, grainValue in zip(grainIds, grainData):
-            grain = self.grainList[grainId]
-            for coord in grain.coordList:
-                grainMap[coord[1], coord[0]] = grainValue
-
-        plot = plotting.MapPlot(self, ax=ax, makeInteractive=makeInteractive)
-        plot.addMap(grainMap, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
-
-        if plotColourBar:
-            plot.addColourBar(cLabel)
-
-        if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
-
-        if highlightGrains is not None:
-            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
-
-        if plotScaleBar:
-            plot.addScaleBar()
-
-        return plot
-
-    def plotGrainAvIPF(
-        self, mapData, direction, ax=None,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel=None,
-        **kwargs
-    ):
-        """Plot IPF of grain reference (average) orientations with
-        points coloured by grain average values from map data.
-
-        Args:
-            mapData (np.array): Array of map data to grain average. This must be cropped!
-            direction (np.array): Vector of reference direction for the IPF
-            plotColourBar (bool, optional): Set to Flase to exclude the colour bar
-            vmin (float, optional): Minimum value of colour scale
-            vmax (float, optional): Maximum value for colour scale
-            cLabel (str, optional): Colour bar label text
-        """
-        # Check that grains have been detected in the map
-        self.checkGrainsDetected()
-
-        grainAvData = self.calcGrainAv(mapData)
-
-        grainOri = np.empty(len(self), dtype=Quat)
-
-        for grainId, grain in enumerate(self.grainList):
-            grainOri[grainId] = grain.ebsdGrain.refOri
-
-
-        plot = Quat.plotIPF(grainOri, direction, self.ebsdMap.crystalSym,
-                            ax=ax, c=grainAvData,
-                            vmin=vmin, vmax=vmax, cmap=cmap, **kwargs)
-
-        if plotColourBar:
-            plot.addColourBar(cLabel)
 
         return plot
 
@@ -790,37 +620,21 @@ class Grain(base.Grain):
         self.coordList.append(coord)
         self.maxShearList.append(maxShear)
 
-    def plotMaxShear(
-        self, ax=None, fig=None, plot=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None,
-        plotScaleBar=False, plotSlipTraces=False, plotSlipBands=False, **kwargs
-    ):
-        x0, y0, xmax, ymax = self.extremeCoords
+    def plotMaxShear(self, **kwargs):
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True,
+            'cLabel': "Effective shear strain"
+        }
+        plotParams.update(kwargs)
 
-        # initialise array with nans so area not in grain displays white
-        grainMaxShear = np.full((ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
-
-        for coord, maxShear in zip(self.coordList, self.maxShearList):
-            grainMaxShear[coord[1] - y0, coord[0] - x0] = maxShear
-
-        if plot is None:
-            plot = plotting.GrainPlot(self, ax=ax, fig=fig,
-                                      makeInteractive=makeInteractive)
-        plot.addMap(grainMaxShear, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
-
-        if plotColourBar:
-            plot.addColourBar("Effective shear strain")
-
-        if plotScaleBar:
-            plot.addScaleBar()
-
-        if plotSlipTraces:
-            plot.addSlipTraces()
-
-        if plotSlipBands:
-            plot.addSlipBands(grainMaxShear)
+        plot = self.plotGrainData(grainData=self.maxShearList, **plotParams)
 
         return plot
+
+    @property
+    def refOri(self):
+        return self.ebsdGrain.refOri
 
     @property
     def slipTraces(self):

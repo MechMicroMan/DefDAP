@@ -360,7 +360,9 @@ class Quat(object):
         return alpha, beta
 
     @staticmethod
-    def plotIPF(quats, direction, symGroup, projection=None, plot=None, ax=None,
+    def plotIPF(quats, direction, symGroup, projection=None,
+                plot=None, fig=None, ax=None, makeInteractive=False,
+                plotColourBar=False, cLabel="",
                 markerColour=None, markerSize=40, **kwargs):
         """
         Plot IPF of orientations for specified sample diection.
@@ -390,10 +392,16 @@ class Quat(object):
         alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup)
 
         if plot is None:
-            plot = plotting.PolePlot("IPF", symGroup, projection=projection, ax=ax)
+            plot = plotting.PolePlot(
+                "IPF", symGroup, projection=projection,
+                ax=ax, fig=fig, makeInteractive=makeInteractive
+            )
         plot.addPoints(alphaFund, betaFund,
                        markerColour=markerColour, markerSize=markerSize,
                        **plotParams)
+
+        if plotColourBar:
+            plot.addColourBar(cLabel)
 
         return plot
 
