@@ -5,7 +5,7 @@ from skimage import morphology as mph
 
 import copy
 
-from defdap.io import EBSDDataLoader
+from defdap.file_readers import EBSDDataLoader
 from defdap.quat import Quat
 from defdap.crystal import SlipSystem
 from defdap import base
@@ -141,11 +141,13 @@ class Map(base.Map):
         dataType : str, {'OxfordBinary', 'OxfordText'}
             Format of EBSD data file
         """
-        dataType = "OxfordBinary" if dataType is None else dataType
+        if dataType is None:
+            dataType = "OxfordBinary"
 
         dataLoader = EBSDDataLoader()
         if dataType == "OxfordBinary":
-            metadataDict, dataDict = dataLoader.loadOxfordCPR(fileName)
+            metadataDict = dataLoader.loadOxfordCPR(fileName)
+            dataDict = dataLoader.loadOxfordCRC(fileName)
         elif dataType == "OxfordText":
             metadataDict, dataDict = dataLoader.loadOxfordCTF(fileName)
         else:
@@ -169,6 +171,20 @@ class Map(base.Map):
     @property
     def scale(self):
         return self.stepSize
+
+    def transformData(self):
+        """
+        Flip data about the horizontal and transform quats
+        """
+        self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
+        self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
+        self.phaseArray = self.phaseArray[::-1, ::-1]
+        self.buildQuatArray()
+        
+        transformQuat = Quat.fromAxisAngle(np.array([1, 0, 0]), np.pi)
+        for i in range(self.xDim):
+            for j in range(self.yDim):
+                self.quatArray[j, i] = self.quatArray[j, i] * transformQuat
 
     def plotBandContrastMap(self, **kwargs):
         """

@@ -1,14 +1,16 @@
-![DefDAP - Deformation data analysis in Python](docs/source/_static/logo.png)
-==============
-A set of scripts for dealing with EBSD and HRDIC data.
+<h1 align="center">
+  <img src="docs/source/_static/logo.png">
+</h1>
 
+<h4 align="center">A set of scripts for dealing with EBSD and HRDIC data.</h4>
 
+<p align="center">
   <a href="#how-to-install">How to install</a> •
   <a href="#how-to-use">How To Use</a> •
   <a href="#documentation">Documentation</a> •
   <a href="#credits">Credits</a> •
   <a href="#license">License</a>
-
+</p>
 
 ## How to install
 
@@ -25,6 +27,10 @@ A set of scripts for dealing with EBSD and HRDIC data.
 ## Documentation
 
 - For more help, see the documentation under /docs/html
+
+## Contributing
+
+- For information about contributing see the [guidelines](/docs/contributing.md)
 
 ## Credits
 
