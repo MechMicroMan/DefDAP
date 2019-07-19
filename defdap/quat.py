@@ -72,6 +72,8 @@ class Quat(object):
         References:
             Melcher A. et al., 'Conversion of EBSD data by a quaternion based algorithm
             to be used for grain structure simulations', Technische Mechanik, 30(4)401 – 413
+            Rowenhorst D. et al., 'Consistent representations of and conversions between
+            3D rotations', Model. Simul. Mater. Sci. Eng., 23(8) 
         """
 
         eulers = np.empty(3, dtype=float)
