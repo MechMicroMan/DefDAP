@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 from skimage import morphology as mph
@@ -8,7 +7,10 @@ import copy
 
 from defdap.file_readers import EBSDDataLoader
 from defdap.quat import Quat
+from defdap.crystal import SlipSystem
 from defdap import base
+
+from defdap.plotting import MapPlot, GrainPlot
 
 
 class Map(base.Map):
@@ -42,7 +44,9 @@ class Map(base.Map):
         map of phase boundaries. -1 for boundary, 0 otherwise
     cacheEulerMap
     grains : numpy.ndarray
-        map of grains
+        map of grains. Grain numbers start at 1 here but everywhere else
+        grainID starts at 0. Regions that are smaller than the minimum
+        grain size are given value -2.
     grainList : list(defdap.ebsd.Grain)
         list of grains
     misOri : numpy.ndarray
@@ -102,7 +106,6 @@ class Map(base.Map):
         self.phaseBoundaries = None
         self.cacheEulerMap = None
         self.grains = None
-        self.grainList = None
         self.misOri = None
         self.misOriAxis = None
         self.kam = None
@@ -114,17 +117,16 @@ class Map(base.Map):
         self.GND = None
         self.Nye = None
 
-        self.fig = None
-        self.ax = None
-
         # Use euler map for defining homologous points
         self.plotHomog = self.plotEulerMap
         self.highlightAlpha = 1
 
         self.loadData(fileName, crystalSym, dataType=dataType)
 
-    def plotDefault(self, *args, **kwargs):
-        self.plotEulerMap(*args, **kwargs)
+    @property
+    def plotDefault(self):
+        # return self.plotEulerMap(*args, **kwargs)
+        return lambda *args, **kwargs: self.plotEulerMap(*args, **kwargs)
 
     def loadData(self, fileName, crystalSym, dataType=None):
         """
@@ -166,6 +168,10 @@ class Map(base.Map):
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step "
               "size: {2} um)".format(self.xDim, self.yDim, self.stepSize))
 
+    @property
+    def scale(self):
+        return self.stepSize
+
     def transformData(self):
         """
         Flip data about the horizontal and transform quats
@@ -180,22 +186,37 @@ class Map(base.Map):
             for j in range(self.yDim):
                 self.quatArray[j, i] = self.quatArray[j, i] * transformQuat
 
-    def plotBandContrastMap(self):
+    def plotBandContrastMap(self, **kwargs):
         """
         Plot band contrast map
         """
         self.checkDataLoaded()
 
-        plt.imshow(self.bandContrastArray, cmap='gray')
-        plt.colorbar()
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True,
+            'cmap:': 'grey',
+            'cLabel': "Band contrast"
+        }
+        plotParams.update(kwargs)
 
-    def plotEulerMap(self, updateCurrent=False, highlightGrains=None,
-                     highlightColours=None):
+        plot = MapPlot.create(self, self.bandContrastArray, **plotParams)
+
+        return plot
+
+    def plotEulerMap(self, **kwargs):
         """
         Plot an orientation map in Euler colouring
 
         Parameters
         ----------
+        ax
+        makeInteractive
+        plotGBs
+        dilateBoundaries
+        boundaryColour
+        plotScaleBar
+        kwargs
         updateCurrent : bool, optional
 
         highlightGrains : iterable(int), optional
@@ -207,30 +228,42 @@ class Map(base.Map):
         """
         self.checkDataLoaded()
 
-        if (not updateCurrent) or self.cacheEulerMap is None:
-            eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
+        # Set default plot parameters then update with any input
+        plotParams = {}
+        plotParams.update(kwargs)
 
-            # this is the normalisation
-            norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]), (self.yDim, self.xDim))
-            norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+        eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
+        # this is the normalisation
+        norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]),
+                       (self.yDim, self.xDim))
+        norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+        # make non-indexed points green
+        eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
+        eulerMap /= norm
 
-            # make non-indexed points green
-            eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
+        plot = MapPlot.create(self, eulerMap, **plotParams)
 
-            eulerMap /= norm
+        return plot
 
-            self.cacheEulerMap = eulerMap
-            self.fig, self.ax = plt.subplots()
+    def plotIPFMap(self, direction, **kwargs):
+        # Set default plot parameters then update with any input
+        plotParams = {}
+        plotParams.update(kwargs)
 
-        self.ax.imshow(self.cacheEulerMap, aspect='equal')
+        # calculate IPF colours
+        IPFcolours = Quat.calcIPFcolours(
+            self.quatArray.flatten(),
+            direction,
+            self.crystalSym
+        )
+        # reshape back to map shape array
+        IPFcolours = np.reshape(IPFcolours, (self.yDim, self.xDim, 3))
 
-        if highlightGrains is not None:
-            self.highlightGrains(highlightGrains, highlightColours)
+        plot = MapPlot.create(self, IPFcolours, **plotParams)
 
-    def plotIPFmap(self, direction):
-        Quat.plotIPFmap(self.quatArray, direction, self.crystalSym)
+        return plot
 
-    def plotPhaseMap(self, cmap='viridis'):
+    def plotPhaseMap(self, **kwargs):
         """
         Plot a phase map.
 
@@ -239,20 +272,23 @@ class Map(base.Map):
         cmap : str, optional
             Colour scale to plot with.
         """
-        values = [-1] + list(range(1, self.numPhases + 1))
-        names = ["Non-indexed"] + self.phaseNames
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'vmin': -1,
+            'vmax': self.numPhases
+        }
+        plotParams.update(kwargs)
 
-        plt.figure(figsize=(10, 6))
-        im = plt.imshow(self.phaseArray, cmap=cmap, vmin=-1, vmax=self.numPhases)
+        plot = MapPlot.create(self, self.phaseArray, **plotParams)
 
-        # Find colour values for phases
-        colors = [im.cmap(im.norm(value)) for value in values]
+        # add a legend to the plot
+        phaseIDs = [-1] + list(range(1, self.numPhases + 1))
+        phaseNames = ["Non-indexed"] + self.phaseNames
+        plot.addLegend(phaseIDs, phaseNames,
+                       bbox_to_anchor=(1.05, 1),
+                       loc=2, borderaxespad=0.)
 
-        # Get colour patches for each phase and make legend
-        patches = [mpl.patches.Patch(color=colors[i], label=names[i]) for i in range(len(values))]
-        plt.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-
-        plt.show()
+        return plot
 
     def calcKam(self):
         """
@@ -268,7 +304,7 @@ class Map(base.Map):
 
         self.kam = np.empty((self.yDim, self.xDim))
 
-        # Start with rows. Caluculate misorientation with neigbouring rows.
+        # Start with rows. Calculate misorientation with neighbouring rows.
         # First and last row only in one direction
         self.kam[0, :] = abs(np.einsum("ij,ij->j", quatComps[:, 0, :], quatComps[:, 1, :]))
         self.kam[-1, :] = abs(np.einsum("ij,ij->j", quatComps[:, -1, :], quatComps[:, -2, :]))
@@ -287,16 +323,8 @@ class Map(base.Map):
 
         self.kam /= 2
         self.kam[self.kam > 1] = 1
-        """Plot Kernel Average Misorientaion (KAM) for the EBSD map.
 
-        :param vmin: Minimum of colour scale (optional)
-        :type vmin: float
-        :param vmax: Maximum of colour scale (optional)
-        :type vmax: float
-        :param cmap: Colour map (optional)
-        :type cmap: str
-        """
-    def plotKamMap(self, vmin=None, vmax=None, cmap="viridis"):
+    def plotKamMap(self, **kwargs):
         """
         Plot Kernel Average Misorientaion (KAM) for the EBSD map.
 
@@ -309,12 +337,20 @@ class Map(base.Map):
         cmap : str, optional
             Colour scale to plot with.
         """
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True,
+            'cLabel': "Kernel average misorientation (KAM) ($^\circ$)"
+        }
+        plotParams.update(kwargs)
+
         self.calcKam()
         # Convert to degrees and plot
         kam = 2 * np.arccos(self.kam) * 180 / np.pi
-        plt.figure()
-        plt.imshow(kam, vmin=vmin, vmax=vmax, cmap=cmap)
-        plt.colorbar()
+
+        plot = MapPlot.create(self, kam, **plotParams)
+
+        return plot
 
     def calcNye(self):
         """
@@ -435,9 +471,19 @@ class Map(base.Map):
         self.GND = alpha_total9
         self.Nye = alpha
 
-        plt.imshow(np.log10(self.GND), vmin=12, vmax=15, cmap="viridis")
-        plt.colorbar()
-        plt.show()
+    def plotGNDMap(self, **kwargs):
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True,
+            'cLabel': "Geometrically necessary dislocation (GND) content"
+        }
+        plotParams.update(kwargs)
+
+        self.calcNye()
+
+        plot = MapPlot.create(self, np.log10(self.GND), **plotParams)
+
+        return plot
 
     def checkDataLoaded(self):
         """ Checks if EBSD data is loaded
@@ -556,36 +602,42 @@ class Map(base.Map):
 
         print("\r", end="")
 
-    def plotPhaseBoundaryMap(self, dilate=False):
+    def plotPhaseBoundaryMap(self, dilate=False, **kwargs):
         """Plot phase boundary map
 
         :param dilate: Dilate boundary by one pixel
         """
-
-        plt.figure()
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'vmax': 1,
+            'plotColourBar': True,
+            'cmap': 'grey'
+        }
+        plotParams.update(kwargs)
 
         boundariesImage = -self.phaseBoundaries
-
         if dilate:
-            boundariesImage = mph.binary_dilation(-self.phaseBoundaries)
+            boundariesImage = mph.binary_dilation(boundariesImage)
 
-        plt.imshow(boundariesImage, vmax=1, cmap='gray')
-        plt.colorbar()
+        plot = MapPlot.create(self, boundariesImage, **plotParams)
 
-    def plotBoundaryMap(self, dilate=False):
+        return plot
+
+    def plotBoundaryMap(self, **kwargs):
         """Plot grain boundary map
 
         :param dilate: Dilate boundary by one pixel
         """
-        plt.figure()
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotGBs': True,
+            'boundaryColour': 'black'
+        }
+        plotParams.update(kwargs)
 
-        boundariesImage = -self.boundaries
+        plot = MapPlot.create(self, None, **plotParams)
 
-        if dilate:
-            boundariesImage = mph.binary_dilation(-self.boundaries)
-
-        plt.imshow(boundariesImage, vmax=1, cmap='gray')
-        plt.colorbar()
+        return plot
 
     def findGrains(self, minGrainSize=10):
         """
@@ -629,61 +681,21 @@ class Map(base.Map):
 
         return
 
-    def plotGrainMap(self):
+    def plotGrainMap(self, **kwargs):
         """
         Plot a map with grains coloured
 
         :return: Figure
         """
-        plt.figure()
-        plt.imshow(self.grains)
-        plt.colorbar()
-        return
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'cLabel': "Grain number"
+        }
+        plotParams.update(kwargs)
 
-    def locateGrainID(self, clickEvent=None, displaySelected=False):
-        """
-        Interactive plot for identifying grains
+        plot = MapPlot.create(self, self.grains, **plotParams)
 
-        :param displaySelected: Plot slip traces for selected grain
-        """
-        # Check that grains have been detected in the map
-        self.checkGrainsDetected()
-
-        # reset current selected grain and plot euler map with click handler
-        self.currGrainId = None
-        self.plotEulerMap()
-        if clickEvent is None:
-            # default click handler which highlights grain and prints id
-            self.fig.canvas.mpl_connect(
-                'button_press_event',
-                lambda x: self.clickGrainId(x, displaySelected)
-            )
-        else:
-            # click handler loaded in as parameter. Pass current map object to it.
-            self.fig.canvas.mpl_connect('button_press_event', lambda x: clickEvent(x, self))
-
-        # unset figure for plotting grains
-        self.grainFig = None
-        self.grainAx = None
-
-    def clickGrainId(self, event, displaySelected):
-        if event.inaxes is not None:
-            # grain id of selected grain
-            self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
-            print("Grain ID: {}".format(self.currGrainId))
-
-            # clear current axis and redraw euler map with highlighted grain overlay
-            self.ax.clear()
-            self.plotEulerMap(updateCurrent=True, highlightGrains=[self.currGrainId])
-            self.fig.canvas.draw()
-
-            if displaySelected:
-                if self.grainFig is None:
-                    self.grainFig, self.grainAx = plt.subplots()
-                self.grainList[self.currGrainId].calcSlipTraces()
-                self.grainAx.clear()
-                self.grainList[self.currGrainId].plotSlipTraces(ax=self.grainAx)
-                self.grainFig.canvas.draw()
+        return plot
 
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self)
@@ -698,7 +710,7 @@ class Map(base.Map):
             newedge = []
 
             for (x, y) in edge:
-                moves = np.array([(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)])
+                moves = np.array([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
 
                 movesIndexShift = 0
                 if x <= 0:
@@ -755,8 +767,7 @@ class Map(base.Map):
 
         return
 
-    def plotMisOriMap(self, component=0, plotGBs=False, boundaryColour='black', vmin=None, vmax=None,
-                      cmap="viridis", cBarLabel="ROD (degrees)"):
+    def plotMisOriMap(self, component=0, **kwargs):
         """
         Plot misorientation map
 
@@ -772,44 +783,51 @@ class Map(base.Map):
         :param cBarLabel: Label for colour bar
         :return: Figure
         """
+
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
         self.misOri = np.ones([self.yDim, self.xDim])
-
-        plt.figure()
 
         if component in [1, 2, 3]:
             for grain in self.grainList:
                 for coord, misOriAxis in zip(grain.coordList, np.array(grain.misOriAxisList)):
                     self.misOri[coord[1], coord[0]] = misOriAxis[component - 1]
 
-            plt.imshow(self.misOri * 180 / np.pi, interpolation='None', vmin=vmin, vmax=vmax, cmap=cmap)
-
+            misOri = self.misOri * 180 / np.pi
+            cLabel = "Rotation around {:} axis ($^\circ$)".format(
+                ['X', 'Y', 'Z'][component-1]
+            )
         else:
             for grain in self.grainList:
                 for coord, misOri in zip(grain.coordList, grain.misOriList):
                     self.misOri[coord[1], coord[0]] = misOri
 
-            plt.imshow(np.arccos(self.misOri) * 360 / np.pi, interpolation='None',
-                       vmin=vmin, vmax=vmax, cmap=cmap)
+            misOri = np.arccos(self.misOri) * 360 / np.pi
+            cLabel = "Grain reference orienation deviation (GROD) ($^\circ$)"
 
-        plt.colorbar(label=cBarLabel)
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True,
+            'cLabel': cLabel
+        }
+        plotParams.update(kwargs)
 
-        if plotGBs:
-            self.plotGBs(colour=boundaryColour)
+        plot = MapPlot.create(self, misOri, **plotParams)
 
-        return
+        return plot
 
-    def loadSlipSystems(self, filepath, cOverA=None):
+    def loadSlipSystems(self, name, cOverA=None):
         """
         Load slip system definitions from file
 
-        :param filepath: File path to slip system definition txt file
+        :param name: name of the slip system file (without file
+        extension) stored in the defdap install dir or path to a file
         :param cOverA: cOverA ratio (for hexagonal)
         """
-        self.slipSystems, self.slipTraceColours = base.SlipSystem.loadSlipSystems(filepath,
-                                                                                  self.crystalSym, cOverA=cOverA)
+        self.slipSystems, self.slipTraceColours = SlipSystem.loadSlipSystems(
+            name, self.crystalSym, cOverA=cOverA
+        )
 
         if self.grainList is not None:
             for grain in self.grainList:
@@ -841,8 +859,8 @@ class Map(base.Map):
 
         print("\r", end="")
 
-    def plotAverageGrainSchmidFactorsMap(self, plotGBs=True, boundaryColour='black', dilateBoundaries=False,
-                                         planes=None, directions=None):
+    def plotAverageGrainSchmidFactorsMap(self, planes=None, directions=None,
+                                         **kwargs):
         """
         Plot maximum Schmid factor map, based on average grain orientation (for all slip systems unless specified)
 
@@ -856,6 +874,16 @@ class Map(base.Map):
         :type boundaryColour: string
         :return:
         """
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'vmin': 0,
+            'vmax': 0.5,
+            'cmap': 'gray',
+            'plotColourBar': True,
+            'cLabel': "Schmid factor"
+        }
+        plotParams.update(kwargs)
+
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
         self.averageSchmidFactor = np.zeros([self.yDim, self.xDim])
@@ -864,23 +892,23 @@ class Map(base.Map):
             raise Exception("Run 'calcAverageGrainSchmidFactors' first")
 
         for grain in self.grainList:
-
             currentSchmidFactor = []
 
             if planes is not None:
-
                 # Error catching
                 if np.max(planes) > len(self.slipSystems) - 1:
-                    raise Exception("Check plane IDs exists, IDs range from 0 to {0}".format(len(self.slipSystems) - 1))
+                    raise Exception("Check plane IDs exists, IDs range from 0 "
+                                    "to {0}".format(len(self.slipSystems) - 1))
 
                 for plane in planes:
                     if directions is not None:
                         for direction in directions:
                             currentSchmidFactor.append(grain.averageSchmidFactors[plane][direction])
-                    elif directions is None:
+                    else:
                         currentSchmidFactor.append(grain.averageSchmidFactors[plane])
+                # TODO: what is this doing?
                 currentSchmidFactor = [max(s) for s in zip(*currentSchmidFactor)]
-            elif planes is None:
+            else:
                 currentSchmidFactor = [max(s) for s in zip(*grain.averageSchmidFactors)]
 
             # Fill grain with colour
@@ -889,14 +917,9 @@ class Map(base.Map):
 
         self.averageSchmidFactor[self.averageSchmidFactor == 0] = 0.5
 
-        plt.figure()
-        plt.imshow(self.averageSchmidFactor, interpolation='none', cmap='gray', vmin=0, vmax=0.5)
-        plt.colorbar(label="Schmid factor")
+        plot = MapPlot.create(self, self.averageSchmidFactor, **plotParams)
 
-        if plotGBs:
-            self.plotGBs(colour=boundaryColour, dilate=dilateBoundaries)
-
-        return
+        return plot
 
 
 class Grain(base.Grain):
@@ -908,6 +931,7 @@ class Grain(base.Grain):
         self.crystalSym = ebsdMap.crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
         self.slipSystems = ebsdMap.slipSystems
         self.ebsdMap = ebsdMap                  # ebsd map this grain is a member of
+        self.ownerMap = ebsdMap
         self.quatList = []                      # list of quats
         self.misOriList = None                  # list of misOri at each point in grain
         self.misOriAxisList = None              # list of misOri axes at each point in grain
@@ -971,80 +995,83 @@ class Grain(base.Grain):
             for row in misOriAxis.transpose():
                 self.misOriAxisList.append(row)
 
-    def plotRefOri(self, direction=np.array([0, 0, 1]), **kwargs):
+    def plotRefOri(self, direction=np.array([0, 0, 1]), plot=None, **kwargs):
         plotParams = {'marker': '+'}
         plotParams.update(kwargs)
-        Quat.plotIPF([self.refOri], direction, self.crystalSym, **plotParams)
+        Quat.plotIPF([self.refOri], direction, self.crystalSym, plot=plot,
+                     **plotParams)
 
-    def plotOriSpread(self, direction=np.array([0, 0, 1]), **kwargs):
+    def plotOriSpread(self, direction=np.array([0, 0, 1]), plot=None, **kwargs):
         plotParams = {'marker': '.'}
         plotParams.update(kwargs)
-        Quat.plotIPF(self.quatList, direction, self.crystalSym, **plotParams)
+        Quat.plotIPF(self.quatList, direction, self.crystalSym, plot=plot,
+                     **plotParams)
 
     # component
     # 0 = misOri
     # {1-3} = misOri axis {1-3}
-    # 4 = all
-    # 5 = all axis
-    def plotMisOri(self, component=0, vmin=None, vmax=None,
-                   vRange=[None, None, None], cmap=["viridis", "bwr"],
-                   plotSlipTraces=False):
+    def plotMisOri(self, component=0, **kwargs):
         component = int(component)
 
-        x0, y0, xmax, ymax = self.extremeCoords
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'plotColourBar': True
+        }
+        if component == 0:
+            plotParams['cLabel'] = "Grain reference orientation " \
+                                   "deviation (GROD) ($^\circ$)"
+            plotData = 2 * np.arccos(self.misOriList)
 
-        if component in [4, 5]:
-            # subplots
-            grainMisOri = np.full((4, ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
-
-            for coord, misOri, misOriAxis in zip(self.coordList,
-                                                 np.arccos(self.misOriList) * 360 / np.pi,
-                                                 np.array(self.misOriAxisList) * 180 / np.pi):
-                grainMisOri[0, coord[1] - y0, coord[0] - x0] = misOri
-                grainMisOri[1:4, coord[1] - y0, coord[0] - x0] = misOriAxis
-
-            f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-
-            img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vmin, vmax=vmax)
-            plt.colorbar(img, ax=ax1, label="Grain misorientation ($^\circ$)")
-            vmin = None if vRange[0] is None else -vRange[0]
-            img = ax2.imshow(grainMisOri[1], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[0])
-            plt.colorbar(img, ax=ax2, label="x rotation ($^\circ$)")
-            vmin = None if vRange[0] is None else -vRange[1]
-            img = ax3.imshow(grainMisOri[2], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[1])
-            plt.colorbar(img, ax=ax3, label="y rotation ($^\circ$)")
-            vmin = None if vRange[0] is None else -vRange[2]
-            img = ax4.imshow(grainMisOri[3], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[2])
-            plt.colorbar(img, ax=ax4, label="z rotation ($^\circ$)")
-
-            for ax in (ax1, ax2, ax3, ax4):
-                ax.set_xticks([])
-                ax.set_yticks([])
+        elif 0 < component < 4:
+            plotParams['cLabel'] = "Rotation around {:} ($^\circ$)".format(
+                ['X', 'Y', 'Z'][component-1]
+            )
+            plotData = np.array(self.misOriAxisList)[:, component-1]
 
         else:
-            # single plot
-            # initialise array with nans so area not in grain displays white
-            grainMisOri = np.full((ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
+            raise ValueError("Component must between 0 and 3")
+        plotParams.update(kwargs)
 
-            if component in [1, 2, 3]:
-                plotData = np.array(self.misOriAxisList)[:, component - 1] * 180 / np.pi
-            else:
-                plotData = np.arccos(self.misOriList) * 360 / np.pi
+        plotData *= 180 / np.pi
+        plot = self.plotGrainData(grainData=plotData, **plotParams)
 
-            for coord, misOri in zip(self.coordList, plotData):
-                grainMisOri[coord[1] - y0, coord[0] - x0] = misOri
+        return plot
 
-            plt.figure()
-            plt.imshow(grainMisOri, interpolation='none', vmin=vmin, vmax=vmax, cmap=cmap[0])
-
-            plt.colorbar(label="ROD (degrees)")
-            plt.xticks([])
-            plt.yticks([])
-
-            if plotSlipTraces:
-                self.plotSlipTraces()
-
-        return
+    # def plotMisOriMulti(self, vmin=None, vmax=None, vRange=(None, None, None),
+        # cmap=("viridis", "bwr")):
+        #
+        # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+        #
+        # # TODO: Update plot grain misori method
+        #
+        # # subplots
+        # grainMisOri = np.full((4, ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
+        #
+        # for coord, misOri, misOriAxis in zip(self.coordList,
+        #                                      np.arccos(self.misOriList) * 360 / np.pi,
+        #                                      np.array(self.misOriAxisList) * 180 / np.pi):
+        #     grainMisOri[0, coord[1] - y0, coord[0] - x0] = misOri
+        #     grainMisOri[1:4, coord[1] - y0, coord[0] - x0] = misOriAxis
+        #
+        # f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+        #
+        # img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vmin, vmax=vmax)
+        # plt.colorbar(img, ax=ax1, label="Grain misorientation ($^\circ$)")
+        # vmin = None if vRange[0] is None else -vRange[0]
+        # img = ax2.imshow(grainMisOri[1], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[0])
+        # plt.colorbar(img, ax=ax2, label="x rotation ($^\circ$)")
+        # vmin = None if vRange[0] is None else -vRange[1]
+        # img = ax3.imshow(grainMisOri[2], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[1])
+        # plt.colorbar(img, ax=ax3, label="y rotation ($^\circ$)")
+        # vmin = None if vRange[0] is None else -vRange[2]
+        # img = ax4.imshow(grainMisOri[3], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[2])
+        # plt.colorbar(img, ax=ax4, label="z rotation ($^\circ$)")
+        #
+        # for ax in (ax1, ax2, ax3, ax4):
+        #     ax.set_xticks([])
+        #     ax.set_yticks([])
+        #
+        # return
 
     # define load axis as unit vector
     def calcAverageSchmidFactors(self, loadVector=np.array([0, 0, 1]),
@@ -1108,7 +1135,7 @@ class Grain(base.Grain):
         if self.refOri is None:
             self.calcAverageOri()
 
-        screenPlaneNorm = np.array((0, 0, 1))   # in sample frame
+        screenPlaneNorm = np.array((0, 0, 1))   # in sample orientation frame
 
         grainAvOri = self.refOri   # orientation of grain
 
@@ -1131,11 +1158,12 @@ class Grain(base.Grain):
                 inclination = np.pi - inclination
             # print("{} inclination: {:.1f}".format(planeLabel, inclination * 180 / np.pi))
 
-            # Transform intersection back into sample coordinates
+            # Transform intersection back into sample coordinates and normalise
             intersection = grainAvOri.conjugate.transformVector(intersectionCrystal)
-            intersection = intersection / np.sqrt(np.dot(intersection, intersection))  # normalise
+            intersection = intersection / np.sqrt(np.dot(intersection, intersection))
 
-            # Calculate trace angle. Starting vertical and proceeding counter clockwise
+            # Calculate trace angle. Starting vertical and proceeding
+            # counter clockwise
             if intersection[0] > 0:
                 intersection *= -1
             traceAngle = np.arccos(np.dot(intersection, np.array([0, 1.0, 0])))
@@ -1187,7 +1215,7 @@ class Linker(object):
                 for ebsdMap in self.ebsdMaps:
                     if ebsdMap is currentEbsdMap:
                         # set current grain in ebsd map that clicked
-                        ebsdMap.clickGrainId(event)
+                        ebsdMap.clickGrainID(event)
                     else:
                         # Guess at grain in other maps
                         # Calculated position relative to set origin of the map, scaled from step size of maps
@@ -1209,7 +1237,7 @@ class Linker(object):
                         ebsdMap.fig.canvas.draw()
             else:
                 # clicked on other map so correct guessed selected grain
-                currentEbsdMap.clickGrainId(event)
+                currentEbsdMap.clickGrainID(event)
 
         elif event.inaxes is currentEbsdMap.fig.axes[1]:
             # axis 1 then is a click on the button
