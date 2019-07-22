@@ -518,9 +518,11 @@ class PolePlot(Plot):
 
 
 class HistPlot(Plot):
-    def __init__(self, plotType="linear", ax=None, density=True):
-        super(HistPlot, self).__init__(ax)
+    def __init__(self, plotType="linear", density=True,
+                 fig=None, ax=None, makeInteractive=False):
+        super(HistPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
 
+        plotType = plotType.lower()
         if plotType in ["linear", "log"]:
             self.plotType = plotType
         else:
@@ -534,9 +536,10 @@ class HistPlot(Plot):
             yLabel = "ln({})".format(yLabel)
         ax.ax.set_ylabel(yLabel)
 
-    def addHist(self, data, bins=None, range=None, line='o', label=None, **kwargs):
+    def addHist(self, histData, bins=None, range=None, line='o',
+                label=None, **kwargs):
 
-        hist = np.histogram(data.flatten(), bins=bins, range=range,
+        hist = np.histogram(histData.flatten(), bins=bins, range=range,
                             density=self.density)
 
         yVals = hist[0]
@@ -548,3 +551,16 @@ class HistPlot(Plot):
 
     def addLegend(self, **kwargs):
         self.ax.legend(**kwargs)
+
+    @classmethod
+    def create(
+        cls, histData, fig=None, ax=None, makeInteractive=False,
+        plotType="linear", density=True, bins=None, range=None,
+        line='o', label=None, **kwargs
+    ):
+        plot = cls(plotType=plotType, density=density, fig=fig, ax=ax,
+                   makeInteractive=makeInteractive)
+        plot.addHist(histData, bins=bins, range=range, line=line,
+                     label=label, **kwargs)
+
+        return plot
