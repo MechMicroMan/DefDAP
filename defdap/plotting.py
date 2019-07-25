@@ -208,14 +208,15 @@ class MapPlot(Plot):
     @classmethod
     def create(
         cls, callingMap, mapData,
-        fig=None, ax=None, makeInteractive=False,
+        fig=None, ax=None, plot=None, makeInteractive=False,
         plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
         plotGBs=False, dilateBoundaries=False, boundaryColour=None,
         plotScaleBar=False, scale=None,
         highlightGrains=None, highlightColours=None, highlightAlpha=None,
         **kwargs
     ):
-        plot = cls(callingMap, fig=fig, ax=ax, makeInteractive=makeInteractive)
+        if plot is None:
+            plot = cls(callingMap, fig=fig, ax=ax, makeInteractive=makeInteractive)
         if mapData is not None:
             plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
@@ -298,12 +299,13 @@ class GrainPlot(Plot):
     @classmethod
     def create(
         cls, callingGrain, mapData,
-        fig=None, ax=None, makeInteractive=False,
+        fig=None, ax=None, plot=None, makeInteractive=False,
         plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
         plotScaleBar=False, scale=None,
         plotSlipTraces=False, plotSlipBands=False, **kwargs
     ):
-        plot = cls(callingGrain, fig=fig, ax=ax, makeInteractive=makeInteractive)
+        if plot is None:
+            plot = cls(callingGrain, fig=fig, ax=ax, makeInteractive=makeInteractive)
         plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
         if plotColourBar:
@@ -554,12 +556,13 @@ class HistPlot(Plot):
 
     @classmethod
     def create(
-        cls, histData, fig=None, ax=None, makeInteractive=False,
+        cls, histData, fig=None, ax=None, plot=None, makeInteractive=False,
         plotType="linear", density=True, bins=None, range=None,
         line='o', label=None, **kwargs
     ):
-        plot = cls(plotType=plotType, density=density, fig=fig, ax=ax,
-                   makeInteractive=makeInteractive)
+        if plot is None:
+            plot = cls(plotType=plotType, density=density, fig=fig, ax=ax,
+                       makeInteractive=makeInteractive)
         plot.addHist(histData, bins=bins, range=range, line=line,
                      label=label, **kwargs)
 

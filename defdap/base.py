@@ -92,6 +92,7 @@ class Map(object):
                     self.grainPlot = currGrain.plotDefault(makeInteractive=True)
                 else:
                     self.grainPlot.clear()
+                    self.grainPlot.callingGrain = currGrain
                     currGrain.plotDefault(plot=self.grainPlot)
 
     def setHomogPoint(self, binSize=1, points=None):

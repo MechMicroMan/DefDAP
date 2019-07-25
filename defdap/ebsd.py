@@ -235,17 +235,17 @@ class Map(base.Map):
         plotParams.update(kwargs)
 
         eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
-        # this is the normalisation - different for different crystal symmetries!
-            if self.crystalSym == 'cubic':
-                norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]), 
-                               (self.yDim, self.xDim))
-                norm = np.reshape(norm, (self.yDim, self.xDim, 3))
-            elif self.crystalSym == 'hexagonal':
-                norm = np.tile(np.array([np.pi, np.pi, np.pi / 3]), 
-                               (self.yDim, self.xDim))
-                norm = np.reshape(norm, (self.yDim, self.xDim, 3))
-            else:
-                Exception("Only hexagonal and cubic symGroup supported")  
+        # this is the normalisation - different foreach crystal symmetry!
+        if self.crystalSym == 'cubic':
+            norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]),
+                           (self.yDim, self.xDim))
+            norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+        elif self.crystalSym == 'hexagonal':
+            norm = np.tile(np.array([np.pi, np.pi, np.pi / 3]),
+                           (self.yDim, self.xDim))
+            norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+        else:
+            Exception("Only hexagonal and cubic symGroup supported")
         # make non-indexed points green
         eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
         eulerMap /= norm
@@ -1004,17 +1004,17 @@ class Grain(base.Grain):
             for row in misOriAxis.transpose():
                 self.misOriAxisList.append(row)
 
-    def plotRefOri(self, direction=np.array([0, 0, 1]), plot=None, **kwargs):
+    def plotRefOri(self, direction=np.array([0, 0, 1]), **kwargs):
         plotParams = {'marker': '+'}
         plotParams.update(kwargs)
-        Quat.plotIPF([self.refOri], direction, self.crystalSym, plot=plot,
-                     **plotParams)
+        return Quat.plotIPF([self.refOri], direction, self.crystalSym,
+                            **plotParams)
 
-    def plotOriSpread(self, direction=np.array([0, 0, 1]), plot=None, **kwargs):
+    def plotOriSpread(self, direction=np.array([0, 0, 1]), **kwargs):
         plotParams = {'marker': '.'}
         plotParams.update(kwargs)
-        Quat.plotIPF(self.quatList, direction, self.crystalSym, plot=plot,
-                     **plotParams)
+        return Quat.plotIPF(self.quatList, direction, self.crystalSym,
+                            **plotParams)
 
     # component
     # 0 = misOri
