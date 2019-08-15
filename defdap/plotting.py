@@ -536,9 +536,9 @@ class HistPlot(Plot):
         yLabel = "Normalised frequency" if self.density else "Frequency"
         if self.plotType is "log":
             yLabel = "ln({})".format(yLabel)
-        ax.ax.set_ylabel(yLabel)
+        self.ax.set_ylabel(yLabel)
 
-    def addHist(self, histData, bins=None, range=None, line='o',
+    def addHist(self, histData, bins=10, range=None, line='o',
                 label=None, **kwargs):
 
         hist = np.histogram(histData.flatten(), bins=bins, range=range,
@@ -557,7 +557,7 @@ class HistPlot(Plot):
     @classmethod
     def create(
         cls, histData, fig=None, ax=None, plot=None, makeInteractive=False,
-        plotType="linear", density=True, bins=None, range=None,
+        plotType="linear", density=True, bins=10, range=None,
         line='o', label=None, **kwargs
     ):
         if plot is None:
