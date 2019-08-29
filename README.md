@@ -43,8 +43,6 @@ The software uses the following open source packages:
 - [pandas](http://pandas.pydata.org)
 - [peakutils](https://peakutils.readthedocs.io/en/latest/)
 - [matplotlib_scalebar](https://pypi.org/project/matplotlib-scalebar/)
-- [vtk](https://vtk.org/)
-- [pyevtk](https://pypi.org/project/pyevtk/)
 - [IPython](https://ipython.org/)
 - [jupyter](https://jupyter.org/)
 
