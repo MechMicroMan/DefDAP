@@ -1,0 +1,1102 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>defdap.ebsd &#8212; DefDAP 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for defdap.ebsd</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="nn">mpl</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">matplotlib.widgets</span> <span class="k">import</span> <span class="n">Button</span>
+<span class="kn">from</span> <span class="nn">skimage</span> <span class="k">import</span> <span class="n">morphology</span> <span class="k">as</span> <span class="n">mph</span>
+
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<span class="kn">from</span> <span class="nn">defdap.quat</span> <span class="k">import</span> <span class="n">Quat</span>
+<span class="kn">from</span> <span class="nn">defdap</span> <span class="k">import</span> <span class="n">base</span>
+
+
+<div class="viewcode-block" id="Map"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map">[docs]</a><span class="k">class</span> <span class="nc">Map</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Map</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Summary</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        averageSchmidFactor (TYPE): Description</span>
+<span class="sd">        binData (TYPE): imported binary data</span>
+<span class="sd">        boundaries (TYPE): Description</span>
+<span class="sd">        cacheEulerMap (TYPE): Description</span>
+<span class="sd">        crystalSym (TYPE): Description</span>
+<span class="sd">        currGrainId (TYPE): Description</span>
+<span class="sd">        grainList (list): Description</span>
+<span class="sd">        grains (TYPE): Description</span>
+<span class="sd">        homogPoints (TYPE): Description</span>
+<span class="sd">        misOri (TYPE): Description</span>
+<span class="sd">        misOriAxis (TYPE): Description</span>
+<span class="sd">        origin (tuple): Description</span>
+<span class="sd">        plotDefault (TYPE): Description</span>
+<span class="sd">        quatArray (TYPE): Description</span>
+<span class="sd">        slipSystems (TYPE): Description</span>
+<span class="sd">        stepSize (TYPE): Description</span>
+<span class="sd">        xDim (int): x dimension of map</span>
+<span class="sd">        yDim (int): y dimension of map</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">crystalSym</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialise class</span>
+
+<span class="sd">        :param fileName: Path to file, including name, excluding extension</span>
+<span class="sd">        :type fileName: str</span>
+<span class="sd">        :param crystalSym: Crystal structure, &#39;cubic&#39; or &#39;hexagonal&#39;</span>
+<span class="sd">        :type crystalSym: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Call base class constructor</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Map</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loading EBSD data...&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span> <span class="o">=</span> <span class="kc">None</span>              <span class="c1"># (str) symmetry of material e.g. &quot;cubic&quot;, &quot;hexagonal&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span> <span class="o">=</span> <span class="kc">None</span>                    <span class="c1"># (int) dimensions of maps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stepSize</span> <span class="o">=</span> <span class="kc">None</span>                <span class="c1"># (float) step size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">binData</span> <span class="o">=</span> <span class="kc">None</span>                 <span class="c1"># imported binary data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">quatArray</span> <span class="o">=</span> <span class="kc">None</span>               <span class="c1"># (array) array of quaterions for each point of map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numPhases</span> <span class="o">=</span> <span class="kc">None</span>               <span class="c1"># (int) number of phases</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phaseArray</span> <span class="o">=</span> <span class="kc">None</span>              <span class="c1"># (array) map of phase ids</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phaseNames</span> <span class="o">=</span> <span class="p">[]</span>                <span class="c1"># (array) array of phase names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boundaries</span> <span class="o">=</span> <span class="kc">None</span>              <span class="c1"># (array) map of boundaries. -1 for a boundary, 0 otherwise</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phaseBoundaries</span> <span class="o">=</span> <span class="kc">None</span>         <span class="c1"># (array) map of phase boundaries. -1 for boundary, 0 otherwise</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grains</span> <span class="o">=</span> <span class="kc">None</span>                  <span class="c1"># (array) map of grains</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span> <span class="o">=</span> <span class="kc">None</span>               <span class="c1"># (list) list of grains</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">misOri</span> <span class="o">=</span> <span class="kc">None</span>                  <span class="c1"># (array) map of misorientation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">misOriAxis</span> <span class="o">=</span> <span class="kc">None</span>              <span class="c1"># (list of arrays) map of misorientation axis components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kam</span> <span class="o">=</span> <span class="kc">None</span>                     <span class="c1"># (array) map of kam</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactor</span> <span class="o">=</span> <span class="kc">None</span>     <span class="c1"># (array) map of average Schmid factor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipSystems</span> <span class="o">=</span> <span class="kc">None</span>             <span class="c1"># (list(list(slipSystems))) slip systems grouped by slip plane</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceColours</span> <span class="o">=</span> <span class="kc">None</span>        <span class="c1"># (list) colours used when plotting slip traces</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span> <span class="o">=</span> <span class="kc">None</span>             <span class="c1"># (int) ID of last selected grain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">origin</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>                <span class="c1"># Map origin (y, x). Used by linker class where origin is a</span>
+                                            <span class="c1"># homologue point of the maps</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotHomog</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotEulerMap</span>  <span class="c1"># Use euler map for defining homologous points</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">highlightAlpha</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadData</span><span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="n">crystalSym</span><span class="p">)</span>
+        <span class="k">return</span>
+
+<div class="viewcode-block" id="Map.plotDefault"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.plotDefault">[docs]</a>    <span class="k">def</span> <span class="nf">plotDefault</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotEulerMap</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Map.loadData"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.loadData">[docs]</a>    <span class="k">def</span> <span class="nf">loadData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">crystalSym</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load EBSD data from file</span>
+
+<span class="sd">        :param fileName: Path to file, including name, excluding extension</span>
+<span class="sd">        :type fileName: str</span>
+<span class="sd">        :param crystalSym: Crystal structure, &#39;cubic&#39; or &#39;hexagonal&#39;</span>
+<span class="sd">        :type crystalSym: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># open meta data file and read in x and y dimensions and phase names</span>
+        <span class="n">metaFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fileName</span> <span class="o">+</span> <span class="s2">&quot;.cpr&quot;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">metaFile</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;xCells&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">7</span><span class="p">:])</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;yCells&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">7</span><span class="p">:])</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="p">[:</span><span class="mi">9</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;GridDistX&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stepSize</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">10</span><span class="p">:])</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;[Phases]&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">numPhases</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">metaFile</span><span class="p">)[</span><span class="mi">6</span><span class="p">:])</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="p">[:</span><span class="mi">6</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;[Phase&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">phaseNames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">metaFile</span><span class="p">)[</span><span class="mi">14</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phaseNames</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">numPhases</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error with cpr file. Number of phases mismatch.&quot;</span><span class="p">)</span>
+
+        <span class="n">metaFile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="c1"># now read the binary .crc file</span>
+        <span class="n">fmt_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">([(</span><span class="s1">&#39;Phase&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">),</span>
+                           <span class="p">(</span><span class="s1">&#39;Eulers&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;ph1&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="s1">&#39;phi&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="s1">&#39;ph2&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">)]),</span>
+                           <span class="p">(</span><span class="s1">&#39;mad&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+                           <span class="p">(</span><span class="s1">&#39;IB2&#39;</span><span class="p">,</span> <span class="s1">&#39;uint8&#39;</span><span class="p">),</span>
+                           <span class="p">(</span><span class="s1">&#39;IB3&#39;</span><span class="p">,</span> <span class="s1">&#39;uint8&#39;</span><span class="p">),</span>
+                           <span class="p">(</span><span class="s1">&#39;IB4&#39;</span><span class="p">,</span> <span class="s1">&#39;uint8&#39;</span><span class="p">),</span>
+                           <span class="p">(</span><span class="s1">&#39;IB5&#39;</span><span class="p">,</span> <span class="s1">&#39;uint8&#39;</span><span class="p">),</span>
+                           <span class="p">(</span><span class="s1">&#39;IB6&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">)])</span>
+        <span class="c1"># for ctf files that have been converted using channel 5</span>
+        <span class="c1"># CHANGE BACK!!!!!!!</span>
+        <span class="c1"># fmt_np = np.dtype([(&#39;Phase&#39;, &#39;b&#39;),</span>
+        <span class="c1">#                    (&#39;Eulers&#39;, [(&#39;ph1&#39;, &#39;f&#39;),</span>
+        <span class="c1">#                                (&#39;phi&#39;, &#39;f&#39;),</span>
+        <span class="c1">#                                (&#39;ph2&#39;, &#39;f&#39;)]),</span>
+        <span class="c1">#                    (&#39;mad&#39;, &#39;f&#39;),</span>
+        <span class="c1">#                    (&#39;IB2&#39;, &#39;uint8&#39;),</span>
+        <span class="c1">#                    (&#39;IB3&#39;, &#39;uint8&#39;),</span>
+        <span class="c1">#                    (&#39;IB4&#39;, &#39;uint8&#39;),</span>
+        <span class="c1">#                    (&#39;IB5&#39;, &#39;uint8&#39;)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">binData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">fileName</span> <span class="o">+</span> <span class="s2">&quot;.crc&quot;</span><span class="p">,</span> <span class="n">fmt_np</span><span class="p">,</span> <span class="n">count</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span> <span class="o">=</span> <span class="n">crystalSym</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phaseArray</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">binData</span><span class="p">[(</span><span class="s1">&#39;Phase&#39;</span><span class="p">)],</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">))</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">Loaded EBSD data (dimensions: </span><span class="si">{0}</span><span class="s2"> x </span><span class="si">{1}</span><span class="s2"> pixels, step size: </span><span class="si">{2}</span><span class="s2"> um)&quot;</span><span class="o">.</span>
+              <span class="nb">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stepSize</span><span class="p">))</span>
+
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.plotBandContrastMap"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.plotBandContrastMap">[docs]</a>    <span class="k">def</span> <span class="nf">plotBandContrastMap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot band contrast map</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkDataLoaded</span><span class="p">()</span>
+
+        <span class="n">bcmap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">binData</span><span class="p">[(</span><span class="s1">&#39;IB2&#39;</span><span class="p">)],</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">bcmap</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.plotEulerMap"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.plotEulerMap">[docs]</a>    <span class="k">def</span> <span class="nf">plotEulerMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">updateCurrent</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">highlightGrains</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">highlightColours</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot an orientation map in Euler colouring</span>
+
+<span class="sd">        :param updateCurrent: Description (optional)</span>
+<span class="sd">        :type updateCurrent: bool</span>
+<span class="sd">        :param highlightGrains: Grain ids of grains to highlight (optional)</span>
+<span class="sd">        :type highlightGrains: list</span>
+<span class="sd">        :param highlightColours: Colour to highlight grain (optional)</span>
+<span class="sd">        :type highlightColours: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkDataLoaded</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">updateCurrent</span><span class="p">:</span>
+            <span class="n">emap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">binData</span><span class="p">[</span><span class="s1">&#39;Eulers&#39;</span><span class="p">][</span><span class="s1">&#39;ph1&#39;</span><span class="p">],</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">binData</span><span class="p">[</span><span class="s1">&#39;Eulers&#39;</span><span class="p">][</span><span class="s1">&#39;phi&#39;</span><span class="p">],</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">binData</span><span class="p">[</span><span class="s1">&#39;Eulers&#39;</span><span class="p">][</span><span class="s1">&#39;ph2&#39;</span><span class="p">]]))</span>
+            <span class="c1"># this is the normalization for the</span>
+            <span class="n">norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">]),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">))</span>
+            <span class="n">norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">norm</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+            <span class="n">eumap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">emap</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+            <span class="c1"># make non-indexed points green</span>
+            <span class="n">eumap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">eumap</span> <span class="o">!=</span> <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">eumap</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">cacheEulerMap</span> <span class="o">=</span> <span class="n">eumap</span> <span class="o">/</span> <span class="n">norm</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cacheEulerMap</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="s1">&#39;equal&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">highlightGrains</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">highlightGrains</span><span class="p">(</span><span class="n">highlightGrains</span><span class="p">,</span> <span class="n">highlightColours</span><span class="p">)</span>
+
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.plotPhaseMap"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.plotPhaseMap">[docs]</a>    <span class="k">def</span> <span class="nf">plotPhaseMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;viridis&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot a phase map</span>
+
+<span class="sd">        :param cmap: Colour map (optional)</span>
+<span class="sd">        :type cmap: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">numPhases</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Non-indexed&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">phaseNames</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="n">im</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phaseArray</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">numPhases</span><span class="p">)</span>
+
+        <span class="c1"># Find colour values for phases</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="n">im</span><span class="o">.</span><span class="n">cmap</span><span class="p">(</span><span class="n">im</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">value</span><span class="p">))</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">]</span>
+
+        <span class="c1"># Get colour patches for each phase and make legend</span>
+        <span class="n">patches</span> <span class="o">=</span> <span class="p">[</span><span class="n">mpl</span><span class="o">.</span><span class="n">patches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">))]</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="o">=</span><span class="n">patches</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">borderaxespad</span><span class="o">=</span><span class="mf">0.</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.calcKam"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.calcKam">[docs]</a>    <span class="k">def</span> <span class="nf">calcKam</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculates Kernel Average Misorientaion (KAM) for the EBSD map. Crystal symmetric</span>
+<span class="sd">           equivalences are not considered. Stores result in self.kam.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">quatComps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quatArray</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">quat</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+                <span class="n">quatComps</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">quat</span><span class="o">.</span><span class="n">quatCoef</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">kam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">))</span>
+
+        <span class="c1"># Start with rows. Caluculate misorientation with neigbouring rows.</span>
+        <span class="c1"># First and last row only in one direction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kam</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;ij,ij-&gt;j&quot;</span><span class="p">,</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kam</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;ij,ij-&gt;j&quot;</span><span class="p">,</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kam</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;ij,ij-&gt;j&quot;</span><span class="p">,</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]))</span> <span class="o">+</span>
+                              <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;ij,ij-&gt;j&quot;</span><span class="p">,</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:])))</span> <span class="o">/</span> <span class="mi">2</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">kam</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">kam</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Do the same for columns</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kam</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;ij,ij-&gt;j&quot;</span><span class="p">,</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kam</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;ij,ij-&gt;j&quot;</span><span class="p">,</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="p">:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="p">:,</span> <span class="o">-</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kam</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;ij,ij-&gt;j&quot;</span><span class="p">,</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]))</span> <span class="o">+</span>
+                               <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;ij,ij-&gt;j&quot;</span><span class="p">,</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">quatComps</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])))</span> <span class="o">/</span> <span class="mi">2</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">kam</span> <span class="o">/=</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kam</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">kam</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span></div>
+
+<div class="viewcode-block" id="Map.plotKamMap"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.plotKamMap">[docs]</a>    <span class="k">def</span> <span class="nf">plotKamMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot Kernel Average Misorientaion (KAM) for the EBSD map.</span>
+
+<span class="sd">        :param vmin: Minimum of colour scale (optional)</span>
+<span class="sd">        :type vmin: float</span>
+<span class="sd">        :param vmax: Maximum of colour scale (optional)</span>
+<span class="sd">        :type vmax: float</span>
+<span class="sd">        :param cmap: Colour map (optional)</span>
+<span class="sd">        :type cmap: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">calcKam</span><span class="p">()</span>
+        <span class="c1"># Convert to degrees and plot</span>
+        <span class="n">kam</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kam</span><span class="p">)</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">kam</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Map.checkDataLoaded"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.checkDataLoaded">[docs]</a>    <span class="k">def</span> <span class="nf">checkDataLoaded</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Checks if EBSD data is loaded</span>
+
+<span class="sd">        :return: True if data loaded</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">binData</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Data not loaded&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="Map.buildQuatArray"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.buildQuatArray">[docs]</a>    <span class="k">def</span> <span class="nf">buildQuatArray</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Build quaternion array</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Building quaternion array...&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkDataLoaded</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">quatArray</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">eulerArray</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">binData</span><span class="p">[(</span><span class="s1">&#39;Eulers&#39;</span><span class="p">)]</span>
+            <span class="c1"># reshape to map dimensions</span>
+            <span class="n">eulerArray</span> <span class="o">=</span> <span class="n">eulerArray</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">))</span>
+            <span class="c1"># this flattens the structures the Euler angles are stored into a normal array</span>
+            <span class="n">eulerArray</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">eulerArray</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+            <span class="n">eulerArray</span> <span class="o">=</span> <span class="n">eulerArray</span><span class="o">.</span><span class="n">transpose</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="c1"># create the array of quat objects</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">quatArray</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">createManyQuats</span><span class="p">(</span><span class="n">eulerArray</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.findBoundaries"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.findBoundaries">[docs]</a>    <span class="k">def</span> <span class="nf">findBoundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">boundDef</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find grain boundaries</span>
+
+<span class="sd">        :param boundDef: critical misorientation</span>
+<span class="sd">        :type boundDef: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buildQuatArray</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Finding boundaries...&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="n">syms</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">symEqv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span><span class="p">)</span>
+        <span class="n">numSyms</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">syms</span><span class="p">)</span>
+
+        <span class="c1"># array to store quat components of initial and symmetric equivalents</span>
+        <span class="n">quatComps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">numSyms</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">))</span>
+
+        <span class="c1"># populate with initial quat components</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quatArray</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">quat</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+                <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">quat</span><span class="o">.</span><span class="n">quatCoef</span>
+
+        <span class="c1"># loop of over symmetries and apply to initial quat components</span>
+        <span class="c1"># (excluding first symmetry as this is the identity transformation)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sym</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">syms</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+            <span class="c1"># sym[i] * quat for all points (* is quaternion product)</span>
+            <span class="n">quatComps</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span>
+                                     <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+            <span class="n">quatComps</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span>
+                                     <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">+</span> <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">quatComps</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span>
+                                     <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+            <span class="n">quatComps</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">+</span> <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span>
+                                     <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">sym</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="c1"># swap into positve hemisphere if required</span>
+            <span class="n">quatComps</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="n">quatComps</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">quatComps</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="n">quatComps</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Arrays to store neigbour misorientation in positive x and y direction</span>
+        <span class="n">misOrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numSyms</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">))</span>
+        <span class="n">misOriy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numSyms</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">))</span>
+
+        <span class="c1"># loop over symmetries calculating misorientation to initial</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numSyms</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xDim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">misOrix</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;ij,ij-&gt;j&quot;</span><span class="p">,</span> <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="n">j</span><span class="p">],</span> <span class="n">quatComps</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]))</span>
+
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">misOriy</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s2">&quot;ij,ij-&gt;j&quot;</span><span class="p">,</span> <span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="n">j</span><span class="p">,</span> <span class="p">:],</span> <span class="n">quatComps</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]))</span>
+
+        <span class="n">misOrix</span><span class="p">[</span><span class="n">misOrix</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">misOriy</span><span class="p">[</span><span class="n">misOriy</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># find min misorientation (max here as misorientaion is cos of this)</span>
+        <span class="n">misOrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">misOrix</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">misOriy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">misOriy</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># convert to misorientation in degrees</span>
+        <span class="n">misOrix</span> <span class="o">=</span> <span class="mi">360</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">misOrix</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">misOriy</span> <span class="o">=</span> <span class="mi">360</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">misOriy</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+
+        <span class="c1"># set boundary locations where misOrix or misOriy are greater than set value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boundaries</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">misOrix</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">boundDef</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">misOriy</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">boundDef</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">boundaries</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.findPhaseBoundaries"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.findPhaseBoundaries">[docs]</a>    <span class="k">def</span> <span class="nf">findPhaseBoundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">treatNonIndexedAs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Finds boundaries in the phase map</span>
+
+<span class="sd">        :param treatNonIndexedAs: value to assign to non-indexed points, defaults to -1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Finding phase boundaries...&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># make new array shifted by one to left and up</span>
+        <span class="n">phaseArrayShifted</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">),</span> <span class="o">-</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">phaseArrayShifted</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">phaseArray</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span>
+        
+        <span class="k">if</span> <span class="n">treatNonIndexedAs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">phaseArray</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">phaseArray</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">treatNonIndexedAs</span>
+            <span class="n">phaseArrayShifted</span><span class="p">[</span><span class="n">phaseArrayShifted</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">treatNonIndexedAs</span>
+
+        <span class="c1"># where shifted array not equal to starting array, set to -1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phaseBoundaries</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phaseBoundaries</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">not_equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phaseArray</span><span class="p">,</span> <span class="n">phaseArrayShifted</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Map.plotPhaseBoundaryMap"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.plotPhaseBoundaryMap">[docs]</a>    <span class="k">def</span> <span class="nf">plotPhaseBoundaryMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dilate</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot phase boundary map</span>
+
+<span class="sd">        :param dilate: Dilate boundary by one pixel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+
+        <span class="n">boundariesImage</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">phaseBoundaries</span>
+
+        <span class="k">if</span> <span class="n">dilate</span><span class="p">:</span>
+            <span class="n">boundariesImage</span> <span class="o">=</span> <span class="n">mph</span><span class="o">.</span><span class="n">binary_dilation</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">phaseBoundaries</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">boundariesImage</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Map.plotBoundaryMap"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.plotBoundaryMap">[docs]</a>    <span class="k">def</span> <span class="nf">plotBoundaryMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dilate</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot grain boundary map</span>
+
+<span class="sd">        :param dilate: Dilate boundary by one pixel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+
+        <span class="n">boundariesImage</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">boundaries</span>
+
+        <span class="k">if</span> <span class="n">dilate</span><span class="p">:</span>
+            <span class="n">boundariesImage</span> <span class="o">=</span> <span class="n">mph</span><span class="o">.</span><span class="n">binary_dilation</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">boundaries</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">boundariesImage</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Map.findGrains"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.findGrains">[docs]</a>    <span class="k">def</span> <span class="nf">findGrains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">minGrainSize</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find grains and assign ids</span>
+
+<span class="sd">        :param minGrainSize: Minimum grain area in pixels</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Finding grains...&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Initialise the grain map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grains</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boundaries</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># List of points where no grain has be set yet</span>
+        <span class="n">unknownPoints</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grains</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># Start counter for grains</span>
+        <span class="n">grainIndex</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Loop until all points (except boundaries) have been assigned to a grain or ignored</span>
+        <span class="k">while</span> <span class="n">unknownPoints</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Flood fill first unknown point and return grain object</span>
+            <span class="n">currentGrain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">floodFill</span><span class="p">(</span><span class="n">unknownPoints</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">unknownPoints</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">grainIndex</span><span class="p">)</span>
+
+            <span class="n">grainSize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">currentGrain</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">grainSize</span> <span class="o">&lt;</span> <span class="n">minGrainSize</span><span class="p">:</span>
+                <span class="c1"># if grain size less than minimum, ignore grain and set values in grain map to -2</span>
+                <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">currentGrain</span><span class="o">.</span><span class="n">coordList</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># add grain and size to lists and increment grain label</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">currentGrain</span><span class="p">)</span>
+                <span class="n">grainIndex</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># update unknown points</span>
+            <span class="n">unknownPoints</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grains</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.plotGrainMap"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.plotGrainMap">[docs]</a>    <span class="k">def</span> <span class="nf">plotGrainMap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot a map with grains coloured</span>
+
+<span class="sd">        :return: Figure</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.locateGrainID"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.locateGrainID">[docs]</a>    <span class="k">def</span> <span class="nf">locateGrainID</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">clickEvent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">displaySelected</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Interactive plot for identifying grains</span>
+
+<span class="sd">        :param displaySelected: Plot slip traces for selected grain</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="c1"># reset current selected grain and plot euler map with click handler</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotEulerMap</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">clickEvent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># default click handler which highlights grain and prints id</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_connect</span><span class="p">(</span>
+                <span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span>
+                <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">clickGrainId</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">displaySelected</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># click handler loaded in as parameter. Pass current map object to it.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_connect</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">clickEvent</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="p">))</span>
+
+        <span class="c1"># unset figure for plotting grains</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainFig</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainAx</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="Map.clickGrainId"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.clickGrainId">[docs]</a>    <span class="k">def</span> <span class="nf">clickGrainId</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">displaySelected</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">inaxes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># grain id of selected grain</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">ydata</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">xdata</span><span class="p">)]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Grain ID: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">))</span>
+
+            <span class="c1"># clear current axis and redraw euler map with highlighted grain overlay</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotEulerMap</span><span class="p">(</span><span class="n">updateCurrent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">highlightGrains</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">displaySelected</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainFig</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">grainFig</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainAx</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">]</span><span class="o">.</span><span class="n">calcSlipTraces</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainAx</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">]</span><span class="o">.</span><span class="n">plotSlipTraces</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">grainAx</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainFig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Map.floodFill"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.floodFill">[docs]</a>    <span class="k">def</span> <span class="nf">floodFill</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">grainIndex</span><span class="p">):</span>
+        <span class="n">currentGrain</span> <span class="o">=</span> <span class="n">Grain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="n">currentGrain</span><span class="o">.</span><span class="n">addPoint</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">quatArray</span><span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">])</span>
+
+        <span class="n">edge</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)]</span>
+        <span class="n">grain</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="n">grainIndex</span>
+        <span class="k">while</span> <span class="n">edge</span><span class="p">:</span>
+            <span class="n">newedge</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="ow">in</span> <span class="n">edge</span><span class="p">:</span>
+                <span class="n">moves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)])</span>
+
+                <span class="n">movesIndexShift</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">moves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">moves</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">movesIndexShift</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">elif</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">moves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">moves</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">movesIndexShift</span> <span class="o">=</span> <span class="mi">1</span>
+
+                <span class="k">if</span> <span class="n">y</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">moves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">moves</span><span class="p">,</span> <span class="mi">3</span> <span class="o">-</span> <span class="n">movesIndexShift</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">y</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">moves</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">moves</span><span class="p">,</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">movesIndexShift</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="ow">in</span> <span class="n">moves</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">currentGrain</span><span class="o">.</span><span class="n">addPoint</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">quatArray</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">s</span><span class="p">])</span>
+                        <span class="n">newedge</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+                        <span class="n">grain</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">grainIndex</span>
+                    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="p">(</span><span class="n">s</span> <span class="o">&gt;</span> <span class="n">x</span> <span class="ow">or</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="n">y</span><span class="p">):</span>
+                        <span class="n">currentGrain</span><span class="o">.</span><span class="n">addPoint</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">quatArray</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">s</span><span class="p">])</span>
+                        <span class="n">grain</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">grainIndex</span>
+
+            <span class="k">if</span> <span class="n">newedge</span> <span class="o">==</span> <span class="p">[]:</span>
+                <span class="k">return</span> <span class="n">currentGrain</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">edge</span> <span class="o">=</span> <span class="n">newedge</span></div>
+
+<div class="viewcode-block" id="Map.calcGrainAvOris"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.calcGrainAvOris">[docs]</a>    <span class="k">def</span> <span class="nf">calcGrainAvOris</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">grain</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">:</span>
+            <span class="n">grain</span><span class="o">.</span><span class="n">calcAverageOri</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Map.calcGrainMisOri"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.calcGrainMisOri">[docs]</a>    <span class="k">def</span> <span class="nf">calcGrainMisOri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">calcAxis</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate grain misorientation</span>
+
+<span class="sd">        :param calcAxis: Calculate the misorientation axis also</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Calculating grain misorientations...&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">grain</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">:</span>
+            <span class="n">grain</span><span class="o">.</span><span class="n">buildMisOriList</span><span class="p">(</span><span class="n">calcAxis</span><span class="o">=</span><span class="n">calcAxis</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.plotMisOriMap"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.plotMisOriMap">[docs]</a>    <span class="k">def</span> <span class="nf">plotMisOriMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">plotGBs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">boundaryColour</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                      <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span> <span class="n">cBarLabel</span><span class="o">=</span><span class="s2">&quot;ROD (degrees)&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot misorientation map</span>
+
+<span class="sd">        :param component: 0: misorientation, 1, 2, 3: rotation about x, y, z</span>
+<span class="sd">        :param plotGBs: Plot grain boundaries</span>
+<span class="sd">        :param boundaryColour: Colour of grain boundary</span>
+<span class="sd">        :param vmin: Minimum of colour scale (optional)</span>
+<span class="sd">        :type vmin: float</span>
+<span class="sd">        :param vmax: Maximum of colour scale (optional)</span>
+<span class="sd">        :type vmax: float</span>
+<span class="sd">        :param cmap: Colour map (optional)</span>
+<span class="sd">        :type cmap: str</span>
+<span class="sd">        :param cBarLabel: Label for colour bar</span>
+<span class="sd">        :return: Figure</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">misOri</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">])</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">component</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>
+            <span class="k">for</span> <span class="n">grain</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">coord</span><span class="p">,</span> <span class="n">misOriAxis</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">coordList</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">misOriAxisList</span><span class="p">)):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">misOri</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">misOriAxis</span><span class="p">[</span><span class="n">component</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+
+            <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">misOri</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;None&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">grain</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">coord</span><span class="p">,</span> <span class="n">misOri</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">coordList</span><span class="p">,</span> <span class="n">grain</span><span class="o">.</span><span class="n">misOriList</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">misOri</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">misOri</span>
+
+            <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">misOri</span><span class="p">)</span> <span class="o">*</span> <span class="mi">360</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;None&#39;</span><span class="p">,</span>
+                       <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">cBarLabel</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">plotGBs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotGBs</span><span class="p">(</span><span class="n">colour</span><span class="o">=</span><span class="n">boundaryColour</span><span class="p">)</span>
+
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Map.loadSlipSystems"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.loadSlipSystems">[docs]</a>    <span class="k">def</span> <span class="nf">loadSlipSystems</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">cOverA</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipSystems</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceColours</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">SlipSystem</span><span class="o">.</span><span class="n">loadSlipSystems</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span><span class="p">,</span> <span class="n">cOverA</span><span class="o">=</span><span class="n">cOverA</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">grain</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">:</span>
+                <span class="n">grain</span><span class="o">.</span><span class="n">slipSystems</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipSystems</span></div>
+
+<div class="viewcode-block" id="Map.printSlipSystems"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.printSlipSystems">[docs]</a>    <span class="k">def</span> <span class="nf">printSlipSystems</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Print a list of slip planes (with colours) and slip directions</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">ssGroup</span><span class="p">,</span> <span class="n">colour</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slipSystems</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceColours</span><span class="p">)):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Plane </span><span class="si">{0}</span><span class="s1">: </span><span class="si">{1}</span><span class="se">\t</span><span class="s1">Colour: </span><span class="si">{2}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ssGroup</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">slipPlaneLabel</span><span class="p">,</span> <span class="n">colour</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">ss</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ssGroup</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  Direction </span><span class="si">{0}</span><span class="s1">: </span><span class="si">{1}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">ss</span><span class="o">.</span><span class="n">slipDirLabel</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Map.calcAverageGrainSchmidFactors"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.calcAverageGrainSchmidFactors">[docs]</a>    <span class="k">def</span> <span class="nf">calcAverageGrainSchmidFactors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loadVector</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">slipSystems</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Calculating grain average Schmid factors...&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">grain</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">:</span>
+            <span class="n">grain</span><span class="o">.</span><span class="n">calcAverageSchmidFactors</span><span class="p">(</span><span class="n">loadVector</span><span class="o">=</span><span class="n">loadVector</span><span class="p">,</span> <span class="n">slipSystems</span><span class="o">=</span><span class="n">slipSystems</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Map.plotAverageGrainSchmidFactorsMap"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Map.plotAverageGrainSchmidFactorsMap">[docs]</a>    <span class="k">def</span> <span class="nf">plotAverageGrainSchmidFactorsMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plotGBs</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param plotGBs:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check that grains have been detected in the map</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkGrainsDetected</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">grain</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">:</span>
+            <span class="c1"># max Schmid factor</span>
+            <span class="n">currentSchmidFactor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">averageSchmidFactors</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+            <span class="c1"># currentSchmidFactor = grain.averageSchmidFactors[0][0]</span>
+            <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">grain</span><span class="o">.</span><span class="n">coordList</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactor</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">currentSchmidFactor</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactor</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactor</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactor</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;Schmid factor&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">plotGBs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotGBs</span><span class="p">()</span>
+
+        <span class="k">return</span></div></div>
+
+
+<div class="viewcode-block" id="Grain"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Grain">[docs]</a><span class="k">class</span> <span class="nc">Grain</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Grain</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ebsdMap</span><span class="p">):</span>
+        <span class="c1"># Call base class constructor</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Grain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span> <span class="o">=</span> <span class="n">ebsdMap</span><span class="o">.</span><span class="n">crystalSym</span>    <span class="c1"># symmetry of material e.g. &quot;cubic&quot;, &quot;hexagonal&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipSystems</span> <span class="o">=</span> <span class="n">ebsdMap</span><span class="o">.</span><span class="n">slipSystems</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span> <span class="o">=</span> <span class="n">ebsdMap</span>                  <span class="c1"># ebsd map this grain is a member of</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">quatList</span> <span class="o">=</span> <span class="p">[]</span>                      <span class="c1"># list of quats</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">misOriList</span> <span class="o">=</span> <span class="kc">None</span>                  <span class="c1"># list of misOri at each point in grain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">misOriAxisList</span> <span class="o">=</span> <span class="kc">None</span>              <span class="c1"># list of misOri axes at each point in grain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refOri</span> <span class="o">=</span> <span class="kc">None</span>                      <span class="c1"># (quat) average ori of grain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">averageMisOri</span> <span class="o">=</span> <span class="kc">None</span>               <span class="c1"># average misOri of grain</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactors</span> <span class="o">=</span> <span class="kc">None</span>        <span class="c1"># list of list Schmid factors (grouped by slip plane)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceAngles</span> <span class="o">=</span> <span class="kc">None</span>             <span class="c1"># list of slip trace angles</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceInclinations</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># quat is a quaterion and coord is a tuple (x, y)</span>
+<div class="viewcode-block" id="Grain.addPoint"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Grain.addPoint">[docs]</a>    <span class="k">def</span> <span class="nf">addPoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">quat</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coordList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">quatList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">quat</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Grain.calcAverageOri"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Grain.calcAverageOri">[docs]</a>    <span class="k">def</span> <span class="nf">calcAverageOri</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">quatCompsSym</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">calcSymEqvs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quatList</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">refOri</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">calcAverageOri</span><span class="p">(</span><span class="n">quatCompsSym</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Grain.buildMisOriList"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Grain.buildMisOriList">[docs]</a>    <span class="k">def</span> <span class="nf">buildMisOriList</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">calcAxis</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">quatCompsSym</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">calcSymEqvs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quatList</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">refOri</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">refOri</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">calcAverageOri</span><span class="p">(</span><span class="n">quatCompsSym</span><span class="p">)</span>
+
+        <span class="n">misOriArray</span><span class="p">,</span> <span class="n">minQuatComps</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">calcMisOri</span><span class="p">(</span><span class="n">quatCompsSym</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">refOri</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">averageMisOri</span> <span class="o">=</span> <span class="n">misOriArray</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">misOriList</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">misOriArray</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">calcAxis</span><span class="p">:</span>
+            <span class="c1"># Now for axis calulation</span>
+            <span class="n">refOriInv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">refOri</span><span class="o">.</span><span class="n">conjugate</span>
+
+            <span class="n">misOriAxis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="n">minQuatComps</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">Dq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="n">minQuatComps</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+            <span class="c1"># refOriInv * minQuat for all points (* is quaternion product)</span>
+            <span class="c1"># change to minQuat * refOriInv</span>
+            <span class="n">Dq</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">refOriInv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">refOriInv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span>
+                        <span class="n">refOriInv</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">refOriInv</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:])</span>
+
+            <span class="n">Dq</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">refOriInv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">refOriInv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span>
+                        <span class="n">refOriInv</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">refOriInv</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:])</span>
+
+            <span class="n">Dq</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">refOriInv</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">refOriInv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span>
+                        <span class="n">refOriInv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">refOriInv</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
+
+            <span class="n">Dq</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">refOriInv</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span> <span class="n">refOriInv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:]</span> <span class="o">+</span>
+                        <span class="n">refOriInv</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">refOriInv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">minQuatComps</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:])</span>
+
+            <span class="n">Dq</span><span class="p">[:,</span> <span class="n">Dq</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">Dq</span><span class="p">[:,</span> <span class="n">Dq</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># numpy broadcasting taking care of different array sizes</span>
+            <span class="n">misOriAxis</span><span class="p">[:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">Dq</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">4</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">Dq</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">Dq</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="mi">2</span><span class="p">))</span>
+
+            <span class="c1"># hack it back into a list. Need to change self.*List to be arrays, it was a bad decision to</span>
+            <span class="c1"># make them lists in the beginning</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">misOriAxisList</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">misOriAxis</span><span class="o">.</span><span class="n">transpose</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">misOriAxisList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Grain.plotRefOri"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Grain.plotRefOri">[docs]</a>    <span class="k">def</span> <span class="nf">plotRefOri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;+&#39;</span><span class="p">):</span>
+        <span class="n">Quat</span><span class="o">.</span><span class="n">plotIPF</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">refOri</span><span class="p">],</span> <span class="n">direction</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="n">marker</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Grain.plotOriSpread"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Grain.plotOriSpread">[docs]</a>    <span class="k">def</span> <span class="nf">plotOriSpread</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="p">):</span>
+        <span class="n">Quat</span><span class="o">.</span><span class="n">plotIPF</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quatList</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="n">marker</span><span class="p">)</span></div>
+
+    <span class="c1"># component</span>
+    <span class="c1"># 0 = misOri</span>
+    <span class="c1"># {1-3} = misOri axis {1-3}</span>
+    <span class="c1"># 4 = all</span>
+    <span class="c1"># 5 = all axis</span>
+<div class="viewcode-block" id="Grain.plotMisOri"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Grain.plotMisOri">[docs]</a>    <span class="k">def</span> <span class="nf">plotMisOri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vRange</span><span class="o">=</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
+                   <span class="n">cmap</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;viridis&quot;</span><span class="p">,</span> <span class="s2">&quot;bwr&quot;</span><span class="p">],</span> <span class="n">plotSlipTraces</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">component</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
+
+        <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extremeCoords</span>
+
+        <span class="k">if</span> <span class="n">component</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]:</span>
+            <span class="c1"># subplots</span>
+            <span class="n">grainMisOri</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">-</span> <span class="n">y0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">-</span> <span class="n">x0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">coord</span><span class="p">,</span> <span class="n">misOri</span><span class="p">,</span> <span class="n">misOriAxis</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordList</span><span class="p">,</span>
+                                                 <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">misOriList</span><span class="p">)</span> <span class="o">*</span> <span class="mi">360</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+                                                 <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">misOriAxisList</span><span class="p">)</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">):</span>
+                <span class="n">grainMisOri</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y0</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x0</span><span class="p">]</span> <span class="o">=</span> <span class="n">misOri</span>
+                <span class="n">grainMisOri</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">4</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y0</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x0</span><span class="p">]</span> <span class="o">=</span> <span class="n">misOriAxis</span>
+
+            <span class="n">f</span><span class="p">,</span> <span class="p">((</span><span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">),</span> <span class="p">(</span><span class="n">ax3</span><span class="p">,</span> <span class="n">ax4</span><span class="p">))</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">img</span> <span class="o">=</span> <span class="n">ax1</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">grainMisOri</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Grain misorientation ($^\circ$)&quot;</span><span class="p">)</span>
+            <span class="n">vmin</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">vRange</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="o">-</span><span class="n">vRange</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">img</span> <span class="o">=</span> <span class="n">ax2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">grainMisOri</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vRange</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;x rotation ($^\circ$)&quot;</span><span class="p">)</span>
+            <span class="n">vmin</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">vRange</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="o">-</span><span class="n">vRange</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">img</span> <span class="o">=</span> <span class="n">ax3</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">grainMisOri</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vRange</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax3</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;y rotation ($^\circ$)&quot;</span><span class="p">)</span>
+            <span class="n">vmin</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">vRange</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="o">-</span><span class="n">vRange</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">img</span> <span class="o">=</span> <span class="n">ax4</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">grainMisOri</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vRange</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax4</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;z rotation ($^\circ$)&quot;</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">,</span> <span class="n">ax3</span><span class="p">,</span> <span class="n">ax4</span><span class="p">):</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([])</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># single plot</span>
+            <span class="c1"># initialise array with nans so area not in grain displays white</span>
+            <span class="n">grainMisOri</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">y0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xmax</span> <span class="o">-</span> <span class="n">x0</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">component</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>
+                <span class="n">plotData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">misOriAxisList</span><span class="p">)[:,</span> <span class="n">component</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">plotData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">misOriList</span><span class="p">)</span> <span class="o">*</span> <span class="mi">360</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+
+            <span class="k">for</span> <span class="n">coord</span><span class="p">,</span> <span class="n">misOri</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coordList</span><span class="p">,</span> <span class="n">plotData</span><span class="p">):</span>
+                <span class="n">grainMisOri</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y0</span><span class="p">,</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x0</span><span class="p">]</span> <span class="o">=</span> <span class="n">misOri</span>
+
+            <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">grainMisOri</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;ROD (degrees)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">([])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">([])</span>
+
+            <span class="k">if</span> <span class="n">plotSlipTraces</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">plotSlipTraces</span><span class="p">()</span>
+
+        <span class="k">return</span></div>
+
+    <span class="c1"># define load axis as unit vector</span>
+<div class="viewcode-block" id="Grain.calcAverageSchmidFactors"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Grain.calcAverageSchmidFactors">[docs]</a>    <span class="k">def</span> <span class="nf">calcAverageSchmidFactors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loadVector</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">slipSystems</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">slipSystems</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">slipSystems</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipSystems</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">refOri</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">calcAverageOri</span><span class="p">()</span>
+
+        <span class="c1"># orientation of grain</span>
+        <span class="n">grainAvOri</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">refOri</span>
+
+        <span class="c1"># Transform the load vector into crystal coordinates</span>
+        <span class="n">loadVectorCrystal</span> <span class="o">=</span> <span class="n">grainAvOri</span><span class="o">.</span><span class="n">transformVector</span><span class="p">(</span><span class="n">loadVector</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># flatten list of lists</span>
+        <span class="c1"># slipSystems = chain.from_iterable(slipSystems)</span>
+
+        <span class="c1"># Loop over groups of slip systems with same slip plane</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">slipSystemGroup</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">slipSystems</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactors</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+            <span class="c1"># Then loop over individual slip systems</span>
+            <span class="k">for</span> <span class="n">slipSystem</span> <span class="ow">in</span> <span class="n">slipSystemGroup</span><span class="p">:</span>
+                <span class="n">schmidFactor</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">loadVectorCrystal</span><span class="p">,</span> <span class="n">slipSystem</span><span class="o">.</span><span class="n">slipPlane</span><span class="p">)</span> <span class="o">*</span>
+                                   <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">loadVectorCrystal</span><span class="p">,</span> <span class="n">slipSystem</span><span class="o">.</span><span class="n">slipDir</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">schmidFactor</span><span class="p">)</span>
+
+        <span class="k">return</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">slipTraces</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceAngles</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">calcSlipTraces</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceAngles</span>
+
+<div class="viewcode-block" id="Grain.printSlipTraces"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Grain.printSlipTraces">[docs]</a>    <span class="k">def</span> <span class="nf">printSlipTraces</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Print a list of slip planes (with colours) and slip directions</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">calcSlipTraces</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">calcAverageSchmidFactors</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">ssGroup</span><span class="p">,</span> <span class="n">colour</span><span class="p">,</span> <span class="n">sfGroup</span><span class="p">,</span> <span class="n">slipTrace</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slipSystems</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">slipTraceColours</span><span class="p">,</span>
+                                                       <span class="bp">self</span><span class="o">.</span><span class="n">averageSchmidFactors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipTraces</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="se">\t</span><span class="s1">Colour: </span><span class="si">{1}</span><span class="se">\t</span><span class="s1">Angle: </span><span class="si">{2:.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ssGroup</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">slipPlaneLabel</span><span class="p">,</span> <span class="n">colour</span><span class="p">,</span> <span class="n">slipTrace</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">ss</span><span class="p">,</span> <span class="n">sf</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ssGroup</span><span class="p">,</span> <span class="n">sfGroup</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  </span><span class="si">{0}</span><span class="s1">   SF: </span><span class="si">{1:.3f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ss</span><span class="o">.</span><span class="n">slipDirLabel</span><span class="p">,</span> <span class="n">sf</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Grain.calcSlipTraces"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Grain.calcSlipTraces">[docs]</a>    <span class="k">def</span> <span class="nf">calcSlipTraces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slipSystems</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">slipSystems</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">slipSystems</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipSystems</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">refOri</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">calcAverageOri</span><span class="p">()</span>
+
+        <span class="n">screenPlaneNorm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>   <span class="c1"># in sample frame</span>
+
+        <span class="n">grainAvOri</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">refOri</span>   <span class="c1"># orientation of grain</span>
+
+        <span class="n">screenPlaneNormCrystal</span> <span class="o">=</span> <span class="n">grainAvOri</span><span class="o">.</span><span class="n">transformVector</span><span class="p">(</span><span class="n">screenPlaneNorm</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceAngles</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceInclinations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Loop over each group of slip systems</span>
+        <span class="k">for</span> <span class="n">slipSystemGroup</span> <span class="ow">in</span> <span class="n">slipSystems</span><span class="p">:</span>
+            <span class="c1"># Take slip plane from first in group</span>
+            <span class="n">slipPlaneNorm</span> <span class="o">=</span> <span class="n">slipSystemGroup</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">slipPlane</span>
+            <span class="c1"># planeLabel = slipSystemGroup[0].slipPlaneLabel</span>
+
+            <span class="c1"># Calculate intersection of slip plane with plane of screen</span>
+            <span class="n">intersectionCrystal</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">screenPlaneNormCrystal</span><span class="p">,</span> <span class="n">slipPlaneNorm</span><span class="p">)</span>
+
+            <span class="c1"># Calculate angle between slip plane and screen plane</span>
+            <span class="n">inclination</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">screenPlaneNormCrystal</span><span class="p">,</span> <span class="n">slipPlaneNorm</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">inclination</span> <span class="o">&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">inclination</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">-</span> <span class="n">inclination</span>
+            <span class="c1"># print(&quot;{} inclination: {:.1f}&quot;.format(planeLabel, inclination * 180 / np.pi))</span>
+
+            <span class="c1"># Transform intersection back into sample coordinates</span>
+            <span class="n">intersection</span> <span class="o">=</span> <span class="n">grainAvOri</span><span class="o">.</span><span class="n">conjugate</span><span class="o">.</span><span class="n">transformVector</span><span class="p">(</span><span class="n">intersectionCrystal</span><span class="p">)</span>
+            <span class="n">intersection</span> <span class="o">=</span> <span class="n">intersection</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">intersection</span><span class="p">,</span> <span class="n">intersection</span><span class="p">))</span>  <span class="c1"># normalise</span>
+
+            <span class="c1"># Calculate trace angle. Starting vertical and proceeding counter clockwise</span>
+            <span class="k">if</span> <span class="n">intersection</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">intersection</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">traceAngle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">intersection</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])))</span>
+
+            <span class="c1"># Append to list</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceAngles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">traceAngle</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceInclinations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inclination</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Linker"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Linker">[docs]</a><span class="k">class</span> <span class="nc">Linker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for linking multiple ebsd maps of the same region for analysis of deformation</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        ebsdMaps (list(ebsd.Map)): List of ebsd.Map objects that are linked</span>
+<span class="sd">        links (list): List of grain link. Each link is stored as a tuple of grain IDs (one from each</span>
+<span class="sd">                      map stored in same order of maps)</span>
+<span class="sd">        numMaps (TYPE): Number of linked maps</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">maps</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMaps</span> <span class="o">=</span> <span class="n">maps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numMaps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">maps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">links</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">return</span>
+
+<div class="viewcode-block" id="Linker.setOrigin"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Linker.setOrigin">[docs]</a>    <span class="k">def</span> <span class="nf">setOrigin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">ebsdMap</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMaps</span><span class="p">:</span>
+            <span class="n">ebsdMap</span><span class="o">.</span><span class="n">locateGrainID</span><span class="p">(</span><span class="n">clickEvent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">clickSetOrigin</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Linker.clickSetOrigin"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Linker.clickSetOrigin">[docs]</a>    <span class="k">def</span> <span class="nf">clickSetOrigin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">currentEbsdMap</span><span class="p">):</span>
+        <span class="n">currentEbsdMap</span><span class="o">.</span><span class="n">origin</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">ydata</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">xdata</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Origin set to (</span><span class="si">{:}</span><span class="s2">, </span><span class="si">{:}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">currentEbsdMap</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">currentEbsdMap</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span></div>
+
+<div class="viewcode-block" id="Linker.startLinking"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Linker.startLinking">[docs]</a>    <span class="k">def</span> <span class="nf">startLinking</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">ebsdMap</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMaps</span><span class="p">:</span>
+            <span class="n">ebsdMap</span><span class="o">.</span><span class="n">locateGrainID</span><span class="p">(</span><span class="n">clickEvent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">clickGrainGuess</span><span class="p">)</span>
+
+            <span class="c1"># Add make link button to axes</span>
+            <span class="n">btnAx</span> <span class="o">=</span> <span class="n">ebsdMap</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">add_axes</span><span class="p">([</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.07</span><span class="p">])</span>
+            <span class="n">Button</span><span class="p">(</span><span class="n">btnAx</span><span class="p">,</span> <span class="s1">&#39;Make link&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;0.85&#39;</span><span class="p">,</span> <span class="n">hovercolor</span><span class="o">=</span><span class="s1">&#39;0.95&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Linker.clickGrainGuess"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Linker.clickGrainGuess">[docs]</a>    <span class="k">def</span> <span class="nf">clickGrainGuess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">currentEbsdMap</span><span class="p">):</span>
+        <span class="c1"># self is cuurent linker instance even if run as click event handler from map class</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">inaxes</span> <span class="ow">is</span> <span class="n">currentEbsdMap</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="c1"># axis 0 then is a click on the map</span>
+
+            <span class="k">if</span> <span class="n">currentEbsdMap</span> <span class="ow">is</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMaps</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="c1"># clicked on &#39;master&#39; map so highlight and guess grain on other maps</span>
+                <span class="k">for</span> <span class="n">ebsdMap</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMaps</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">ebsdMap</span> <span class="ow">is</span> <span class="n">currentEbsdMap</span><span class="p">:</span>
+                        <span class="c1"># set current grain in ebsd map that clicked</span>
+                        <span class="n">ebsdMap</span><span class="o">.</span><span class="n">clickGrainId</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># Guess at grain in other maps</span>
+                        <span class="c1"># Calculated position relative to set origin of the map, scaled from step size of maps</span>
+                        <span class="n">y0m</span> <span class="o">=</span> <span class="n">currentEbsdMap</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">x0m</span> <span class="o">=</span> <span class="n">currentEbsdMap</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">y0</span> <span class="o">=</span> <span class="n">ebsdMap</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">x0</span> <span class="o">=</span> <span class="n">ebsdMap</span><span class="o">.</span><span class="n">origin</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">scaling</span> <span class="o">=</span> <span class="n">currentEbsdMap</span><span class="o">.</span><span class="n">stepSize</span> <span class="o">/</span> <span class="n">ebsdMap</span><span class="o">.</span><span class="n">stepSize</span>
+
+                        <span class="n">x</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">event</span><span class="o">.</span><span class="n">xdata</span> <span class="o">-</span> <span class="n">x0m</span><span class="p">)</span> <span class="o">*</span> <span class="n">scaling</span> <span class="o">+</span> <span class="n">x0</span><span class="p">)</span>
+                        <span class="n">y</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">event</span><span class="o">.</span><span class="n">ydata</span> <span class="o">-</span> <span class="n">y0m</span><span class="p">)</span> <span class="o">*</span> <span class="n">scaling</span> <span class="o">+</span> <span class="n">y0</span><span class="p">)</span>
+
+                        <span class="n">ebsdMap</span><span class="o">.</span><span class="n">currGrainId</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">grains</span><span class="p">[</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">)</span>
+
+                        <span class="c1"># clear current axis and redraw euler map with highlighted grain overlay</span>
+                        <span class="n">ebsdMap</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+                        <span class="n">ebsdMap</span><span class="o">.</span><span class="n">plotEulerMap</span><span class="p">(</span><span class="n">updateCurrent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">highlightGrains</span><span class="o">=</span><span class="p">[</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">])</span>
+                        <span class="n">ebsdMap</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># clicked on other map so correct guessed selected grain</span>
+                <span class="n">currentEbsdMap</span><span class="o">.</span><span class="n">clickGrainId</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">inaxes</span> <span class="ow">is</span> <span class="n">currentEbsdMap</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="c1"># axis 1 then is a click on the button</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">makeLink</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Linker.makeLink"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Linker.makeLink">[docs]</a>    <span class="k">def</span> <span class="nf">makeLink</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># create empty list for link</span>
+        <span class="n">currLink</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ebsdMap</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMaps</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">ebsdMap</span><span class="o">.</span><span class="n">currGrainId</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">currLink</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">currGrainId</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;No grain setected in map </span><span class="si">{:d}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">currLink</span><span class="p">))</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Link added &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">currLink</span><span class="p">)))</span></div>
+
+<div class="viewcode-block" id="Linker.resetLinks"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Linker.resetLinks">[docs]</a>    <span class="k">def</span> <span class="nf">resetLinks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">links</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+<span class="c1">#   Analysis routines</span>
+
+<div class="viewcode-block" id="Linker.setAvOriFromInitial"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Linker.setAvOriFromInitial">[docs]</a>    <span class="k">def</span> <span class="nf">setAvOriFromInitial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">masterMap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMaps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># loop over each map (not first/refernece) and each link. Set refOri of linked grains</span>
+        <span class="c1"># to refOri of grain in first map</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ebsdMap</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMaps</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">:</span>
+                <span class="n">ebsdMap</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">link</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">refOri</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">masterMap</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">link</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">refOri</span><span class="p">)</span>
+
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Linker.updateMisOri"><a class="viewcode-back" href="../../defdap.html#defdap.ebsd.Linker.updateMisOri">[docs]</a>    <span class="k">def</span> <span class="nf">updateMisOri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">calcAxis</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="c1"># recalculate misorientation for linked grain (not for first map)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ebsdMap</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMaps</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="p">:</span>
+                <span class="n">ebsdMap</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">link</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">buildMisOriList</span><span class="p">(</span><span class="n">calcAxis</span><span class="o">=</span><span class="n">calcAxis</span><span class="p">)</span>
+
+        <span class="k">return</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2019, Michael Atkinson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.4.
+    </div>
+  </body>
+</html>

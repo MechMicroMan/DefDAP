@@ -1,33 +1,55 @@
+# Copyright 2019 Mechanics of Microstructures Group
+#    at The University of Manchester
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
-import matplotlib.pyplot as plt
-import math
+
+from defdap import plotting
 
 
-# be careful with deep and shallow copies
 class Quat(object):
     def __init__(self, *args, **kwargs):
-        self.quatCoef = np.zeros(4, dtype=float)
-        # construt with Bunge euler angles (radians, ZXZ)
+        """
+        Create a quat object from 3 Bunge euler angles, 4 quat coefficients or an array of 4 quat coefficients
+        """
+        # construct with Bunge euler angles (radians, ZXZ)
         if len(args) == 3:
             ph1 = args[0]
             phi = args[1]
             ph2 = args[2]
 
-            self.quatCoef[0] = np.cos(phi / 2.0) * np.cos((ph1 + ph2) / 2.0)
-            self.quatCoef[1] = -np.sin(phi / 2.0) * np.cos((ph1 - ph2) / 2.0)
-            self.quatCoef[2] = -np.sin(phi / 2.0) * np.sin((ph1 - ph2) / 2.0)
-            self.quatCoef[3] = -np.cos(phi / 2.0) * np.sin((ph1 + ph2) / 2.0)
-        # construt with array of quat coefficients
-        elif len(args) == 1:
-            self.quatCoef = args[0]
-        # construt with quat coefficients
-        elif len(args) == 4:
-            self.quatCoef[0] = args[0]
-            self.quatCoef[1] = args[1]
-            self.quatCoef[2] = args[2]
-            self.quatCoef[3] = args[3]
+            self.quatCoef = np.array([np.cos(phi / 2.0) * np.cos((ph1 + ph2) / 2.0),
+                                      -np.sin(phi / 2.0) * np.cos((ph1 - ph2) / 2.0),
+                                      -np.sin(phi / 2.0) * np.sin((ph1 - ph2) / 2.0),
+                                      -np.cos(phi / 2.0) * np.sin((ph1 + ph2) / 2.0)],
+                                     dtype=float)
 
-        if (self.quatCoef[0] < 0):
+        # construct with array of quat coefficients
+        elif len(args) == 1:
+            if len(args[0]) == 4:
+                self.quatCoef = np.array(args[0], dtype=float)
+            else:
+                raise Exception("Arrays should have 4 elements, use 3 arguments for Euler angles")
+
+        # construct with quat coefficients
+        elif len(args) == 4:
+            self.quatCoef = np.array([args[0], args[1], args[2], args[3]], dtype=float)
+        elif len(args) > 4 or len(args) ==2:
+            raise Exception("Incorrect argument length\n"
+                            "Allowable inputs are 3 Bunge euler angles, array of quat coeffs or quat coeffs")
+
+        if self.quatCoef[0] < 0:
             self.quatCoef = self.quatCoef * -1
 
         # overload static method with instance method of same name in object
@@ -39,11 +61,12 @@ class Quat(object):
 
         Args:
             axis (np.array size 3): Axis of rotation
-            angle (float): Rotation arround axis (radians)
+            angle (float): Rotation around axis (radians)
 
         Returns:
             Quat: Initialised Quat object
         """
+
         # normalise the axis vector
         axis = axis / np.sqrt(np.dot(axis, axis))
         # calculate quat coefficients
@@ -55,11 +78,17 @@ class Quat(object):
         return cls(quatCoef)
 
     def eulerAngles(self):
-        # See Melcher, a. Unser, A. Reichhardt, M. Nestler, B. Conversion of EBSD data by a
-        # quaternion based algorithm to be used for grain structure simulations
-        # or
-        # Rowenhorst, D et al. Consistent representations of and conversions between 3D rotations
-        # P = +1
+        """Calculate euler angles for quat
+
+        Returns:
+            eulers (np.array size 3): Bunge euler angles (in radians)
+
+        References:
+            Melcher A. et al., 'Conversion of EBSD data by a quaternion based algorithm
+            to be used for grain structure simulations', Technische Mechanik, 30(4)401 – 413
+            Rowenhorst D. et al., 'Consistent representations of and conversions between
+            3D rotations', Model. Simul. Mater. Sci. Eng., 23(8) 
+        """
 
         eulers = np.empty(3, dtype=float)
 
@@ -123,10 +152,10 @@ class Quat(object):
 
     # show components when the quat is printed
     def __repr__(self):
-        return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
+        return "[{:.4f}, {:.4f}, {:.4f}, {:.4f}]".format(*self.quatCoef)
 
     def __str__(self):
-        return "[%.4f, %.4f, %.4f, %.4f]" % (self.quatCoef[0], self.quatCoef[1], self.quatCoef[2], self.quatCoef[3])
+        return self.__repr__()
 
     def _plotIPF(self, direction, symGroup, **kwargs):
         Quat.plotIPF([self], direction, symGroup, **kwargs)
@@ -181,7 +210,7 @@ class Quat(object):
     # also the inverse if this is a unit quaterion
     @property
     def conjugate(self):
-        return Quat(self.quatCoef[0], -self.quatCoef[1], -self.quatCoef[2], -self.quatCoef[3])
+        return Quat(self[0], -self[1], -self[2], -self[3])
 
     def transformVector(self, vector):
         """Transforms vector by the quaternion. For EBSD quaterions this
@@ -283,9 +312,9 @@ class Quat(object):
         return quats
 
     @staticmethod
-    def calcSymEqvs(quats, symGroup):
+    def calcSymEqvs(quats, symGroup, dtype=np.float):
         syms = Quat.symEqv(symGroup)
-        quatComps = np.empty((len(syms), 4, len(quats)))
+        quatComps = np.empty((len(syms), 4, len(quats)), dtype=dtype)
 
         # store quat components in array
         for i, quat in enumerate(quats):
@@ -347,7 +376,7 @@ class Quat(object):
         return minMisOris, minQuatComps
 
     @staticmethod
-    def polarAngles(x, y, z):
+    def polarAngles(x, y, z):      # spherical coordinates as per Wikipedia
         mod = np.sqrt(x**2 + y**2 + z**2)
         x = x / mod
         y = y / mod
@@ -355,139 +384,126 @@ class Quat(object):
 
         # alpha - angle with z axis
         alpha = np.arccos(z)
-        # beta - angle around z axis
+        # beta - angle around z axis from x in anticlockwise as per ISO
         beta = np.arctan2(y, x)
 
         return alpha, beta
 
     @staticmethod
-    def stereoProject(*args):
-        if len(args) == 3:
-            alpha, beta = Quat.polarAngles(args[0], args[1], args[2])
-        elif len(args) == 2:
-            alpha, beta = args
-        else:
-            raise Exception("3 arguments for pole directions and 2 for polar angles.")
-
-        alphaComp = np.tan(alpha / 2)
-        xp = alphaComp * np.cos(beta)
-        yp = alphaComp * np.sin(beta)
-
-        return xp, yp
-
-    @staticmethod
-    def plotLine(startPoint, endPoint, plotSymmetries=False, symGroup=None, res=100, projection=None, ax=None, **kwargs):
-        if projection is None:
-            projection = Quat.stereoProject
-        if ax is None:
-            ax = plt.gca()
-
-        lines = []
-        lines.append((startPoint, endPoint))
-        if plotSymmetries:
-            if symGroup is None:
-                raise Exception("Please provide a symGroup")
-            for symm in Quat.symEqv(symGroup)[1:]:
-                startPointSymm = symm.transformVector(startPoint).astype(int)
-                endPointSymm = symm.transformVector(endPoint).astype(int)
-
-                if startPointSymm[2] < 0:
-                    startPointSymm *= -1
-                if endPointSymm[2] < 0:
-                    endPointSymm *= -1
-
-                lines.append((startPointSymm, endPointSymm))
-
-        linePoints = np.zeros((3, res), dtype=float)
-        for line in lines:
-            for i in range(3):
-                if line[0][i] == line[1][i]:
-                    linePoints[i] = np.full(res, line[0][i])
-                else:
-                    linePoints[i] = np.linspace(line[0][i], line[1][i], res)
-
-            xp, yp = projection(linePoints[0], linePoints[1], linePoints[2])
-            ax.plot(xp, yp, **kwargs)
-
-    @staticmethod
-    def labelPoint(point, label, projection=None, ax=None, padX=0, padY=0, **kwargs):
-        if projection is None:
-            projection = Quat.stereoProject
-        if ax is None:
-            ax = plt.gca()
-
-        xp, yp = projection(point[0], point[1], point[2])
-        ax.text(xp + padX, yp + padY, label, **kwargs)
-
-    @staticmethod
-    def plotPoleAxis(plotType, symGroup, ax=None):
-        if ax is None:
-            ax = plt.gca()
-
-        if plotType == "IPF" and symGroup == "cubic":
-            # line between [001] and [111]
-            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 1, 1]), ax=ax, c='k', lw=2)
-
-            # line between [001] and [101]
-            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 1]), ax=ax, c='k', lw=2)
-
-            # line between [101] and [111]
-            Quat.plotLine(np.array([1, 0, 1]), np.array([1, 1, 1]), ax=ax, c='k', lw=2)
-
-            # label poles
-            Quat.labelPoint(np.array([0, 0, 1]), '001', ax=ax, padY=-0.005, va='top', ha='center')
-            Quat.labelPoint(np.array([1, 0, 1]), '101', ax=ax, padY=-0.005, va='top', ha='center')
-            Quat.labelPoint(np.array([1, 1, 1]), '111', ax=ax, padY=0.005, va='bottom', ha='center')
-
-        elif plotType == "IPF" and symGroup == "hexagonal":
-            # line between [0001] and [10-10] ([001] and [210]) - converted to cubic axes
-            Quat.plotLine(np.array([0, 0, 1]), np.array([np.sqrt(3), 1, 0]), ax=ax, c='k', lw=2)
-
-            # line between [0001] and [2-1-10] ([001] and [100]) - converted to cubic axes
-            Quat.plotLine(np.array([0, 0, 1]), np.array([1, 0, 0]), ax=ax, c='k', lw=2)
-
-            # line between [2-1-10] and [10-10] ([100] and [210]) - converted to cubic axes
-            Quat.plotLine(np.array([1, 0, 0]), np.array([np.sqrt(3), 1, 0]), ax=ax, c='k', lw=2)
-
-            # label poles
-            Quat.labelPoint(np.array([0, 0, 1]), '0001', padY=-0.008, va='top', ha='center')
-            Quat.labelPoint(np.array([1, 0, 0]), '2-1-10', padY=-0.008, va='top', ha='center')
-            Quat.labelPoint(np.array([np.sqrt(3), 1, 0]), '10-10', padY=0.008, va='bottom', ha='center')
-
-        else:
-            raise Exception("Only works for cubic and hexagonal IPFs")
-
-        ax.axis('equal')
-        ax.axis('off')
-
-    @staticmethod
-
-    def plotIPF(quats, direction, symGroup, ax=None, markerColour='red', markerSize=40, **kwargs):
-        """Plot crystal orientations on an IPF
-
-        Args:
-            quats (list): Lits of quats to plot on the IPF
-            direction (array): Sample direction for IPF
-            symGroup (str): Crystal type (cubic, hexagonal)
-            ax (str): Axis to plot to
-            markerColour (str): Marker colour (or two colours for halp and half)
-            markerSize (int): Size of marker to plot
+    def plotIPF(quats, direction, symGroup, projection=None,
+                plot=None, fig=None, ax=None, makeInteractive=False,
+                plotColourBar=False, cLabel="",
+                markerColour=None, markerSize=40, **kwargs):
         """
+        Plot IPF of orientations for specified sample diection.
 
+        Parameters
+        ----------
+        quats : enumerable(quat)
+            Quats to plot on the IPF
+        direction : np.array
+            Sample reference direction for IPF
+        symGroup : string
+            Crystal type (cubic, hexagonal)
+        projection
+             Projection to use. Either string (stereographic or lambert) or a function
+        ax
+            matplotlib axis to plot on, if not provided the current active axis is used
+        markerColour : string
+            Colour of markers (only used for half and half colouring, otherwise us arguemnt c)
+        markerSize : int
+            Size of markers (only used for half and half colouring, otherwise us arguemnt s)
+        kwargs
+            All other arguments are passed to the matplotlib scatter call
+        """
         plotParams = {'marker': '+'}
         plotParams.update(kwargs)
-        if ax is None:
-            ax = plt.gca()
 
-        # Plot IPF axis
-        # plt.figure()
-        Quat.plotPoleAxis("IPF", symGroup, ax=ax)
+        alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup)
+
+        if plot is None:
+            plot = plotting.PolePlot(
+                "IPF", symGroup, projection=projection,
+                ax=ax, fig=fig, makeInteractive=makeInteractive
+            )
+        plot.addPoints(alphaFund, betaFund,
+                       markerColour=markerColour, markerSize=markerSize,
+                       **plotParams)
+
+        if plotColourBar:
+            plot.addColourBar(cLabel)
+
+        return plot
+
+    @staticmethod
+    def calcIPFcolours(quats, direction, symGroup):
+        numQuats = len(quats)
+
+        # Calculating as float32 seems to speed this up
+        alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup, dtype=np.float32)
+
+        # revert to cartesians
+        # at some this should be changed to have the quats dimention
+        # last to fit with numpys row major storage direction vector in
+        # cartesians. Changes this to float32 causes errors in arccos,
+        # so leave to default to 64
+        dirvec = np.empty((numQuats, 3))
+        dirvec[:, 0] = np.sin(alphaFund) * np.cos(betaFund)
+        dirvec[:, 1] = np.sin(alphaFund) * np.sin(betaFund)
+        dirvec[:, 2] = np.cos(alphaFund)
+        rvect = np.matlib.repmat([0., 0., 1.], numQuats, 1)
+        gvect = np.matlib.repmat([1., 0., 1.] / np.sqrt(2), numQuats, 1)
+        bvect = np.matlib.repmat([1., 1., 1.] / np.sqrt(3), numQuats, 1)
+        rgb = np.zeros((numQuats, 3))
+
+        # Red Component; these subroutines are converted from
+        # Stephen Cluff's IPF_rgbcalc.m (BYU)
+        RDirPlane = np.cross(dirvec, rvect)
+        GBplane = np.cross(bvect, gvect)
+        Rintersect = np.cross(RDirPlane, GBplane)
+        NORM = np.sqrt(np.power(Rintersect[:, 0], 2) + np.power(Rintersect[:, 1], 2) + np.power(Rintersect[:, 2], 2))
+        Rintersect[NORM != 0, :] = np.divide(Rintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+
+        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Rintersect))
+        Rintersect[temp > (np.pi / 2), :] = Rintersect[temp > (np.pi / 2), :] * -1
+        rgb[:, 0] = np.divide(np.arccos(np.einsum("ij,ij->i", dirvec, Rintersect)), np.arccos(np.einsum("ij,ij->i", rvect, Rintersect)))
+
+        # Green Component
+        GDirPlane = np.cross(dirvec, gvect)
+        RBplane = np.cross(rvect, bvect)
+        Gintersect = np.cross(GDirPlane, RBplane)
+        NORM = np.sqrt(np.power(Gintersect[:, 0], 2) + np.power(Gintersect[:, 1], 2) + np.power(Gintersect[:, 2], 2))
+        Gintersect[NORM != 0, :] = np.divide(Gintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+
+        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Gintersect))
+        Gintersect[temp > (np.pi / 2), :] = Gintersect[temp > (np.pi / 2), :] * -1
+        rgb[:, 1] = np.divide(np.arccos(np.einsum("ij,ij->i", dirvec, Gintersect)), np.arccos(np.einsum("ij,ij->i", gvect, Gintersect)))
+
+        # Blue Component
+        BDirPlane = np.cross(dirvec, bvect)
+        RGplane = np.cross(gvect, rvect)
+        Bintersect = np.cross(BDirPlane, RGplane)
+        NORM = np.sqrt(np.power(Bintersect[:, 0], 2) + np.power(Bintersect[:, 1], 2) + np.power(Bintersect[:, 2], 2))
+        Bintersect[NORM != 0, :] = np.divide(Bintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+
+        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Bintersect))
+        Bintersect[temp > (np.pi / 2), :] = Bintersect[temp > (np.pi / 2), :] * -1
+        rgb[:, 2] = np.divide(np.arccos(np.einsum("ij,ij->i", dirvec, Bintersect)), np.arccos(np.einsum("ij,ij->i", bvect, Bintersect)))
+
+        rgb = np.divide(rgb, np.transpose(np.matlib.repmat(np.amax(rgb, 1), 3, 1)))
+
+        return rgb
+
+    @staticmethod
+    def calcFundDirs(quats, direction, symGroup, dtype=np.float):
+        # convert direction to float array
+        direction = np.array(direction, dtype=dtype)
 
         # get array of symmetry operations. shape - (numSym, 4, numQuats)
-        quatCompsSym = Quat.calcSymEqvs(quats, symGroup)
+        quatCompsSym = Quat.calcSymEqvs(quats, symGroup, dtype=dtype)
 
         # array to store crytal directions for all orientations and symmetries
-        directionCrystal = np.empty((3, quatCompsSym.shape[0], quatCompsSym.shape[2]))
+        directionCrystal = np.empty((3, quatCompsSym.shape[0], quatCompsSym.shape[2]), dtype=dtype)
 
         # temp variables to use bleow
         quatDotVec = (quatCompsSym[:, 1, :] * direction[0] +
@@ -535,6 +551,7 @@ class Quat(object):
 
             # now of symmetric equivalents left we want the one with minimum alpha
             # loop over different orientations
+            # this seems quite slow so might be worth finding a different way to do it
             for i in range(trialPoles.shape[1]):
                 # create array of indexes of poles kept in previous step
                 trialPoleIdxs = np.arange(trialPoles.shape[0])[trialPoles[:, i]]
@@ -562,35 +579,7 @@ class Quat(object):
         else:
             raise Exception("symGroup must be cubic or hexagonal")
 
-        # project onto equatorial plane
-        xp, yp = Quat.stereoProject(alphaFund, betaFund)
-
-        # plot poles
-        # plot markers with 'half and half' colour
-        if type(markerColour) == str:
-            markerColour = [markerColour]
-
-        if len(markerColour) == 1:
-            ax.scatter(xp, yp, c = markerColour, **plotParams)
-        elif len(markerColour) == 2:
-            pos=(xp,yp); r1 = 0.5; r2 = r1+0.5; markerSize = np.sqrt(markerSize);
-
-            x = [0] + np.cos(np.linspace(0, 2*math.pi*r1, 10)).tolist()
-            y = [0] + np.sin(np.linspace(0, 2*math.pi*r1, 10)).tolist()
-
-            xy1 = list(zip(x, y))
-            s1 = max(max(x), max(y))
-
-            x = [0] + np.cos(np.linspace(2*math.pi*r1, 2*math.pi*r2, 10)).tolist()
-            y = [0] + np.sin(np.linspace(2*math.pi*r1, 2*math.pi*r2, 10)).tolist()
-            xy2 = list(zip(x, y))
-            s2 = max(max(x), max(y))
-
-            ax.scatter(pos[0],pos[1], marker=(xy1, 0), s=markerSize, c=markerColour[0])
-            ax.scatter(pos[0],pos[1], marker=(xy2, 0), s=markerSize, c=markerColour[1])
-        else:
-            raise Exception("specify one colour for solid markers or list two for 'half and half'")
-
+        return alphaFund, betaFund
 
     @staticmethod
     def symEqv(group):
@@ -650,9 +639,9 @@ class Quat(object):
         qsym.append(Quat(np.array([0.0, sqrt3over2, -0.5, 0.0])))
         qsym.append(Quat(np.array([0.0, -sqrt3over2, -0.5, 0.0])))
 
-        if (group == 'cubic'):
+        if group == 'cubic':
             return qsym[0:24]
-        elif (group == 'hexagonal'):
+        elif group == 'hexagonal':
             return [qsym[0], qsym[2], qsym[5], qsym[8]] + qsym[-8:32]
         else:
             return [qsym[0]]
