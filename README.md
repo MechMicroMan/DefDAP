@@ -14,7 +14,7 @@
 
 ## How to install
 
-- Download and install Anaconda from https://repo.continuum.io/archive/ (version 4.4 has been tested)
+- Download and install Anaconda from https://repo.continuum.io/archive/ (version 5.3 has been tested)
 
 - Download the DefDAP package using the 'Clone or download' button above, and extract to a directory
 
@@ -50,4 +50,4 @@ The software uses the following open source packages:
 
 ## License
 
-MIT license
+[Apache 2.0 license](/LICENSE)
