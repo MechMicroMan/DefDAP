@@ -2,7 +2,7 @@
   <img src="docs/source/_static/logo.png">
 </h1>
 
-<h4 align="center">A pyhton library for dealing with EBSD and HRDIC data.</h4>
+<h4 align="center">A pyhton library for correlating EBSD and HRDIC data.</h4>
 
 <p align="center">
   <a href="#how-to-install">How to install</a> •
