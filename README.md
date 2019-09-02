@@ -12,6 +12,9 @@
   <a href="#license">License</a>
 </p>
 
+
+
+
 ## How to install
 
 - Download and install Anaconda from https://repo.continuum.io/archive/ (version 5.3 has been tested)
@@ -23,6 +26,7 @@
 ## How to use
 
 - To start the example notebook, use the command `jupyter notebook` and click the notebook (.ipynb file)
+[![DefDAP demo](http://img.youtube.com/vi/JIbc7F-nFSQ/0.jpg)](http://www.youtube.com/watch?v=JIbc7F-nFSQ "DefDAP demo")
 
 ## Documentation
 
