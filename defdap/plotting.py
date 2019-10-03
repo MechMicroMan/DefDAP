@@ -27,6 +27,8 @@ from defdap import quat
 
 
 class Plot(object):
+    """ Class for creating a plot
+    """
     def __init__(self, ax, fig=None, makeInteractive=False):
 
         self.interactive = makeInteractive
@@ -83,6 +85,8 @@ class Plot(object):
 
 
 class MapPlot(Plot):
+    """ Class for creating a map
+    """
     def __init__(self, callingMap, fig=None, ax=None, makeInteractive=False):
         super(MapPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
 
@@ -254,6 +258,8 @@ class MapPlot(Plot):
 
 
 class GrainPlot(Plot):
+    """ Class for creating a map for a grain
+    """
     def __init__(self, callingGrain, fig=None, ax=None, makeInteractive=False):
         super(GrainPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
 
@@ -339,6 +345,8 @@ class GrainPlot(Plot):
 
 
 class PolePlot(Plot):
+    """ Class for creating an inverse pole figure
+    """
     defaultProjection = "stereographic"
 
     def __init__(self, plotType, crystalSym, projection=None,
@@ -535,6 +543,8 @@ class PolePlot(Plot):
 
 
 class HistPlot(Plot):
+    """ Class for creating a histogram
+    """
     def __init__(self, plotType="linear", density=True,
                  fig=None, ax=None, makeInteractive=False):
         super(HistPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
@@ -585,25 +595,24 @@ class HistPlot(Plot):
 
 
 class crystalPlot(Plot):
-    """ Creates a 3D plot for plotting unit cells
-    Args:
-        ax: the axis on which to plot the unit cell
+    """ Class for creating a 3D plot for plotting unit cells
     """
 
     def __init__(self, ax=None):
+        # Initialises plot
         if ax is None:
             self.fig = plt.figure(figsize=(6,6))
             self.ax = self.fig.add_subplot(111, projection='3d', proj_type = 'ortho')
         else:
             self.ax=ax
 
-        # Set plotting paramaters
+        # Set plotting parameters
         self.ax.set_xlim3d(-0.15, 0.15); self.ax.set_ylim3d(-0.15, 0.15); self.ax.set_zlim3d(-0.15, 0.15);
         self.ax.view_init(azim=270, elev=90)
         self.ax._axis3don = False
         
     def addVerts(self, verts):
-        #Add planes defined by vertices to 3D plot
+        #Add list of planes defined by given vertices to the 3D plot
         for vert in verts:
             pc = Poly3DCollection(vert, alpha = 0.6, facecolor='0.8', linewidths=3, edgecolor='k')
             self.ax.add_collection3d(pc)
