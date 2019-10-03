@@ -18,7 +18,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 from matplotlib_scalebar.scalebar import ScaleBar
-
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from skimage import morphology as mph
 
@@ -582,3 +582,29 @@ class HistPlot(Plot):
                      label=label, **kwargs)
 
         return plot
+
+
+class crystalPlot(Plot):
+    """ Creates a 3D plot for plotting unit cells
+    Args:
+        ax: the axis on which to plot the unit cell
+    """
+
+    def __init__(self, ax=None):
+        if ax is None:
+            self.fig = plt.figure(figsize=(6,6))
+            self.ax = self.fig.add_subplot(111, projection='3d', proj_type = 'ortho')
+        else:
+            self.ax=ax
+
+        # Set plotting paramaters
+        self.ax.set_xlim3d(-0.15, 0.15); self.ax.set_ylim3d(-0.15, 0.15); self.ax.set_zlim3d(-0.15, 0.15);
+        self.ax.view_init(azim=270, elev=90)
+        self.ax._axis3don = False
+        
+    def addVerts(self, verts):
+        #Add planes defined by vertices to 3D plot
+        for vert in verts:
+            pc = Poly3DCollection(vert, alpha = 0.6, facecolor='0.8', linewidths=3, edgecolor='k')
+            self.ax.add_collection3d(pc)
+    

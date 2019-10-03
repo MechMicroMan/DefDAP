@@ -88,7 +88,7 @@ class Map(base.Map):
     ax
     """
 
-    def __init__(self, fileName, crystalSym, dataType=None):
+    def __init__(self, fileName, crystalSym, cOverA=None, dataType=None):
         """
         Initialise class and load EBSD data
 
@@ -107,6 +107,7 @@ class Map(base.Map):
         print("\rLoading EBSD data...", end="")
 
         self.crystalSym = None
+        self.cOverA = None
         self.xDim = None
         self.yDim = None
         self.stepSize = None
@@ -135,14 +136,14 @@ class Map(base.Map):
         self.plotHomog = self.plotEulerMap
         self.highlightAlpha = 1
 
-        self.loadData(fileName, crystalSym, dataType=dataType)
+        self.loadData(fileName, crystalSym, cOverA, dataType=dataType)
 
     @property
     def plotDefault(self):
         # return self.plotEulerMap(*args, **kwargs)
         return lambda *args, **kwargs: self.plotEulerMap(*args, **kwargs)
 
-    def loadData(self, fileName, crystalSym, dataType=None):
+    def loadData(self, fileName, crystalSym, cOverA, dataType=None):
         """
         Load in EBSD data
 
@@ -178,6 +179,11 @@ class Map(base.Map):
         self.phaseArray = dataDict['phase']
 
         self.crystalSym = crystalSym
+        
+        if self.crystalSym == 'hexagonal':
+            if cOverA == None:
+                raise Exception("No c over a ratio given")
+            self.cOverA = cOverA
 
         print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step "
               "size: {2} um)".format(self.xDim, self.yDim, self.stepSize))
@@ -840,16 +846,15 @@ class Map(base.Map):
 
         return plot
 
-    def loadSlipSystems(self, name, cOverA=None):
+    def loadSlipSystems(self, name):
         """
         Load slip system definitions from file
 
         :param name: name of the slip system file (without file
         extension) stored in the defdap install dir or path to a file
-        :param cOverA: cOverA ratio (for hexagonal)
         """
         self.slipSystems, self.slipTraceColours = SlipSystem.loadSlipSystems(
-            name, self.crystalSym, cOverA=cOverA
+            name, self.crystalSym, cOverA=self.cOverA
         )
 
         if self.grainList is not None:
@@ -1029,6 +1034,9 @@ class Grain(base.Grain):
         plotParams.update(kwargs)
         return Quat.plotIPF(self.quatList, direction, self.crystalSym,
                             **plotParams)
+                            
+    def plotUnitCell(self):
+        Quat.plotUnitCell(self.refOri, symGroup=self.crystalSym, cOverA=self.ebsdMap.cOverA, ax=None)
 
     # component
     # 0 = misOri

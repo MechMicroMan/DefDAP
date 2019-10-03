@@ -282,6 +282,104 @@ class Quat(object):
             return misOriAxis
         raise TypeError("Input must be a quaternion.")
 
+    def plotUnitCell(self, symGroup=None, cOverA=None, ax=None):
+        """ Plots an unit cell
+        Args:
+            symGroup (str): symmetry group, hexagonal or cubic
+            cOverA (float): c over a ratio, for hexagonal
+            OI (boolean): true if using oxford instruments system
+            szFac (float): size factor for plot
+            ax: the axis on which to plot the unit cell
+        """
+        
+        OI=True
+        szFac = 0.2
+        
+        if symGroup == None:
+            raise TypeError("symGroup must be specified")
+            
+        if symGroup == 'hexagonal':
+        
+            if cOverA == None:
+                raise TypeError("cOverA must be specified for hcp")
+            
+            vert = np.matrix([
+                [0,0,0],
+                [1,0,0],
+                [np.cos(np.deg2rad(60)), np.sin(np.deg2rad(60)), 0],
+                [-np.cos(np.deg2rad(60)), np.sin(np.deg2rad(60)), 0],
+                [-1, 0, 0],
+                [-np.cos(np.deg2rad(60)), -np.sin(np.deg2rad(60)), 0],
+                [np.cos(np.deg2rad(60)), -np.sin(np.deg2rad(60)), 0],
+                [1/2., 1/3.*np.sin(np.deg2rad(60)), cOverA/2.],
+                [-1/2., 1/3.*np.sin(np.deg2rad(60)), cOverA/2.],
+                [0, -2.*1/3.*np.sin(np.deg2rad(60)), cOverA/2.],
+                [0, 0, cOverA],
+                [1, 0, cOverA],
+                [np.cos(np.deg2rad(60)), np.sin(np.deg2rad(60)), cOverA],
+                [-np.cos(np.deg2rad(60)), np.sin(np.deg2rad(60)), cOverA],
+                [-1, 0, cOverA],
+                [-np.cos(np.deg2rad(60)), -np.sin(np.deg2rad(60)), cOverA],
+                [np.cos(np.deg2rad(60)), -np.sin(np.deg2rad(60)), cOverA],
+                [0, 0, 3.*cOverA],
+                [0, 1/3.*np.sin(np.deg2rad(60))+((3.**0.5)/2.), cOverA/2.]
+            ])
+
+            vert[:,2] = vert[:,2]-cOverA/2.;
+
+            faces = [[2, 3, 4, 5, 6, 7], [12, 13, 14, 15, 16, 17],
+                     [2, 12, 13, 3], [3, 13, 14, 4],
+                     [4, 14, 15, 5], [5, 15, 16, 6],
+                     [6, 16, 17, 7], [7, 17, 12, 2]]
+
+            if OI:
+                # Add 30 degrees to phi2 for OI
+                quatObj = Quat(self.eulerAngles()[0], 
+                                    self.eulerAngles()[1], 
+                                    self.eulerAngles()[2]+np.pi/6)
+
+        elif symGroup == 'cubic':
+
+            szFac = szFac * 1.5
+            
+            vert = np.matrix([
+                [-1/2,   -1/2,    -1/2],
+                [1/2,   -1/2,    -1/2],
+                [1/2,    1/2,    -1/2],
+                [-1/2,    1/2,    -1/2],
+                [-1/2,   -1/2,     1/2],
+                [1/2,   -1/2,     1/2],
+                [1/2,    1/2,     1/2],
+                [-1/2,    1/2,     1/2]])
+            
+            faces = [[1, 2, 3, 4], [5, 6, 7, 8],
+                [1, 2, 6, 5], [2, 3, 7, 6],
+                [3, 4, 8, 7], [4, 1, 5, 8]]
+                
+            quatObj = self
+            
+        else:
+            print('Only cubic and hexagonal supported')
+        
+        g_glob=np.matrix(quatObj.rotMatrix()).H
+
+        # Rotate the lattice cell points
+        gg  = np.matrix(g_glob);
+        pts = (gg*(vert.T)).T*szFac
+
+        # Plot unit cell    
+        planes = []
+        for face in faces:
+            x = []; y = []; z = [];
+            for idx in face:
+                x.append(pts[idx-1].item(0))
+                y.append(pts[idx-1].item(1))
+                z.append(pts[idx-1].item(2))
+            planes.append([list(zip(x, y, z))])  
+            
+        plot = plotting.crystalPlot()
+        plot.addVerts(planes)
+
 # Static methods
 
     @staticmethod
