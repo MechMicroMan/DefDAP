@@ -2,7 +2,7 @@
   <img src="docs/source/_static/logo.png">
 </h1>
 
-<h4 align="center">A set of scripts for dealing with EBSD and HRDIC data.</h4>
+<h4 align="center">A python library for correlating EBSD and HRDIC data.</h4>
 
 <p align="center">
   <a href="#how-to-install">How to install</a> •
@@ -11,6 +11,9 @@
   <a href="#credits">Credits</a> •
   <a href="#license">License</a>
 </p>
+
+
+
 
 ## How to install
 
@@ -23,6 +26,7 @@
 ## How to use
 
 - To start the example notebook, use the command `jupyter notebook` and click the notebook (.ipynb file)
+[![DefDAP demo](http://img.youtube.com/vi/JIbc7F-nFSQ/0.jpg)](http://www.youtube.com/watch?v=JIbc7F-nFSQ "DefDAP demo")
 
 ## Documentation
 
@@ -43,8 +47,6 @@ The software uses the following open source packages:
 - [pandas](http://pandas.pydata.org)
 - [peakutils](https://peakutils.readthedocs.io/en/latest/)
 - [matplotlib_scalebar](https://pypi.org/project/matplotlib-scalebar/)
-- [vtk](https://vtk.org/)
-- [pyevtk](https://pypi.org/project/pyevtk/)
 - [IPython](https://ipython.org/)
 - [jupyter](https://jupyter.org/)
 
