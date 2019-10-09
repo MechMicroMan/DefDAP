@@ -258,3 +258,17 @@ class DICDataLoader(object):
         self.checkData()
 
         return self.loadedData
+        
+    def loadDavisImageData(self, fileName, fileDir=""):
+        """ A .txt file from DaVis containing a 2D image
+        """
+        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
+        if not filePath.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(filePath))
+
+        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1, header=None)
+       
+       # x and y coordinates
+        loadedData = np.array(data)
+
+        return loadedData

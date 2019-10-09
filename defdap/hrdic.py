@@ -61,6 +61,8 @@ class Map(base.Map):
         self.yc = None          # y coordinates
         self.xd = None          # x displacement
         self.yd = None          # y displacement
+        
+        self.corrVal = None     # correlation value
 
         self.ebsdMap = None                 # EBSD map linked to DIC map
         self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
@@ -138,6 +140,27 @@ class Map(base.Map):
         self.yc = dataDict['yc']    # y coordinates
         self.xd = dataDict['xd']    # x displacement
         self.yd = dataDict['yd']    # y displacement
+        
+    def loadCorrValData(self, fileDir, fileName, dataType=None):
+        """Load correlation value for DIC data
+
+        Args:
+            fileDir(str): Path to file
+            fileName(str): Name of file including extension
+            dataType(str): Type of data file - see file_readers.py
+        """
+        dataType = "DavisImage" if dataType is None else dataType
+
+        dataLoader = DICDataLoader()
+        if dataType == "DavisImage":
+            loadedData = dataLoader.loadDavisImageData(fileName, fileDir)
+        else:
+            raise Exception("No loader found for this DIC data.")
+            
+        self.corrVal = loadedData
+        
+        assert self.xdim == self.corrVal.shape[1], "Dimensions of imported data and dic data do not match"
+        assert self.ydim == self.corrVal.shape[0], "Dimensions of imported data and dic data do not match"
 
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))
