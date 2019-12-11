@@ -1035,8 +1035,8 @@ class Grain(base.Grain):
         return Quat.plotIPF(self.quatList, direction, self.crystalSym,
                             **plotParams)
                             
-    def plotUnitCell(self):
-        Quat.plotUnitCell(self.refOri, symGroup=self.crystalSym, cOverA=self.ebsdMap.cOverA, ax=None)
+    def plotUnitCell(self, fig=None, ax=None):
+        Quat.plotUnitCell(self.refOri, fig, ax, symGroup=self.crystalSym, cOverA=self.ebsdMap.cOverA)
 
     # component
     # 0 = misOri

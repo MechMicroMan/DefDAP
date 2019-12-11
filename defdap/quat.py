@@ -282,7 +282,7 @@ class Quat(object):
             return misOriAxis
         raise TypeError("Input must be a quaternion.")
 
-    def plotUnitCell(self, symGroup=None, cOverA=None, ax=None):
+    def plotUnitCell(self, fig=None, ax=None, symGroup=None, cOverA=None):
         """ Plots an unit cell
         Args:
             symGroup (str): symmetry group, hexagonal or cubic
@@ -377,7 +377,7 @@ class Quat(object):
                 z.append(pts[idx-1].item(2))
             planes.append([list(zip(x, y, z))])  
             
-        plot = plotting.crystalPlot()
+        plot = plotting.crystalPlot(fig, ax)
         plot.addVerts(planes)
 
 # Static methods
