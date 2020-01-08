@@ -1,146 +1,170 @@
 import pytest
 import numpy as np
 
-import defdap.file_readers
+from defdap.file_readers import EBSDDataLoader, DICDataLoader
 
-EXAMPLE_DIC = "../example_data/Map Data 2-DIC area"
-EXAMPLE_TXT = "../example_data/B00005.txt"
+EXAMPLE_EBSD = "tests/data/testDataEBSD"
+EXAMPLE_DIC = "tests/data/testDataDIC.txt"
+
+
+def ebsd_metadata_tests(data_loader: EBSDDataLoader):
+    """This function describes the metadata in the EBSD test files so can be used to check if
+    the test metadata is correctly loaded."""
+    assert data_loader.loadedMetadata["xDim"] == 25
+    assert data_loader.loadedMetadata["yDim"] == 25
+    assert data_loader.loadedMetadata["stepSize"] == pytest.approx(0.12)
+    assert data_loader.loadedMetadata["numPhases"] == 1
+    assert data_loader.loadedMetadata["phaseNames"] == ["Ni-superalloy"]
+
+
+def ebsd_data_tests(data_loader: EBSDDataLoader):
+    """This function describes the data in the EBSD test files so can be used to check if
+    the test data is correctly loaded."""
+    x_dim = data_loader.loadedMetadata["xDim"]
+    y_dim = data_loader.loadedMetadata["yDim"]
+
+    assert data_loader.loadedData['bandContrast'].shape == (y_dim, x_dim)
+    assert isinstance(data_loader.loadedData['bandContrast'][0][0], np.uint8)
+
+    assert data_loader.loadedData['phase'].shape == (y_dim, x_dim)
+    assert isinstance(data_loader.loadedData['phase'][0][0], np.int8)
+
+    assert data_loader.loadedData['eulerAngle'].shape == (3, y_dim, x_dim)
+    assert data_loader.loadedData['eulerAngle'][0][0][3] == pytest.approx(0.067917, rel=1e4)
+    assert isinstance(data_loader.loadedData['eulerAngle'][0], np.ndarray)
+    assert isinstance(data_loader.loadedData['eulerAngle'][0][0], np.ndarray)
+    assert isinstance(data_loader.loadedData['eulerAngle'][0][0][0], np.float64)
 
 
 class TestEBSDDataLoader:
+    """The loader object stores EBSD data and associated metadata."""
 
     @staticmethod
-    @pytest.fixture
-    def data_loader():
-        return defdap.file_readers.EBSDDataLoader()
-
-    @staticmethod
-    @pytest.fixture
-    def metadata_loaded(data_loader):
-        data_loader.loadOxfordCPR(EXAMPLE_DIC)
-        return data_loader
-
-    @staticmethod
-    def test_init(data_loader):
+    def test_init():
+        """Test initialisation of the Loader object."""
+        data_loader = EBSDDataLoader()
         assert isinstance(data_loader.loadedMetadata, dict)
         assert isinstance(data_loader.loadedData, dict)
 
     @staticmethod
-    def test_check_metadata_good(data_loader):
+    def test_checkMetadata_good():
         """The check_metadata method should pass silently if phaseNames
         and numPhases match."""
+        data_loader = EBSDDataLoader()
         data_loader.loadedMetadata["phaseNames"] = ["1", "2", "3"]
         data_loader.loadedMetadata["numPhases"] = 3
         assert data_loader.checkMetadata() is None
 
     @staticmethod
-    def test_check_metadata_bad(data_loader):
+    def test_checkMetadata_bad():
         """The check_metadata method should fail if phaseNames and
         numPhases do not match."""
+        data_loader = EBSDDataLoader()
         data_loader.loadedMetadata["phaseNames"] = ["1", "2"]
         data_loader.loadedMetadata["numPhases"] = 3
         with pytest.raises(AssertionError):
             data_loader.checkMetadata()
 
-    @staticmethod
-    def test_load_oxford_cpr_good_file(data_loader):
-        data_loader.loadOxfordCPR(EXAMPLE_DIC)
-        metadata = data_loader.loadedMetadata
-        assert metadata["xDim"] == 1006
-        assert metadata["yDim"] == 996
-        # Testing for floating point equality so use approx
-        assert metadata["stepSize"] == pytest.approx(0.1)
-        assert metadata["numPhases"] == 1
-        assert metadata["phaseNames"] == ["Ni-superalloy"]
+
+class TestLoadOxfordBinary:
+    """Tests for loading Oxford binary EBSD files. These consist of metadata in a CPR file
+    and binary EBSD data in a CRC file."""
 
     @staticmethod
-    def test_load_oxford_cpr_bad_file(data_loader):
+    def test_load_oxford_cpr_good_file():
+        """Load a known good cpr file and check the contents are read correctly."""
+        data_loader = EBSDDataLoader()
+        data_loader.loadOxfordCPR(EXAMPLE_EBSD)
+
+        ebsd_metadata_tests(data_loader)
+
+    @staticmethod
+    def test_load_oxford_cpr_bad_file():
+        """Check an error is raised on a bad file name."""
         with pytest.raises(FileNotFoundError):
-            data_loader.loadOxfordCPR("badger")
+            data_loader = EBSDDataLoader()
+            data_loader.loadOxfordCPR("bad_file_name")
 
     @staticmethod
-    def test_load_oxford_crc_good_file(metadata_loaded):
-        metadata_loaded.loadOxfordCRC(EXAMPLE_DIC)
-        x_dim = metadata_loaded.loadedMetadata["xDim"]
-        y_dim = metadata_loaded.loadedMetadata["yDim"]
-        assert metadata_loaded.loadedData['bandContrast'].shape == (y_dim, x_dim)
-        assert isinstance(metadata_loaded.loadedData['bandContrast'][0][0], np.uint8)
+    def test_load_oxford_crc_good_file():
+        """Load a known good crc file and check the contents are read correctly."""
+        data_loader = EBSDDataLoader()
+        data_loader.loadOxfordCPR(EXAMPLE_EBSD)
+        data_loader.loadOxfordCRC(EXAMPLE_EBSD)
 
-        assert metadata_loaded.loadedData['phase'].shape == (y_dim, x_dim)
-        assert isinstance(metadata_loaded.loadedData['phase'][0][0], np.int8)
-
-        assert metadata_loaded.loadedData['eulerAngle'].shape == (3, y_dim, x_dim)
-        assert isinstance(metadata_loaded.loadedData['eulerAngle'][0], np.ndarray)
-        assert isinstance(metadata_loaded.loadedData['eulerAngle'][0][0], np.ndarray)
-        assert isinstance(metadata_loaded.loadedData['eulerAngle'][0][0][0], np.float64)
+        ebsd_data_tests(data_loader)
 
     @staticmethod
-    def test_load_oxford_crc_bad(metadata_loaded):
+    def test_load_oxford_crc_bad():
+        """Check an error is raised on a bad file name."""
         with pytest.raises(FileNotFoundError):
-            metadata_loaded.loadOxfordCRC("badger")
+            data_loader = EBSDDataLoader()
+            data_loader.loadOxfordCRC("bad_file_name")
 
 
-class TestDICDataLoader:
-
-    @staticmethod
-    @pytest.fixture
-    def dic_loader():
-        return defdap.file_readers.DICDataLoader()
+class TestLoadCTF:
+    """Tests for loading EBSD CTF files. These are text files containing metadata in a
+    header and the EBSD data beneath."""
 
     @staticmethod
-    @pytest.fixture
-    def dic_metadata_loaded(dic_loader):
-        dic_loader.loadDavisMetadata(EXAMPLE_TXT)
-        return dic_loader
+    def test_load_oxford_ctf_good():
+        """Load a known good ctf file and check the contents are read correctly."""
+        data_loader = EBSDDataLoader()
+        data_loader.loadOxfordCTF(EXAMPLE_EBSD)
+
+        ebsd_metadata_tests(data_loader)
+        ebsd_data_tests(data_loader)
 
     @staticmethod
-    @pytest.fixture
-    def dic_data_loaded(dic_metadata_loaded):
-        dic_metadata_loaded.loadDavisData(EXAMPLE_TXT)
-        return dic_metadata_loaded
-
-    @staticmethod
-    def test_init(dic_loader):
-        assert isinstance(dic_loader.loadedMetadata, dict)
-        assert isinstance(dic_loader.loadedData, dict)
-
-    @staticmethod
-    def test_load_davis_metadata(dic_loader):
-        dic_loader.loadDavisMetadata(EXAMPLE_TXT)
-        metadata = dic_loader.loadedMetadata
-        assert metadata['format'] == "DaVis"
-        assert metadata['version'] == "8.1.5"
-        assert metadata['binning'] == 12
-        assert metadata['xDim'] == 586
-        assert metadata['yDim'] == 510
-
-    @staticmethod
-    def test_load_davis_metadata_bad_file(dic_loader):
+    def test_load_oxford_ctf_bad():
+        """Check an error is raised on a bad file name."""
         with pytest.raises(FileNotFoundError):
-            dic_loader.loadDavisMetadata("badger")
+            data_loader = EBSDDataLoader()
+            data_loader.loadOxfordCTF("bad_file_name")
+
+
+class TestLoadDIC:
+    """Tests for loading DIC text files. These are text files containing metadata in a
+    header and the DIC data beneath."""
 
     @staticmethod
-    def test_load_davis_data(dic_metadata_loaded):
-        dic_metadata_loaded.loadDavisData(EXAMPLE_TXT)
-        data = dic_metadata_loaded.loadedData
-        num_elements = dic_metadata_loaded.loadedMetadata["xDim"] * \
-                       dic_metadata_loaded.loadedMetadata["yDim"]
-        assert data['xc'].shape[0] == num_elements
-        assert data['yc'].shape[0] == num_elements
-        assert data['xd'].shape[0] == num_elements
-        assert data['yd'].shape[0] == num_elements
+    def test_load_metadata():
+        """Load a known good DIC txt file and check the metadata is read correctly."""
+        data_loader = DICDataLoader()
+        data_loader.loadDavisMetadata(EXAMPLE_DIC)
+
+        assert data_loader.loadedMetadata["format"] == "DaVis"
+        assert data_loader.loadedMetadata["version"] == "8.4.0"
+        assert data_loader.loadedMetadata["binning"] == 12
+        assert data_loader.loadedMetadata["xDim"] == 17
+        assert data_loader.loadedMetadata["yDim"] == 17
 
     @staticmethod
-    def test_load_davis_data_bad_file(dic_metadata_loaded):
+    def test_load_bad_metadata():
+        """Check an error is raised on a bad file name."""
+        data_loader = DICDataLoader()
         with pytest.raises(FileNotFoundError):
-            dic_metadata_loaded.loadDavisData("badger")
+            data_loader.loadDavisMetadata("bad_file_name")
 
     @staticmethod
-    def test_check_davis_data(dic_data_loaded):
-        assert dic_data_loaded.checkData() is None
+    def test_load_data():
+        """Load a known good DIC txt file and check the data are read correctly."""
+        data_loader = DICDataLoader()
+        data_loader.loadDavisMetadata(EXAMPLE_DIC)
+        data_loader.loadDavisData(EXAMPLE_DIC)
+
+        assert data_loader.loadedData["xc"].shape == (289,)
+        assert data_loader.loadedData["xc"][0] == 6
+        assert data_loader.loadedData["yc"].shape == (289,)
+        assert data_loader.loadedData["yc"][0] == 6
+        assert data_loader.loadedData["xd"].shape == (289,)
+        assert data_loader.loadedData["xd"][0] == 54.1145
+        assert data_loader.loadedData["yd"].shape == (289,)
+        assert data_loader.loadedData["yd"][0] == 0.0357
 
     @staticmethod
-    def test_check__bad_davis_data(dic_data_loaded):
-        dic_data_loaded.loadedMetadata["xDim"] = 42
-        with pytest.raises(AssertionError):
-            dic_data_loaded.checkData()
+    def test_load_bad_data():
+        """Check an error is raised on a bad file name."""
+        data_loader = DICDataLoader()
+        with pytest.raises(FileNotFoundError):
+            data_loader.loadDavisData("bad_file_name")

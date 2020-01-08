@@ -19,8 +19,8 @@ TiltAxis=0.00
 Device=Beam
 GridDistX=0.1200
 GridDistY=0.1200
-xCells=359
-yCells=243
+xCells=25
+yCells=25
 [Acquisition Surface]
 Euler1=0.0
 Euler2=0.0
