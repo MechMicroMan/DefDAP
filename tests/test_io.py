@@ -1,9 +1,14 @@
+import pathlib
+
 import pytest
 import numpy as np
 
 from defdap.file_readers import EBSDDataLoader, DICDataLoader
 
-EXAMPLE_EBSD = "tests/data/testDataEBSD"
+EXAMPLE_CTF = pathlib.Path("tests/data/testDataEBSD.ctf")
+EXAMPLE_CPR = pathlib.Path("tests/data/testDataEBSD.cpr")
+EXAMPLE_CRC = pathlib.Path("tests/data/testDataEBSD.crc")
+BAD_PATH = pathlib.Path("aaabbb")
 EXAMPLE_DIC = "tests/data/testDataDIC.txt"
 
 
@@ -74,7 +79,7 @@ class TestLoadOxfordBinary:
     def test_load_oxford_cpr_good_file():
         """Load a known good cpr file and check the contents are read correctly."""
         data_loader = EBSDDataLoader()
-        data_loader.loadOxfordCPR(EXAMPLE_EBSD)
+        data_loader.loadOxfordCPR(EXAMPLE_CPR)
 
         ebsd_metadata_tests(data_loader)
 
@@ -83,14 +88,14 @@ class TestLoadOxfordBinary:
         """Check an error is raised on a bad file name."""
         with pytest.raises(FileNotFoundError):
             data_loader = EBSDDataLoader()
-            data_loader.loadOxfordCPR("bad_file_name")
+            data_loader.loadOxfordCPR(BAD_PATH)
 
     @staticmethod
     def test_load_oxford_crc_good_file():
         """Load a known good crc file and check the contents are read correctly."""
         data_loader = EBSDDataLoader()
-        data_loader.loadOxfordCPR(EXAMPLE_EBSD)
-        data_loader.loadOxfordCRC(EXAMPLE_EBSD)
+        data_loader.loadOxfordCPR(EXAMPLE_CPR)
+        data_loader.loadOxfordCRC(EXAMPLE_CRC)
 
         ebsd_data_tests(data_loader)
 
@@ -99,7 +104,7 @@ class TestLoadOxfordBinary:
         """Check an error is raised on a bad file name."""
         with pytest.raises(FileNotFoundError):
             data_loader = EBSDDataLoader()
-            data_loader.loadOxfordCRC("bad_file_name")
+            data_loader.loadOxfordCRC(BAD_PATH)
 
 
 class TestLoadCTF:
@@ -110,7 +115,7 @@ class TestLoadCTF:
     def test_load_oxford_ctf_good():
         """Load a known good ctf file and check the contents are read correctly."""
         data_loader = EBSDDataLoader()
-        data_loader.loadOxfordCTF(EXAMPLE_EBSD)
+        data_loader.loadOxfordCTF(EXAMPLE_CTF)
 
         ebsd_metadata_tests(data_loader)
         ebsd_data_tests(data_loader)
@@ -120,7 +125,7 @@ class TestLoadCTF:
         """Check an error is raised on a bad file name."""
         with pytest.raises(FileNotFoundError):
             data_loader = EBSDDataLoader()
-            data_loader.loadOxfordCTF("bad_file_name")
+            data_loader.loadOxfordCTF(BAD_PATH)
 
 
 class TestLoadDIC:

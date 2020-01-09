@@ -4,9 +4,3 @@
 # Explicitly declare text files you want to always be normalized and converted
 # to native line endings on checkout.
 *.py text
-
-# Declare files that will always have CRLF line endings on checkout.
-
-
-# Denote all files that are truly binary and should not be modified.
-*.ipynb binary

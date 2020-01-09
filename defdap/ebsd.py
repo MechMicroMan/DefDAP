@@ -19,7 +19,7 @@ from skimage import morphology as mph
 
 import copy
 
-from defdap.file_readers import EBSDDataLoader
+import defdap.file_readers as file_readers
 from defdap.quat import Quat
 from defdap.crystal import SlipSystem
 from defdap import base
@@ -88,7 +88,7 @@ class Map(base.Map):
     ax
     """
 
-    def __init__(self, fileName, crystalSym, dataType=None):
+    def __init__(self, fileName, crystalSym):
         """
         Initialise class and load EBSD data
 
@@ -98,8 +98,6 @@ class Map(base.Map):
             Path to EBSD file, including name, excluding extension
         crystalSym : str, {'cubic', 'hexagonal'}
             Crystal structure
-        dataType : str, {'OxfordBinary', 'OxfordText'}
-            Format of EBSD data file
         """
         # Call base class constructor
         super(Map, self).__init__()
@@ -135,37 +133,28 @@ class Map(base.Map):
         self.plotHomog = self.plotEulerMap
         self.highlightAlpha = 1
 
-        self.loadData(fileName, crystalSym, dataType=dataType)
+        self.loadData(fileName, crystalSym)
 
     @property
     def plotDefault(self):
         # return self.plotEulerMap(*args, **kwargs)
         return lambda *args, **kwargs: self.plotEulerMap(*args, **kwargs)
 
-    def loadData(self, fileName, crystalSym, dataType=None):
+    def loadData(self, fileName, crystalSym):
         """
         Load in EBSD data
 
         Parameters
         ----------
         fileName : str
-            Path to EBSD file, including name, excluding extension
+            Path to EBSD file, including name, including extension
         crystalSym : str, {'cubic', 'hexagonal'}
             Crystal structure
-        dataType : str, {'OxfordBinary', 'OxfordText'}
-            Format of EBSD data file
         """
-        if dataType is None:
-            dataType = "OxfordBinary"
 
-        dataLoader = EBSDDataLoader()
-        if dataType == "OxfordBinary":
-            metadataDict = dataLoader.loadOxfordCPR(fileName)
-            dataDict = dataLoader.loadOxfordCRC(fileName)
-        elif dataType == "OxfordText":
-            metadataDict, dataDict = dataLoader.loadOxfordCTF(fileName)
-        else:
-            raise Exception("No loader found for this EBSD data.")
+        dataLoader = file_readers.loadEBSDData(fileName)
+        metadataDict = dataLoader.loadedMetadata
+        dataDict = dataLoader.loadedData
 
         self.xDim = metadataDict['xDim']
         self.yDim = metadataDict['yDim']
