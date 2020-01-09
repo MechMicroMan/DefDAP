@@ -15,161 +15,147 @@
 
 import os
 import pathlib
-from typing import Union
+from typing import Union, Tuple
 
 import numpy as np
 import pandas as pd
 
 
-class EBSDDataLoader:
-
+class EBSDMetadata:
     def __init__(self):
-        self.loadedMetadata = {
-            'xDim': 0,
-            'yDim': 0,
-            'stepSize': 0.,
-            'numPhases': 0,
-            'phaseNames': []
-        }
-        self.loadedData = {
-            'eulerAngle': None,
-            'bandContrast': None,
-            'phase': None
-        }
+        self.xDim = 0
+        self.yDim = 0
+        self.stepSize = 0
+        self.numPhases = 0
+        self.phaseNames = []
 
-    def checkMetadata(self):
-        if len(self.loadedMetadata['phaseNames']) != self.loadedMetadata['numPhases']:
-            print("Number of phases mismatch.")
-            raise AssertionError
 
-    def loadOxfordCPR(self, fileStub: pathlib.Path):
-        """ A .cpr file is a metadata file describing EBSD data.
-        This function opens the cpr file, reading in the x and y
-        dimensions and phase names."""
-        filePath = fileStub.with_suffix(".cpr")
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
+class EBSDData:
+    def __init__(self):
+        self.eulerAngle = None
+        self.bandContrast = None
+        self.phase = None
 
-        cprFile = open(str(filePath), 'r')
 
+def _checkEBSDMetadata(metadata: EBSDMetadata):
+    if len(metadata.phaseNames) != metadata.numPhases:
+        print("Number of phases mismatch.")
+        raise AssertionError
+
+
+def _loadOxfordCPR(fileStub: pathlib.Path) -> EBSDMetadata:
+    """ A .cpr file is a metadata file describing EBSD data.
+    This function opens the cpr file, reading in the x and y
+    dimensions and phase names."""
+    filePath = fileStub.with_suffix(".cpr")
+    if not filePath.is_file():
+        raise FileNotFoundError("Cannot open file {}".format(filePath))
+
+    with open(str(filePath), 'r') as cprFile:
+
+        metadata = EBSDMetadata()
         for line in cprFile:
             if 'xCells' in line:
-                self.loadedMetadata['xDim'] = int(line.split("=")[-1])
+                metadata.xDim = int(line.split("=")[-1])
             elif 'yCells' in line:
-                self.loadedMetadata['yDim'] = int(line.split("=")[-1])
+                metadata.yDim = int(line.split("=")[-1])
             elif 'GridDistX' in line:
-                self.loadedMetadata['stepSize'] = float(line.split("=")[-1])
+                metadata.stepSize = float(line.split("=")[-1])
             elif '[Phases]' in line:
-                self.loadedMetadata['numPhases'] = int(next(cprFile).split("=")[-1])
+                metadata.numPhases = int(next(cprFile).split("=")[-1])
             elif '[Phase' in line:
                 phaseName = next(cprFile).split("=")[-1].strip('\n')
-                self.loadedMetadata['phaseNames'].append(phaseName)
+                metadata.phaseNames.append(phaseName)
 
-        cprFile.close()
+    _checkEBSDMetadata(metadata)
 
-        self.checkMetadata()
+    return metadata
 
-        return self.loadedMetadata
 
-    def loadOxfordCRC(self, fileStub: pathlib.Path):
-        """Read binary EBSD data from a .crc file"""
-        xDim = self.loadedMetadata['xDim']
-        yDim = self.loadedMetadata['yDim']
+def _loadOxfordCRC(fileStub: pathlib.Path, metadata: EBSDMetadata) -> EBSDData:
+    """Read binary EBSD data from a .crc file"""
+    filePath = fileStub.with_suffix(".crc")
 
-        filePath = fileStub.with_suffix(".crc")
+    if not filePath.is_file():
+        raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
+    dataFormat = np.dtype([
+        ('Phase', 'b'),
+        ('ph1', 'f'),
+        ('phi', 'f'),
+        ('ph2', 'f'),
+        ('MAD', 'f'),
+        ('BC', 'uint8'),
+        ('IB3', 'uint8'),
+        ('IB4', 'uint8'),
+        ('IB5', 'uint8'),
+        ('IB6', 'f')
+    ])
+    binData = np.fromfile(str(filePath), dataFormat, count=-1)
 
-        dataFormat = np.dtype([
-            ('Phase', 'b'),
-            ('Eulers', [('ph1', 'f'), ('phi', 'f'), ('ph2', 'f')]),
-            ('MAD', 'f'),
-            ('BC', 'uint8'),
-            ('IB3', 'uint8'),
-            ('IB4', 'uint8'),
-            ('IB5', 'uint8'),
-            ('IB6', 'f')
-        ])
-        binData = np.fromfile(str(filePath), dataFormat, count=-1)
+    return build_ebsd_data(binData, metadata)
 
-        self.loadedData['bandContrast'] = np.reshape(
-            binData['BC'], (yDim, xDim)
-        )
-        self.loadedData['phase'] = np.reshape(
-            binData['Phase'], (yDim, xDim)
-        )
-        eulerAngles = np.reshape(
-            binData['Eulers'], (yDim, xDim)
-        )
-        # flatten the structures so that the Euler angles are stored
-        # into a normal array
-        eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
-        self.loadedData['eulerAngle'] = eulerAngles
 
-        return self.loadedData
+def _loadOxfordCTF(filePath: pathlib.Path) -> Tuple[EBSDMetadata, EBSDData]:
+    """ A .ctf file is a HKL single orientation file. This is a
+    data file generated by the Oxford EBSD instrument."""
 
-    def loadOxfordCTF(self, filePath: pathlib.Path):
-        """ A .ctf file is a HKL single orientation file. This is a
-        data file generated by the Oxford EBSD instrument."""
+    # open data file and read in metadata
+    if not filePath.is_file():
+        raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        # open data file and read in metadata
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
+    metadata = EBSDMetadata()
 
-        ctfFile = open(str(filePath), 'r')
+    with open(str(filePath), 'r') as ctfFile:
 
-        for i, line in enumerate(ctfFile):
+        for line_num, line in enumerate(ctfFile):
             if 'XCells' in line:
-                xDim = int(line.split()[-1])
-                self.loadedMetadata['xDim'] = xDim
+                metadata.xDim = int(line.split()[-1])
             elif 'YCells' in line:
-                yDim = int(line.split()[-1])
-                self.loadedMetadata['yDim'] = yDim
+                metadata.yDim = int(line.split()[-1])
             elif 'XStep' in line:
-                self.loadedMetadata['stepSize'] = float(line.split()[-1])
+                metadata.stepSize = float(line.split()[-1])
             elif 'Phases' in line:
                 numPhases = int(line.split()[-1])
-                self.loadedMetadata['numPhases'] = numPhases
-                for j in range(numPhases):
-                    self.loadedMetadata['phaseNames'].append(
-                        next(ctfFile).split()[2]
-                    )
-                numHeaderLines = i + j + 3
-                # phases are last in the header so break out the loop
+                metadata.numPhases = numPhases
+                for phase_num in range(numPhases):
+                    metadata.phaseNames.append(next(ctfFile).split()[2])
+                numHeaderLines = line_num + numPhases + 2
+                # phases are last in the header so break out of the loop
                 break
 
-        ctfFile.close()
+    _checkEBSDMetadata(metadata)
 
-        self.checkMetadata()
+    # now read the data from file
+    dataFormat = np.dtype([
+        ('Phase', 'b'),
+        ('ph1', 'f'),
+        ('phi', 'f'),
+        ('ph2', 'f'),
+        ('MAD', 'f'),
+        ('BC', 'uint8')
+    ])
+    input_data = np.loadtxt(
+        str(filePath), dataFormat, delimiter='\t',
+        skiprows=numHeaderLines, usecols=(0, 5, 6, 7, 8, 9)
+    )
 
-        # now read the data from file
-        dataFormat = np.dtype([
-            ('Phase', 'b'),
-            ('Eulers', [('ph1', 'f'), ('phi', 'f'), ('ph2', 'f')]),
-            ('MAD', 'f'),
-            ('BC', 'uint8')
-        ])
-        binData = np.loadtxt(
-            str(filePath), dataFormat, delimiter='\t',
-            skiprows=numHeaderLines, usecols=(0, 5, 6, 7, 8, 9)
-        )
+    data = build_ebsd_data(input_data, metadata)
+    data.eulerAngle = data.eulerAngle * np.pi / 180.
 
-        self.loadedData['bandContrast'] = np.reshape(
-            binData['BC'], (yDim, xDim)
-        )
-        self.loadedData['phase'] = np.reshape(
-            binData['Phase'], (yDim, xDim)
-        )
-        eulerAngles = np.reshape(
-            binData['Eulers'], (yDim, xDim)
-        )
-        # flatten the structures the Euler angles are stored into a
-        # normal array
-        eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
-        self.loadedData['eulerAngle'] = eulerAngles * np.pi / 180.
+    return metadata, data
 
-        return self.loadedMetadata, self.loadedData
+
+def build_ebsd_data(input_data: np.ndarray, metadata: EBSDMetadata) -> EBSDData:
+    """Given raw input data, build an EBSD data object."""
+    data = EBSDData()
+    data.bandContrast = np.reshape(input_data['BC'], (metadata.yDim, metadata.xDim))
+    data.phase = np.reshape(input_data['Phase'], (metadata.yDim, metadata.xDim))
+    eulerAngles = np.stack((input_data['ph1'], input_data['phi'], input_data['ph2']),
+                           axis=0)
+    data.eulerAngle = eulerAngles.reshape((3, metadata.yDim, metadata.xDim))
+
+    return data
 
 
 class DICDataLoader:
@@ -244,15 +230,19 @@ class DICDataLoader:
         return self.loadedData
 
 
-def loadEBSDData(file_path: Union[str, os.PathLike]) -> EBSDDataLoader:
-    data_loader = EBSDDataLoader()
-
+def loadEBSDData(file_path: Union[str, os.PathLike]) -> Tuple[EBSDMetadata, EBSDData]:
+    """General method for loading EBSD data and associated metadata."""
     path = pathlib.Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError
 
     if path.suffix == ".ctf":
-        data_loader.loadOxfordCTF(path)
-    elif path.suffix == ".cpr" or ".crc":
+        metadata, data = _loadOxfordCTF(path)
+    elif path.suffix == ".cpr" or path.suffix == ".crc":
         file_stub = path.with_suffix('')
-        data_loader.loadOxfordCPR(file_stub)
-        data_loader.loadOxfordCRC(file_stub)
-    return data_loader
+        metadata = _loadOxfordCPR(file_stub)
+        data = _loadOxfordCRC(file_stub, metadata)
+    else:
+        raise TypeError(f"File {path} is an unknown type.")
+
+    return metadata, data

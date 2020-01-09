@@ -152,19 +152,17 @@ class Map(base.Map):
             Crystal structure
         """
 
-        dataLoader = file_readers.loadEBSDData(fileName)
-        metadataDict = dataLoader.loadedMetadata
-        dataDict = dataLoader.loadedData
+        metadata, data = file_readers.loadEBSDData(fileName)
 
-        self.xDim = metadataDict['xDim']
-        self.yDim = metadataDict['yDim']
-        self.stepSize = metadataDict['stepSize']
-        self.numPhases = metadataDict['numPhases']
-        self.phaseNames = metadataDict['phaseNames']
+        self.xDim = metadata.xDim
+        self.yDim = metadata.yDim
+        self.stepSize = metadata.stepSize
+        self.numPhases = metadata.numPhases
+        self.phaseNames = metadata.phaseNames
 
-        self.eulerAngleArray = dataDict['eulerAngle']
-        self.bandContrastArray = dataDict['bandContrast']
-        self.phaseArray = dataDict['phase']
+        self.eulerAngleArray = data.eulerAngle
+        self.bandContrastArray = data.bandContrast
+        self.phaseArray = data.phase
 
         self.crystalSym = crystalSym
 
