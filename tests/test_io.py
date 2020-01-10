@@ -99,43 +99,28 @@ class TestLoadDIC:
     header and the DIC data beneath."""
 
     @staticmethod
-    def test_load_metadata():
-        """Load a known good DIC txt file and check the metadata is read correctly."""
-        data_loader = file_readers.DICDataLoader()
-        data_loader.loadDavisMetadata(EXAMPLE_DIC)
-
-        assert data_loader.loadedMetadata["format"] == "DaVis"
-        assert data_loader.loadedMetadata["version"] == "8.4.0"
-        assert data_loader.loadedMetadata["binning"] == 12
-        assert data_loader.loadedMetadata["xDim"] == 17
-        assert data_loader.loadedMetadata["yDim"] == 17
-
-    @staticmethod
-    def test_load_bad_metadata():
-        """Check an error is raised on a bad file name."""
-        data_loader = file_readers.DICDataLoader()
-        with pytest.raises(FileNotFoundError):
-            data_loader.loadDavisMetadata("bad_file_name")
-
-    @staticmethod
     def test_load_data():
-        """Load a known good DIC txt file and check the data are read correctly."""
-        data_loader = file_readers.DICDataLoader()
-        data_loader.loadDavisMetadata(EXAMPLE_DIC)
-        data_loader.loadDavisData(EXAMPLE_DIC)
+        """Load a known good DIC txt file and check the metadata
+        and data are read correctly."""
+        metadata, data = file_readers.loadDICData(EXAMPLE_DIC)
 
-        assert data_loader.loadedData["xc"].shape == (289,)
-        assert data_loader.loadedData["xc"][0] == 6
-        assert data_loader.loadedData["yc"].shape == (289,)
-        assert data_loader.loadedData["yc"][0] == 6
-        assert data_loader.loadedData["xd"].shape == (289,)
-        assert data_loader.loadedData["xd"][0] == 54.1145
-        assert data_loader.loadedData["yd"].shape == (289,)
-        assert data_loader.loadedData["yd"][0] == 0.0357
+        assert metadata.format == "DaVis"
+        assert metadata.version == "8.4.0"
+        assert metadata.binning == 12
+        assert metadata.xDim == 17
+        assert metadata.yDim == 17
+
+        assert data.xc.shape == (289,)
+        assert data.xc[0] == 6
+        assert data.yc.shape == (289,)
+        assert data.yc[0] == 6
+        assert data.xd.shape == (289,)
+        assert data.xd[0] == 54.1145
+        assert data.yd.shape == (289,)
+        assert data.yd[0] == 0.0357
 
     @staticmethod
     def test_load_bad_data():
         """Check an error is raised on a bad file name."""
-        data_loader = file_readers.DICDataLoader()
         with pytest.raises(FileNotFoundError):
-            data_loader.loadDavisData("bad_file_name")
+            file_readers.loadDICData(BAD_PATH)

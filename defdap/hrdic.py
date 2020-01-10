@@ -16,30 +16,23 @@
 import numpy as np
 from matplotlib.pyplot import imread
 import inspect
-
 from skimage import transform as tf
 from skimage import morphology as mph
-
 from scipy.stats import mode
-
 import peakutils
+import pathlib
 
-from defdap.file_readers import DICDataLoader
-from defdap import base
-from defdap.quat import Quat
-from defdap import plotting
-
-from defdap.plotting import MapPlot, GrainPlot
+from defdap import base, file_readers
+from defdap.plotting import MapPlot
 
 
 class Map(base.Map):
 
-    def __init__(self, path, fname, dataType=None):
+    def __init__(self, path: str):
         """Initialise class and import DIC data from file
 
         Args:
-            path(str): Path to file
-            fname(str): Name of file including extension
+            path(str): Full path to file including file name and extension
         """
 
         # Call base class constructor
@@ -72,10 +65,10 @@ class Map(base.Map):
         # pattern relative to pixel size of dic data i.e 1 means they
         # are the same size and 2 means the pixels in the pattern are
         # half the size of the dic data.
-        self.path = path                    # file path
-        self.fname = fname                  # file name
+        path = pathlib.Path(path)
+        self.path = path.parent
 
-        self.loadData(path, fname, dataType=dataType)
+        self.loadData(path)
   
         # *dim are full size of data. *Dim are size after cropping
         self.xDim = self.xdim
@@ -108,26 +101,23 @@ class Map(base.Map):
     def crystalSym(self):
         return self.ebsdMap.crystalSym
 
-    def loadData(self, fileDir, fileName, dataType=None):
-        dataType = "DavisText" if dataType is None else dataType
+    def loadData(self, path: str):
+        """
+        Load data from a file.
+        :param path: The full or relative path of the file to be loaded.
+        """
+        metadata, data = file_readers.loadDICData(path)
 
-        dataLoader = DICDataLoader()
-        if dataType == "DavisText":
-            metadataDict = dataLoader.loadDavisMetadata(fileName, fileDir)
-            dataDict = dataLoader.loadDavisData(fileName, fileDir)
-        else:
-            raise Exception("No loader found for this DIC data.")
+        self.format = metadata.format      # Software name
+        self.version = metadata.version    # Software version
+        self.binning = metadata.binning    # Sub-window width in pixels
+        self.xdim = metadata.xDim          # size of map along x (from header)
+        self.ydim = metadata.yDim          # size of map along y (from header)
 
-        self.format = metadataDict['format']      # Software name
-        self.version = metadataDict['version']    # Software version
-        self.binning = metadataDict['binning']    # Sub-window width in pixels
-        self.xdim = metadataDict['xDim']          # size of map along x (from header)
-        self.ydim = metadataDict['yDim']          # size of map along y (from header)
-
-        self.xc = dataDict['xc']    # x coordinates
-        self.yc = dataDict['yc']    # y coordinates
-        self.xd = dataDict['xd']    # x displacement
-        self.yd = dataDict['yd']    # y displacement
+        self.xc = data.xc    # x coordinates
+        self.yc = data.yc    # y coordinates
+        self.xd = data.xd    # x displacement
+        self.yd = data.yd    # y displacement
 
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))

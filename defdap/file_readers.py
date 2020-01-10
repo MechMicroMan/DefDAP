@@ -158,76 +158,69 @@ def build_ebsd_data(input_data: np.ndarray, metadata: EBSDMetadata) -> EBSDData:
     return data
 
 
-class DICDataLoader:
-
+class DICMetadata:
     def __init__(self):
-        self.loadedMetadata = {
-            'format': "",
-            'version': "",
-            'binning': "",
-            'xDim': 0,
-            'yDim': 0
-        }
-        self.loadedData = {
-            'xc': None,
-            'yc': None,
-            'xd': None,
-            'yd': None
-        }
+        self.format = ""
+        self.version = ""
+        self.binning = ""
+        self.xDim = 0
+        self.yDim = 0
 
-    def checkData(self):
-        # Calculate size of map from loaded data and check it matches
-        # values from metadata
-        coords = self.loadedData['xc']
-        xdim = int(
-            (coords.max() - coords.min()) / min(abs(np.diff(coords))) + 1
-        )
 
-        coords = self.loadedData['yc']
-        ydim = int(
-            (coords.max() - coords.min()) / max(abs(np.diff(coords))) + 1
-        )
+class DICData:
+    def __init__(self):
+        self.xc = None
+        self.yc = None
+        self.xd = None
+        self.yd = None
 
-        assert xdim == self.loadedMetadata['xDim'], "Dimensions of data and header do not match"
-        assert ydim == self.loadedMetadata['yDim'], "Dimensions of data and header do not match"
 
-    def loadDavisMetadata(self, fileName, fileDir=""):
-        # Load metadata
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
+def checkDICData(data: DICData, metadata: DICMetadata):
+    # Calculate size of map from loaded data and check it matches
+    # values from metadata
+    xdim = int(
+        (data.xc.max() - data.xc.min()) / min(abs(np.diff(data.xc))) + 1
+    )
 
-        with open(str(filePath), 'r') as f:
-            header = f.readline()
-        metadata = header.split()
+    ydim = int(
+        (data.yc.max() - data.yc.min()) / max(abs(np.diff(data.yc))) + 1
+    )
 
-        # Software name and version
-        self.loadedMetadata['format'] = metadata[0].strip('#')
-        self.loadedMetadata['version'] = metadata[1]
-        # Sub-window width in pixels
-        self.loadedMetadata['binning'] = int(metadata[3])
-        # size of map along x and y (from header)
-        self.loadedMetadata['xDim'] = int(metadata[5])
-        self.loadedMetadata['yDim'] = int(metadata[4])
+    if not xdim == metadata.xDim or not ydim == metadata.yDim:
+        raise AssertionError("Dimensions of data and header do not match")
 
-        return self.loadedMetadata
 
-    def loadDavisData(self, fileName, fileDir=""):
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
+def _loadDaVisData(filePath) -> Tuple[DICMetadata, DICData]:
+    # Load DIC data from a txt file in the format used by DaVis imaging software
+    if not filePath.is_file():
+        raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1, header=None)
-        # x and y coordinates
-        self.loadedData['xc'] = data.values[:, 0]
-        self.loadedData['yc'] = data.values[:, 1]
-        # x and y displacement
-        self.loadedData['xd'] = data.values[:, 2]
-        self.loadedData['yd'] = data.values[:, 3]
+    with open(str(filePath), 'r') as f:
+        line = f.readline().split()
 
-        self.checkData()
+    metadata = DICMetadata()
 
-        return self.loadedData
+    # Software name and version
+    metadata.format = line[0].strip('#')
+    metadata.version = line[1]
+    # Sub-window width in pixels
+    metadata.binning = int(line[3])
+    # size of map along x and y (from header)
+    metadata.xDim = int(line[5])
+    metadata.yDim = int(line[4])
+
+    raw_data = pd.read_table(str(filePath), delimiter='\t', skiprows=1, header=None)
+    data = DICData()
+    # x and y coordinates
+    data.xc = raw_data.values[:, 0]
+    data.yc = raw_data.values[:, 1]
+    # x and y displacement
+    data.xd = raw_data.values[:, 2]
+    data.yd = raw_data.values[:, 3]
+
+    checkDICData(data, metadata)
+
+    return metadata, data
 
 
 def loadEBSDData(file_path: Union[str, os.PathLike]) -> Tuple[EBSDMetadata, EBSDData]:
@@ -243,6 +236,20 @@ def loadEBSDData(file_path: Union[str, os.PathLike]) -> Tuple[EBSDMetadata, EBSD
         metadata = _loadOxfordCPR(file_stub)
         data = _loadOxfordCRC(file_stub, metadata)
     else:
-        raise TypeError(f"File {path} is an unknown type.")
+        raise TypeError(f"File {path} is an unknown type for EBSD data.")
+
+    return metadata, data
+
+
+def loadDICData(file_path: Union[str, os.PathLike]) -> Tuple[DICMetadata, DICData]:
+    """General method for loading DIC data and associated metadata."""
+    path = pathlib.Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError
+
+    if path.suffix == ".txt":
+        metadata, data = _loadDaVisData(path)
+    else:
+        raise TypeError(f"File {path} is an unknown type for DIC data.")
 
     return metadata, data
