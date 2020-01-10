@@ -22,7 +22,7 @@ from scipy.stats import mode
 import peakutils
 import pathlib
 
-from defdap import base, file_readers
+from defdap import base, file_io
 from defdap.plotting import MapPlot
 
 
@@ -68,7 +68,7 @@ class Map(base.Map):
         path = pathlib.Path(path)
         self.path = path.parent
 
-        self.loadData(path)
+        file_io.loadDICData(path, self)
   
         # *dim are full size of data. *Dim are size after cropping
         self.xDim = self.xdim
@@ -100,24 +100,6 @@ class Map(base.Map):
     @property
     def crystalSym(self):
         return self.ebsdMap.crystalSym
-
-    def loadData(self, path: str):
-        """
-        Load data from a file.
-        :param path: The full or relative path of the file to be loaded.
-        """
-        metadata, data = file_readers.loadDICData(path)
-
-        self.format = metadata.format      # Software name
-        self.version = metadata.version    # Software version
-        self.binning = metadata.binning    # Sub-window width in pixels
-        self.xdim = metadata.xDim          # size of map along x (from header)
-        self.ydim = metadata.yDim          # size of map along y (from header)
-
-        self.xc = data.xc    # x coordinates
-        self.yc = data.yc    # y coordinates
-        self.xd = data.xd    # x displacement
-        self.yd = data.yd    # y displacement
 
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))

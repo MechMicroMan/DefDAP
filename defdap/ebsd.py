@@ -19,7 +19,7 @@ from skimage import morphology as mph
 
 import copy
 
-import defdap.file_readers as file_readers
+import defdap.file_io as file_readers
 from defdap.quat import Quat
 from defdap.crystal import SlipSystem
 from defdap import base
@@ -104,7 +104,7 @@ class Map(base.Map):
 
         print("\rLoading EBSD data...", end="")
 
-        self.crystalSym = None
+        self.crystalSym = crystalSym
         self.xDim = None
         self.yDim = None
         self.stepSize = None
@@ -133,41 +133,15 @@ class Map(base.Map):
         self.plotHomog = self.plotEulerMap
         self.highlightAlpha = 1
 
-        self.loadData(fileName, crystalSym)
+        file_readers.loadEBSDData(fileName, self)
+
+        print(f"\rLoaded EBSD data (dimensions: {self.xDim} x {self.yDim} "
+              f"pixels, step size: {self.stepSize} um)")
 
     @property
     def plotDefault(self):
         # return self.plotEulerMap(*args, **kwargs)
         return lambda *args, **kwargs: self.plotEulerMap(*args, **kwargs)
-
-    def loadData(self, fileName, crystalSym):
-        """
-        Load in EBSD data
-
-        Parameters
-        ----------
-        fileName : str
-            Path to EBSD file, including name, including extension
-        crystalSym : str, {'cubic', 'hexagonal'}
-            Crystal structure
-        """
-
-        metadata, data = file_readers.loadEBSDData(fileName)
-
-        self.xDim = metadata.xDim
-        self.yDim = metadata.yDim
-        self.stepSize = metadata.stepSize
-        self.numPhases = metadata.numPhases
-        self.phaseNames = metadata.phaseNames
-
-        self.eulerAngleArray = data.eulerAngle
-        self.bandContrastArray = data.bandContrast
-        self.phaseArray = data.phase
-
-        self.crystalSym = crystalSym
-
-        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step "
-              "size: {2} um)".format(self.xDim, self.yDim, self.stepSize))
 
     @property
     def scale(self):
