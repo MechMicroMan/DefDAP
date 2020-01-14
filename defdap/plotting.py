@@ -180,6 +180,7 @@ class MapPlot(Plot):
             img = self.imgLayers[self.highlightsLayerID]
             img.set_data(outline)
             img.set_cmap(hightlightsCmap)
+            img.autoscale()
 
         self.draw()
 
