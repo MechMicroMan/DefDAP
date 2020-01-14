@@ -226,7 +226,7 @@ class Quat(object):
 
         if isinstance(vector, np.ndarray) and vector.shape == (3,):
             vectorQuat = Quat(0, vector[0], vector[1], vector[2])
-            vectorQuatTransformed = (self * vectorQuat) * self.conjugate
+            vectorQuatTransformed = self * (vectorQuat * self.conjugate)
             vectorTransformed = vectorQuatTransformed.quatCoef[1:4]
             return vectorTransformed
 
