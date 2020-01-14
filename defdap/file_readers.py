@@ -156,7 +156,7 @@ class EBSDDataLoader(object):
             ('BC', 'uint8')
         ])
         binData = np.loadtxt(
-            str(filePath), dataFormat, delimiter='\t',
+            str(filePath), dataFormat,
             skiprows=numHeaderLines, usecols=(0, 5, 6, 7, 8, 9)
         )
 
