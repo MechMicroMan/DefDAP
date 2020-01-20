@@ -437,6 +437,9 @@ class Quat(object):
 
     @staticmethod
     def calcIPFcolours(quats, direction, symGroup):
+        if symGroup != "cubic":
+            raise NotImplementedError("Only available for cubic currently")
+
         numQuats = len(quats)
 
         # Calculating as float32 seems to speed this up
