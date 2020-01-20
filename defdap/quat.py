@@ -451,9 +451,10 @@ class Quat(object):
         dirvec[:, 0] = np.sin(alphaFund) * np.cos(betaFund)
         dirvec[:, 1] = np.sin(alphaFund) * np.sin(betaFund)
         dirvec[:, 2] = np.cos(alphaFund)
-        rvect = np.matlib.repmat([0., 0., 1.], numQuats, 1)
-        gvect = np.matlib.repmat([1., 0., 1.] / np.sqrt(2), numQuats, 1)
-        bvect = np.matlib.repmat([1., 1., 1.] / np.sqrt(3), numQuats, 1)
+
+        rvect = np.repeat(np.array([0., 0., 1.])[np.newaxis, :], numQuats, axis=0)
+        gvect = np.repeat(np.array([1., 0., 1.])[np.newaxis, :] / np.sqrt(2), numQuats, axis=0)
+        bvect = np.repeat(np.array([1., 1., 1.])[np.newaxis, :] / np.sqrt(3), numQuats, axis=0)
         rgb = np.zeros((numQuats, 3))
 
         # Red Component; these subroutines are converted from
@@ -462,7 +463,7 @@ class Quat(object):
         GBplane = np.cross(bvect, gvect)
         Rintersect = np.cross(RDirPlane, GBplane)
         NORM = np.sqrt(np.power(Rintersect[:, 0], 2) + np.power(Rintersect[:, 1], 2) + np.power(Rintersect[:, 2], 2))
-        Rintersect[NORM != 0, :] = np.divide(Rintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+        Rintersect[NORM != 0, :] = np.divide(Rintersect[NORM != 0, :], np.repeat(NORM[NORM != 0][:, np.newaxis], 3, axis=1))
 
         temp = np.arccos(np.einsum("ij,ij->i", dirvec, Rintersect))
         Rintersect[temp > (np.pi / 2), :] = Rintersect[temp > (np.pi / 2), :] * -1
@@ -473,7 +474,7 @@ class Quat(object):
         RBplane = np.cross(rvect, bvect)
         Gintersect = np.cross(GDirPlane, RBplane)
         NORM = np.sqrt(np.power(Gintersect[:, 0], 2) + np.power(Gintersect[:, 1], 2) + np.power(Gintersect[:, 2], 2))
-        Gintersect[NORM != 0, :] = np.divide(Gintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+        Gintersect[NORM != 0, :] = np.divide(Gintersect[NORM != 0, :], np.repeat(NORM[NORM != 0][:, np.newaxis], 3, axis=1))
 
         temp = np.arccos(np.einsum("ij,ij->i", dirvec, Gintersect))
         Gintersect[temp > (np.pi / 2), :] = Gintersect[temp > (np.pi / 2), :] * -1
@@ -484,13 +485,12 @@ class Quat(object):
         RGplane = np.cross(gvect, rvect)
         Bintersect = np.cross(BDirPlane, RGplane)
         NORM = np.sqrt(np.power(Bintersect[:, 0], 2) + np.power(Bintersect[:, 1], 2) + np.power(Bintersect[:, 2], 2))
-        Bintersect[NORM != 0, :] = np.divide(Bintersect[NORM != 0, :], np.transpose(np.matlib.repmat(NORM[NORM != 0], 3, 1)))
+        Bintersect[NORM != 0, :] = np.divide(Bintersect[NORM != 0, :], np.repeat(NORM[NORM != 0][:, np.newaxis], 3, axis=1))
 
         temp = np.arccos(np.einsum("ij,ij->i", dirvec, Bintersect))
         Bintersect[temp > (np.pi / 2), :] = Bintersect[temp > (np.pi / 2), :] * -1
         rgb[:, 2] = np.divide(np.arccos(np.einsum("ij,ij->i", dirvec, Bintersect)), np.arccos(np.einsum("ij,ij->i", bvect, Bintersect)))
-
-        rgb = np.divide(rgb, np.transpose(np.matlib.repmat(np.amax(rgb, 1), 3, 1)))
+        rgb = np.divide(rgb, np.repeat(np.amax(rgb, axis=1)[:, np.newaxis], 3, axis=1))
 
         return rgb
 
