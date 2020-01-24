@@ -196,7 +196,7 @@ class Map(base.Map):
         """
         Rotate map by 180 degrees and transform quats
         """
-        print("\rTransforming EBSD data...", end="")
+        print("\rTransforming EBSD data... 0% complete...", end="")
         self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
         self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
         self.phaseArray = self.phaseArray[::-1, ::-1]
@@ -204,6 +204,8 @@ class Map(base.Map):
         
         transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi)
         for i in range(self.xDim):
+            if i%10==0:
+                print("\rTransforming EBSD data... {0}% complete...".format(int(i*100/self.xDim)), end="")
             for j in range(self.yDim):
                 self.quatArray[j, i] = self.quatArray[j, i] * transformQuat
         print("\rDone                                               ", end="")
@@ -527,7 +529,7 @@ class Map(base.Map):
         """
         Build quaternion array
         """
-        print("\rBuilding quaternion array...", end="")
+        print("\rBuilding quaternion array... 0% complete...", end="")
 
         self.checkDataLoaded()
 
