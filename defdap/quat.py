@@ -282,7 +282,7 @@ class Quat(object):
             return misOriAxis
         raise TypeError("Input must be a quaternion.")
 
-    def plotUnitCell(self, fig=None, ax=None, symGroup=None, cOverA=None):
+    def plotUnitCell(self, fig=None, ax=None, symGroup=None, cOverA=None, OI=True):
         """ Plots an unit cell
         Args:
             symGroup (str): symmetry group, hexagonal or cubic
@@ -292,9 +292,6 @@ class Quat(object):
             ax: the axis on which to plot the unit cell
         """
         
-        OI=True
-        szFac = 0.2
-        
         if symGroup == None:
             raise TypeError("symGroup must be specified")
             
@@ -303,6 +300,8 @@ class Quat(object):
             if cOverA == None:
                 raise TypeError("cOverA must be specified for hcp")
             
+            szFac = 0.2
+
             vert = np.matrix([
                 [0,0,0],
                 [1,0,0],
@@ -340,7 +339,7 @@ class Quat(object):
 
         elif symGroup == 'cubic':
 
-            szFac = szFac * 1.5
+            szFac = 0.3
             
             vert = np.matrix([
                 [-1/2,   -1/2,    -1/2],
@@ -361,10 +360,9 @@ class Quat(object):
         else:
             print('Only cubic and hexagonal supported')
         
-        g_glob=np.matrix(quatObj.rotMatrix()).H
-
         # Rotate the lattice cell points
-        gg  = np.matrix(g_glob);
+        g_glob=np.matrix(quatObj.rotMatrix()).H
+        gg = np.matrix(g_glob);
         pts = (gg*(vert.T)).T*szFac
 
         # Plot unit cell    
