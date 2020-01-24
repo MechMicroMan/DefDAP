@@ -574,12 +574,13 @@ class Map(base.Map):
             quatComps[i, 3] = (quatComps[0, 0] * sym[3] + quatComps[0, 3] * sym[0] -
                                quatComps[0, 1] * sym[2] + quatComps[0, 2] * sym[1])
 
-            # swap into positve hemisphere if required
+            # swap into positive hemisphere if required
             quatComps[i, :, quatComps[i, 0] < 0] *= -1
 
-        # Arrays to store neigbour misorientation in positive x and y direction
-        misOrix = np.zeros((numSyms, self.yDim, self.xDim))
-        misOriy = np.zeros((numSyms, self.yDim, self.xDim))
+        # Arrays to store neighbour misorientation in positive x and y
+        # directions
+        misOrix = np.ones((numSyms, self.yDim, self.xDim))
+        misOriy = np.ones((numSyms, self.yDim, self.xDim))
 
         # loop over symmetries calculating misorientation to initial
         for i in range(numSyms):
@@ -597,16 +598,17 @@ class Map(base.Map):
         misOriy = np.max(misOriy, axis=0)
 
         # convert to misorientation in degrees
-        misOrix = 360 * np.arccos(misOrix) / np.pi
-        misOriy = 360 * np.arccos(misOriy) / np.pi
+        misOrix = 2 * np.arccos(misOrix) * 180 / np.pi
+        misOriy = 2 * np.arccos(misOriy) * 180 / np.pi
 
-        # set boundary locations where misOrix or misOriy are greater than set value
-        self.boundaries = np.zeros((self.yDim, self.xDim), dtype=int)
-
-        for i in range(self.xDim):
-            for j in range(self.yDim):
-                if (misOrix[j, i] > boundDef) or (misOriy[j, i] > boundDef):
-                    self.boundaries[j, i] = -1
+        # set boundary locations where misOrix or misOriy are greater
+        # than set value
+        self.boundariesX = misOrix > boundDef
+        self.boundariesY = misOriy > boundDef
+        self.misOriX = misOrix
+        self.misOriY = misOriy
+        self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
+        self.boundaries = -self.boundaries.astype(int)
 
         yield 1.
 
@@ -727,48 +729,76 @@ class Map(base.Map):
         return plot
 
     def floodFill(self, x, y, grainIndex):
+        """Flood fill algorithm that uses the x and y boundary arrays to
+        fill a connected area around the seed point. The points are inserted
+        into a grain object and the grain map array is updated.
+
+        Parameters
+        ----------
+        x : int
+            Seed point x for flood fill
+        y : int
+            Seed point y for flood fill
+        grainIndex : int
+            Value to fill in grain map
+
+        Returns
+        -------
+        currentGrain : defdap.ebsd.Grain
+            New grain object with points added
+        """
+        # create new grain
         currentGrain = Grain(self)
 
+        # add first point to the grain
         currentGrain.addPoint((x, y), self.quatArray[y, x])
-
-        edge = [(x, y)]
-        grain = [(x, y)]
-
         self.grains[y, x] = grainIndex
+        edge = [(x, y)]
+
         while edge:
-            newedge = []
+            x, y = edge.pop(0)
 
-            for (x, y) in edge:
-                moves = np.array([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
+            moves = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
 
-                movesIndexShift = 0
-                if x <= 0:
-                    moves = np.delete(moves, 1, 0)
-                    movesIndexShift = 1
-                elif x >= self.xDim - 1:
-                    moves = np.delete(moves, 0, 0)
-                    movesIndexShift = 1
+            # get rid of any that go out of the map area
+            if x <= 0:
+                moves.pop(1)
+            elif x >= self.xDim - 1:
+                moves.pop(0)
+            if y <= 0:
+                moves.pop(-1)
+            elif y >= self.yDim - 1:
+                moves.pop(-2)
 
-                if y <= 0:
-                    moves = np.delete(moves, 3 - movesIndexShift, 0)
-                elif y >= self.yDim - 1:
-                    moves = np.delete(moves, 2 - movesIndexShift, 0)
+            for (s, t) in moves:
+                if self.grains[t, s] > 0:
+                    continue
 
-                for (s, t) in moves:
-                    if self.grains[t, s] == 0:
-                        currentGrain.addPoint((s, t), self.quatArray[t, s])
-                        newedge.append((s, t))
-                        grain.append((s, t))
-                        self.grains[t, s] = grainIndex
-                    elif self.grains[t, s] == -1 and (s > x or t > y):
-                        currentGrain.addPoint((s, t), self.quatArray[t, s])
-                        grain.append((s, t))
-                        self.grains[t, s] = grainIndex
+                addPoint = False
 
-            if newedge == []:
-                return currentGrain
-            else:
-                edge = newedge
+                if t == y:
+                    # moving horizontally
+                    if s > x:
+                        # moving right
+                        addPoint = not self.boundariesX[y, x]
+                    else:
+                        # moving left
+                        addPoint = not self.boundariesX[t, s]
+                else:
+                    # moving vertically
+                    if t > y:
+                        # moving down
+                        addPoint = not self.boundariesY[y, x]
+                    else:
+                        # moving up
+                        addPoint = not self.boundariesY[t, s]
+
+                if addPoint:
+                    currentGrain.addPoint((s, t), self.quatArray[t, s])
+                    self.grains[t, s] = grainIndex
+                    edge.append((s, t))
+
+        return currentGrain
 
     @reportProgress("calculating grain mean orientations")
     def calcGrainAvOris(self):
