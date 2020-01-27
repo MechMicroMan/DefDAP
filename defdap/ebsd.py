@@ -610,7 +610,61 @@ class Map(base.Map):
         self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
         self.boundaries = -self.boundaries.astype(int)
 
+        boundaryPoints = np.where(self.boundariesX)
+        boundarySegmentsX = []
+        for i, j in zip(*boundaryPoints):
+            boundarySegmentsX.append(((j + 0.5, i - 0.5), (j + 0.5, i + 0.5)))
+
+        boundaryPoints = np.where(self.boundariesY)
+        boundarySegmentsY = []
+        for i, j in zip(*boundaryPoints):
+            boundarySegmentsY.append(((j - 0.5, i + 0.5), (j + 0.5, i + 0.5)))
+
+        self.boundarySegments = boundarySegmentsX + boundarySegmentsY
+
         yield 1.
+
+    def buildNeighbourNetwork(self):
+        # create network
+        import networkx as nx
+        nn = nx.Graph()
+        nn.add_nodes_from(range(len(self)))
+
+        for i, boundaries in enumerate((self.boundariesX, self.boundariesY)):
+            yLocs, xLocs = np.nonzero(boundaries)
+
+            for x, y in zip(xLocs, yLocs):
+                if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
+                        y == self.grains.shape[0] - 1):
+                    # exclude boundary pixels of map
+                    continue
+
+                grainID = self.grains[y, x]
+                neiGrainID = self.grains[y + i, x - i + 1]
+
+                if neiGrainID == grainID:
+                    # ignore if neighbour is same as grain
+                    continue
+                if neiGrainID <= 0 or grainID <= 0:
+                    # ignore if not a grain (boundary points -1 and
+                    # points in small grains -2)
+                    continue
+
+                grainID -= 1
+                neiGrainID -= 1
+
+                try:
+                    # look up boundary segment if it exists
+                    boundarySegment = nn[grainID][neiGrainID]['boundary']
+                except KeyError:
+                    # neighbour relation doesn't exist so add it
+                    boundarySegment = BoundarySegment(grainID, neiGrainID)
+                    nn.add_edge(grainID, neiGrainID, boundary=boundarySegment)
+
+                # add the boundary point
+                boundarySegment.addBoundaryPoint(x, y, i)
+
+        self.neighbourNetwork = nn
 
     @reportProgress("finding phase boundaries")
     def findPhaseBoundaries(self, treatNonIndexedAs=None):
@@ -677,6 +731,7 @@ class Map(base.Map):
         :param minGrainSize: Minimum grain area in pixels
         """
         # Initialise the grain map
+        # TODO: Look at grain map compared to boundary map
         self.grains = np.copy(self.boundaries)
 
         self.grainList = []
@@ -1243,6 +1298,35 @@ class Grain(base.Grain):
             # Append to list
             self.slipTraceAngles.append(traceAngle)
             self.slipTraceInclinations.append(inclination)
+
+
+class BoundarySegment(object):
+    def __init__(self, grainID1, grainID2):
+        self.grainID1 = grainID1
+        self.grainID2 = grainID2
+
+        self.boundaryPointsX = []
+        self.boundaryPointsY = []
+
+    def __eq__(self, right):
+        if type(self) != type(right):
+            raise TypeError()
+
+        return ((self.grainID1 == right.grainID1 and
+                 self.grainID2 == right.grainID2) or
+                (self.grainID1 == right.grainID2 and
+                 self.grainID2 == right.grainID1))
+
+    def __len__(self):
+        return len(self.boundaryPointsX) + len(self.boundaryPointsY)
+
+    def addBoundaryPoint(self, x, y, kind):
+        if kind == 0:
+            self.boundaryPointsX.append((x, y))
+        elif kind == 1:
+            self.boundaryPointsY.append((x, y))
+        else:
+            raise ValueError("Boundary point kind is 0 for x and 1 for y")
 
 
 class Linker(object):

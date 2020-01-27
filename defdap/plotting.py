@@ -16,7 +16,9 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+
 from matplotlib.widgets import Button, TextBox
+from matplotlib.collections import LineCollection
 from matplotlib_scalebar.scalebar import ScaleBar
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import Axes3D
@@ -154,30 +156,40 @@ class MapPlot(Plot):
             scale = self.callingMap.scale * 1e-6
         self.ax.add_artist(ScaleBar(scale))
 
-    def addGrainBoundaries(self, colour=None, dilate=False):
+    def addGrainBoundaries(self, colour=None, dilate=False, **kwargs):
         if colour is None:
             colour = "white"
 
-        boundariesImage = -self.callingMap.boundaries
+        from matplotlib import colors as mcolors
 
-        if dilate:
-            boundariesImage = mph.binary_dilation(boundariesImage)
+        mcolors.to_rgba('red')
 
-        # create colourmap for boundaries going from transparent to
-        # opaque of the given colour
-        boundariesCmap = mpl.colors.LinearSegmentedColormap.from_list(
-            'my_cmap', ['white', colour], 256
-        )
-        boundariesCmap._init()
-        boundariesCmap._lut[:, -1] = np.linspace(0, 1, boundariesCmap.N + 3)
+        lc = LineCollection(self.callingMap.boundarySegments,
+                            colors=mcolors.to_rgba(colour), **kwargs)
 
-        img = self.ax.imshow(boundariesImage, cmap=boundariesCmap,
-                             interpolation='None', vmin=0, vmax=1)
+        self.ax.add_collection(lc)
+        # ax.autoscale()
+
+        # boundariesImage = -self.callingMap.boundaries
+        #
+        # if dilate:
+        #     boundariesImage = mph.binary_dilation(boundariesImage)
+        #
+        # # create colourmap for boundaries going from transparent to
+        # # opaque of the given colour
+        # boundariesCmap = mpl.colors.LinearSegmentedColormap.from_list(
+        #     'my_cmap', ['white', colour], 256
+        # )
+        # boundariesCmap._init()
+        # boundariesCmap._lut[:, -1] = np.linspace(0, 1, boundariesCmap.N + 3)
+        #
+        # img = self.ax.imshow(boundariesImage, cmap=boundariesCmap,
+        #                      interpolation='None', vmin=0, vmax=1)
         self.draw()
 
-        self.imgLayers.append(img)
+        # self.imgLayers.append(img)
 
-        return img
+        # return img
 
     def addGrainHighlights(self, grainIds, grainColours=None, alpha=None,
                            newLayer=False):
