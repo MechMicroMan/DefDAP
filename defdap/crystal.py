@@ -176,6 +176,8 @@ class SlipSystem(object):
 
     @staticmethod
     def lMatrix(a, b, c, alpha, beta, gamma):
+        """ Construct L matrix based on Page 22 of
+        Randle and Engle - Introduction to texture analysis"""
         lMatrix = np.zeros((3, 3))
 
         cosAlpha = np.cos(alpha)
@@ -184,7 +186,6 @@ class SlipSystem(object):
 
         sinGamma = np.sin(gamma)
 
-        # From Randle and Engle - Intro to texture analysis
         lMatrix[0, 0] = a
         lMatrix[0, 1] = b * cosGamma
         lMatrix[0, 2] = c * cosBeta
@@ -213,8 +214,8 @@ class SlipSystem(object):
 
     @staticmethod
     def qMatrix(lMatrix):
-        # Construct matrix of reciprocal lattice zectors to transform plane normals
-        # See C. T. Young and J. L. Lytton, J. Appl. Phys., vol. 43, no. 4, pp. 1408–1417, 1972.
+        """ Construct matrix of reciprocal lattice vectors to transform plane normals
+        See C. T. Young and J. L. Lytton, J. Appl. Phys., vol. 43, no. 4, pp. 1408–1417, 1972."""
         a = lMatrix[:, 0]
         b = lMatrix[:, 1]
         c = lMatrix[:, 2]

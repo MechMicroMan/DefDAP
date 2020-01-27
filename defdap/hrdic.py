@@ -33,7 +33,10 @@ from defdap.plotting import MapPlot, GrainPlot
 
 
 class Map(base.Map):
-
+    """
+    Class to encapsulate DIC data and useful analysis and plotting
+    methods.
+    """
     def __init__(self, path, fname, dataType=None):
         """Initialise class and import DIC data from file
 
@@ -58,6 +61,8 @@ class Map(base.Map):
         self.yc = None          # y coordinates
         self.xd = None          # x displacement
         self.yd = None          # y displacement
+        
+        self.corrVal = None     # correlation value
 
         self.ebsdMap = None                 # EBSD map linked to DIC map
         self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
@@ -109,6 +114,13 @@ class Map(base.Map):
         return self.ebsdMap.crystalSym
 
     def loadData(self, fileDir, fileName, dataType=None):
+        """Load DIC data
+
+        Args:
+            fileDir(str): Path to file
+            fileName(str): Name of file including extension
+            dataType(str): Type of data file - see file_readers.py
+        """
         dataType = "DavisText" if dataType is None else dataType
 
         dataLoader = DICDataLoader()
@@ -128,6 +140,27 @@ class Map(base.Map):
         self.yc = dataDict['yc']    # y coordinates
         self.xd = dataDict['xd']    # x displacement
         self.yd = dataDict['yd']    # y displacement
+        
+    def loadCorrValData(self, fileDir, fileName, dataType=None):
+        """Load correlation value for DIC data
+
+        Args:
+            fileDir(str): Path to file
+            fileName(str): Name of file including extension
+            dataType(str): Type of data file - see file_readers.py
+        """
+        dataType = "DavisImage" if dataType is None else dataType
+
+        dataLoader = DICDataLoader()
+        if dataType == "DavisImage":
+            loadedData = dataLoader.loadDavisImageData(fileName, fileDir)
+        else:
+            raise Exception("No loader found for this DIC data.")
+            
+        self.corrVal = loadedData
+        
+        assert self.xdim == self.corrVal.shape[1], "Dimensions of imported data and dic data do not match"
+        assert self.ydim == self.corrVal.shape[0], "Dimensions of imported data and dic data do not match"
 
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))
@@ -141,8 +174,6 @@ class Map(base.Map):
     def retrieveName(self):
         """
         Gets the first name assigned to the a map, as a string
-
-        var(obj) variable to get name of
         """
         for fi in reversed(inspect.stack()):
             names = [var_name for var_name, var_val in fi.frame.f_locals.items() if var_val is self]
@@ -152,8 +183,8 @@ class Map(base.Map):
     def setScale(self, micrometrePerPixel):
         """
         Sets the scale of the map
-
-        micrometrePerPixel(float) length of pixel in original BSE image in micrometres
+        Args:
+            micrometrePerPixel(float) length of pixel in original BSE image in micrometres
         """
         self.bseScale = micrometrePerPixel
 
@@ -168,8 +199,9 @@ class Map(base.Map):
         """
         Print out statistics table for a DIC map
 
-        percentiles(list) list of percentiles to print (number, Min, Mean or Max)
-        components(list of str) lis of map components to print i.e. f11, mss
+        Args:
+            percentiles(list) list of percentiles to print (number, Min, Mean or Max)
+            components(list of str) lis of map components to print i.e. f11, mss
         """
 
         # Print map info
@@ -259,6 +291,13 @@ class Map(base.Map):
         self.yDim = self.ydim - self.cropDists[1, 0] - self.cropDists[1, 1]
 
     def crop(self, mapData, binned=True):
+        """ Crop given data using crop paramaters stored in map
+        i.e. cropped_data = DicMap.crop(DicMap.data_to_crop)
+
+        Args:
+            mapData(map): map data to crop
+            binned(boolean): true if mapData is binned i.e. binned BSE pattern
+        """
         if binned:
             multiplier = 1
         else:
@@ -273,7 +312,13 @@ class Map(base.Map):
         return mapData[minY:maxY, minX:maxX]
 
     def setHomogPoint(self, points=None, display=None):
-        
+        """Set homologous points
+        Uses GUI if points is None
+
+        Args:
+            points(list): homologous points to set
+            display(string, optional): maxshear or pattern
+        """        
         if points is not None:
             self.homogPoints = points
             
