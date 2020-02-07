@@ -375,7 +375,7 @@ class Quat(object):
                 z.append(pts[idx-1].item(2))
             planes.append([list(zip(x, y, z))])  
             
-        plot = plotting.crystalPlot()
+        plot = plotting.crystalPlot(fig=fig, ax=ax)
         plot.addVerts(planes)
 
 # Static methods

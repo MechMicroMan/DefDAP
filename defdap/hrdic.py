@@ -28,6 +28,7 @@ from defdap.file_readers import DICDataLoader
 from defdap import base
 from defdap.quat import Quat
 from defdap import plotting
+from defdap import interactive
 
 from defdap.plotting import MapPlot, GrainPlot
 
@@ -662,6 +663,9 @@ class Map(base.Map):
             else:
                 edge = newedge
 
+    def runGrainInspector(self):
+        interactive.grainInspector(currMap=self)
+
 
 class Grain(base.Grain):
 
@@ -669,11 +673,14 @@ class Grain(base.Grain):
         # Call base class constructor
         super(Grain, self).__init__()
 
-        self.dicMap = dicMap       # dic map this grain is a member of
+        self.dicMap = dicMap        # DIC map this grain is a member of
         self.ownerMap = dicMap
         self.maxShearList = []
         self.ebsdGrain = None
         self.ebsdMap = None
+
+        self.pointsList = []        # Lines drawn for STA
+        self.groupsList = []        # Unique angles drawn for STA
 
     @property
     def plotDefault(self):
