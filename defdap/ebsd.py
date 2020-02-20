@@ -579,48 +579,50 @@ class Map(base.Map):
 
         # Arrays to store neighbour misorientation in positive x and y
         # directions
-        misOrix = np.ones((numSyms, self.yDim, self.xDim))
-        misOriy = np.ones((numSyms, self.yDim, self.xDim))
+        misOriX = np.ones((numSyms, self.yDim, self.xDim))
+        misOriY = np.ones((numSyms, self.yDim, self.xDim))
 
         # loop over symmetries calculating misorientation to initial
         for i in range(numSyms):
             for j in range(self.xDim - 1):
-                misOrix[i, :, j] = abs(np.einsum("ij,ij->j", quatComps[0, :, :, j], quatComps[i, :, :, j + 1]))
+                misOriX[i, :, j] = abs(
+                    np.einsum("ij,ij->j", quatComps[0, :, :, j], quatComps[i, :, :, j + 1]))
 
             for j in range(self.yDim - 1):
-                misOriy[i, j, :] = abs(np.einsum("ij,ij->j", quatComps[0, :, j, :], quatComps[i, :, j + 1, :]))
+                misOriY[i, j, :] = abs(np.einsum("ij,ij->j", quatComps[0, :, j, :], quatComps[i, :, j + 1, :]))
 
-        misOrix[misOrix > 1] = 1
-        misOriy[misOriy > 1] = 1
+        misOriX[misOriX > 1] = 1
+        misOriY[misOriY > 1] = 1
 
         # find min misorientation (max here as misorientaion is cos of this)
-        misOrix = np.max(misOrix, axis=0)
-        misOriy = np.max(misOriy, axis=0)
+        misOriX = np.max(misOriX, axis=0)
+        misOriY = np.max(misOriY, axis=0)
 
         # convert to misorientation in degrees
-        misOrix = 2 * np.arccos(misOrix) * 180 / np.pi
-        misOriy = 2 * np.arccos(misOriy) * 180 / np.pi
+        misOriX = 2 * np.arccos(misOriX) * 180 / np.pi
+        misOriY = 2 * np.arccos(misOriY) * 180 / np.pi
 
-        # set boundary locations where misOrix or misOriy are greater
+        # set boundary locations where misOriX or misOriY are greater
         # than set value
-        self.boundariesX = misOrix > boundDef
-        self.boundariesY = misOriy > boundDef
-        self.misOriX = misOrix
-        self.misOriY = misOriy
+        self.boundariesX = misOriX > boundDef
+        self.boundariesY = misOriY > boundDef
+        # self.misOriX = misOriX
+        # self.misOriY = misOriY
         self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
         self.boundaries = -self.boundaries.astype(int)
 
+
         boundaryPoints = np.where(self.boundariesX)
-        boundarySegmentsX = []
+        boundaryLinesX = []
         for i, j in zip(*boundaryPoints):
-            boundarySegmentsX.append(((j + 0.5, i - 0.5), (j + 0.5, i + 0.5)))
+            boundaryLinesX.append(((j + 0.5, i - 0.5), (j + 0.5, i + 0.5)))
 
         boundaryPoints = np.where(self.boundariesY)
-        boundarySegmentsY = []
+        boundaryLinesY = []
         for i, j in zip(*boundaryPoints):
-            boundarySegmentsY.append(((j - 0.5, i + 0.5), (j + 0.5, i + 0.5)))
+            boundaryLinesY.append(((j - 0.5, i + 0.5), (j + 0.5, i + 0.5)))
 
-        self.boundarySegments = boundarySegmentsX + boundarySegmentsY
+        self.boundaryLines = boundaryLinesX + boundaryLinesY
 
         yield 1.
 
