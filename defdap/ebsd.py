@@ -540,6 +540,87 @@ class Map(base.Map):
 
         yield 1.
 
+    def filterData(self, misOriTol=5):
+        print("8 quadrants")
+        misOriTol *= np.pi / 180
+        misOriTol = np.cos(misOriTol / 2)
+
+        # store quat components in array
+        quatComps = np.empty((4,) + self.shape)
+        for idx in np.ndindex(self.shape):
+            quatComps[(slice(None),) + idx] = self.quatArray[idx].quatCoef
+
+        # misorientation in each quadrant surrounding a point
+        misOris = np.zeros((8,) + self.shape)
+
+        for i in range(2, self.shape[0] - 2):
+            for j in range(2, self.shape[1] - 2):
+
+                refQuat = quatComps[:, i, j]
+                quadrants = [
+                    quatComps[:, i - 2:i + 1, j - 2:j + 1],   # UL
+                    quatComps[:, i - 2:i + 1, j - 1:j + 2],   # UC
+                    quatComps[:, i - 2:i + 1, j:j + 3],       # UR
+                    quatComps[:, i - 1:i + 2, j:j + 3],       # MR
+                    quatComps[:, i:i + 3, j:j + 3],           # LR
+                    quatComps[:, i:i + 3, j - 1:j + 2],       # LC
+                    quatComps[:, i:i + 3, j - 2:j + 1],       # LL
+                    quatComps[:, i - 1:i + 2, j - 2:j + 1]    # ML
+                ]
+
+                for k, quats in enumerate(quadrants):
+                    misOrisQuad = np.abs(
+                        np.einsum("ijk,i->jk", quats, refQuat)
+                    )
+                    misOrisQuad = misOrisQuad[misOrisQuad > misOriTol]
+                    misOris[k, i, j] = misOrisQuad.mean()
+
+        minMisOriQuadrant = np.argmax(misOris, axis=0)
+        # minMisOris = np.max(misOris, axis=0)
+        # minMisOris[minMisOris > 1.] = 1.
+        # minMisOris = 2 * np.arccos(minMisOris)
+
+        quatCompsNew = np.copy(quatComps)
+
+        for i in range(2, self.shape[0] - 2):
+            for j in range(2, self.shape[1] - 2):
+                # if minMisOris[i, j] < misOriTol:
+                #     continue
+
+                refQuat = quatComps[:, i, j]
+                quadrants = [
+                    quatComps[:, i - 2:i + 1, j - 2:j + 1],   # UL
+                    quatComps[:, i - 2:i + 1, j - 1:j + 2],   # UC
+                    quatComps[:, i - 2:i + 1, j:j + 3],       # UR
+                    quatComps[:, i - 1:i + 2, j:j + 3],       # MR
+                    quatComps[:, i:i + 3, j:j + 3],           # LR
+                    quatComps[:, i:i + 3, j - 1:j + 2],       # LC
+                    quatComps[:, i:i + 3, j - 2:j + 1],       # LL
+                    quatComps[:, i - 1:i + 2, j - 2:j + 1]    # ML
+                ]
+                quats = quadrants[minMisOriQuadrant[i, j]]
+
+                misOrisQuad = np.abs(
+                    np.einsum("ijk,i->jk", quats, refQuat)
+                )
+                quats = quats[:, misOrisQuad > misOriTol]
+
+                avOri = np.einsum("ij->i", quats)
+                # avOri /= np.sqrt(np.dot(avOri, avOri))
+
+                quatCompsNew[:, i, j] = avOri
+
+        quatCompsNew /= np.sqrt(np.einsum("ijk,ijk->jk", quatCompsNew, quatCompsNew))
+
+        quatArrayNew = np.empty(self.shape, dtype=Quat)
+
+        for idx in np.ndindex(self.shape):
+            quatArrayNew[idx] = Quat(quatCompsNew[(slice(None),) + idx])
+
+        self.quatArray = quatArrayNew
+
+        return quats
+
     @reportProgress("finding grain boundaries")
     def findBoundaries(self, boundDef=10):
         """
