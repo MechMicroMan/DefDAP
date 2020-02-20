@@ -108,8 +108,6 @@ class Map(base.Map):
 
         self.crystalSym = None
         self.cOverA = None
-        self.xDim = None
-        self.yDim = None
         self.stepSize = None
         self.eulerAngleArray = None
         self.bandContrastArray = None

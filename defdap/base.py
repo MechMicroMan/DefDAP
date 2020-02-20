@@ -26,6 +26,9 @@ from defdap.utils import reportProgress
 class Map(object):
 
     def __init__(self):
+        self.xDim = None
+        self.yDim = None
+
         self.grainList = None
         self.homogPoints = []
 
@@ -283,8 +286,10 @@ class Map(object):
         self.neighbourNetwork.add_nodes_from(range(len(self)))
         self.neighbourNetwork.add_edges_from(neighboursList)
 
-    def displayNeighbours(self):
-        self.locateGrainID(clickEvent=self.clickGrainNeighbours)
+    def displayNeighbours(self, **kwargs):
+        return self.locateGrainID(
+            clickEvent=self.clickGrainNeighbours, **kwargs
+        )
 
     def clickGrainNeighbours(self, event, plot):
         if event.inaxes is plot.ax:
