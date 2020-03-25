@@ -174,9 +174,10 @@ class MapPlot(Plot):
 
             self.draw()
         else:
-            boundariesImage = -boundaries
+            boundariesImage = boundaries
             if boundariesImage is None:
-                boundariesImage = -self.callingMap.boundaries
+                boundariesImage = self.callingMap.boundaries
+            boundariesImage = -boundariesImage
 
             if dilate:
                 boundariesImage = mph.binary_dilation(boundariesImage)
