@@ -228,7 +228,7 @@ class Quat(object):
                     np.cross(self.quatCoef[1:4], right.quatCoef[1:4])
             )
             return Quat(newQuatCoef)
-        raise TypeError()
+        raise TypeError("{:} - {:}".format(type(self), type(right)))
 
     # # overload % operator for dot product
     # def __mod__(self, right):
@@ -355,7 +355,6 @@ class Quat(object):
             Dq = right * self.conjugate
             Dq = Dq.quatCoef
             misOriAxis = 2 * Dq[1:4] * np.arccos(Dq[0]) / np.sqrt(1 - Dq[0]**2)
-
             return misOriAxis
         raise TypeError("Input must be a quaternion.")
 

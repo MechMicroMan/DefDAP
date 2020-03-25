@@ -739,7 +739,8 @@ class Map(base.Map):
                     boundarySegment = nn[grainID][neiGrainID]['boundary']
                 except KeyError:
                     # neighbour relation doesn't exist so add it
-                    boundarySegment = BoundarySegment(grainID, neiGrainID)
+                    boundarySegment = BoundarySegment(self,
+                                                      grainID, neiGrainID)
                     nn.add_edge(grainID, neiGrainID, boundary=boundarySegment)
 
                 # add the boundary point
@@ -1382,15 +1383,19 @@ class Grain(base.Grain):
 
 
 class BoundarySegment(object):
-    def __init__(self, grainID1, grainID2):
+    def __init__(self, ebsdMap, grainID1, grainID2):
+        self.ebsdMap = ebsdMap
         self.grainID1 = grainID1
         self.grainID2 = grainID2
+
+        self.grain1 = ebsdMap[grainID1]
+        self.grain2 = ebsdMap[grainID2]
 
         self.boundaryPointsX = []
         self.boundaryPointsY = []
 
     def __eq__(self, right):
-        if type(self) != type(right):
+        if type(self) is not type(right):
             raise TypeError()
 
         return ((self.grainID1 == right.grainID1 and
@@ -1408,6 +1413,25 @@ class BoundarySegment(object):
             self.boundaryPointsY.append((x, y))
         else:
             raise ValueError("Boundary point kind is 0 for x and 1 for y")
+
+    def misorientation(self):
+        misOri, minSymm = self.grain1.refOri.misOri(
+            self.grain2.refOri, self.ebsdMap.crystalSym, returnQuat=2
+        )
+        misOri = 2 * np.arccos(misOri)
+        misOriAxis = self.grain1.refOri.misOriAxis(minSymm)
+
+        # should this be a unit vector already?
+        misOriAxis /= np.sqrt(np.dot(misOriAxis, misOriAxis))
+
+        return misOri, misOriAxis
+
+        # compVector = np.array([1., 1., 1.])
+        # deviation = np.arccos(
+        #     np.dot(misOriAxis, np.array([1., 1., 1.])) /
+        #     (np.sqrt(np.dot(misOriAxis, misOriAxis) * np.dot(compVector,
+        #                                                      compVector))))
+        # print(deviation * 180 / np.pi)
 
 
 class Linker(object):

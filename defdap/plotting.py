@@ -156,12 +156,17 @@ class MapPlot(Plot):
             scale = self.callingMap.scale * 1e-6
         self.ax.add_artist(ScaleBar(scale))
 
-    def addGrainBoundaries(self, colour=None, dilate=False, kind="pixel", **kwargs):
+    def addGrainBoundaries(self, colour=None, dilate=False, kind="pixel",
+                           boundaries=None, **kwargs):
         if colour is None:
             colour = "white"
 
         if kind == "line":
-            lc = LineCollection(self.callingMap.boundaryLines,
+            boundaryLines = boundaries
+            if boundaryLines is None:
+                boundaryLines = self.callingMap.boundaryLines
+
+            lc = LineCollection(boundaryLines,
                                 colors=mpl.colors.to_rgba(colour), **kwargs)
 
             self.ax.add_collection(lc)
@@ -169,7 +174,9 @@ class MapPlot(Plot):
 
             self.draw()
         else:
-            boundariesImage = -self.callingMap.boundaries
+            boundariesImage = -boundaries
+            if boundariesImage is None:
+                boundariesImage = -self.callingMap.boundaries
 
             if dilate:
                 boundariesImage = mph.binary_dilation(boundariesImage)
@@ -197,10 +204,7 @@ class MapPlot(Plot):
         if alpha is None:
             alpha = self.callingMap.highlightAlpha
 
-        xDim = self.callingMap.xDim
-        yDim = self.callingMap.yDim
-
-        outline = np.zeros((yDim, xDim), dtype=int)
+        outline = np.zeros(self.callingMap.shape, dtype=int)
         for i, grainId in enumerate(grainIds, start=1):
             if i > len(grainColours):
                 i = len(grainColours)

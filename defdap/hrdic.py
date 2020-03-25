@@ -447,13 +447,25 @@ class Map(base.Map):
         # return map
         return warpedMap
 
-    @property
-    def boundaries(self):
+    def warpBoundaries(self, boundaries):
+        """
+
+        Parameters
+        ----------
+        boundaries : np.ndarray
+            Boundaries image with -1 for boundary pixels and 0 otherwise
+
+        Returns
+        -------
+        boundaries : np.ndarray
+            Warped boundaries image
+
+        """
         # Check a EBSD map is linked
         self.checkEbsdLinked()
 
         # image is returned cropped if a piecewise transform is being used
-        boundaries = self.warpToDicFrame(-self.ebsdMap.boundaries.astype(float), cropImage=False) > 0.1
+        boundaries = self.warpToDicFrame(-boundaries.astype(float), cropImage=False) > 0.1
 
         boundaries = mph.skeletonize(boundaries)
         mph.remove_small_objects(boundaries, min_size=10, in_place=True, connectivity=2)
@@ -471,9 +483,11 @@ class Map(base.Map):
             boundaries = boundaries[crop[1]:crop[1] + self.yDim,
                                     crop[0]:crop[0] + self.xDim]
 
-        boundaries = -boundaries.astype(int)
+        return -boundaries.astype(int)
 
-        return boundaries
+    @property
+    def boundaries(self):
+        return self.warpBoundaries(self.ebsdMap.boundaries)
 
     def setPatternPath(self, filePath, windowSize):
         """Set path of BSE image of pattern. filePath is relative to
