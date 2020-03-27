@@ -29,21 +29,24 @@ from defdap import quat
 class Plot(object):
     """ Class for creating a plot
     """
-    def __init__(self, ax, fig=None, makeInteractive=False):
-
+    def __init__(self, ax, axParams={}, fig=None, makeInteractive=False,
+                 **kwargs):
         self.interactive = makeInteractive
         if makeInteractive:
             if fig is not None and ax is not None:
                 self.fig = fig
                 self.ax = ax
             else:
-                self.fig, self.ax = plt.subplots()
+                # self.fig, self.ax = plt.subplots(**kwargs)
+                self.fig = plt.figure(**kwargs)
+                self.ax = self.fig.add_subplot(111, **axParams)
             self.btnStore = []
         else:
             self.fig = fig
             # TODO: flag for new figure
             if ax is None:
-                self.fig, self.ax = plt.subplots()
+                self.fig = plt.figure(**kwargs)
+                self.ax = self.fig.add_subplot(111, **axParams)
             else:
                 self.ax = ax
         self.colourBar = None
@@ -99,7 +102,6 @@ class MapPlot(Plot):
         self.ax.set_yticks([])
 
     def addMap(self, mapData, vmin=None, vmax=None, cmap='viridis', **kwargs):
-
         img = self.ax.imshow(mapData, vmin=vmin, vmax=vmax,
                              interpolation='None', cmap=cmap, **kwargs)
         self.draw()

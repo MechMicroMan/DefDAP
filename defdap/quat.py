@@ -403,10 +403,6 @@ class Quat(object):
 
         for i, idx in enumerate(np.ndindex(oriShape)):
             quats[idx] = Quat(quatComps[(slice(None),) + idx])
-
-            if i%1000==0:
-                print("\rBuilding quaternion array... {0}% complete...".format(int(i*100/np.size(quats))), end="")
-
             # quatComps[(slice(None),) + idx] is equivalent to quatComps[:, idx[0], ..., idx[n]]
 
         return quats
