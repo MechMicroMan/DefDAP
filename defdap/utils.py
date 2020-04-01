@@ -26,6 +26,7 @@ def reportProgress(message=""):
                                       " {:} % ".format(int(prog*100))
                         print(messageProg, end="")
                         progPrev = prog
+                        printFinal = True
 
             except StopIteration as e:
                 if printFinal:

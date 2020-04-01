@@ -18,6 +18,7 @@ from matplotlib.widgets import Button
 from skimage import morphology as mph
 
 import copy
+import warnings
 
 from defdap.file_readers import EBSDDataLoader
 from defdap.quat import Quat
@@ -181,9 +182,9 @@ class Map(base.Map):
         self.crystalSym = crystalSym
         
         if self.crystalSym == 'hexagonal':
-            if cOverA == None:
-                raise Exception("No c over a ratio given")
-                # TODO: change to warning an set to ideal ratio (1.633)
+            if cOverA is None:
+                warnings.warn("No c/a ratio given. Using ideal ratio 1.633")
+                cOverA = 1.633
             self.cOverA = cOverA
 
         # write final status
