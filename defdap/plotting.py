@@ -597,26 +597,42 @@ class HistPlot(Plot):
         return plot
 
 
-class crystalPlot(Plot):
+class CrystalPlot(Plot):
     """ Class for creating a 3D plot for plotting unit cells
     """
+    def __init__(self, fig=None, ax=None,
+                 makeInteractive=False, **kwargs):
+        # Set default plot parameters then update with any input
+        figParams = {
+            'figsize': (6, 6)
+        }
+        axParams = {
+            'projection': '3d',
+            'proj_type': 'ortho'
+        }
+        figParams.update(kwargs)
 
-    def __init__(self, ax=None):
-        # Initialises plot
-        if ax is None:
-            self.fig = plt.figure(figsize=(6,6))
-            self.ax = self.fig.add_subplot(111, projection='3d', proj_type = 'ortho')
-        else:
-            self.ax=ax
+        super(CrystalPlot, self).__init__(ax, axParams=axParams, fig=fig,
+                                          makeInteractive=makeInteractive,
+                                          **figParams)
 
         # Set plotting parameters
-        self.ax.set_xlim3d(-0.15, 0.15); self.ax.set_ylim3d(-0.15, 0.15); self.ax.set_zlim3d(-0.15, 0.15);
+        self.ax.set_xlim3d(-0.15, 0.15)
+        self.ax.set_ylim3d(-0.15, 0.15)
+        self.ax.set_zlim3d(-0.15, 0.15)
         self.ax.view_init(azim=270, elev=90)
         self.ax._axis3don = False
         
-    def addVerts(self, verts):
-        #Add list of planes defined by given vertices to the 3D plot
-        for vert in verts:
-            pc = Poly3DCollection(vert, alpha = 0.6, facecolor='0.8', linewidths=3, edgecolor='k')
-            self.ax.add_collection3d(pc)
-    
+    def addVerts(self, verts, **kwargs):
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'alpha' : 0.6,
+            'facecolor' : '0.8',
+            'linewidths' : 3,
+            'edgecolor' : 'k'
+        }
+        plotParams.update(kwargs)
+
+        # Add list of planes defined by given vertices to the 3D plot
+        pc = Poly3DCollection(verts, **plotParams)
+        self.ax.add_collection3d(pc)
