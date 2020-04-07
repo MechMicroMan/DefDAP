@@ -19,6 +19,8 @@ from defdap import plotting
 
 
 class Quat(object):
+    __slots__ = ['quatCoef']
+
     def __init__(self, *args):
         """
         Construct a Quat object from 4 quat coefficients or an array of
@@ -48,10 +50,6 @@ class Quat(object):
         # move to northern hemisphere
         if self.quatCoef[0] < 0:
             self.quatCoef = self.quatCoef * -1
-
-        # overload static method with instance method of same name in object
-        self.plotIPF = self._plotIPF
-        self.plotUnitCell = self._plotUnitCell
 
     @classmethod
     def fromEulerAngles(cls, ph1, phi, ph2):
@@ -216,9 +214,6 @@ class Quat(object):
     def _plotIPF(self, direction, symGroup, **kwargs):
         Quat.plotIPF([self], direction, symGroup, **kwargs)
 
-    def _plotUnitCell(self, symGroup, cOverA=None, OI=True, **kwargs):
-        Quat.plotUnitCell(self, symGroup, cOverA=cOverA, OI=OI, **kwargs)
-
     # overload * operator for quaternion product and vector product
     def __mul__(self, right):
         if isinstance(right, type(self)):   # another quat
@@ -364,6 +359,169 @@ class Quat(object):
             return misOriAxis
         raise TypeError("Input must be a quaternion.")
 
+    def plotIPF(self, direction, symGroup, projection=None,
+                plot=None, fig=None, ax=None, makeInteractive=False,
+                plotColourBar=False, cLabel="",
+                markerColour=None, markerSize=40, **kwargs):
+        """
+        Plot IPF of orientations for specified sample diection.
+
+        Parameters
+        ----------
+        quats : array_like of defda.quat.Quat
+            Orientations to plot on the IPF
+        direction : np.array
+            Sample reference direction for IPF
+        symGroup : string
+            Crystal type (cubic, hexagonal)
+        projection : str
+             Projection to use. Either string (stereographic or lambert)
+             or a function
+        ax
+            matplotlib axis to plot on, if not provided the current
+            active axis is used
+        markerColour : string
+            Colour of markers (only used for half and half colouring,
+            otherwise us arguemnt c)
+        markerSize : int
+            Size of markers (only used for half and half colouring,
+            otherwise us arguemnt s)
+        kwargs
+            All other arguments are passed to the matplotlib scatter call
+        """
+        plotParams = {'marker': '+'}
+        plotParams.update(kwargs)
+
+        # Works as an instance or static method on a list of Quats
+        if isinstance(self, Quat):
+            quats = [self]
+        else:
+            quats = self
+
+        alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup)
+
+        if plot is None:
+            plot = plotting.PolePlot(
+                "IPF", symGroup, projection=projection,
+                ax=ax, fig=fig, makeInteractive=makeInteractive
+            )
+        plot.addPoints(alphaFund, betaFund,
+                       markerColour=markerColour, markerSize=markerSize,
+                       **plotParams)
+
+        if plotColourBar:
+            plot.addColourBar(cLabel)
+
+        return plot
+
+    def plotUnitCell(self, symGroup, cOverA=None, OI=True,
+                     plot=None, fig=None, ax=None, makeInteractive=False,
+                     **kwargs):
+        """Plots a unit cell
+
+        Parameters
+        ----------
+        symGroup : str
+            Crystal type, hexagonal or cubic
+        cOverA : float
+            c over a ratio for hexagonal
+        OI : bool
+            true if using oxford instruments system
+        plot
+        fig
+        ax
+            matplotlib axis to plot on, if not provided the current
+            active axis is used
+        makeInteractive
+
+        """
+        # Set default plot parameters then update with any input
+        plotParams = {}
+        plotParams.update(kwargs)
+
+        if symGroup is None:
+            raise ValueError("symGroup must be specified")
+
+        quat = self
+
+        if symGroup == 'hexagonal':
+            if cOverA is None:
+                raise ValueError("cOverA must be specified for hcp")
+
+            szFac = 0.2
+            sqrt3over2 = np.sqrt(3) / 2
+            cOverA /= 2
+            vert = np.array([
+                [1, 0, -cOverA],
+                [0.5, sqrt3over2, -cOverA],
+                [-0.5, sqrt3over2, -cOverA],
+                [-1, 0, -cOverA],
+                [-0.5, -sqrt3over2, -cOverA],
+                [0.5, -sqrt3over2, -cOverA],
+                [1, 0, cOverA],
+                [0.5, sqrt3over2, cOverA],
+                [-0.5, sqrt3over2, cOverA],
+                [-1, 0, cOverA],
+                [-0.5, -sqrt3over2, cOverA],
+                [0.5, -sqrt3over2, cOverA]
+            ])
+            faces = [
+                [0, 1, 2, 3, 4, 5],
+                [6, 7, 8, 9, 10, 11],
+                [0, 6, 7, 1],
+                [1, 7, 8, 2],
+                [2, 8, 9, 3],
+                [3, 9, 10, 4],
+                [4, 10, 11, 5],
+                [5, 11, 6, 0]
+            ]
+
+            if OI:
+                # Add 30 degrees to phi2 for OI
+                eulerAngles = quat.eulerAngles()
+                eulerAngles[2] += np.pi / 6
+                quat = Quat.fromEulerAngles(*eulerAngles)
+
+        elif symGroup == 'cubic':
+            szFac = 0.3
+            vert = np.array([
+                [-0.5, -0.5, -0.5],
+                [0.5, -0.5, -0.5],
+                [0.5, 0.5, -0.5],
+                [-0.5, 0.5, -0.5],
+                [-0.5, -0.5, 0.5],
+                [0.5, -0.5, 0.5],
+                [0.5, 0.5, 0.5],
+                [-0.5, 0.5, 0.5]
+            ])
+            faces = [
+                [0, 1, 2, 3],
+                [4, 5, 6, 7],
+                [0, 1, 5, 4],
+                [1, 2, 6, 5],
+                [2, 3, 7, 6],
+                [3, 0, 4, 7]
+            ]
+        else:
+            raise ValueError("Only cubic and hexagonal supported")
+
+        # Rotate the lattice cell points
+        gg = quat.rotMatrix().T
+        pts = np.matmul(gg, vert.T).T * szFac
+
+        # Plot unit cell
+        planes = []
+        for face in faces:
+            planes.append(pts[face, :])
+
+        if plot is None:
+            plot = plotting.CrystalPlot(
+                ax=ax, fig=fig, makeInteractive=makeInteractive
+            )
+        plot.addVerts(planes, **plotParams)
+
+        return plot
+
 # Static methods
 
     @staticmethod
@@ -484,56 +642,6 @@ class Quat(object):
         beta = np.arctan2(y, x)
 
         return alpha, beta
-
-    @staticmethod
-    def plotIPF(quats, direction, symGroup, projection=None,
-                plot=None, fig=None, ax=None, makeInteractive=False,
-                plotColourBar=False, cLabel="",
-                markerColour=None, markerSize=40, **kwargs):
-        """
-        Plot IPF of orientations for specified sample diection.
-
-        Parameters
-        ----------
-        quats : array_like of defda.quat.Quat
-            Orientations to plot on the IPF
-        direction : np.array
-            Sample reference direction for IPF
-        symGroup : string
-            Crystal type (cubic, hexagonal)
-        projection : str
-             Projection to use. Either string (stereographic or lambert)
-             or a function
-        ax
-            matplotlib axis to plot on, if not provided the current
-            active axis is used
-        markerColour : string
-            Colour of markers (only used for half and half colouring,
-            otherwise us arguemnt c)
-        markerSize : int
-            Size of markers (only used for half and half colouring,
-            otherwise us arguemnt s)
-        kwargs
-            All other arguments are passed to the matplotlib scatter call
-        """
-        plotParams = {'marker': '+'}
-        plotParams.update(kwargs)
-
-        alphaFund, betaFund = Quat.calcFundDirs(quats, direction, symGroup)
-
-        if plot is None:
-            plot = plotting.PolePlot(
-                "IPF", symGroup, projection=projection,
-                ax=ax, fig=fig, makeInteractive=makeInteractive
-            )
-        plot.addPoints(alphaFund, betaFund,
-                       markerColour=markerColour, markerSize=markerSize,
-                       **plotParams)
-
-        if plotColourBar:
-            plot.addColourBar(cLabel)
-
-        return plot
 
     @staticmethod
     def calcIPFcolours(quats, direction, symGroup):
@@ -744,115 +852,6 @@ class Quat(object):
             raise Exception("symGroup must be cubic or hexagonal")
 
         return alphaFund, betaFund
-
-    @staticmethod
-    def plotUnitCell(quat, symGroup, cOverA=None, OI=True,
-                     plot=None, fig=None, ax=None, makeInteractive=False,
-                     **kwargs):
-        """Plots a unit cell
-
-        Parameters
-        ----------
-        quat : defdap.quat.Quat
-
-        symGroup : str
-            Crystal type, hexagonal or cubic
-        cOverA : float
-            c over a ratio for hexagonal
-        OI : bool
-            true if using oxford instruments system
-        plot
-        fig
-        ax
-            matplotlib axis to plot on, if not provided the current
-            active axis is used
-        makeInteractive
-
-        """
-        # Set default plot parameters then update with any input
-        plotParams = {}
-        plotParams.update(kwargs)
-
-        if symGroup is None:
-            raise ValueError("symGroup must be specified")
-
-        if symGroup == 'hexagonal':
-            if cOverA is None:
-                raise ValueError("cOverA must be specified for hcp")
-
-            szFac = 0.2
-            sqrt3over2 = np.sqrt(3) / 2
-            cOverA /= 2
-            vert = np.array([
-                [1, 0, -cOverA],
-                [0.5, sqrt3over2, -cOverA],
-                [-0.5, sqrt3over2, -cOverA],
-                [-1, 0, -cOverA],
-                [-0.5, -sqrt3over2, -cOverA],
-                [0.5, -sqrt3over2, -cOverA],
-                [1, 0, cOverA],
-                [0.5, sqrt3over2, cOverA],
-                [-0.5, sqrt3over2, cOverA],
-                [-1, 0, cOverA],
-                [-0.5, -sqrt3over2, cOverA],
-                [0.5, -sqrt3over2, cOverA]
-            ])
-            faces = [
-                [0, 1, 2, 3, 4, 5],
-                [6, 7, 8, 9, 10, 11],
-                [0, 6, 7, 1],
-                [1, 7, 8, 2],
-                [2, 8, 9, 3],
-                [3, 9, 10, 4],
-                [4, 10, 11, 5],
-                [5, 11, 6, 0]
-            ]
-
-            if OI:
-                # Add 30 degrees to phi2 for OI
-                eulerAngles = quat.eulerAngles()
-                eulerAngles[2] += np.pi / 6
-                quat = Quat.fromEulerAngles(*eulerAngles)
-
-        elif symGroup == 'cubic':
-            szFac = 0.3
-            vert = np.array([
-                [-0.5, -0.5, -0.5],
-                [0.5, -0.5, -0.5],
-                [0.5, 0.5, -0.5],
-                [-0.5, 0.5, -0.5],
-                [-0.5, -0.5, 0.5],
-                [0.5, -0.5, 0.5],
-                [0.5, 0.5, 0.5],
-                [-0.5, 0.5, 0.5]
-            ])
-            faces = [
-                [0, 1, 2, 3],
-                [4, 5, 6, 7],
-                [0, 1, 5, 4],
-                [1, 2, 6, 5],
-                [2, 3, 7, 6],
-                [3, 0, 4, 7]
-            ]
-        else:
-            raise ValueError("Only cubic and hexagonal supported")
-
-        # Rotate the lattice cell points
-        gg = quat.rotMatrix().T
-        pts = np.matmul(gg, vert.T).T * szFac
-
-        # Plot unit cell
-        planes = []
-        for face in faces:
-            planes.append(pts[face, :])
-
-        if plot is None:
-            plot = plotting.CrystalPlot(
-                ax=ax, fig=fig, makeInteractive=makeInteractive
-            )
-        plot.addVerts(planes, **plotParams)
-
-        return plot
 
     @staticmethod
     def symEqv(group):
