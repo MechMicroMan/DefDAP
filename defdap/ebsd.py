@@ -172,6 +172,10 @@ class Map(base.Map):
         self.xDim = metadataDict['xDim']
         self.yDim = metadataDict['yDim']
         self.stepSize = metadataDict['stepSize']
+
+        for phaseName in phaseNames:
+
+
         self.numPhases = metadataDict['numPhases']
         self.phaseNames = metadataDict['phaseNames']
 

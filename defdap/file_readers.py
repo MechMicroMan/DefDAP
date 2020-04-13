@@ -16,6 +16,8 @@
 import numpy as np
 import pandas as pd
 import pathlib
+import re
+import warnings
 
 
 class EBSDDataLoader(object):
@@ -26,7 +28,8 @@ class EBSDDataLoader(object):
             'yDim': 0,
             'stepSize': 0.,
             'numPhases': 0,
-            'phaseNames': []
+            'phaseNames': [],
+            'phaseInfo': []
         }
         self.loadedData = {
             'eulerAngle': None,
@@ -65,8 +68,25 @@ class EBSDDataLoader(object):
             elif '[Phases]' in line:
                 self.loadedMetadata['numPhases'] = int(next(cprFile).split("=")[-1])
             elif '[Phase' in line:
+                phaseNum = int(re.search("\[Phase(\d+)\]", line).group(1))
+                if phaseNum - 1 != len(self.loadedMetadata['phaseNames']):
+                    warnings.warn("Phases out of order")
+
+                while next(cprFile).strip()[0] != '[':
+
+
+                    filePos = cprFile.tell
+
+
+
                 phaseName = next(cprFile).split("=")[-1].strip('\n')
                 self.loadedMetadata['phaseNames'].append(phaseName)
+
+
+
+
+
+
 
         cprFile.close()
 
