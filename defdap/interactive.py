@@ -19,7 +19,7 @@ from sklearn.cluster import MeanShift
 from scipy.stats import linregress
 import pandas as pd
 
-from defdap import plotting
+from defdap.plotting import Plot, GrainPlot, LineSlice
 
 class grainInspector:
     def __init__(self, currMap):
