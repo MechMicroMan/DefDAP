@@ -17,7 +17,9 @@ import numpy as np
 import pandas as pd
 import pathlib
 import re
-import warnings
+
+from defdap.crystal import Phase, crystalStructures
+from defdap.quat import Quat
 
 
 class EBSDDataLoader(object):
@@ -27,9 +29,9 @@ class EBSDDataLoader(object):
             'xDim': 0,
             'yDim': 0,
             'stepSize': 0.,
+            'acquisitionRotation': Quat(1.0, 0.0, 0.0, 0.0),
             'numPhases': 0,
-            'phaseNames': [],
-            'phaseInfo': []
+            'phases': []
         }
         self.loadedData = {
             'eulerAngle': None,
@@ -40,9 +42,8 @@ class EBSDDataLoader(object):
     def checkMetadata(self):
         """ Checks that the number of phases from metadata matches
         the amount of phase names."""
-        if len(self.loadedMetadata['phaseNames']) != self.loadedMetadata['numPhases']:
-            print("Number of phases mismatch.")
-            raise AssertionError
+        if len(self.loadedMetadata['phases']) != self.loadedMetadata['numPhases']:
+            raise ValueError("Number of phases mismatch.")
 
     def checkData(self, binData):
         return
@@ -56,42 +57,54 @@ class EBSDDataLoader(object):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        cprFile = open(str(filePath), 'r')
+        metadata = dict()
+        groupPat = re.compile("\[(.+)\]")
 
-        for line in cprFile:
-            if 'xCells' in line:
-                self.loadedMetadata['xDim'] = int(line.split("=")[-1])
-            elif 'yCells' in line:
-                self.loadedMetadata['yDim'] = int(line.split("=")[-1])
-            elif 'GridDistX' in line:
-                self.loadedMetadata['stepSize'] = float(line.split("=")[-1])
-            elif '[Phases]' in line:
-                self.loadedMetadata['numPhases'] = int(next(cprFile).split("=")[-1])
-            elif '[Phase' in line:
-                phaseNum = int(re.search("\[Phase(\d+)\]", line).group(1))
-                if phaseNum - 1 != len(self.loadedMetadata['phaseNames']):
-                    warnings.warn("Phases out of order")
+        def parseLine(line):
+            try:
+                key, val = line.strip().split('=')
+                groupDict[key] = val
+            except ValueError:
+                pass
 
-                while next(cprFile).strip()[0] != '[':
+        with open(str(filePath), 'r') as cprFile:
+            while True:
+                line = cprFile.readline()
+                if not line:
+                    break
 
+                groupName = groupPat.match(line.strip()).group(1)
+                groupDict = dict()
+                readUntilComment(cprFile, commentChar='[',
+                                 lineProcess=parseLine)
+                metadata[groupName] = groupDict
 
-                    filePos = cprFile.tell
+        self.loadedMetadata['xDim'] = int(metadata['Job']['xCells'])
+        self.loadedMetadata['yDim'] = int(metadata['Job']['yCells'])
+        self.loadedMetadata['stepSize'] = float(metadata['Job']['GridDistX'])
+        self.loadedMetadata['acquisitionRotation'] = Quat.fromEulerAngles(
+            metadata['Acquisition Surface']['Euler1'] * np.pi / 180.,
+            metadata['Acquisition Surface']['Euler2'] * np.pi / 180.,
+            metadata['Acquisition Surface']['Euler3'] * np.pi / 180.
+        )
+        self.loadedMetadata['numPhases'] = int(metadata['Phases']['Count'])
 
-
-
-                phaseName = next(cprFile).split("=")[-1].strip('\n')
-                self.loadedMetadata['phaseNames'].append(phaseName)
-
-
-
-
-
-
-
-        cprFile.close()
+        for i in range(self.loadedMetadata['numPhases']):
+            phaseMetadata = metadata['Phase{:}'.format(i+1)]
+            self.loadedMetadata['phases'].append(Phase(
+                phaseMetadata['StructureName'],
+                EBSDDataLoader.laueGroupLookup(phaseMetadata['LaueGroup']),
+                (
+                    phaseMetadata['a'],
+                    phaseMetadata['b'],
+                    phaseMetadata['c'],
+                    phaseMetadata['alpha'],
+                    phaseMetadata['beta'],
+                    phaseMetadata['gamma']
+                )
+            ))
 
         self.checkMetadata()
-
         return self.loadedMetadata
 
     def loadOxfordCRC(self, fileName, fileDir=""):
@@ -200,6 +213,16 @@ class EBSDDataLoader(object):
 
         return self.loadedMetadata, self.loadedData
 
+    @staticmethod
+    def laueGroupLookup(laueGroup):
+        if laueGroup == 9:
+            return crystalStructures['cubic']
+        elif laueGroup == 11:
+            return crystalStructures['hexagonal']
+
+        raise ValueError("Only cubic and hexagonal crystal structures "
+                         "are currently supported.")
+
 
 class DICDataLoader(object):
 
@@ -292,3 +315,17 @@ class DICDataLoader(object):
         loadedData = np.array(data)
 
         return loadedData
+
+
+def readUntilComment(file, commentChar='*', lineProcess=None):
+    lines = []
+    while True:
+        currPos = file.tell()  # save position in file
+        line = file.readline()
+        if not line or line[0] == commentChar:
+            file.seek(currPos)  # return to before prev line
+            break
+        if lineProcess is not None:
+            line = lineProcess(line)
+        lines.append(line)
+    return lines

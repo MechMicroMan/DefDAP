@@ -25,7 +25,7 @@ from defdap.quat import Quat
 from defdap.crystal import SlipSystem
 from defdap import base
 
-from defdap.plotting import MapPlot, GrainPlot
+from defdap.plotting import MapPlot
 from defdap.utils import reportProgress
 
 
@@ -90,7 +90,7 @@ class Map(base.Map):
     ax
     """
 
-    def __init__(self, fileName, crystalSym, cOverA=None, dataType=None):
+    def __init__(self, fileName, dataType=None):
         """
         Initialise class and load EBSD data
 
@@ -106,8 +106,6 @@ class Map(base.Map):
         # Call base class constructor
         super(Map, self).__init__()
 
-        self.crystalSym = None
-        self.cOverA = None
         self.xDim = None
         self.yDim = None
         self.stepSize = None
@@ -116,7 +114,7 @@ class Map(base.Map):
         self.quatArray = None
         self.numPhases = None
         self.phaseArray = None
-        self.phaseNames = []
+        self.phases = []
         self.boundaries = None
         self.phaseBoundaries = None
         self.cacheEulerMap = None
@@ -125,8 +123,6 @@ class Map(base.Map):
         self.misOriAxis = None
         self.kam = None
         self.averageSchmidFactor = None
-        self.slipSystems = None
-        self.slipTraceColours = None
         self.currGrainId = None
         self.origin = (0, 0)
         self.GND = None
@@ -136,7 +132,7 @@ class Map(base.Map):
         self.plotHomog = self.plotEulerMap
         self.highlightAlpha = 1
 
-        self.loadData(fileName, crystalSym, cOverA, dataType=dataType)
+        self.loadData(fileName, dataType=dataType)
 
     @property
     def plotDefault(self):
@@ -144,7 +140,7 @@ class Map(base.Map):
         return lambda *args, **kwargs: self.plotEulerMap(*args, **kwargs)
 
     @reportProgress("loading EBSD data")
-    def loadData(self, fileName, crystalSym, cOverA, dataType=None):
+    def loadData(self, fileName, dataType=None):
         """
         Load in EBSD data
 
@@ -152,8 +148,6 @@ class Map(base.Map):
         ----------
         fileName : str
             Path to EBSD file, including name, excluding extension
-        crystalSym : str, {'cubic', 'hexagonal'}
-            Crystal structure
         dataType : str, {'OxfordBinary', 'OxfordText'}
             Format of EBSD data file
         """
@@ -172,9 +166,6 @@ class Map(base.Map):
         self.xDim = metadataDict['xDim']
         self.yDim = metadataDict['yDim']
         self.stepSize = metadataDict['stepSize']
-
-        for phaseName in phaseNames:
-
 
         self.numPhases = metadataDict['numPhases']
         self.phaseNames = metadataDict['phaseNames']

@@ -19,6 +19,27 @@ import numpy as np
 from defdap.quat import Quat
 
 
+class Phase(object):
+    def __init__(self, name, crystalStructure, latticeParams,
+                 slipSystems=None):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of the phase
+        latticeParams : tuple
+            Lattice parameters in order (a,b,c,alpha,beta,gamma)
+        crystalStructure : defdap.crystal.CrystalStructure
+            Crystal structure of this phase
+        slipSystems : collection of defdap.crystal.SlipSystem
+            Slip systems available in the phase
+        """
+        self.name = name
+        self.crystalStructure = crystalStructure
+        self.latticeParams = latticeParams
+        self.slipSystems = slipSystems
+
+
 class CrystalStructure(object):
     def __init__(self, name, symmetries, vertices, faces):
         self.name = name
@@ -361,3 +382,4 @@ class SlipSystem(object):
                 groupedSlipSystems.append([slipSystem])
 
         return groupedSlipSystems
+
