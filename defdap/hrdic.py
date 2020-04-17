@@ -29,6 +29,7 @@ from defdap import base
 from defdap.quat import Quat
 
 from defdap.plotting import MapPlot, GrainPlot
+from defdap.inspector import grainInspector
 from defdap.utils import reportProgress
 
 
@@ -666,7 +667,7 @@ class Map(base.Map):
                 edge = newedge
 
     def runGrainInspector(self):
-        interactive.grainInspector(currMap=self)
+        grainInspector(currMap=self)
 
 
 class Grain(base.Grain):
