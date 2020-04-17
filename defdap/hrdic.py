@@ -27,10 +27,9 @@ import peakutils
 from defdap.file_readers import DICDataLoader
 from defdap import base
 from defdap.quat import Quat
-from defdap import plotting
-from defdap import interactive
 
 from defdap.plotting import MapPlot, GrainPlot
+from defdap.utils import reportProgress
 
 
 class Map(base.Map):
@@ -45,11 +44,8 @@ class Map(base.Map):
             path(str): Path to file
             fname(str): Name of file including extension
         """
-
         # Call base class constructor
         super(Map, self).__init__()
-
-        print("\rLoading DIC data...", end="")
 
         # Initialise variables
         self.format = None      # Software name
@@ -102,9 +98,6 @@ class Map(base.Map):
 
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)      # crop distances (default all zeros)
 
-        print("\rLoaded {0} {1} data (dimensions: {2} x {3} pixels, sub-window size: {4} x {4} pixels)".
-              format(self.format, self.version, self.xdim, self.ydim, self.binning))
-
     @property
     def plotDefault(self):
         # return self.plotMaxShear(plotGBs=True, *args, **kwargs)
@@ -114,6 +107,7 @@ class Map(base.Map):
     def crystalSym(self):
         return self.ebsdMap.crystalSym
 
+    @reportProgress("loading HRDIC data")
     def loadData(self, fileDir, fileName, dataType=None):
         """Load DIC data
 
@@ -141,6 +135,12 @@ class Map(base.Map):
         self.yc = dataDict['yc']    # y coordinates
         self.xd = dataDict['xd']    # x displacement
         self.yd = dataDict['yd']    # y displacement
+
+        # write final status
+        yield "Loaded {0} {1} data (dimensions: {2} x {3} pixels, " \
+              "sub-window size: {4} x {4} pixels)".format(
+            self.format, self.version, self.xdim, self.ydim, self.binning
+        )
         
     def loadCorrValData(self, fileDir, fileName, dataType=None):
         """Load correlation value for DIC data
@@ -160,8 +160,10 @@ class Map(base.Map):
             
         self.corrVal = loadedData
         
-        assert self.xdim == self.corrVal.shape[1], "Dimensions of imported data and dic data do not match"
-        assert self.ydim == self.corrVal.shape[0], "Dimensions of imported data and dic data do not match"
+        assert self.xdim == self.corrVal.shape[1], \
+            "Dimensions of imported data and dic data do not match"
+        assert self.ydim == self.corrVal.shape[0], \
+            "Dimensions of imported data and dic data do not match"
 
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))
@@ -209,11 +211,8 @@ class Map(base.Map):
         print('\033[1m', end='')    # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} "
               "x {3} pixels, number of points: {4})\n".format(
-            self.retrieveName(),
-            self.xDim,
-            self.yDim,
-            self.binning,
-            self.xDim * self.yDim
+            self.retrieveName(), self.xDim, self.yDim,
+            self.binning, self.xDim * self.yDim
         ))
 
         # Print table header
@@ -555,9 +554,8 @@ class Map(base.Map):
 
         return plot
 
+    @reportProgress("finding grains")
     def findGrains(self, minGrainSize=10):
-        print("\rFinding grains in DIC map...", end="")
-
         # Check a EBSD map is linked
         self.checkEbsdLinked()
 
@@ -568,12 +566,17 @@ class Map(base.Map):
 
         # List of points where no grain has been set yet
         unknownPoints = np.where(self.grains == 0)
+        numPoints = unknownPoints[0].shape[0]
+        totalPoints = numPoints
         # Start counter for grains
         grainIndex = 1
 
         # Loop until all points (except boundaries) have been assigned
         # to a grain or ignored
-        while unknownPoints[0].shape[0] > 0:
+        while numPoints > 0:
+            # report progress
+            yield 1. - numPoints / totalPoints
+
             # Flood fill first unknown point and return grain object
             currentGrain = self.floodFill(unknownPoints[1][0], unknownPoints[0][0], grainIndex)
 
@@ -590,6 +593,7 @@ class Map(base.Map):
 
             # update unknown points
             unknownPoints = np.where(self.grains == 0)
+            numPoints = unknownPoints[0].shape[0]
 
         # Now link grains to those in ebsd Map
         # Warp DIC grain map to EBSD frame
@@ -611,8 +615,6 @@ class Map(base.Map):
             self.grainList[i].ebsdGrainId = modeId[0] - 1
             self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
             self.grainList[i].ebsdMap = self.ebsdMap
-
-        print("\rDone                                               ", end="")
 
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self)

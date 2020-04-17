@@ -19,6 +19,8 @@ from defdap.quat import Quat
 from defdap import plotting
 from defdap.plotting import MapPlot, GrainPlot
 
+from defdap.utils import reportProgress
+
 
 class Map(object):
 
@@ -203,6 +205,9 @@ class Map(object):
                 # exclude boundary pixel of map
                 continue
             else:
+                # use 4 nearest neighbour points as potential neighbour grains
+                # (this maybe needs changing considering the position of
+                # boundary pixels relative to the actual edges)
                 # use sets as they do not allow duplicate elements
                 # minus 1 on all as the grain image starts labeling at 1
                 neighbours = {
@@ -263,7 +268,6 @@ class Map(object):
                         secondNeighbours.append(secondNeighbour)
             highlightGrains.extend(secondNeighbours)
 
-            # highlightGrains = [self.currGrainId] + firstNeighbours + secondNeighbours
             highlightColours = ['white']
             highlightColours.extend(['yellow'] * len(firstNeighbours))
             highlightColours.append('green')
@@ -277,6 +281,7 @@ class Map(object):
 
         return self.proxigramArr
 
+    @reportProgress("calculating proxigram")
     def calcProxigram(self, numTrials=500, forceCalc=True):
         if self.proxigramArr is not None and not forceCalc:
             return
@@ -311,7 +316,6 @@ class Map(object):
         # loop over each boundary point (p) and calculate distance from
         # p to all points in the map store minimum once numTrails have
         # been made and start a new batch of trials
-        print("Calculating proxigram ", end='')
         numBoundaryPoints = len(indexBoundaries)
         j = 1
         for i, indexBoundary in enumerate(indexBoundaries):
@@ -322,7 +326,8 @@ class Map(object):
                 # find current minimum distances and store
                 trialDistances[0] = trialDistances.min(axis=0)
                 j = 0
-                print("{:.1f}% ".format(i / numBoundaryPoints * 100), end='')
+                # report progress
+                yield i / numBoundaryPoints
             j += 1
 
         # find final minimum distances to a boundary

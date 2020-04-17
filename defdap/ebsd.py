@@ -18,6 +18,7 @@ from matplotlib.widgets import Button
 from skimage import morphology as mph
 
 import copy
+import warnings
 
 from defdap.file_readers import EBSDDataLoader
 from defdap.quat import Quat
@@ -25,6 +26,7 @@ from defdap.crystal import SlipSystem
 from defdap import base
 
 from defdap.plotting import MapPlot, GrainPlot
+from defdap.utils import reportProgress
 
 
 class Map(base.Map):
@@ -104,8 +106,6 @@ class Map(base.Map):
         # Call base class constructor
         super(Map, self).__init__()
 
-        print("\rLoading EBSD data...", end="")
-
         self.crystalSym = None
         self.cOverA = None
         self.xDim = None
@@ -143,6 +143,7 @@ class Map(base.Map):
         # return self.plotEulerMap(*args, **kwargs)
         return lambda *args, **kwargs: self.plotEulerMap(*args, **kwargs)
 
+    @reportProgress("loading EBSD data")
     def loadData(self, fileName, crystalSym, cOverA, dataType=None):
         """
         Load in EBSD data
@@ -181,22 +182,24 @@ class Map(base.Map):
         self.crystalSym = crystalSym
         
         if self.crystalSym == 'hexagonal':
-            if cOverA == None:
-                raise Exception("No c over a ratio given")
+            if cOverA is None:
+                warnings.warn("No c/a ratio given. Using ideal ratio 1.633")
+                cOverA = 1.633
             self.cOverA = cOverA
 
-        print("\rLoaded EBSD data (dimensions: {0} x {1} pixels, step "
-              "size: {2} um)".format(self.xDim, self.yDim, self.stepSize))
+        # write final status
+        yield "Loaded EBSD data (dimensions: {:} x {:} pixels, step " \
+              "size: {:} um)".format(self.xDim, self.yDim, self.stepSize)
 
     @property
     def scale(self):
         return self.stepSize
 
+    @reportProgress("transforming EBSD data")
     def transformData(self):
         """
         Rotate map by 180 degrees and transform quats
         """
-        print("\rTransforming EBSD data... 0% complete...", end="")
         self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
         self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
         self.phaseArray = self.phaseArray[::-1, ::-1]
@@ -204,11 +207,11 @@ class Map(base.Map):
         
         transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi)
         for i in range(self.xDim):
-            if i%10==0:
-                print("\rTransforming EBSD data... {0}% complete...".format(int(i*100/self.xDim)), end="")
             for j in range(self.yDim):
                 self.quatArray[j, i] = self.quatArray[j, i] * transformQuat
-        print("\rDone                                               ", end="")
+
+            # report progress
+            yield i / self.xDim
 
     def plotBandContrastMap(self, **kwargs):
         """
@@ -383,13 +386,13 @@ class Map(base.Map):
 
         return plot
 
+    @reportProgress("calculating Nye tensor")
     def calcNye(self):
         """
         Calculates Nye tensor and related GND density for the EBSD map.
         Stores result in self.Nye and self.GND.
         """
         self.buildQuatArray()
-        print("\rFinding boundaries...", end="")
         syms = Quat.symEqv(self.crystalSym)
         numSyms = len(syms)
 
@@ -502,6 +505,8 @@ class Map(base.Map):
         self.GND = alpha_total9
         self.Nye = alpha
 
+        yield 1.
+
     def plotGNDMap(self, **kwargs):
         # Set default plot parameters then update with any input
         plotParams = {
@@ -525,22 +530,20 @@ class Map(base.Map):
             raise Exception("Data not loaded")
         return True
 
+    @reportProgress("building quaternion array")
     def buildQuatArray(self):
         """
         Build quaternion array
         """
-        print("\rBuilding quaternion array... 0% complete...", end="")
-
         self.checkDataLoaded()
 
         if self.quatArray is None:
             # create the array of quat objects
             self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
 
-        print("\rDone                                               ", end="")
+        yield 1.
 
-        return
-
+    @reportProgress("finding grain boundaries")
     def findBoundaries(self, boundDef=10):
         """
         Find grain boundaries
@@ -548,9 +551,6 @@ class Map(base.Map):
         :param boundDef: critical misorientation
         :type boundDef: float
         """
-        self.buildQuatArray()
-        print("\rFinding boundaries...", end="")
-
         syms = Quat.symEqv(self.crystalSym)
         numSyms = len(syms)
 
@@ -609,16 +609,14 @@ class Map(base.Map):
                 if (misOrix[j, i] > boundDef) or (misOriy[j, i] > boundDef):
                     self.boundaries[j, i] = -1
 
-        print("\rDone                                               ", end="")
-        return
+        yield 1.
 
+    @reportProgress("finding phase boundaries")
     def findPhaseBoundaries(self, treatNonIndexedAs=None):
         """Finds boundaries in the phase map
 
         :param treatNonIndexedAs: value to assign to non-indexed points, defaults to -1
         """
-        print("\rFinding phase boundaries...", end="")
-
         # make new array shifted by one to left and up
         phaseArrayShifted = np.full((self.yDim, self.xDim), -3)
         phaseArrayShifted[:-1, :-1] = self.phaseArray[1:, 1:]
@@ -631,7 +629,7 @@ class Map(base.Map):
         self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
         self.phaseBoundaries = np.where(np.not_equal(self.phaseArray, phaseArrayShifted), -1, 0)
 
-        print("\rDone                                               ", end="")
+        yield 1.
 
     def plotPhaseBoundaryMap(self, dilate=False, **kwargs):
         """Plot phase boundary map
@@ -670,14 +668,13 @@ class Map(base.Map):
 
         return plot
 
+    @reportProgress("finding grains")
     def findGrains(self, minGrainSize=10):
         """
         Find grains and assign ids
 
         :param minGrainSize: Minimum grain area in pixels
         """
-        print("\rFinding grains...", end="")
-
         # Initialise the grain map
         self.grains = np.copy(self.boundaries)
 
@@ -685,12 +682,17 @@ class Map(base.Map):
 
         # List of points where no grain has be set yet
         unknownPoints = np.where(self.grains == 0)
+        numPoints = unknownPoints[0].shape[0]
+        totalPoints = numPoints
         # Start counter for grains
         grainIndex = 1
 
         # Loop until all points (except boundaries) have been assigned
         # to a grain or ignored
-        while unknownPoints[0].shape[0] > 0:
+        while numPoints > 0:
+            # report progress
+            yield 1. - numPoints / totalPoints
+
             # Flood fill first unknown point and return grain object
             currentGrain = self.floodFill(unknownPoints[1][0], unknownPoints[0][0], grainIndex)
 
@@ -707,10 +709,7 @@ class Map(base.Map):
 
             # update unknown points
             unknownPoints = np.where(self.grains == 0)
-
-        print("\rDone                                               ", end="")
-
-        return
+            numPoints = unknownPoints[0].shape[0]
 
     def plotGrainMap(self, **kwargs):
         """
@@ -772,13 +771,19 @@ class Map(base.Map):
             else:
                 edge = newedge
 
+    @reportProgress("calculating grain mean orientations")
     def calcGrainAvOris(self):
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
-        for grain in self.grainList:
+        numGrains = len(self)
+        for iGrain, grain in enumerate(self):
             grain.calcAverageOri()
 
+            # report progress
+            yield (iGrain + 1) / numGrains
+
+    @reportProgress("calculating grain misorientations")
     def calcGrainMisOri(self, calcAxis=False):
         """
         Calculate grain misorientation
@@ -786,17 +791,15 @@ class Map(base.Map):
         :param calcAxis: Calculate the misorientation axis also
         :return:
         """
-        print("\rCalculating grain misorientations...", end="")
-
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
-        for grain in self.grainList:
+        numGrains = len(self)
+        for iGrain, grain in enumerate(self):
             grain.buildMisOriList(calcAxis=calcAxis)
 
-        print("\rDone                                               ", end="")
-
-        return
+            # report progress
+            yield (iGrain + 1) / numGrains
 
     def plotMisOriMap(self, component=0, **kwargs):
         """
@@ -872,6 +875,7 @@ class Map(base.Map):
             for j, ss in enumerate(ssGroup):
                 print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
 
+    @reportProgress("calculating grain average Schmid factors")
     def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
         """
         Calculates Schmid factors for all slip systems, for all grains, based on average grain orientation
@@ -879,15 +883,16 @@ class Map(base.Map):
         :param loadVector: Loading vector, i.e. [1, 0, 0]
         :param slipSystems: Slip systems
         """
-        print("\rCalculating grain average Schmid factors...", end="")
-
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
-        for grain in self.grainList:
-            grain.calcAverageSchmidFactors(loadVector=loadVector, slipSystems=slipSystems)
+        numGrains = len(self)
+        for iGrain, grain in enumerate(self.grainList):
+            grain.calcAverageSchmidFactors(loadVector=loadVector,
+                                           slipSystems=slipSystems)
 
-        print("\rDone                                               ", end="")
+            # report progress
+            yield (iGrain + 1) / numGrains
 
     def plotAverageGrainSchmidFactorsMap(self, planes=None, directions=None,
                                          **kwargs):
@@ -972,7 +977,7 @@ class Grain(base.Grain):
         self.slipTraceAngles = None             # list of slip trace angles
         self.slipTraceInclinations = None
 
-    # quat is a quaterion and coord is a tuple (x, y)
+    # quat is a quaternion and coord is a tuple (x, y)
     def addPoint(self, coord, quat):
         self.coordList.append(coord)
         self.quatList.append(quat)

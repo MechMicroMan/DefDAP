@@ -30,15 +30,17 @@ from defdap import quat
 class Plot(object):
     """ Class for creating a plot
     """
-    def __init__(self, ax=None, fig=None, makeInteractive=False, figsize=None, title=None):
-
+    def __init__(self, ax, axParams={}, fig=None, makeInteractive=False, title=None,
+                 **kwargs):
         self.interactive = makeInteractive
         if makeInteractive:
             if fig is not None and ax is not None:
                 self.fig = fig
                 self.ax = ax
             else:
-                self.fig, self.ax = plt.subplots()
+                # self.fig, self.ax = plt.subplots(**kwargs)
+                self.fig = plt.figure(**kwargs)
+                self.ax = self.fig.add_subplot(111, **axParams)
             self.btnStore = []
             self.txtStore = []
             self.txtBoxStore = []
@@ -46,7 +48,8 @@ class Plot(object):
             self.fig = fig
             # TODO: flag for new figure
             if ax is None:
-                self.fig, self.ax = plt.subplots()
+                self.fig = plt.figure(**kwargs)
+                self.ax = self.fig.add_subplot(111, **axParams)
             else:
                 self.ax = ax
         self.colourBar = None
@@ -133,7 +136,6 @@ class MapPlot(Plot):
         self.ax.set_yticks([])
 
     def addMap(self, mapData, vmin=None, vmax=None, cmap='viridis', **kwargs):
-
         img = self.ax.imshow(mapData, vmin=vmin, vmax=vmax,
                              interpolation='None', cmap=cmap, **kwargs)
         self.draw()
@@ -371,7 +373,7 @@ class GrainPlot(Plot):
             scale = self.callingGrain.ownerMap.scale * 1e-6
         self.ax.add_artist(ScaleBar(scale))
 
-    def addTraces(self, angles, topOnly, colours, pos=None, **kwargs):
+    def addTraces(self, angles, colours, topOnly=False, pos=None, **kwargs):
         if pos is None:
             pos = self.callingGrain.centreCoords()
         traces = np.array((-np.sin(angles), np.cos(angles)))
@@ -388,8 +390,6 @@ class GrainPlot(Plot):
             self.ax.set_xlim(pos[0]-0.1, pos[0]+0.1)
         else: 
             pivot = 'middle'
-            self.ax.set_ylim(pos[1]-0.1, pos[1]+0.1)
-            self.ax.set_xlim(pos[0]-0.1, pos[0]+0.1)
 
         for i, trace in enumerate(traces.T):
             colour = colours[len(colours) - 1] if i >= len(colours) else colours[i]
@@ -699,26 +699,42 @@ class HistPlot(Plot):
         return plot
 
 
-class crystalPlot(Plot):
+class CrystalPlot(Plot):
     """ Class for creating a 3D plot for plotting unit cells
     """
+    def __init__(self, fig=None, ax=None,
+                 makeInteractive=False, **kwargs):
+        # Set default plot parameters then update with any input
+        figParams = {
+            'figsize': (6, 6)
+        }
+        axParams = {
+            'projection': '3d',
+            'proj_type': 'ortho'
+        }
+        figParams.update(kwargs)
 
-    def __init__(self, fig=None, ax=None):
-        # Initialises plot
-        if ax is None:
-            self.fig = plt.figure(figsize=(6,6))
-            self.ax = self.fig.add_subplot(111, projection='3d', proj_type = 'ortho')
-        else:
-            self.ax=ax
+        super(CrystalPlot, self).__init__(ax, axParams=axParams, fig=fig,
+                                          makeInteractive=makeInteractive,
+                                          **figParams)
 
         # Set plotting parameters
-        self.ax.set_xlim3d(-0.15, 0.15); self.ax.set_ylim3d(-0.15, 0.15); self.ax.set_zlim3d(-0.15, 0.15);
+        self.ax.set_xlim3d(-0.15, 0.15)
+        self.ax.set_ylim3d(-0.15, 0.15)
+        self.ax.set_zlim3d(-0.15, 0.15)
         self.ax.view_init(azim=270, elev=90)
         self.ax._axis3don = False
         
-    def addVerts(self, verts):
-        #Add list of planes defined by given vertices to the 3D plot
-        for vert in verts:
-            pc = Poly3DCollection(vert, alpha = 0.6, facecolor='0.8', linewidths=3, edgecolor='k')
-            self.ax.add_collection3d(pc)
-    
+    def addVerts(self, verts, **kwargs):
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'alpha' : 0.6,
+            'facecolor' : '0.8',
+            'linewidths' : 3,
+            'edgecolor' : 'k'
+        }
+        plotParams.update(kwargs)
+
+        # Add list of planes defined by given vertices to the 3D plot
+        pc = Poly3DCollection(verts, **plotParams)
+        self.ax.add_collection3d(pc)
