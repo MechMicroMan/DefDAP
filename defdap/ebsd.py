@@ -1043,7 +1043,7 @@ class Grain(base.Grain):
                             **plotParams)
                             
     def plotUnitCell(self, fig=None, ax=None):
-        Quat.plotUnitCell(self.refOri, fig, ax, symGroup=self.crystalSym, cOverA=self.ebsdMap.cOverA)
+        Quat.plotUnitCell(self.refOri, fig=fig, ax=ax, symGroup=self.crystalSym, cOverA=self.ebsdMap.cOverA)
 
     # component
     # 0 = misOri

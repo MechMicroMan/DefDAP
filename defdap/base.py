@@ -415,7 +415,7 @@ class Map(object):
             mapShape = [self.yDim, self.xDim, 3]
         else:
             raise Exception("The grain data supplied must be either a"
-                            "singel value or RGB values per grain.")
+                            "single value or RGB values per grain.")
 
         grainMap = np.full(mapShape, bg, dtype=grainData.dtype)
         for grainId, grainValue in zip(grainIds, grainData):
