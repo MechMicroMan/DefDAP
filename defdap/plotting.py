@@ -16,7 +16,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button, TextBox, CheckButtons
+from matplotlib.widgets import Button, TextBox
 from matplotlib_scalebar.scalebar import ScaleBar
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import Axes3D
@@ -232,14 +232,14 @@ class MapPlot(Plot):
                          fontsize=fontsize, **kwargs)
         self.draw()
 
-    def addLegend(self, values, lables, layer=0, **kwargs):
+    def addLegend(self, values, labels, layer=0, **kwargs):
         # Find colour values for given values
         img = self.imgLayers[layer]
         colors = [img.cmap(img.norm(value)) for value in values]
 
         # Get colour patches for each phase and make legend
         patches = [mpl.patches.Patch(
-            color=colors[i], label=lables[i]
+            color=colors[i], label=labels[i]
         ) for i in range(len(values))]
 
         self.ax.legend(handles=patches, **kwargs)
@@ -290,13 +290,15 @@ class MapPlot(Plot):
 
         return plot
 
+
 class LineSlice:
     """ Class to catch click and drag and determine positions
     """
     def __init__(self, fig, ax, action):
-        
-        self.p1=[0,0]; self.p2=[0,0];
-        self.ax = ax;
+
+        self.p1=[0,0]
+        self.p2=[0,0]
+        self.ax = ax
         self.cidclick = plt.connect('button_press_event', self)
         self.cidrelease = plt.connect('button_release_event', self)
         self.action = action
@@ -313,7 +315,8 @@ class LineSlice:
 
             self.points = (self.p1[0], self.p1[1], self.p2[0], self.p2[1])
 
-            return (self.p1[0], self.p1[1], self.p2[0], self.p2[1])
+            return self.p1[0], self.p1[1], self.p2[0], self.p2[1]
+
 
 class GrainPlot(Plot):
     """ Class for creating a map for a grain
@@ -338,27 +341,31 @@ class GrainPlot(Plot):
         return img
 
     def addArrow(self, startEnd, persistent=False, clearPrev=True, label=None):
-        
-        x0=startEnd[0];  y0=startEnd[1]; x1=startEnd[2];   y1=startEnd[3];
 
-        if persistent == True:
+        x0 = startEnd[0]
+        y0 = startEnd[1]
+        x1 = startEnd[2]
+        y1 = startEnd[3]
+
+        if persistent:
             self.ax.annotate("", xy=(x0, y0), xycoords='data', xytext=(x1, y1), textcoords='data',
-                    arrowprops=dict(arrowstyle="<-",connectionstyle="arc3",color='red',alpha=0.7,linewidth=2))
+                             arrowprops=dict(arrowstyle="<-",connectionstyle="arc3",color='red',alpha=0.7,linewidth=2))
 
-        if persistent == False:
-            if clearPrev==True:
-                if self.arrow != None:
+        if not persistent:
+            if clearPrev:
+                if self.arrow is not None:
                     self.arrow.remove()
-            
-            if x0==None or y0==None or x1==None or y1==None:
+
+            if None in (x0, y0, x1, y1):
                 pass
             else:
                 self.arrow = self.ax.annotate("", xy=(x0, y0), xycoords='data', xytext=(x1, y1), textcoords='data',
-                        arrowprops=dict(arrowstyle="<-",connectionstyle="arc3",color='red',alpha=0.7,linewidth=2))
+                                              arrowprops=dict(arrowstyle="<-",connectionstyle="arc3",
+                                                              color='red',alpha=0.7,linewidth=2))
 
         if label is not None:
             self.ax.annotate(label, xy=(x1, y1), xycoords='data', xytext=(15, 15), textcoords='offset pixels',
-                c='red', fontsize=12)
+                             c='red', fontsize=12)
 
     def addColourBar(self, label, layer=0, **kwargs):
 
@@ -377,7 +384,7 @@ class GrainPlot(Plot):
 
         # When plotting top half only, move all 'traces' to +ve y
         # and set the pivot to be in the tail instead of centre
-        if topOnly == True: 
+        if topOnly:
             pivot='tail'
             for idx, (x,y) in enumerate(zip(traces[0], traces[1])):
                 if x < 0 and y < 0:
@@ -385,7 +392,7 @@ class GrainPlot(Plot):
                     traces[1][idx] *= -1
             self.ax.set_ylim(pos[1]-0.001, pos[1]+0.1)
             self.ax.set_xlim(pos[0]-0.1, pos[0]+0.1)
-        else: 
+        else:
             pivot = 'middle'
 
         for i, trace in enumerate(traces.T):
@@ -407,15 +414,15 @@ class GrainPlot(Plot):
 
         self.addTraces(slipTraceAngles, colours, topOnly, pos=pos, **kwargs)
 
-    def addSlipBands(self, topOnly=False, grainMapData=None, angles=None, pos=None, thres=None, min_dist=None, **kwargs):
-        
-        if angles == None:
+    def addSlipBands(self, topOnly=False, grainMapData=None, angles=None, pos=None,
+                     thres=None, min_dist=None, **kwargs):
+
+        if angles is None:
             slipBandAngles = self.callingGrain.calcSlipBands(grainMapData,
                                                              thres=thres,
                                                              min_dist=min_dist)
         else:
             slipBandAngles = angles
-
 
         self.addTraces(slipBandAngles, ["black"], topOnly,  pos=pos, **kwargs)
 
@@ -721,7 +728,7 @@ class CrystalPlot(Plot):
         self.ax.set_zlim3d(-0.15, 0.15)
         self.ax.view_init(azim=270, elev=90)
         self.ax._axis3don = False
-        
+
     def addVerts(self, verts, **kwargs):
         # Set default plot parameters then update with any input
         plotParams = {
