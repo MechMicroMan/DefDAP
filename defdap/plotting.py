@@ -54,9 +54,6 @@ class Plot(object):
                 self.ax = ax
         self.colourBar = None
 
-        if figsize:
-            self.setSize(figsize)
-
         if title:
             self.setTitle(title)
 
@@ -408,7 +405,7 @@ class GrainPlot(Plot):
             colours = self.callingGrain.ebsdMap.slipTraceColours
         slipTraceAngles = self.callingGrain.slipTraces
 
-        self.addTraces(slipTraceAngles, topOnly, colours, pos=pos, **kwargs)
+        self.addTraces(slipTraceAngles, colours, topOnly, pos=pos, **kwargs)
 
     def addSlipBands(self, topOnly=False, grainMapData=None, angles=None, pos=None, thres=None, min_dist=None, **kwargs):
         
@@ -420,7 +417,7 @@ class GrainPlot(Plot):
             slipBandAngles = angles
 
 
-        self.addTraces(slipBandAngles, topOnly, ["black"], pos=pos, **kwargs)
+        self.addTraces(slipBandAngles, ["black"], topOnly,  pos=pos, **kwargs)
 
     @classmethod
     def create(
@@ -444,7 +441,7 @@ class GrainPlot(Plot):
             plot.addSlipTraces()
 
         if plotSlipBands:
-            plot.addSlipBands(mapData)
+            plot.addSlipBands(grainMapData=mapData)
 
         return plot
 
@@ -704,7 +701,7 @@ class CrystalPlot(Plot):
     """
     def __init__(self, fig=None, ax=None,
                  makeInteractive=False, **kwargs):
-        # Set default plot parameters then update with any input
+        # Set default plot parameters then update with input
         figParams = {
             'figsize': (6, 6)
         }
