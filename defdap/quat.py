@@ -644,8 +644,9 @@ class Quat(object):
 
     @staticmethod
     def calcIPFcolours(quats, direction, symGroup):
-        if symGroup != "cubic":
-            raise NotImplementedError("Only available for cubic currently")
+        # if symGroup != "cubic":
+        #     raise NotImplementedError("Only available for cubic currently")
+        symGroup = 'cubic'
 
         numQuats = len(quats)
 

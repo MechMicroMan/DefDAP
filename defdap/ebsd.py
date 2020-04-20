@@ -541,6 +541,7 @@ class Map(base.Map):
         yield 1.
 
     def filterData(self, misOriTol=5):
+        # Kuwahara filter
         print("8 quadrants")
         misOriTol *= np.pi / 180
         misOriTol = np.cos(misOriTol / 2)
