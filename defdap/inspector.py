@@ -77,7 +77,7 @@ class grainInspector:
         """
         ## Go to grain ID specified in event
         self.grainID=int(event)
-
+        self.grainPlot.arrow=None
         self.currDICGrain = self.currMap[self.grainID]
         self.currEBSDGrain = self.currDICGrain.ebsdGrain
         self.redraw()
@@ -199,8 +199,7 @@ class grainInspector:
         self.drawnLine = LineSlice(ax=self.maxShearAx, fig=self.plot.fig, action=self.grainPlot.addArrow)
 
         # Write lines text and draw lines
-        linesTxt = 'List of lines\n\n'
-        linesTxt += 'LineID  x0     y0     x1     y1     Angle  Group\n'
+        linesTxt = 'List of lines\n\nLineID  x0     y0     x1     y1     Angle  Group\n'
 
         if self.currDICGrain.pointsList != []:
             for idx, points in enumerate(self.currDICGrain.pointsList):
@@ -213,8 +212,7 @@ class grainInspector:
         self.plot.addText(self.lineInfoAx, 0, 1, linesTxt, va='top', fontsize=10)
         
         # Write groups info text
-        groupsTxt = 'List of groups\n\n'
-        groupsTxt += 'GroupID    Angle      System      Dev     RDR\n'
+        groupsTxt = 'List of groups\n\nGroupID    Angle      System      Dev     RDR\n'
         if self.currDICGrain.groupsList != []:
             for idx, group in enumerate(self.currDICGrain.groupsList):
                 groupsTxt += '{0}                {1:.1f}      {2}      {3}      {4:.2f}\n'.format(
@@ -333,7 +331,7 @@ class grainInspector:
         # Save measured RDR
         grain.groupsList[group][4] = linRegResults.slope
         
-        self.redraw()
+
         if showPlot: self.plotRDR(grain, group, ulist, vlist, allxlist, allylist, linRegResults)
 
     def plotRDR(self, grain, group, ulist, vlist, allxlist, allylist, linRegResults):
@@ -359,7 +357,7 @@ class grainInspector:
         """
 
         # Draw window and axes
-        self.rdrPlot = Plot(ax=None, makeInteractive=True, title='RDR Calculation', figsize=(20, 7))
+        self.rdrPlot = Plot(ax=None, makeInteractive=True, title='RDR Calculation', figsize=(21, 7))
         self.rdrPlot.ax.axis('off')
         self.rdrPlot.grainAx = self.rdrPlot.addAxes((0.05, 0.07, 0.20, 0.85))
         self.rdrPlot.textAx = self.rdrPlot.addAxes((0.27, 0.07, 0.20, 0.85))
@@ -431,6 +429,7 @@ class grainInspector:
         # Plot RDR values on number line
         uniqueRDRs = set()
         for x in [item for sublist in RDRs for item in sublist]: uniqueRDRs.add(x)
+        self.rdrPlot.numLineAx.axvline(x=0, ymin=-20, ymax=20, c='k')
         self.rdrPlot.numLineAx.plot(np.zeros(len(uniqueRDRs)), list(uniqueRDRs), 'bo', label='Theroretical RDR values')
         self.rdrPlot.numLineAx.plot([0], slope, 'ro', label='Measured RDR value')
         self.rdrPlot.addText(self.rdrPlot.numLineAx, -0.009, slope-0.01, '{0:.3f}'.format(float(slope)))
@@ -447,5 +446,5 @@ class grainInspector:
                                                       self.currEBSDMap.slipSystems[idx][idx2].slipDirLabel))
             self.rdrPlot.addText(self.rdrPlot.numLineAx,0.002, RDR-0.01, txt)
 
-        self.rdrPlot.numLineAx.set_ylim(slope-0.6, slope+0.6)
+        self.rdrPlot.numLineAx.set_ylim(slope-1, slope+1)
         self.rdrPlot.numLineAx.set_xlim(-0.01, 0.05)
