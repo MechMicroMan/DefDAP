@@ -4,6 +4,11 @@
 
 <h4 align="center">A python library for correlating EBSD and HRDIC data.</h4>
 
+<h4 align="center">
+  <img alt="Python 3.7" src="https://img.shields.io/badge/python-3.7-red">
+  <img alt="GitHub" src="https://img.shields.io/github/license/MechMicroMan/DefDAP">
+</h4>
+
 <p align="center">
   <a href="#how-to-install">How to install</a> •
   <a href="#how-to-use">How To Use</a> •
@@ -17,16 +22,18 @@
 
 ## How to install
 
-- Download and install Anaconda from https://repo.continuum.io/archive/ (version 5.3 has been tested)
+- Download and install Anaconda from https://repo.continuum.io/archive/ (Anaconda3-2019.10 has been tested)
 
 - Download the DefDAP package using the 'Clone or download' button above, and extract to a directory
 
-- Open a terminal in that directory and run `pip install .` (or `pip install -e .` if you want to work on the scripts)
+- Open a terminal in that directory and run `pip install -e .`
 
 ## How to use
 
-- To start the example notebook, use the command `jupyter notebook` and click the notebook (.ipynb file)
-[![DefDAP demo](http://img.youtube.com/vi/JIbc7F-nFSQ/0.jpg)](http://www.youtube.com/watch?v=JIbc7F-nFSQ "DefDAP demo")
+- To start the example notebook, use the command `jupyter lab` and click the notebook (.ipynb file)
+
+- Here is a video demonstrating the basic functionality of the package: 
+[DefDAP demo](http://www.youtube.com/watch?v=JIbc7F-nFSQ "DefDAP demo")
 
 ## Documentation
 
