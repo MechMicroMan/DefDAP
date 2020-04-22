@@ -129,6 +129,9 @@ class MapPlot(Plot):
         self.highlightsLayerID = None
         self.pointsLayerIDs = []
 
+        self.ax.set_xlim((0, callingMap.xDim))
+        self.ax.set_ylim((0, callingMap.yDim))
+
         self.ax.set_xticks([])
         self.ax.set_yticks([])
 
@@ -348,8 +351,13 @@ class GrainPlot(Plot):
         y1 = startEnd[3]
 
         if persistent:
-            self.ax.annotate("", xy=(x0, y0), xycoords='data', xytext=(x1, y1), textcoords='data',
-                             arrowprops=dict(arrowstyle="<-",connectionstyle="arc3",color='red',alpha=0.7,linewidth=2))
+            self.ax.annotate(
+                "", xy=(x0, y0), xycoords='data', xytext=(x1, y1),
+                textcoords='data', arrowprops=dict(
+                    arrowstyle="<-", connectionstyle="arc3",
+                    color='red', alpha=0.7, linewidth=2
+                )
+            )
 
         if not persistent:
             if clearPrev:
@@ -359,16 +367,20 @@ class GrainPlot(Plot):
             if None in (x0, y0, x1, y1):
                 pass
             else:
-                self.arrow = self.ax.annotate("", xy=(x0, y0), xycoords='data', xytext=(x1, y1), textcoords='data',
-                                              arrowprops=dict(arrowstyle="<-",connectionstyle="arc3",
-                                                              color='red',alpha=0.7,linewidth=2))
+                self.arrow = self.ax.annotate(
+                    "", xy=(x0, y0), xycoords='data', xytext=(x1, y1),
+                    textcoords='data', arrowprops=dict(
+                        arrowstyle="<-", connectionstyle="arc3",
+                        color='red',alpha=0.7,linewidth=2
+                    )
+                )
 
         if label is not None:
-            self.ax.annotate(label, xy=(x1, y1), xycoords='data', xytext=(15, 15), textcoords='offset pixels',
+            self.ax.annotate(label, xy=(x1, y1), xycoords='data',
+                             xytext=(15, 15), textcoords='offset pixels',
                              c='red', fontsize=12)
 
     def addColourBar(self, label, layer=0, **kwargs):
-
         img = self.imgLayers[layer]
         self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
 

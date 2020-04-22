@@ -347,12 +347,14 @@ class Map(base.Map):
             transformType(string, optional): affine, piecewiseAffine or polynomial
             order(int, optional): Order of polynomial transform to apply
         """
-
         self.ebsdMap = ebsdMap
-        if transformType == "piecewiseAffine":
+        if transformType.lower() == "piecewiseaffine":
             self.ebsdTransform = tf.PiecewiseAffineTransform()
             self.ebsdTransformInv = self.ebsdTransform.inverse
-        elif transformType == "polynomial":
+        elif transformType.lower() == "projective":
+            self.ebsdTransform = tf.ProjectiveTransform()
+            self.ebsdTransformInv = self.ebsdTransform.inverse
+        elif transformType.lower() == "polynomial":
             self.ebsdTransform = tf.PolynomialTransform()
             # You can't calculate the inverse of a polynomial transform
             # so have to estimate by swapping source and destination
@@ -371,6 +373,7 @@ class Map(base.Map):
             )
             return
         else:
+            # default to using affine
             self.ebsdTransform = tf.AffineTransform()
             self.ebsdTransformInv = self.ebsdTransform.inverse
 

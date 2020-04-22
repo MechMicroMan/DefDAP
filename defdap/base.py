@@ -51,7 +51,9 @@ class Map(object):
         Raises:
             Exception: if grains not detected
         """
-        if self.grainList is None or type(self.grainList) is not list or len(self.grainList) < 1:
+        if (self.grainList is None or
+                type(self.grainList) is not list or
+                len(self.grainList) < 1):
             raise Exception("No grains detected.")
         return True
 
@@ -118,27 +120,57 @@ class Map(object):
             # Plot stored homogo points if there are any
             if len(self.homogPoints) > 0:
                 homogPoints = np.array(self.homogPoints) * binSize
-                plot.addPoints(homogPoints[:, 0], homogPoints[:, 1], c='y', s=60)
+                plot.addPoints(homogPoints[:, 0], homogPoints[:, 1],
+                               c='y', s=60)
             else:
                 # add empty points layer to update later
                 plot.addPoints([None], [None], c='y', s=60)
 
             # add empty points layer for current selected point
-            plot.addPoints([None], [None], c='w',s=60, marker='x')
+            plot.addPoints([None], [None], c='w', s=60, marker='x')
 
             plot.addEventHandler('button_press_event', self.clickHomog)
-
-            plot.addButton(
-                "Save point",
-                lambda e, p: self.clickSaveHomog(e, p, binSize),
-                color="0.85", hovercolor="blue"
-            )
+            plot.addEventHandler('key_press_event', self.keyHomog)
+            plot.addButton("Save point",
+                           lambda e, p: self.clickSaveHomog(e, p, binSize),
+                           color="0.85", hovercolor="blue")
         else:
             self.homogPoints = points
 
     def clickHomog(self, event, plot):
         if event.inaxes is plot.ax:
-            plot.addPoints([int(event.xdata)], [int(event.ydata)], updateLayer=1)
+            # right mouse click or shift + left mouse click
+            # shift click doesn't work in osx backend
+            if (event.button == 3 or
+                    (event.button == 1 and event.key == 'shift')):
+                plot.addPoints([int(event.xdata)], [int(event.ydata)],
+                               updateLayer=1)
+
+    def keyHomog(self, event, plot):
+        keys = ['left', 'right', 'up', 'down']
+        key = event.key.split('+')
+        if key[-1] in keys:
+            # get the selected point
+            points = plot.imgLayers[plot.pointsLayerIDs[1]]
+            selPoint = points.get_offsets()[0]
+
+            # check if a point is selected
+            if selPoint[0] is not None and selPoint[1] is not None:
+                # print(event.key)
+                move = 1
+                if len(key) == 2 and key[0] == 'shift':
+                    move = 10
+
+                if key[-1] == keys[0]:
+                    selPoint[0] -= move
+                elif key[-1] == keys[1]:
+                    selPoint[0] += move
+                elif key[-1] == keys[2]:
+                    selPoint[1] -= move
+                elif key[-1] == keys[3]:
+                    selPoint[1] += move
+
+                plot.addPoints([selPoint[0]], [selPoint[1]], updateLayer=1)
 
     def clickSaveHomog(self, event, plot, binSize):
         # get the selected point
@@ -195,13 +227,14 @@ class Map(object):
             self.homogPoints[homogID] = newPoint
 
     def buildNeighbourNetwork(self):
-        # Construct a list of neighbours
-
+        """Construct a list of neighbours
+        """
         yLocs, xLocs = np.nonzero(self.boundaries)
         neighboursList = []
 
         for y, x in zip(yLocs, xLocs):
-            if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or y == self.grains.shape[0] - 1):
+            if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
+                    y == self.grains.shape[0] - 1):
                 # exclude boundary pixel of map
                 continue
             else:
@@ -217,7 +250,8 @@ class Map(object):
                     self.grains[y, x - 1] - 1
                 }
                 # neighbours = set(neighbours)
-                # remove boundary points (-2) and points in small grains (-3) (Normally -1 and -2)
+                # remove boundary points (-2) and points in small
+                # grains (-3) (Normally -1 and -2)
                 neighbours.discard(-2)
                 neighbours.discard(-3)
 
@@ -308,10 +342,13 @@ class Map(object):
 
         # array of x and y coordinate of each pixel in the map
         coords = np.zeros((2, proxShape[0], proxShape[1]), dtype=float)
-        coords[0], coords[1] = np.meshgrid(range(proxShape[0]), range(proxShape[1]), indexing='ij')
+        coords[0], coords[1] = np.meshgrid(
+            range(proxShape[0]), range(proxShape[1]), indexing='ij'
+        )
 
         # array to store trial distance from each boundary point
-        trialDistances = np.full((numTrials + 1, proxShape[0], proxShape[1]), 1000, dtype=float)
+        trialDistances = np.full((numTrials + 1, proxShape[0], proxShape[1]),
+                                 1000, dtype=float)
 
         # loop over each boundary point (p) and calculate distance from
         # p to all points in the map store minimum once numTrails have
@@ -339,7 +376,8 @@ class Map(object):
         """Calculate grain average of any DIC map data.
 
         Args:
-            mapData (np.array): Array of map data to grain average. This must be cropped!
+            mapData (np.array): Array of map data to grain average. This
+            must be cropped!
 
         Returns:
             np.array: Array containing the grain average values
@@ -435,9 +473,11 @@ class Map(object):
         points coloured by grain average values from map data.
 
         Args:
-            mapData (np.array): Array of map data to grain average. This must be cropped!
+            mapData (np.array): Array of map data to grain average. This
+            must be cropped!
             direction (np.array): Vector of reference direction for the IPF
-            plotColourBar (bool, optional): Set to Flase to exclude the colour bar
+            plotColourBar (bool, optional): Set to Flase to exclude the
+            colour bar
             vmin (float, optional): Minimum value of colour scale
             vmax (float, optional): Maximum value for colour scale
             cLabel (str, optional): Colour bar label text
