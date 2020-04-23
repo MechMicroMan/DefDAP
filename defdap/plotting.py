@@ -129,9 +129,6 @@ class MapPlot(Plot):
         self.highlightsLayerID = None
         self.pointsLayerIDs = []
 
-        self.ax.set_xlim((0, callingMap.xDim))
-        self.ax.set_ylim((0, callingMap.yDim))
-
         self.ax.set_xticks([])
         self.ax.set_yticks([])
 
