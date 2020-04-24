@@ -30,8 +30,8 @@ from defdap import quat
 class Plot(object):
     """ Class for creating a plot
     """
-    def __init__(self, ax, axParams={}, fig=None, makeInteractive=False, title=None,
-                 **kwargs):
+    def __init__(self, ax, axParams={}, fig=None, makeInteractive=False,
+                 title=None, **kwargs):
         self.interactive = makeInteractive
         if makeInteractive:
             if fig is not None and ax is not None:
@@ -54,7 +54,7 @@ class Plot(object):
                 self.ax = ax
         self.colourBar = None
 
-        if title:
+        if title is not None:
             self.setTitle(title)
 
     def checkInteractive(self):
@@ -121,8 +121,12 @@ class Plot(object):
 class MapPlot(Plot):
     """ Class for creating a map
     """
-    def __init__(self, callingMap, fig=None, ax=None, makeInteractive=False):
-        super(MapPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
+    def __init__(self, callingMap, fig=None, ax=None, axParams={},
+                 makeInteractive=False, **kwargs):
+        super(MapPlot, self).__init__(
+            ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
+            **kwargs
+        )
 
         self.callingMap = callingMap
         self.imgLayers = []
@@ -261,7 +265,8 @@ class MapPlot(Plot):
     @classmethod
     def create(
         cls, callingMap, mapData,
-        fig=None, ax=None, plot=None, makeInteractive=False,
+        fig=None, figParams={}, ax=None, axParams={},
+        plot=None, makeInteractive=False,
         plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
         plotGBs=False, dilateBoundaries=False, boundaryColour=None,
         plotScaleBar=False, scale=None,
@@ -269,7 +274,9 @@ class MapPlot(Plot):
         **kwargs
     ):
         if plot is None:
-            plot = cls(callingMap, fig=fig, ax=ax, makeInteractive=makeInteractive)
+            plot = cls(callingMap, fig=fig, ax=ax, axParams=axParams,
+                       makeInteractive=makeInteractive, **figParams)
+
         if mapData is not None:
             plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
@@ -321,8 +328,12 @@ class LineSlice:
 class GrainPlot(Plot):
     """ Class for creating a map for a grain
     """
-    def __init__(self, callingGrain, fig=None, ax=None, makeInteractive=False):
-        super(GrainPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
+    def __init__(self, callingGrain, fig=None, ax=None, axParams={},
+                 makeInteractive=False, **kwargs):
+        super(GrainPlot, self).__init__(
+            ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
+            **kwargs
+        )
 
         self.callingGrain = callingGrain
         self.imgLayers = []
@@ -438,13 +449,15 @@ class GrainPlot(Plot):
     @classmethod
     def create(
         cls, callingGrain, mapData,
-        fig=None, ax=None, plot=None, makeInteractive=False,
+        fig=None, figParams={}, ax=None, axParams={},
+        plot=None, makeInteractive=False,
         plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
         plotScaleBar=False, scale=None,
         plotSlipTraces=False, plotSlipBands=False, **kwargs
     ):
         if plot is None:
-            plot = cls(callingGrain, fig=fig, ax=ax, makeInteractive=makeInteractive)
+            plot = cls(callingGrain, fig=fig, ax=ax, axParams=axParams,
+                       makeInteractive=makeInteractive, **figParams)
         plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
         if plotColourBar:
@@ -468,8 +481,11 @@ class PolePlot(Plot):
     defaultProjection = "stereographic"
 
     def __init__(self, plotType, crystalSym, projection=None,
-                 fig=None, ax=None, makeInteractive=False):
-        super(PolePlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
+                 fig=None, ax=None, axParams={}, makeInteractive=False,
+                 **kwargs):
+        super(PolePlot, self).__init__(
+            ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
+            **kwargs)
 
         self.plotType = plotType
         self.crystalSym = crystalSym
@@ -663,9 +679,12 @@ class PolePlot(Plot):
 class HistPlot(Plot):
     """ Class for creating a histogram
     """
-    def __init__(self, plotType="linear", density=True,
-                 fig=None, ax=None, makeInteractive=False):
-        super(HistPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
+    def __init__(self, plotType="linear", density=True, fig=None,
+                 ax=None, axParams={}, makeInteractive=False, **kwargs):
+        super(HistPlot, self).__init__(
+            ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
+            **kwargs
+        )
 
         plotType = plotType.lower()
         if plotType in ["linear", "log"]:
@@ -699,13 +718,15 @@ class HistPlot(Plot):
 
     @classmethod
     def create(
-        cls, histData, fig=None, ax=None, plot=None, makeInteractive=False,
+        cls, histData, fig=None, figParams={}, ax=None, axParams={},
+        plot=None, makeInteractive=False,
         plotType="linear", density=True, bins=10, range=None,
         line='o', label=None, **kwargs
     ):
         if plot is None:
             plot = cls(plotType=plotType, density=density, fig=fig, ax=ax,
-                       makeInteractive=makeInteractive)
+                       axParams=axParams, makeInteractive=makeInteractive,
+                       **figParams)
         plot.addHist(histData, bins=bins, range=range, line=line,
                      label=label, **kwargs)
 
@@ -715,21 +736,24 @@ class HistPlot(Plot):
 class CrystalPlot(Plot):
     """ Class for creating a 3D plot for plotting unit cells
     """
-    def __init__(self, fig=None, ax=None,
+    def __init__(self, fig=None, ax=None, axParams={},
                  makeInteractive=False, **kwargs):
         # Set default plot parameters then update with input
         figParams = {
             'figsize': (6, 6)
         }
-        axParams = {
+        figParams.update(kwargs)
+        axParamsDefault = {
             'projection': '3d',
             'proj_type': 'ortho'
         }
-        figParams.update(kwargs)
+        axParamsDefault.update(axParams)
+        axParams = axParamsDefault
 
-        super(CrystalPlot, self).__init__(ax, axParams=axParams, fig=fig,
-                                          makeInteractive=makeInteractive,
-                                          **figParams)
+        super(CrystalPlot, self).__init__(
+            ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
+            **figParams
+        )
 
         # Set plotting parameters
         self.ax.set_xlim3d(-0.15, 0.15)
