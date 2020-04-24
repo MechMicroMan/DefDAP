@@ -312,7 +312,7 @@ class Map(base.Map):
 
         return mapData[minY:maxY, minX:maxX]
 
-    def setHomogPoint(self, points=None, display=None):
+    def setHomogPoint(self, points=None, display=None, **kwargs):
         """Set homologous points
         Uses GUI if points is None
 
@@ -337,7 +337,7 @@ class Map(base.Map):
                 binSize = 1
 
             # Call set homog points from base class setting the bin size
-            super(type(self), self).setHomogPoint(binSize=binSize, points=points)
+            super(type(self), self).setHomogPoint(binSize=binSize, points=points, **kwargs)
 
     def linkEbsdMap(self, ebsdMap, transformType="affine", order=2):
         """Calculates the transformation required to align EBSD dataset to DIC

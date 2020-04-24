@@ -114,9 +114,9 @@ class Map(object):
                     self.grainPlot.callingGrain = currGrain
                     currGrain.plotDefault(plot=self.grainPlot)
 
-    def setHomogPoint(self, binSize=1, points=None):
+    def setHomogPoint(self, binSize=1, points=None, **kwargs):
         if points is None:
-            plot = self.plotHomog(makeInteractive=True)
+            plot = self.plotHomog(makeInteractive=True, **kwargs)
             # Plot stored homogo points if there are any
             if len(self.homogPoints) > 0:
                 homogPoints = np.array(self.homogPoints) * binSize
