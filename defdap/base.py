@@ -235,15 +235,21 @@ class Map(object):
 
             self.homogPoints[homogID] = newPoint
 
+    @reportProgress("constructing neighbour network")
     def buildNeighbourNetwork(self):
         """Construct a list of neighbours
         """
         yLocs, xLocs = np.nonzero(self.boundaries)
+        totalPoints = len(xLocs)
         neighboursList = []
 
-        for y, x in zip(yLocs, xLocs):
-            if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
-                    y == self.grains.shape[0] - 1):
+        for iPoint, (x, y) in enumerate(zip(xLocs, yLocs)):
+            # report progress
+            yield iPoint / totalPoints
+
+            if (x == 0 or y == 0
+                    or x == self.grains.shape[1] - 1
+                    or y == self.grains.shape[0] - 1):
                 # exclude boundary pixel of map
                 continue
             else:

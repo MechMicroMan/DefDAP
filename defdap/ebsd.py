@@ -706,6 +706,7 @@ class Map(base.Map):
 
         yield 1.
 
+    @reportProgress("constructing neighbour network")
     def buildNeighbourNetwork(self):
         # create network
         import networkx as nx
@@ -714,8 +715,13 @@ class Map(base.Map):
 
         for i, boundaries in enumerate((self.boundariesX, self.boundariesY)):
             yLocs, xLocs = np.nonzero(boundaries)
+            totalPoints = len(xLocs)
 
-            for x, y in zip(xLocs, yLocs):
+            for iPoint, (x, y) in enumerate(zip(xLocs, yLocs)):
+                # report progress, assumes roughly equal number of x and
+                # y boundary points
+                yield 0.5 * (i + iPoint / totalPoints)
+
                 if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
                         y == self.grains.shape[0] - 1):
                     # exclude boundary pixels of map
