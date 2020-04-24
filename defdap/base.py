@@ -407,6 +407,55 @@ class Map(object):
 
         return grainAvData
 
+    def grainDataToMapData(self, grainData, grainIds=-1, bg=0):
+        """Create a map array with each grain filled with the given
+        values.
+
+        Parameters
+        ----------
+        grainData : list or np.ndarray
+            Grain values. This an be a single value per grain or RGB
+            values. You must supply either mapData or grainData.
+        grainIds: list of int or int, optional
+            IDs of grains to plot for. Use -1 for all grains in the map.
+        bg: int or real, optional
+            Value to fill the background with.
+        kwargs:
+            Other parameters are passed to defdap.plotting.MapPlot.create
+
+        Returns
+        -------
+        grainMap: np.ndarray
+            Array filled with grain data values
+        """
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
+        if type(grainIds) is int:
+            if grainIds == -1:
+                grainIds = range(len(self))
+            else:
+                grainIds = [grainIds]
+
+        grainData = np.array(grainData)
+        if grainData.shape[0] != len(grainIds):
+            raise Exception("The length of supplied grain data does not"
+                            "match the number of grains.")
+        if len(grainData.shape) == 1:
+            mapShape = [self.yDim, self.xDim]
+        elif len(grainData.shape) == 2 and grainData.shape[1] == 3:
+            mapShape = [self.yDim, self.xDim, 3]
+        else:
+            raise Exception("The grain data supplied must be either a"
+                            "single value or RGB values per grain.")
+
+        grainMap = np.full(mapShape, bg, dtype=grainData.dtype)
+        for grainId, grainValue in zip(grainIds, grainData):
+            for coord in self[grainId].coordList:
+                grainMap[coord[1], coord[0]] = grainValue
+
+        return grainMap
+
     def plotGrainDataMap(self, mapData=None, grainData=None,
                          grainIds=-1, bg=0, **kwargs):
         """Plot a grain map with grains coloured by given data. The data
@@ -444,40 +493,15 @@ class Map(object):
             else:
                 grainData = self.calcGrainAv(mapData, grainIds=grainIds)
 
-        # Check that grains have been detected in the map
-        self.checkGrainsDetected()
-
-        if type(grainIds) is int:
-            if grainIds == -1:
-                grainIds = range(len(self))
-            else:
-                grainIds = [grainIds]
-
-        grainData = np.array(grainData)
-        if grainData.shape[0] != len(grainIds):
-            raise Exception("The length of supplied grain data does not"
-                            "match the number of grains.")
-        if len(grainData.shape) == 1:
-            mapShape = [self.yDim, self.xDim]
-        elif len(grainData.shape) == 2 and grainData.shape[1] == 3:
-            mapShape = [self.yDim, self.xDim, 3]
-        else:
-            raise Exception("The grain data supplied must be either a"
-                            "single value or RGB values per grain.")
-
-        grainMap = np.full(mapShape, bg, dtype=grainData.dtype)
-        for grainId, grainValue in zip(grainIds, grainData):
-            grain = self.grainList[grainId]
-            for coord in grain.coordList:
-                grainMap[coord[1], coord[0]] = grainValue
+        grainMap = self.grainDataToMapData(grainData, grainIds=grainIds,
+                                           bg=bg)
 
         plot = MapPlot.create(self, grainMap, **plotParams)
 
         return plot
 
-    def plotGrainDataIPF(
-            self, direction, mapData=None, grainData=None,
-            grainIds=-1, **kwargs
+    def plotGrainDataIPF(self, direction, mapData=None, grainData=None,
+                         grainIds=-1, **kwargs
     ):
         """Plot IPF of grain reference (average) orientations with
         points coloured by grain average values from map data.
