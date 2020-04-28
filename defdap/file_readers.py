@@ -38,6 +38,7 @@ class EBSDDataLoader(object):
             'bandContrast': None,
             'phase': None
         }
+        self.dataFormat = None
 
     def checkMetadata(self):
         """ Checks that the number of phases from metadata matches
@@ -83,9 +84,9 @@ class EBSDDataLoader(object):
         self.loadedMetadata['yDim'] = int(metadata['Job']['yCells'])
         self.loadedMetadata['stepSize'] = float(metadata['Job']['GridDistX'])
         self.loadedMetadata['acquisitionRotation'] = Quat.fromEulerAngles(
-            metadata['Acquisition Surface']['Euler1'] * np.pi / 180.,
-            metadata['Acquisition Surface']['Euler2'] * np.pi / 180.,
-            metadata['Acquisition Surface']['Euler3'] * np.pi / 180.
+            float(metadata['Acquisition Surface']['Euler1']) * np.pi / 180.,
+            float(metadata['Acquisition Surface']['Euler2']) * np.pi / 180.,
+            float(metadata['Acquisition Surface']['Euler3']) * np.pi / 180.
         )
         self.loadedMetadata['numPhases'] = int(metadata['Phases']['Count'])
 
@@ -93,18 +94,42 @@ class EBSDDataLoader(object):
             phaseMetadata = metadata['Phase{:}'.format(i+1)]
             self.loadedMetadata['phases'].append(Phase(
                 phaseMetadata['StructureName'],
-                EBSDDataLoader.laueGroupLookup(phaseMetadata['LaueGroup']),
+                EBSDDataLoader.laueGroupLookup(int(phaseMetadata['LaueGroup'])),
                 (
-                    phaseMetadata['a'],
-                    phaseMetadata['b'],
-                    phaseMetadata['c'],
-                    phaseMetadata['alpha'],
-                    phaseMetadata['beta'],
-                    phaseMetadata['gamma']
+                    float(phaseMetadata['a']),
+                    float(phaseMetadata['b']),
+                    float(phaseMetadata['c']),
+                    float(phaseMetadata['alpha']),
+                    float(phaseMetadata['beta']),
+                    float(phaseMetadata['gamma'])
                 )
             ))
 
         self.checkMetadata()
+
+        # Construct binary data format from listed fields
+        dataFormat = [('phase', 'uint8')]
+
+        fieldLookup = {
+            3: ('ph1', 'float32'),
+            4: ('phi', 'float32'),
+            5: ('ph2', 'float32'),
+            6: ('MAD', 'float32'),  # Mean Angular Deviation
+            7: ('BC', 'uint8'),     # Band Contrast
+            8: ('BS', 'uint8'),     # Band Slope
+            10: ('numBands', 'uint8'),
+            11: ('AFI', 'uint8'),   # Advanced Fit index. legacy
+            12: ('IB6', 'float32')  # ?
+        }
+        try:
+            for i in range(int(metadata['Fields']['Count'])):
+                fieldID = int(metadata['Fields']['Field{:}'.format(i+1)])
+                dataFormat.append(fieldLookup[fieldID])
+        except KeyError:
+            raise TypeError("Unknown data in EBSD file.")
+
+        self.dataFormat = np.dtype(dataFormat)
+
         return self.loadedMetadata
 
     def loadOxfordCRC(self, fileName, fileDir=""):
@@ -117,17 +142,8 @@ class EBSDDataLoader(object):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        dataFormat = np.dtype([
-            ('Phase', 'b'),
-            ('Eulers', [('ph1', 'f'), ('phi', 'f'), ('ph2', 'f')]),
-            ('MAD', 'f'),
-            ('BC', 'uint8'),
-            ('IB3', 'uint8'),
-            ('IB4', 'uint8'),
-            ('IB5', 'uint8'),
-            ('IB6', 'f')
-        ])
-        binData = np.fromfile(str(filePath), dataFormat, count=-1)
+        # laod binary data from file
+        binData = np.fromfile(str(filePath), self.dataFormat, count=-1)
 
         self.checkData(binData)
 
@@ -135,10 +151,10 @@ class EBSDDataLoader(object):
             binData['BC'], (yDim, xDim)
         )
         self.loadedData['phase'] = np.reshape(
-            binData['Phase'], (yDim, xDim)
+            binData['phase'], (yDim, xDim)
         )
         eulerAngles = np.reshape(
-            binData['Eulers'], (yDim, xDim)
+            binData[['ph1', 'phi', 'ph2']], (yDim, xDim)
         )
         # flatten the structures so that the Euler angles are stored
         # into a normal array
@@ -157,42 +173,62 @@ class EBSDDataLoader(object):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        ctfFile = open(str(filePath), 'r')
-
-        for i, line in enumerate(ctfFile):
-            if 'XCells' in line:
-                xDim = int(line.split()[-1])
-                self.loadedMetadata['xDim'] = xDim
-            elif 'YCells' in line:
-                yDim = int(line.split()[-1])
-                self.loadedMetadata['yDim'] = yDim
-            elif 'XStep' in line:
-                self.loadedMetadata['stepSize'] = float(line.split()[-1])
-            elif 'Phases' in line:
-                numPhases = int(line.split()[-1])
-                self.loadedMetadata['numPhases'] = numPhases
-                for j in range(numPhases):
-                    self.loadedMetadata['phaseNames'].append(
-                        next(ctfFile).split()[2]
-                    )
-                numHeaderLines = i + j + 3
-                # phases are last in the header so break out the loop
-                break
-
-        ctfFile.close()
+        with open(str(filePath), 'r') as ctfFile:
+            for i, line in enumerate(ctfFile):
+                if 'XCells' in line:
+                    xDim = int(line.split()[-1])
+                    self.loadedMetadata['xDim'] = xDim
+                elif 'YCells' in line:
+                    yDim = int(line.split()[-1])
+                    self.loadedMetadata['yDim'] = yDim
+                elif 'XStep' in line:
+                    self.loadedMetadata['stepSize'] = float(line.split()[-1])
+                elif 'Phases' in line:
+                    numPhases = int(line.split()[-1])
+                    self.loadedMetadata['numPhases'] = numPhases
+                    for j in range(numPhases):
+                        self.loadedMetadata['phases'].append(
+                            next(ctfFile).split()[2]
+                        )
+                    headerText = next(ctfFile)
+                    numHeaderLines = i + j + 3
+                    # phases are last in the header, so break out the loop
+                    break
 
         self.checkMetadata()
 
+        # Construct data format from table header
+        fieldLookup = {
+            'Phase': ('phase', 'uint8'),
+            'X': ('x', 'float32'),
+            'Y': ('y', 'float32'),
+            'Bands': ('numBands', 'uint8'),
+            'Error': ('error', 'uint8'),
+            'Euler1': ('ph1', 'float32'),
+            'Euler2': ('phi', 'float32'),
+            'Euler3': ('ph2', 'float32'),
+            'MAD': ('MAD', 'float32'),  # Mean Angular Divation
+            'BC': ('BC', 'uint8'),      # Band Contrast
+            'BS': ('BS', 'uint8'),      # Band Slope
+        }
+
+        keepColNames = ('phase', 'ph1', 'phi', 'ph2', 'BC')
+        dataFormat = []
+        loadCols = []
+        try:
+            for i, colTitle in enumerate(headerText.split()):
+                if fieldLookup[colTitle][0] in keepColNames:
+                    dataFormat.append(fieldLookup[colTitle])
+                    loadCols.append(i)
+        except KeyError:
+            raise TypeError("Unknown data in EBSD file.")
+
+        self.dataFormat = np.dtype(dataFormat)
+
         # now read the data from file
-        dataFormat = np.dtype([
-            ('Phase', 'b'),
-            ('Eulers', [('ph1', 'f'), ('phi', 'f'), ('ph2', 'f')]),
-            ('MAD', 'f'),
-            ('BC', 'uint8')
-        ])
         binData = np.loadtxt(
-            str(filePath), dataFormat,
-            skiprows=numHeaderLines, usecols=(0, 5, 6, 7, 8, 9)
+            str(filePath), self.dataFormat, usecols=loadCols,
+            skiprows=numHeaderLines
         )
 
         self.checkData(binData)
@@ -201,13 +237,13 @@ class EBSDDataLoader(object):
             binData['BC'], (yDim, xDim)
         )
         self.loadedData['phase'] = np.reshape(
-            binData['Phase'], (yDim, xDim)
+            binData['phase'], (yDim, xDim)
         )
         eulerAngles = np.reshape(
-            binData['Eulers'], (yDim, xDim)
+            binData[['ph1', 'phi', 'ph2']], (yDim, xDim)
         )
-        # flatten the structures the Euler angles are stored into a
-        # normal array
+        # flatten the structures so that the Euler angles are stored
+        # into a normal array
         eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
         self.loadedData['eulerAngle'] = eulerAngles * np.pi / 180.
 
