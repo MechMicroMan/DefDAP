@@ -173,6 +173,19 @@ class EBSDDataLoader(object):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
+        def parsePhase():
+            lineSplit = line.split('\t')
+            latticeParams = lineSplit[0].split(';') + lineSplit[1].split(';')
+            latticeParams = tuple(float(val) for val in latticeParams)
+            phase = Phase(
+                lineSplit[2],
+                EBSDDataLoader.laueGroupLookup(int(lineSplit[3])),
+                latticeParams
+            )
+            return phase
+
+        # default values for acquisition rotation in case missing in in file
+        acqEulers = [0., 0., 0.]
         with open(str(filePath), 'r') as ctfFile:
             for i, line in enumerate(ctfFile):
                 if 'XCells' in line:
@@ -183,17 +196,27 @@ class EBSDDataLoader(object):
                     self.loadedMetadata['yDim'] = yDim
                 elif 'XStep' in line:
                     self.loadedMetadata['stepSize'] = float(line.split()[-1])
+                elif 'AcqE1' in line:
+                    acqEulers[0] = float(line.split()[-1])
+                elif 'AcqE2' in line:
+                    acqEulers[1] = float(line.split()[-1])
+                elif 'AcqE3' in line:
+                    acqEulers[2] = float(line.split()[-1])
                 elif 'Phases' in line:
                     numPhases = int(line.split()[-1])
                     self.loadedMetadata['numPhases'] = numPhases
                     for j in range(numPhases):
-                        self.loadedMetadata['phases'].append(
-                            next(ctfFile).split()[2]
-                        )
+                        line = next(ctfFile)
+                        self.loadedMetadata['phases'].append(parsePhase())
+                    # phases are last in the header, so read the column
+                    # headings then break out the loop
                     headerText = next(ctfFile)
                     numHeaderLines = i + j + 3
-                    # phases are last in the header, so break out the loop
                     break
+
+        self.loadedMetadata['acquisitionRotation'] = Quat.fromEulerAngles(
+            *(np.array(acqEulers) * np.pi / 180)
+        )
 
         self.checkMetadata()
 
@@ -207,7 +230,7 @@ class EBSDDataLoader(object):
             'Euler1': ('ph1', 'float32'),
             'Euler2': ('phi', 'float32'),
             'Euler3': ('ph2', 'float32'),
-            'MAD': ('MAD', 'float32'),  # Mean Angular Divation
+            'MAD': ('MAD', 'float32'),  # Mean Angular Deviation
             'BC': ('BC', 'uint8'),      # Band Contrast
             'BS': ('BS', 'uint8'),      # Band Slope
         }
@@ -251,9 +274,9 @@ class EBSDDataLoader(object):
 
     @staticmethod
     def laueGroupLookup(laueGroup):
-        if laueGroup == 9:
+        if laueGroup == 11:
             return crystalStructures['cubic']
-        elif laueGroup == 11:
+        elif laueGroup == 9:
             return crystalStructures['hexagonal']
 
         raise ValueError("Only cubic and hexagonal crystal structures "

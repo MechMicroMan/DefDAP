@@ -39,6 +39,12 @@ class Phase(object):
         self.latticeParams = latticeParams
         self.slipSystems = slipSystems
 
+    def __str__(self):
+        text = "Phase: {:}\n  Crystal structure: {:}\n  Lattice params: " \
+               "({:.2f}, {:.2f}, {:.2f}, {:.0f}, {:.0f}, {:.0f})"
+        return text.format(self.name, self.crystalStructure.name,
+                           *self.latticeParams)
+
 
 class CrystalStructure(object):
     def __init__(self, name, symmetries, vertices, faces):
