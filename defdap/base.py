@@ -42,6 +42,10 @@ class Map(object):
 
         return self.grainList[key]
 
+    @property
+    def shape(self):
+        return self.yDim, self.xDim
+
     def checkGrainsDetected(self):
         """Check if grains have been detected
 

@@ -84,20 +84,29 @@ class Map(base.Map):
         self.xDim = self.xdim
         self.yDim = self.ydim
         
-        self.x_map = self._map(self.xd)     # u (displacement component along x)
-        self.y_map = self._map(self.yd)     # v (displacement component along x)
-        xDispGrad = self._grad(self.x_map)
+        self.x_map = self._map(self.xd)     # u displacement component along x
+        self.y_map = self._map(self.yd)     # v displacement component along x
+        xDispGrad = self._grad(self.x_map)  #d/dy is first term, d/dx is second
         yDispGrad = self._grad(self.y_map)
-        self.f11 = xDispGrad[1] + 1         # f11
-        self.f22 = yDispGrad[0] + 1         # f22
-        self.f12 = xDispGrad[0]             # f12
-        self.f21 = yDispGrad[1]             # f21
 
-        self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
-                                 ((self.f12 + self.f21) / 2.)**2)   # max shear component
-        self.mapshape = np.shape(self.max_shear)                    # map shape
+        # Deformation gradient
+        self.f11 = xDispGrad[1] + 1
+        self.f22 = yDispGrad[0] + 1
+        self.f12 = xDispGrad[0]
+        self.f21 = yDispGrad[1]
 
-        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)      # crop distances (default all zeros)
+        # Green strain
+        self.e11 = xDispGrad[1] + \
+                   0.5*(xDispGrad[1]*xDispGrad[1] + yDispGrad[1]*yDispGrad[1])
+        self.e22 = yDispGrad[0] + \
+                   0.5*(xDispGrad[0]*xDispGrad[0] + yDispGrad[0]*yDispGrad[0])
+        self.e12 = 0.5*(xDispGrad[0] + yDispGrad[1] +
+                        xDispGrad[1]*xDispGrad[0] + yDispGrad[1]*yDispGrad[0])
+        # max shear component
+        self.eMaxShear = np.sqrt(((self.e11 - self.e22) / 2.)**2 + self.e12**2)
+
+        # crop distances (default all zeros)
+        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
 
     @property
     def plotDefault(self):
@@ -230,7 +239,7 @@ class Map(base.Map):
         for c in components:
             selmap = []
             if c == 'mss':
-                selmap = self.crop(self.max_shear) * 100
+                selmap = self.crop(self.eMaxShear) * 100
             if c == 'f11':
                 selmap = (self.crop(self.f11) - 1) * 100
             if c == 'f12':
@@ -530,7 +539,7 @@ class Map(base.Map):
         }
         plotParams.update(kwargs)
 
-        plot = MapPlot.create(self, self.crop(self.max_shear), **plotParams)
+        plot = MapPlot.create(self, self.crop(self.eMaxShear), **plotParams)
 
         return plot
 
@@ -553,7 +562,7 @@ class Map(base.Map):
         plotParams.update(kwargs)
 
         plot = self.plotGrainDataMap(
-            mapData=self.crop(self.max_shear), **plotParams
+            mapData=self.crop(self.eMaxShear), **plotParams
         )
 
         return plot
@@ -623,7 +632,7 @@ class Map(base.Map):
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self)
 
-        currentGrain.addPoint((x, y), self.max_shear[y + self.cropDists[1, 0], x + self.cropDists[0, 0]])
+        currentGrain.addPoint((x, y), self.eMaxShear[y + self.cropDists[1, 0], x + self.cropDists[0, 0]])
 
         edge = [(x, y)]
         grain = [(x, y)]
@@ -653,13 +662,13 @@ class Map(base.Map):
 
                 for (s, t) in moves:
                     if self.grains[t, s] == 0:
-                        currentGrain.addPoint((s, t), self.max_shear[y + self.cropDists[1, 0],
+                        currentGrain.addPoint((s, t), self.eMaxShear[y + self.cropDists[1, 0],
                                                                      x + self.cropDists[0, 0]])
                         newedge.append((s, t))
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
                     elif self.grains[t, s] == -1 and (s > x or t > y):
-                        currentGrain.addPoint((s, t), self.max_shear[y + self.cropDists[1, 0],
+                        currentGrain.addPoint((s, t), self.eMaxShear[y + self.cropDists[1, 0],
                                                                      x + self.cropDists[0, 0]])
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
