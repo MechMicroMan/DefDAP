@@ -870,17 +870,21 @@ class Map(base.Map):
         """
         Print a list of slip planes (with colours) and slip directions
         """
-        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems, self.slipTraceColours)):
-            print('Plane {0}: {1}\tColour: {2}'.format(i, ssGroup[0].slipPlaneLabel, colour))
+        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems,
+                                                  self.slipTraceColours)):
+            print('Plane {0}: {1}\tColour: {2}'.format(
+                i, ssGroup[0].slipPlaneLabel, colour
+            ))
             for j, ss in enumerate(ssGroup):
                 print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
 
     @reportProgress("calculating grain average Schmid factors")
-    def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
+    def calcAverageGrainSchmidFactors(self, loadVector, slipSystems=None):
         """
-        Calculates Schmid factors for all slip systems, for all grains, based on average grain orientation
+        Calculates Schmid factors for all slip systems, for all grains,
+        based on average grain orientation
 
-        :param loadVector: Loading vector, i.e. [1, 0, 0]
+        :param loadVector: Loading vector, e.g. [1, 0, 0]
         :param slipSystems: Slip systems
         """
         # Check that grains have been detected in the map
@@ -888,8 +892,7 @@ class Map(base.Map):
 
         numGrains = len(self)
         for iGrain, grain in enumerate(self.grainList):
-            grain.calcAverageSchmidFactors(loadVector=loadVector,
-                                           slipSystems=slipSystems)
+            grain.calcAverageSchmidFactors(loadVector, slipSystems=slipSystems)
 
             # report progress
             yield (iGrain + 1) / numGrains
@@ -897,7 +900,8 @@ class Map(base.Map):
     def plotAverageGrainSchmidFactorsMap(self, planes=None, directions=None,
                                          **kwargs):
         """
-        Plot maximum Schmid factor map, based on average grain orientation (for all slip systems unless specified)
+        Plot maximum Schmid factor map, based on average grain
+        orientation (for all slip systems unless specified)
 
         :param planes: Plane ID(s) to consider (optional)
         :type planes: list
@@ -1112,8 +1116,7 @@ class Grain(base.Grain):
         # return
 
     # define load axis as unit vector
-    def calcAverageSchmidFactors(self, loadVector=np.array([0, 0, 1]),
-                                 slipSystems=None):
+    def calcAverageSchmidFactors(self, loadVector, slipSystems=None):
         """
         Calculate Schmid factors for grain, using average orientation
 
