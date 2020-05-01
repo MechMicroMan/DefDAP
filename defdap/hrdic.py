@@ -240,14 +240,12 @@ class Map(base.Map):
             selmap = []
             if c == 'mss':
                 selmap = self.crop(self.eMaxShear) * 100
-            if c == 'f11':
-                selmap = (self.crop(self.f11) - 1) * 100
-            if c == 'f12':
-                selmap = self.crop(self.f12) * 100
-            if c == 'f21':
-                selmap = self.crop(self.f21) * 100
-            if c == 'f22':
-                selmap = (self.crop(self.f22) - 1) * 100
+            if c == 'e11':
+                selmap = self.crop(self.e11) * 100
+            if c == 'e12':
+                selmap = self.crop(self.e12) * 100
+            if c == 'e22':
+                selmap = self.crop(self.e22) * 100
             plist = []
             for p in percentiles:
                 if p == 'Min':
