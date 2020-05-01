@@ -676,8 +676,8 @@ class Map(base.Map):
             else:
                 edge = newedge
 
-    def runGrainInspector(self):
-        grainInspector(currMap=self)
+    def runGrainInspector(self, vmax=0.1):
+        grainInspector(currMap=self, vmax=vmax)
 
 
 class Grain(base.Grain):

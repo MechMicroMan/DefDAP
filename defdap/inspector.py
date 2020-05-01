@@ -22,14 +22,14 @@ import pandas as pd
 from defdap.plotting import Plot, GrainPlot, LineSlice
 
 class grainInspector:
-    def __init__(self, currMap):
+    def __init__(self, currMap, vmax=0.1):
         # Initialise some values
         self.grainID = 0
         self.currMap = currMap
         self.currEBSDMap = self.currMap.ebsdMap
         self.currDICGrain = self.currMap[self.grainID]
         self.currEBSDGrain = self.currDICGrain.ebsdGrain
-        self.vmax = np.percentile(currMap.crop(currMap.max_shear), 99.9)
+        self.vmax = vmax
         
         # Draw the figure
         self.draw()
