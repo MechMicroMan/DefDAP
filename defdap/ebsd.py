@@ -319,7 +319,6 @@ class Map(base.Map):
         phaseIDs = [-1] + list(range(1, self.numPhases + 1))
         phaseNames = ["Non-indexed"] + self.phaseNames
         plot.addLegend(phaseIDs, phaseNames,
-                       bbox_to_anchor=(1.05, 1),
                        loc=2, borderaxespad=0.)
 
         return plot
@@ -1162,7 +1161,9 @@ class Grain(base.Grain):
         """
 
         self.calcSlipTraces()
-        self.calcAverageSchmidFactors()
+
+        if self.averageSchmidFactors is None:
+            raise Exception("Run 'calcAverageGrainSchmidFactors' on the EBSD map first")
 
         for ssGroup, colour, sfGroup, slipTrace in zip(self.slipSystems, self.ebsdMap.slipTraceColours,
                                                        self.averageSchmidFactors, self.slipTraces):
