@@ -5,6 +5,7 @@
 <h4 align="center">A python library for correlating EBSD and HRDIC data.</h4>
 
 <p align="center">
+  <img alt="Release" src="https://img.shields.io/github/v/release/MechMicroMan/DefDAP?include_prereleases">
   <img alt="Python 3.7" src="https://img.shields.io/badge/python-3.7-red">
   <img alt="License" src="https://img.shields.io/github/license/MechMicroMan/DefDAP">
   <a href="https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb">
