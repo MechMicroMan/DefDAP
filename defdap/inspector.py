@@ -21,7 +21,8 @@ import pandas as pd
 
 from defdap.plotting import Plot, GrainPlot, LineSlice
 
-class grainInspector:
+
+class GrainInspector:
     def __init__(self, currMap, vmax=0.1):
         # Initialise some values
         self.grainID = 0

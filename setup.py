@@ -11,6 +11,7 @@ setup(
         'numpy',
         'matplotlib',
         'scikit-image',
+        'scikit-learn',
         'pandas',
         'peakutils',
         'matplotlib_scalebar',
