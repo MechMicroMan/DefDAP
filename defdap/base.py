@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import numpy as np
+import networkx as nx
 
 from defdap.quat import Quat
 from defdap import plotting
@@ -29,6 +30,7 @@ class Map(object):
         self.homogPoints = []
 
         self.proxigramArr = None
+        self.neighbourNetwork = None
 
         self.grainPlot = None
 
@@ -277,7 +279,6 @@ class Map(object):
                         neighboursList.append(trialNeig)
 
         # create network
-        import networkx as nx
         self.neighbourNetwork = nx.Graph()
         self.neighbourNetwork.add_nodes_from(range(len(self)))
         self.neighbourNetwork.add_edges_from(neighboursList)
