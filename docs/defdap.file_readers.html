@@ -1,0 +1,184 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>defdap.file_readers module &#8212; DefDAP 0.92 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="defdap.hrdic module" href="defdap.hrdic.html" />
+    <link rel="prev" title="defdap.ebsd module" href="defdap.ebsd.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="defdap.hrdic.html" title="defdap.hrdic module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="defdap.ebsd.html" title="defdap.ebsd module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="defdap.html" accesskey="U">DefDAP API Documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-defdap.file_readers">
+<span id="defdap-file-readers-module"></span><h1>defdap.file_readers module<a class="headerlink" href="#module-defdap.file_readers" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="defdap.file_readers.DICDataLoader">
+<em class="property">class </em><code class="sig-prename descclassname">defdap.file_readers.</code><code class="sig-name descname">DICDataLoader</code><a class="reference internal" href="_modules/defdap/file_readers.html#DICDataLoader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.DICDataLoader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="defdap.file_readers.DICDataLoader.checkData">
+<code class="sig-name descname">checkData</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/file_readers.html#DICDataLoader.checkData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.DICDataLoader.checkData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate size of map from loaded data and check it matches
+values from metadata</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.file_readers.DICDataLoader.checkMetadata">
+<code class="sig-name descname">checkMetadata</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/file_readers.html#DICDataLoader.checkMetadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.DICDataLoader.checkMetadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.file_readers.DICDataLoader.loadDavisData">
+<code class="sig-name descname">loadDavisData</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fileName</span></em>, <em class="sig-param"><span class="n">fileDir</span><span class="o">=</span><span class="default_value">''</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/file_readers.html#DICDataLoader.loadDavisData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.DICDataLoader.loadDavisData" title="Permalink to this definition">¶</a></dt>
+<dd><p>A .txt file from DaVis contains x and y coordinates
+and x and y displacements for each coordinate</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.file_readers.DICDataLoader.loadDavisImageData">
+<code class="sig-name descname">loadDavisImageData</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fileName</span></em>, <em class="sig-param"><span class="n">fileDir</span><span class="o">=</span><span class="default_value">''</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/file_readers.html#DICDataLoader.loadDavisImageData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.DICDataLoader.loadDavisImageData" title="Permalink to this definition">¶</a></dt>
+<dd><p>A .txt file from DaVis containing a 2D image</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.file_readers.DICDataLoader.loadDavisMetadata">
+<code class="sig-name descname">loadDavisMetadata</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fileName</span></em>, <em class="sig-param"><span class="n">fileDir</span><span class="o">=</span><span class="default_value">''</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/file_readers.html#DICDataLoader.loadDavisMetadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.DICDataLoader.loadDavisMetadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load DaVis metadata</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="defdap.file_readers.EBSDDataLoader">
+<em class="property">class </em><code class="sig-prename descclassname">defdap.file_readers.</code><code class="sig-name descname">EBSDDataLoader</code><a class="reference internal" href="_modules/defdap/file_readers.html#EBSDDataLoader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.EBSDDataLoader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="defdap.file_readers.EBSDDataLoader.checkData">
+<code class="sig-name descname">checkData</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">binData</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/file_readers.html#EBSDDataLoader.checkData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.EBSDDataLoader.checkData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.file_readers.EBSDDataLoader.checkMetadata">
+<code class="sig-name descname">checkMetadata</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/file_readers.html#EBSDDataLoader.checkMetadata"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.EBSDDataLoader.checkMetadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks that the number of phases from metadata matches
+the amount of phase names.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.file_readers.EBSDDataLoader.loadOxfordCPR">
+<code class="sig-name descname">loadOxfordCPR</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fileName</span></em>, <em class="sig-param"><span class="n">fileDir</span><span class="o">=</span><span class="default_value">''</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/file_readers.html#EBSDDataLoader.loadOxfordCPR"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.EBSDDataLoader.loadOxfordCPR" title="Permalink to this definition">¶</a></dt>
+<dd><p>A .cpr file is a metadata file describing EBSD data.
+This function opens the cpr file, reading in the x and y
+dimensions and phase names.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.file_readers.EBSDDataLoader.loadOxfordCRC">
+<code class="sig-name descname">loadOxfordCRC</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fileName</span></em>, <em class="sig-param"><span class="n">fileDir</span><span class="o">=</span><span class="default_value">''</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/file_readers.html#EBSDDataLoader.loadOxfordCRC"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.EBSDDataLoader.loadOxfordCRC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read binary EBSD data from a .crc file</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.file_readers.EBSDDataLoader.loadOxfordCTF">
+<code class="sig-name descname">loadOxfordCTF</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fileName</span></em>, <em class="sig-param"><span class="n">fileDir</span><span class="o">=</span><span class="default_value">''</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/file_readers.html#EBSDDataLoader.loadOxfordCTF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.file_readers.EBSDDataLoader.loadOxfordCTF" title="Permalink to this definition">¶</a></dt>
+<dd><p>A .ctf file is a HKL single orientation file. This is a
+data file generated by the Oxford EBSD instrument.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="defdap.ebsd.html"
+                        title="previous chapter">defdap.ebsd module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="defdap.hrdic.html"
+                        title="next chapter">defdap.hrdic module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/defdap.file_readers.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="defdap.hrdic.html" title="defdap.hrdic module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="defdap.ebsd.html" title="defdap.ebsd module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="defdap.html" >DefDAP API Documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Michael Atkinson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+    </div>
+  </body>
+</html>

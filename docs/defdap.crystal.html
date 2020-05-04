@@ -1,0 +1,193 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>defdap.crystal module &#8212; DefDAP 0.92 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="defdap.ebsd module" href="defdap.ebsd.html" />
+    <link rel="prev" title="defdap.base module" href="defdap.base.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="defdap.ebsd.html" title="defdap.ebsd module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="defdap.base.html" title="defdap.base module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="defdap.html" accesskey="U">DefDAP API Documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-defdap.crystal">
+<span id="defdap-crystal-module"></span><h1>defdap.crystal module<a class="headerlink" href="#module-defdap.crystal" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="defdap.crystal.SlipSystem">
+<em class="property">class </em><code class="sig-prename descclassname">defdap.crystal.</code><code class="sig-name descname">SlipSystem</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">slipPlane</span></em>, <em class="sig-param"><span class="n">slipDir</span></em>, <em class="sig-param"><span class="n">crystalSym</span></em>, <em class="sig-param"><span class="n">cOverA</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/crystal.html#SlipSystem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.crystal.SlipSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="defdap.crystal.SlipSystem.groupSlipSystems">
+<em class="property">static </em><code class="sig-name descname">groupSlipSystems</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">slipSystems</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/crystal.html#SlipSystem.groupSlipSystems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.crystal.SlipSystem.groupSlipSystems" title="Permalink to this definition">¶</a></dt>
+<dd><p>Groups slip systems by there slip plane.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>slipSytems</strong> (<em>list</em><em>(</em><a class="reference internal" href="#defdap.crystal.SlipSystem" title="defdap.crystal.SlipSystem"><em>SlipSystem</em></a><em>)</em>) – A list of slip systems</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list of list of slip systems grouped slip plane.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list(list(<a class="reference internal" href="#defdap.crystal.SlipSystem" title="defdap.crystal.SlipSystem">SlipSystem</a>))</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.crystal.SlipSystem.lMatrix">
+<em class="property">static </em><code class="sig-name descname">lMatrix</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">a</span></em>, <em class="sig-param"><span class="n">b</span></em>, <em class="sig-param"><span class="n">c</span></em>, <em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">beta</span></em>, <em class="sig-param"><span class="n">gamma</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/crystal.html#SlipSystem.lMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.crystal.SlipSystem.lMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct L matrix based on Page 22 of
+Randle and Engle - Introduction to texture analysis</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.crystal.SlipSystem.loadSlipSystems">
+<em class="property">static </em><code class="sig-name descname">loadSlipSystems</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">crystalSym</span></em>, <em class="sig-param"><span class="n">cOverA</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/crystal.html#SlipSystem.loadSlipSystems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.crystal.SlipSystem.loadSlipSystems" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load in slip systems from file. 3 integers for slip plane
+normal and 3 for slip direction. Returns a list of list of slip
+systems grouped by slip plane.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>string</em>) – name of the slip system file (without file</p></li>
+<li><p><strong>stored in the defdap install dir</strong><strong> or </strong><strong>path to a file</strong> (<em>extension</em><em>)</em>) – </p></li>
+<li><p><strong>crystalSym</strong> (<em>string</em>) – The crystal symmetry (“cubic” or “hexagonal”)</p></li>
+<li><p><strong>cOverA</strong> (<em>float</em><em>, </em><em>optional</em>) – c over a ratio for hexagonal crystals</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list of list of slip systems
+grouped slip plane.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list(list(<a class="reference internal" href="#defdap.crystal.SlipSystem" title="defdap.crystal.SlipSystem">SlipSystem</a>))</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>IOError</strong> – Raised if not 6/8 integers per line</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.crystal.SlipSystem.qMatrix">
+<em class="property">static </em><code class="sig-name descname">qMatrix</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lMatrix</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/crystal.html#SlipSystem.qMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.crystal.SlipSystem.qMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct matrix of reciprocal lattice vectors to transform plane normals
+See C. T. Young and J. L. Lytton, J. Appl. Phys., vol. 43, no. 4, pp. 1408–1417, 1972.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.crystal.SlipSystem.slipDir">
+<em class="property">property </em><code class="sig-name descname">slipDir</code><a class="headerlink" href="#defdap.crystal.SlipSystem.slipDir" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.crystal.SlipSystem.slipDirLabel">
+<em class="property">property </em><code class="sig-name descname">slipDirLabel</code><a class="headerlink" href="#defdap.crystal.SlipSystem.slipDirLabel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.crystal.SlipSystem.slipPlane">
+<em class="property">property </em><code class="sig-name descname">slipPlane</code><a class="headerlink" href="#defdap.crystal.SlipSystem.slipPlane" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.crystal.SlipSystem.slipPlaneLabel">
+<em class="property">property </em><code class="sig-name descname">slipPlaneLabel</code><a class="headerlink" href="#defdap.crystal.SlipSystem.slipPlaneLabel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="defdap.base.html"
+                        title="previous chapter">defdap.base module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="defdap.ebsd.html"
+                        title="next chapter">defdap.ebsd module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/defdap.crystal.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="defdap.ebsd.html" title="defdap.ebsd module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="defdap.base.html" title="defdap.base module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="defdap.html" >DefDAP API Documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Michael Atkinson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+    </div>
+  </body>
+</html>

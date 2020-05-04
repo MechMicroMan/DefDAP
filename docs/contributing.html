@@ -1,0 +1,158 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Contributing &#8212; DefDAP 0.92 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="DefDAP API Documentation" href="defdap.html" />
+    <link rel="prev" title="Example documentation" href="example_analysis.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="defdap.html" title="DefDAP API Documentation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="example_analysis.html" title="Example documentation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="contributing">
+<h1>Contributing<a class="headerlink" href="#contributing" title="Permalink to this headline">¶</a></h1>
+<p>We welcome any improvements made to this package, but please follow the guidelines below when making changes.</p>
+<div class="section" id="coding-style">
+<h2>Coding style<a class="headerlink" href="#coding-style" title="Permalink to this headline">¶</a></h2>
+<p>In this project we (try) to follow the PEP8 standard for formatting python code with 2 notable exceptions:
+- Function and variable names are in mixed case e.g myFirstFunction
+- The 79 character line length limit is seen more as a guideline than rule. Code is split across lines where possible and to improve readability. Line length should never excede 119 characters. All documentation should be split to lines of less than 73 characters.</p>
+</div>
+<div class="section" id="repository-structure">
+<h2>Repository Structure<a class="headerlink" href="#repository-structure" title="Permalink to this headline">¶</a></h2>
+<p>The schematic below shows the intended structure of the branches in this repository, based on <a class="reference external" href="https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow">Gitflow</a>. The <cite>master</cite> branch will be committed to at regular intervals by an administrator and each release will be given a tag with a version number. This is the first branch that is visible and we (will eventually) have controls in place to ensure this branch always works correctly. The <cite>develop</cite> branch contains new features which may not be significant enough to form part of the ‘master’ branch just yet. The final type of branch is the feature branch (green), such as <cite>feture_1</cite> and <cite>feature_2</cite>. This is where you come in! If you would like to make a new feature or fix a bug, simply make a branch from develop with a reasonable name and make a start on any changes you would like to make. Don’t be afraid of breaking anything at this point, there are controls in place to help make sure buggy code does not make it into <cite>develop</cite> or <cite>master</cite>.</p>
+<div class="figure align-default" id="id1">
+<a class="reference internal image-reference" href="_images/branches.png"><img alt="Repository structure" src="_images/branches.png" style="width: 620.0px; height: 280.0px;" /></a>
+<p class="caption"><span class="caption-text">Repository structure</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</div>
+</div>
+<div class="section" id="instructions">
+<h2>Instructions<a class="headerlink" href="#instructions" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Making an ‘issue’ first is recommended when adding a new feature or fixing a bug, especially if you’re not sure how to go about the change. Advice can then be given on the best way forward.</p></li>
+<li><p>Using your local git client (GitHub Desktop is easy to use), checkout the <cite>develop</cite> branch by selecting it (making sure you ‘Pull Origin’ after).</p></li>
+<li><p>Create a new branch with an appropriate name, using underscores where appropriate, for example <cite>new_feature</cite></p></li>
+<li><p>Make any changes necessary in your favourite editor (PyCharm is recommended).</p></li>
+<li><p>Test to make sure the feature works correctly in your Jupyter Notebook.</p></li>
+<li><p>Commit the change to your new branch using the ‘Commit to new_feature’ button and include a descriptive title and description for the commit, making sure you click ‘Push origin’ when this is done.</p></li>
+<li><p>Make additional commits if necessary.</p></li>
+<li><p>Raise a pull request.</p></li>
+</ol>
+</div>
+<div class="section" id="additional-notes">
+<h2>Additional notes<a class="headerlink" href="#additional-notes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Always make a branch from <cite>develop</cite>, don’t try to make a branch from <cite>master</cite> or any feature branch.</p></li>
+<li><p>You will not be able to complete a pull request into <cite>develop</cite> without a review by Mike or Rhys.</p></li>
+<li><p>Try to avoid adding any dependencies to the code, if you do need to, add a comment to your ‘issue’ with the details.</p></li>
+</ul>
+</div>
+<div class="section" id="documentation">
+<h2>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h2>
+<p>Where possible, update or add documentation at the beginning of the function you are making or changing, adding references if required. This is important so that other people know how to use your code and so that we can validate any methods you use. We are following the <a class="reference external" href="https://docs.scipy.org/doc/numpy-1.15.0/docs/howto_document.html">NumPy Docs Style Guide</a>, but you can use any of the documentation in the code as an example. Add comments where it is not clear what you have done.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Contributing</a><ul>
+<li><a class="reference internal" href="#coding-style">Coding style</a></li>
+<li><a class="reference internal" href="#repository-structure">Repository Structure</a></li>
+<li><a class="reference internal" href="#instructions">Instructions</a></li>
+<li><a class="reference internal" href="#additional-notes">Additional notes</a></li>
+<li><a class="reference internal" href="#documentation">Documentation</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="example_analysis.html"
+                        title="previous chapter">Example documentation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="defdap.html"
+                        title="next chapter">DefDAP API Documentation</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/contributing.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="defdap.html" title="DefDAP API Documentation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="example_analysis.html" title="Example documentation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Michael Atkinson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+    </div>
+  </body>
+</html>

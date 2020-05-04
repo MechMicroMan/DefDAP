@@ -14,18 +14,18 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../DefDAP')) 	# Reference the root directory so autodocs can find the python modules
+sys.path.insert(0, os.path.abspath('../../defdap')) 	# Reference the root directory so autodocs can find the python modules
 
 # -- Project information -----------------------------------------------------
 
 project = 'DefDAP'
-copyright = '2019, Michael Atkinson'
+copyright = '2020, Michael Atkinson'
 author = 'Michael Atkinson'
 
 # The short X.Y version
-version = ''
+version = '0.92'
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '0.92'
 
 
 # -- General configuration ---------------------------------------------------

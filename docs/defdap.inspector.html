@@ -1,0 +1,224 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>defdap.inspector module &#8212; DefDAP 0.92 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="defdap.plotting module" href="defdap.plotting.html" />
+    <link rel="prev" title="defdap.hrdic module" href="defdap.hrdic.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="defdap.plotting.html" title="defdap.plotting module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="defdap.hrdic.html" title="defdap.hrdic module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="defdap.html" accesskey="U">DefDAP API Documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-defdap.inspector">
+<span id="defdap-inspector-module"></span><h1>defdap.inspector module<a class="headerlink" href="#module-defdap.inspector" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="defdap.inspector.GrainInspector">
+<em class="property">class </em><code class="sig-prename descclassname">defdap.inspector.</code><code class="sig-name descname">GrainInspector</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">currMap</span></em>, <em class="sig-param"><span class="n">vmax</span><span class="o">=</span><span class="default_value">0.1</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.batchRunSTA">
+<code class="sig-name descname">batchRunSTA</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">event</span></em>, <em class="sig-param"><span class="n">plot</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.batchRunSTA"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.batchRunSTA" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run slip trace analysis on all grains which hve slip trace lines drawn</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.calcRDR">
+<code class="sig-name descname">calcRDR</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grain</span></em>, <em class="sig-param"><span class="n">group</span></em>, <em class="sig-param"><span class="n">showPlot</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">length</span><span class="o">=</span><span class="default_value">2.5</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.calcRDR"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.calcRDR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the relative displacement ratio for a given grain and group</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>grain</strong> (<em>int</em>) – DIC grain ID to run RDR on</p></li>
+<li><p><strong>group</strong> (<em>int</em>) – group ID to run RDR on</p></li>
+<li><p><strong>showPlot</strong> (<em>bool</em>) – if True, show plot window</p></li>
+<li><p><strong>length</strong> (<em>int</em>) – length of perpendicular lines used for RDR</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.clearAllLines">
+<code class="sig-name descname">clearAllLines</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">event</span></em>, <em class="sig-param"><span class="n">plot</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.clearAllLines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.clearAllLines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear all lines in a given grain</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.draw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the main window, buttons, text boxes and axes</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.gotoGrain">
+<code class="sig-name descname">gotoGrain</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">event</span></em>, <em class="sig-param"><span class="n">plot</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.gotoGrain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.gotoGrain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Go to a specified grain ID</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>event</strong> (<em>int</em>) – Grain ID to go to</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.groupLines">
+<code class="sig-name descname">groupLines</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.groupLines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.groupLines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Group the lines drawn in the current grain item using a mean shift algorithm,
+save the average angle and detect the active slip planes</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.plotRDR">
+<code class="sig-name descname">plotRDR</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grain</span></em>, <em class="sig-param"><span class="n">group</span></em>, <em class="sig-param"><span class="n">ulist</span></em>, <em class="sig-param"><span class="n">vlist</span></em>, <em class="sig-param"><span class="n">allxlist</span></em>, <em class="sig-param"><span class="n">allylist</span></em>, <em class="sig-param"><span class="n">linRegResults</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.plotRDR"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.plotRDR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot RDR figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>grain</strong> (<em>int</em>) – DIC grain to plot</p></li>
+<li><p><strong>group</strong> (<em>int</em>) – Group ID to plot</p></li>
+<li><p><strong>ulist</strong> (<em>list</em>) – List of ucentered values</p></li>
+<li><p><strong>vlist</strong> (<em>list</em>) – List of vcentered values</p></li>
+<li><p><strong>allxlist</strong> (<em>list</em>) – List of all x values</p></li>
+<li><p><strong>allylist</strong> (<em>list</em>) – List of all y values</p></li>
+<li><p><strong>linRegResults</strong> (<em>array</em>) – Results from linear regression of ucentered vs vcentered</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.redraw">
+<code class="sig-name descname">redraw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.redraw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.redraw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw items which need to be redrawn often (i.e. when changing grain ID)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.removeLine">
+<code class="sig-name descname">removeLine</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">event</span></em>, <em class="sig-param"><span class="n">plot</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.removeLine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.removeLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove single line [runs after submitting a text box]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>event</strong> (<em>int</em>) – Line ID to remove</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.runRDRGroup">
+<code class="sig-name descname">runRDRGroup</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">event</span></em>, <em class="sig-param"><span class="n">plot</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.runRDRGroup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.runRDRGroup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run RDR on a specified group, upon submitting a text box</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>event</strong> (<em>int</em>) – Group ID specified from text box</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.inspector.GrainInspector.saveLine">
+<code class="sig-name descname">saveLine</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">event</span></em>, <em class="sig-param"><span class="n">plot</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/inspector.html#GrainInspector.saveLine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.inspector.GrainInspector.saveLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the start point, end point and angle of drawn line into the grain</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>event</strong> (<em>array</em>) – Start x, start y, end x, end y point of line passed from drawn line</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="defdap.hrdic.html"
+                        title="previous chapter">defdap.hrdic module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="defdap.plotting.html"
+                        title="next chapter">defdap.plotting module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/defdap.inspector.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="defdap.plotting.html" title="defdap.plotting module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="defdap.hrdic.html" title="defdap.hrdic module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="defdap.html" >DefDAP API Documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Michael Atkinson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+    </div>
+  </body>
+</html>

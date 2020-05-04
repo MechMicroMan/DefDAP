@@ -1,0 +1,380 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>defdap.quat module &#8212; DefDAP 0.92 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="defdap.utils module" href="defdap.utils.html" />
+    <link rel="prev" title="defdap.plotting module" href="defdap.plotting.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="defdap.utils.html" title="defdap.utils module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="defdap.plotting.html" title="defdap.plotting module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="defdap.html" accesskey="U">DefDAP API Documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-defdap.quat">
+<span id="defdap-quat-module"></span><h1>defdap.quat module<a class="headerlink" href="#module-defdap.quat" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="defdap.quat.Quat">
+<em class="property">class </em><code class="sig-prename descclassname">defdap.quat.</code><code class="sig-name descname">Quat</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="defdap.quat.Quat.calcAverageOri">
+<em class="property">static </em><code class="sig-name descname">calcAverageOri</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">quatComps</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.calcAverageOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.calcAverageOri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.calcFundDirs">
+<em class="property">static </em><code class="sig-name descname">calcFundDirs</code><span class="sig-paren">(</span><em class="sig-param">quats</em>, <em class="sig-param">direction</em>, <em class="sig-param">symGroup</em>, <em class="sig-param">dtype=&lt;class 'float'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.calcFundDirs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.calcFundDirs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.calcIPFcolours">
+<em class="property">static </em><code class="sig-name descname">calcIPFcolours</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">quats</span></em>, <em class="sig-param"><span class="n">direction</span></em>, <em class="sig-param"><span class="n">symGroup</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.calcIPFcolours"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.calcIPFcolours" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.calcMisOri">
+<em class="property">static </em><code class="sig-name descname">calcMisOri</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">quatComps</span></em>, <em class="sig-param"><span class="n">refOri</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.calcMisOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.calcMisOri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.calcSymEqvs">
+<em class="property">static </em><code class="sig-name descname">calcSymEqvs</code><span class="sig-paren">(</span><em class="sig-param">quats</em>, <em class="sig-param">symGroup</em>, <em class="sig-param">dtype=&lt;class 'float'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.calcSymEqvs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.calcSymEqvs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.conjugate">
+<em class="property">property </em><code class="sig-name descname">conjugate</code><a class="headerlink" href="#defdap.quat.Quat.conjugate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.createManyQuats">
+<em class="property">static </em><code class="sig-name descname">createManyQuats</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">eulerArray</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.createManyQuats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.createManyQuats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a an array of quats from an array of Euler angles</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>eulerArray</strong> (<em>np.ndarray</em>) – Array of Bunge Euler angles of shape 3 x n x … x m</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>quats</strong> – Array of quat objects of shape n x … x m</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.ndarray of defdap.quat.Quat</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.dot">
+<code class="sig-name descname">dot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">right</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.dot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.dot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.eulerAngles">
+<code class="sig-name descname">eulerAngles</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.eulerAngles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.eulerAngles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the Euler angle representation for this rotation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>eulers</strong> – Bunge euler angles (in radians)</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>np.ndarray shape 3</p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<p>Melcher A. et al., ‘Conversion of EBSD data by a quaternion
+based algorithm to be used for grain structure simulations’,
+Technische Mechanik, 30(4)401 – 413</p>
+<p>Rowenhorst D. et al., ‘Consistent representations of and
+conversions between 3D rotations’,
+Model. Simul. Mater. Sci. Eng., 23(8)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.fromAxisAngle">
+<em class="property">classmethod </em><code class="sig-name descname">fromAxisAngle</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">axis</span></em>, <em class="sig-param"><span class="n">angle</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.fromAxisAngle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.fromAxisAngle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a quat object from an axis angle pair</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>axis</strong> (<em>array_like shape 3</em>) – Axis rotaion is applied around</p></li>
+<li><p><strong>angle</strong> (<em>float</em>) – Magnitude of rotation in radians</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Initialised Quat object</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>defdap.Quat.quat</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.fromEulerAngles">
+<em class="property">classmethod </em><code class="sig-name descname">fromEulerAngles</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ph1</span></em>, <em class="sig-param"><span class="n">phi</span></em>, <em class="sig-param"><span class="n">ph2</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.fromEulerAngles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.fromEulerAngles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a quat object from 3 Bunge euler angles</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ph1</strong> (<em>float</em>) – First Euler angle, rotation around Z in radians</p></li>
+<li><p><strong>phi</strong> (<em>float</em>) – Second Euler angle, rotation around new X in radians</p></li>
+<li><p><strong>ph2</strong> (<em>float</em>) – Third Euler angle, rotation around new Z in radians</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Initialised Quat object</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>defdap.Quat.quat</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.misOri">
+<code class="sig-name descname">misOri</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">right</span></em>, <em class="sig-param"><span class="n">symGroup</span></em>, <em class="sig-param"><span class="n">returnQuat</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.misOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.misOri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate misorientation angle between 2 orientations taking
+into account the symmetries of the crystal structure.
+Angle is 2*arccos(output).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>right</strong> (<a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat"><em>defdap.quat.Quat</em></a>) – Orientation to find misorientation to</p></li>
+<li><p><strong>symGroup</strong> (<em>str</em>) – Crystal type (cubic, hexagonal)</p></li>
+<li><p><strong>returnQuat</strong> (<em>int</em>) – What to return: 0 for minimum misorientation, 1 for
+symmetric equivalent with minimum misorientation, 2 for both</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>minMisOri</strong> (<em>float</em>) – Minimum misorientation</p></li>
+<li><p><strong>minQuatSym</strong> (<em>defdap.quat.Quat</em>) – Symmetric equivalent orientation with minimum  misorientation</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.misOriAxis">
+<code class="sig-name descname">misOriAxis</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">right</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.misOriAxis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.misOriAxis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate misorientation axis between 2 orientations. This
+does not consider symmetries of the crystal structure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>right</strong> (<a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat"><em>defdap.quat.Quat</em></a>) – Orientation to find misorientation axis to</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Axis of misorientation</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>numpy.ndarray shape 3</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.norm">
+<code class="sig-name descname">norm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.norm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.norm" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.normalise">
+<code class="sig-name descname">normalise</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.normalise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.normalise" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.plotIPF">
+<code class="sig-name descname">plotIPF</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">direction</span></em>, <em class="sig-param"><span class="n">symGroup</span></em>, <em class="sig-param"><span class="n">projection</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">plot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fig</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">makeInteractive</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">plotColourBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">cLabel</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">markerColour</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">markerSize</span><span class="o">=</span><span class="default_value">40</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.plotIPF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.plotIPF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot IPF of orientations for specified sample diection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>quats</strong> (<em>array_like of defda.quat.Quat</em>) – Orientations to plot on the IPF</p></li>
+<li><p><strong>direction</strong> (<em>np.array</em>) – Sample reference direction for IPF</p></li>
+<li><p><strong>symGroup</strong> (<em>string</em>) – Crystal type (cubic, hexagonal)</p></li>
+<li><p><strong>projection</strong> (<em>str</em>) – Projection to use. Either string (stereographic or lambert)
+or a function</p></li>
+<li><p><strong>ax</strong> – matplotlib axis to plot on, if not provided the current
+active axis is used</p></li>
+<li><p><strong>markerColour</strong> (<em>string</em>) – Colour of markers (only used for half and half colouring,
+otherwise us arguemnt c)</p></li>
+<li><p><strong>markerSize</strong> (<em>int</em>) – Size of markers (only used for half and half colouring,
+otherwise us arguemnt s)</p></li>
+<li><p><strong>kwargs</strong> – All other arguments are passed to the matplotlib scatter call</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.plotUnitCell">
+<code class="sig-name descname">plotUnitCell</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">symGroup</span></em>, <em class="sig-param"><span class="n">cOverA</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">OI</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">plot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fig</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">makeInteractive</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.plotUnitCell"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.plotUnitCell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots a unit cell</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>symGroup</strong> (<em>str</em>) – Crystal type, hexagonal or cubic</p></li>
+<li><p><strong>cOverA</strong> (<em>float</em>) – c over a ratio for hexagonal</p></li>
+<li><p><strong>OI</strong> (<em>bool</em>) – true if using oxford instruments system</p></li>
+<li><p><strong>plot</strong> – </p></li>
+<li><p><strong>fig</strong> – </p></li>
+<li><p><strong>ax</strong> – matplotlib axis to plot on, if not provided the current
+active axis is used</p></li>
+<li><p><strong>makeInteractive</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.polarAngles">
+<em class="property">static </em><code class="sig-name descname">polarAngles</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">y</span></em>, <em class="sig-param"><span class="n">z</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.polarAngles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.polarAngles" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="defdap.quat.Quat.quatCoef">
+<code class="sig-name descname">quatCoef</code><a class="headerlink" href="#defdap.quat.Quat.quatCoef" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.rotMatrix">
+<code class="sig-name descname">rotMatrix</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.rotMatrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.rotMatrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the rotation matrix representation for this rotation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>rotMatrix</strong> – Rotation matrix</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>np.ndarray shape (3, 3)</p>
+</dd>
+</dl>
+<p class="rubric">References</p>
+<p>Melcher A. et al., ‘Conversion of EBSD data by a quaternion
+based algorithm to be used for grain structure simulations’,
+Technische Mechanik, 30(4)401 – 413</p>
+<p>Rowenhorst D. et al., ‘Consistent representations of and
+conversions between 3D rotations’,
+Model. Simul. Mater. Sci. Eng., 23(8)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.symEqv">
+<em class="property">static </em><code class="sig-name descname">symEqv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">group</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.symEqv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.symEqv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="defdap.quat.Quat.transformVector">
+<code class="sig-name descname">transformVector</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">vector</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.transformVector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.transformVector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms vector by the quaternion. For EBSD quaterions this
+is a transformation from sample space to crystal space. Perform
+on conjugate of quaternion for crystal to sample.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>vector</strong> (<em>array_like shape 3</em>) – Vector to transform</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Transformed vector</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.ndarray shape 3</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="defdap.plotting.html"
+                        title="previous chapter">defdap.plotting module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="defdap.utils.html"
+                        title="next chapter">defdap.utils module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/defdap.quat.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="defdap.utils.html" title="defdap.utils module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="defdap.plotting.html" title="defdap.plotting module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="defdap.html" >DefDAP API Documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Michael Atkinson.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+    </div>
+  </body>
+</html>
