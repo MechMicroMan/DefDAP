@@ -16,6 +16,7 @@
 import numpy as np
 from matplotlib.widgets import Button
 from skimage import morphology as mph
+import networkx as nx
 
 import copy
 import warnings
@@ -709,7 +710,6 @@ class Map(base.Map):
     @reportProgress("constructing neighbour network")
     def buildNeighbourNetwork(self):
         # create network
-        import networkx as nx
         nn = nx.Graph()
         nn.add_nodes_from(range(len(self)))
 
@@ -848,7 +848,7 @@ class Map(base.Map):
                 for coord in currentGrain.coordList:
                     self.grains[coord[1], coord[0]] = -2
             else:
-                # add grain and size to lists and increment grain label
+                # add grain to list and increment grain index
                 self.grainList.append(currentGrain)
                 grainIndex += 1
 
@@ -892,7 +892,7 @@ class Map(base.Map):
             New grain object with points added
         """
         # create new grain
-        currentGrain = Grain(self)
+        currentGrain = Grain(grainIndex - 1, self)
 
         # add first point to the grain
         currentGrain.addPoint((x, y), self.quatArray[y, x])
@@ -903,7 +903,6 @@ class Map(base.Map):
             x, y = edge.pop(0)
 
             moves = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
-
             # get rid of any that go out of the map area
             if x <= 0:
                 moves.pop(1)
@@ -1136,12 +1135,13 @@ class Map(base.Map):
 
 class Grain(base.Grain):
 
-    def __init__(self, ebsdMap):
+    def __init__(self, grainID, ebsdMap):
         # Call base class constructor
         super(Grain, self).__init__()
 
         self.crystalSym = ebsdMap.crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
         self.slipSystems = ebsdMap.slipSystems
+        self.grainID = grainID
         self.ebsdMap = ebsdMap                  # ebsd map this grain is a member of
         self.ownerMap = ebsdMap
         self.quatList = []                      # list of quats
@@ -1251,42 +1251,6 @@ class Grain(base.Grain):
         plot = self.plotGrainData(grainData=plotData, **plotParams)
 
         return plot
-
-    # def plotMisOriMulti(self, vmin=None, vmax=None, vRange=(None, None, None),
-        # cmap=("viridis", "bwr")):
-        #
-        # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-        #
-        # # TODO: Update plot grain misori method
-        #
-        # # subplots
-        # grainMisOri = np.full((4, ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
-        #
-        # for coord, misOri, misOriAxis in zip(self.coordList,
-        #                                      np.arccos(self.misOriList) * 360 / np.pi,
-        #                                      np.array(self.misOriAxisList) * 180 / np.pi):
-        #     grainMisOri[0, coord[1] - y0, coord[0] - x0] = misOri
-        #     grainMisOri[1:4, coord[1] - y0, coord[0] - x0] = misOriAxis
-        #
-        # f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-        #
-        # img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vmin, vmax=vmax)
-        # plt.colorbar(img, ax=ax1, label="Grain misorientation ($^\circ$)")
-        # vmin = None if vRange[0] is None else -vRange[0]
-        # img = ax2.imshow(grainMisOri[1], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[0])
-        # plt.colorbar(img, ax=ax2, label="x rotation ($^\circ$)")
-        # vmin = None if vRange[0] is None else -vRange[1]
-        # img = ax3.imshow(grainMisOri[2], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[1])
-        # plt.colorbar(img, ax=ax3, label="y rotation ($^\circ$)")
-        # vmin = None if vRange[0] is None else -vRange[2]
-        # img = ax4.imshow(grainMisOri[3], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[2])
-        # plt.colorbar(img, ax=ax4, label="z rotation ($^\circ$)")
-        #
-        # for ax in (ax1, ax2, ax3, ax4):
-        #     ax.set_xticks([])
-        #     ax.set_yticks([])
-        #
-        # return
 
     # define load axis as unit vector
     def calcAverageSchmidFactors(self, loadVector, slipSystems=None):

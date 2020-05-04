@@ -642,53 +642,48 @@ class Map(base.Map):
             self.grainList[i].ebsdMap = self.ebsdMap
 
     def floodFill(self, x, y, grainIndex):
-        currentGrain = Grain(self)
+        # create new grain
+        currentGrain = Grain(grainIndex - 1, self)
 
-        currentGrain.addPoint((x, y), self.eMaxShear[y + self.cropDists[1, 0], x + self.cropDists[0, 0]])
-
-        edge = [(x, y)]
-        grain = [(x, y)]
-
+        # add first point to the grain
+        currentGrain.addPoint((x, y), self.eMaxShear[y + self.cropDists[1, 0],
+                                                     x + self.cropDists[0, 0]])
         self.grains[y, x] = grainIndex
+        edge = [(x, y)]
+
         while edge:
-            newedge = []
+            x, y = edge.pop(0)
 
-            for (x, y) in edge:
-                moves = np.array([(x + 1, y),
-                                  (x - 1, y),
-                                  (x, y + 1),
-                                  (x, y - 1)])
+            moves = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
+            # get rid of any that go out of the map area
+            if x <= 0:
+                moves.pop(1)
+            elif x >= self.xDim - 1:
+                moves.pop(0)
+            if y <= 0:
+                moves.pop(-1)
+            elif y >= self.yDim - 1:
+                moves.pop(-2)
 
-                movesIndexShift = 0
-                if x <= 0:
-                    moves = np.delete(moves, 1, 0)
-                    movesIndexShift = 1
-                elif x >= self.xDim - 1:
-                    moves = np.delete(moves, 0, 0)
-                    movesIndexShift = 1
+            for (s, t) in moves:
+                addPoint = False
 
-                if y <= 0:
-                    moves = np.delete(moves, 3 - movesIndexShift, 0)
-                elif y >= self.yDim - 1:
-                    moves = np.delete(moves, 2 - movesIndexShift, 0)
+                if self.grains[t, s] == 0:
+                    addPoint = True
+                    edge.append((s, t))
 
-                for (s, t) in moves:
-                    if self.grains[t, s] == 0:
-                        currentGrain.addPoint((s, t), self.eMaxShear[y + self.cropDists[1, 0],
-                                                                     x + self.cropDists[0, 0]])
-                        newedge.append((s, t))
-                        grain.append((s, t))
-                        self.grains[t, s] = grainIndex
-                    elif self.grains[t, s] == -1 and (s > x or t > y):
-                        currentGrain.addPoint((s, t), self.eMaxShear[y + self.cropDists[1, 0],
-                                                                     x + self.cropDists[0, 0]])
-                        grain.append((s, t))
-                        self.grains[t, s] = grainIndex
+                elif self.grains[t, s] == -1 and (s > x or t > y):
+                    addPoint = True
 
-            if newedge == []:
-                return currentGrain
-            else:
-                edge = newedge
+                if addPoint:
+                    currentGrain.addPoint(
+                        (s, t),
+                        self.eMaxShear[t + self.cropDists[1, 0],
+                                       s + self.cropDists[0, 0]]
+                    )
+                    self.grains[t, s] = grainIndex
+
+        return currentGrain
 
     def runGrainInspector(self, vmax=0.1):
         GrainInspector(currMap=self, vmax=vmax)
@@ -696,10 +691,11 @@ class Map(base.Map):
 
 class Grain(base.Grain):
 
-    def __init__(self, dicMap):
+    def __init__(self, grainID, dicMap):
         # Call base class constructor
         super(Grain, self).__init__()
 
+        self.grainID = grainID
         self.dicMap = dicMap        # DIC map this grain is a member of
         self.ownerMap = dicMap
         self.maxShearList = []
