@@ -16,9 +16,10 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
+from matplotlib.widgets import Button, TextBox
 from matplotlib_scalebar.scalebar import ScaleBar
-
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from mpl_toolkits.mplot3d import Axes3D
 
 from skimage import morphology as mph
 
@@ -27,24 +28,34 @@ from defdap import quat
 
 
 class Plot(object):
-    def __init__(self, ax, fig=None, makeInteractive=False):
-
+    """ Class for creating a plot
+    """
+    def __init__(self, ax, axParams={}, fig=None, makeInteractive=False,
+                 title=None, **kwargs):
         self.interactive = makeInteractive
         if makeInteractive:
             if fig is not None and ax is not None:
                 self.fig = fig
                 self.ax = ax
             else:
-                self.fig, self.ax = plt.subplots()
+                # self.fig, self.ax = plt.subplots(**kwargs)
+                self.fig = plt.figure(**kwargs)
+                self.ax = self.fig.add_subplot(111, **axParams)
             self.btnStore = []
+            self.txtStore = []
+            self.txtBoxStore = []
         else:
             self.fig = fig
             # TODO: flag for new figure
             if ax is None:
-                self.fig, self.ax = plt.subplots()
+                self.fig = plt.figure(**kwargs)
+                self.ax = self.fig.add_subplot(111, **axParams)
             else:
                 self.ax = ax
         self.colourBar = None
+
+        if title is not None:
+            self.setTitle(title)
 
     def checkInteractive(self):
         if not self.interactive:
@@ -55,14 +66,39 @@ class Plot(object):
 
         self.fig.canvas.mpl_connect(eventName, lambda e: eventHandler(e, self))
 
+    def addAxes(self, loc, proj='2d'):
+        if proj == '2d':
+            return self.fig.add_axes(loc)
+        if proj == '3d':
+            return Axes3D(self.fig, rect=loc, proj_type='ortho', azim=270, elev=90)
+
     def addButton(self, label, clickHandler, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
         self.checkInteractive()
-
         btnAx = self.fig.add_axes(loc)
         btn = Button(btnAx, label, **kwargs)
         btn.on_clicked(lambda e: clickHandler(e, self))
 
         self.btnStore.append(btn)
+
+    def addTextBox(self, label, submitHandler, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
+        self.checkInteractive()
+        txtBoxAx = self.fig.add_axes(loc)
+        txtBox = TextBox(txtBoxAx, label, **kwargs)
+        txtBox.on_submit(lambda e: submitHandler(e, self))
+
+        self.txtBoxStore.append(txtBox)
+
+        return txtBox
+
+    def addText(self, ax, x, y, txt, **kwargs):
+        txt = ax.text(x, y, txt, **kwargs)
+        self.txtStore.append(txt)
+
+    def setSize(self, size):
+        self.fig.set_size_inches(size[0], size[1], forward=True)
+
+    def setTitle(self, txt):
+        self.fig.canvas.set_window_title(txt)
 
     @property
     def exists(self):
@@ -83,8 +119,14 @@ class Plot(object):
 
 
 class MapPlot(Plot):
-    def __init__(self, callingMap, fig=None, ax=None, makeInteractive=False):
-        super(MapPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
+    """ Class for creating a map
+    """
+    def __init__(self, callingMap, fig=None, ax=None, axParams={},
+                 makeInteractive=False, **kwargs):
+        super(MapPlot, self).__init__(
+            ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
+            **kwargs
+        )
 
         self.callingMap = callingMap
         self.imgLayers = []
@@ -95,7 +137,6 @@ class MapPlot(Plot):
         self.ax.set_yticks([])
 
     def addMap(self, mapData, vmin=None, vmax=None, cmap='viridis', **kwargs):
-
         img = self.ax.imshow(mapData, vmin=vmin, vmax=vmax,
                              interpolation='None', cmap=cmap, **kwargs)
         self.draw()
@@ -180,6 +221,7 @@ class MapPlot(Plot):
             img = self.imgLayers[self.highlightsLayerID]
             img.set_data(outline)
             img.set_cmap(hightlightsCmap)
+            img.autoscale()
 
         self.draw()
 
@@ -194,14 +236,14 @@ class MapPlot(Plot):
                          fontsize=fontsize, **kwargs)
         self.draw()
 
-    def addLegend(self, values, lables, layer=0, **kwargs):
+    def addLegend(self, values, labels, layer=0, **kwargs):
         # Find colour values for given values
         img = self.imgLayers[layer]
         colors = [img.cmap(img.norm(value)) for value in values]
 
         # Get colour patches for each phase and make legend
         patches = [mpl.patches.Patch(
-            color=colors[i], label=lables[i]
+            color=colors[i], label=labels[i]
         ) for i in range(len(values))]
 
         self.ax.legend(handles=patches, **kwargs)
@@ -223,7 +265,8 @@ class MapPlot(Plot):
     @classmethod
     def create(
         cls, callingMap, mapData,
-        fig=None, ax=None, plot=None, makeInteractive=False,
+        fig=None, figParams={}, ax=None, axParams={},
+        plot=None, makeInteractive=False,
         plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
         plotGBs=False, dilateBoundaries=False, boundaryColour=None,
         plotScaleBar=False, scale=None,
@@ -231,7 +274,9 @@ class MapPlot(Plot):
         **kwargs
     ):
         if plot is None:
-            plot = cls(callingMap, fig=fig, ax=ax, makeInteractive=makeInteractive)
+            plot = cls(callingMap, fig=fig, ax=ax, axParams=axParams,
+                       makeInteractive=makeInteractive, **figParams)
+
         if mapData is not None:
             plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
@@ -253,9 +298,42 @@ class MapPlot(Plot):
         return plot
 
 
+class LineSlice:
+    """ Class to catch click and drag and determine positions
+    """
+    def __init__(self, fig, ax, action):
+
+        self.p1=[0,0]
+        self.p2=[0,0]
+        self.ax = ax
+        self.cidclick = plt.connect('button_press_event', self)
+        self.cidrelease = plt.connect('button_release_event', self)
+        self.action = action
+        self.fig=fig
+
+    def __call__(self, event):
+        if event.name == 'button_press_event':
+            self.p1 = (event.xdata, event.ydata)    # save 1st point
+        elif event.name == 'button_release_event':
+            self.p2 = (event.xdata, event.ydata)    # save 2nd point
+
+            self.action(startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
+            self.fig.canvas.draw()
+
+            self.points = (self.p1[0], self.p1[1], self.p2[0], self.p2[1])
+
+            return self.p1[0], self.p1[1], self.p2[0], self.p2[1]
+
+
 class GrainPlot(Plot):
-    def __init__(self, callingGrain, fig=None, ax=None, makeInteractive=False):
-        super(GrainPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
+    """ Class for creating a map for a grain
+    """
+    def __init__(self, callingGrain, fig=None, ax=None, axParams={},
+                 makeInteractive=False, **kwargs):
+        super(GrainPlot, self).__init__(
+            ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
+            **kwargs
+        )
 
         self.callingGrain = callingGrain
         self.imgLayers = []
@@ -267,10 +345,48 @@ class GrainPlot(Plot):
         img = self.ax.imshow(mapData, vmin=vmin, vmax=vmax,
                              interpolation='None', cmap=cmap, **kwargs)
         self.draw()
+        self.arrow = None
 
         self.imgLayers.append(img)
 
         return img
+
+    def addArrow(self, startEnd, persistent=False, clearPrev=True, label=None):
+
+        x0 = startEnd[0]
+        y0 = startEnd[1]
+        x1 = startEnd[2]
+        y1 = startEnd[3]
+
+        if persistent:
+            self.ax.annotate(
+                "", xy=(x0, y0), xycoords='data', xytext=(x1, y1),
+                textcoords='data', arrowprops=dict(
+                    arrowstyle="<-", connectionstyle="arc3",
+                    color='red', alpha=0.7, linewidth=2
+                )
+            )
+
+        if not persistent:
+            if clearPrev:
+                if self.arrow is not None:
+                    self.arrow.remove()
+
+            if None in (x0, y0, x1, y1):
+                pass
+            else:
+                self.arrow = self.ax.annotate(
+                    "", xy=(x0, y0), xycoords='data', xytext=(x1, y1),
+                    textcoords='data', arrowprops=dict(
+                        arrowstyle="<-", connectionstyle="arc3",
+                        color='red',alpha=0.7,linewidth=2
+                    )
+                )
+
+        if label is not None:
+            self.ax.annotate(label, xy=(x1, y1), xycoords='data',
+                             xytext=(15, 15), textcoords='offset pixels',
+                             c='red', fontsize=12)
 
     def addColourBar(self, label, layer=0, **kwargs):
         img = self.imgLayers[layer]
@@ -281,46 +397,67 @@ class GrainPlot(Plot):
             scale = self.callingGrain.ownerMap.scale * 1e-6
         self.ax.add_artist(ScaleBar(scale))
 
-    def addTraces(self, angles, colours, pos=None, **kwargs):
+    def addTraces(self, angles, colours, topOnly=False, pos=None, **kwargs):
         if pos is None:
             pos = self.callingGrain.centreCoords()
-
         traces = np.array((-np.sin(angles), np.cos(angles)))
+
+        # When plotting top half only, move all 'traces' to +ve y
+        # and set the pivot to be in the tail instead of centre
+        if topOnly:
+            pivot='tail'
+            for idx, (x,y) in enumerate(zip(traces[0], traces[1])):
+                if x < 0 and y < 0:
+                    traces[0][idx] *= -1
+                    traces[1][idx] *= -1
+            self.ax.set_ylim(pos[1]-0.001, pos[1]+0.1)
+            self.ax.set_xlim(pos[0]-0.1, pos[0]+0.1)
+        else:
+            pivot = 'middle'
+
         for i, trace in enumerate(traces.T):
             colour = colours[len(colours) - 1] if i >= len(colours) else colours[i]
             self.ax.quiver(
                 pos[0], pos[1],
                 trace[0], trace[1],
-                scale=1, pivot="middle",
+                scale=1, pivot=pivot,
                 color=colour, headwidth=1,
                 headlength=0, **kwargs
             )
             self.draw()
 
-    def addSlipTraces(self, colours=None, pos=None, **kwargs):
+    def addSlipTraces(self, topOnly=False, colours=None, pos=None, **kwargs):
+
         if colours is None:
             colours = self.callingGrain.ebsdMap.slipTraceColours
         slipTraceAngles = self.callingGrain.slipTraces
 
-        self.addTraces(slipTraceAngles, colours, pos=pos, **kwargs)
+        self.addTraces(slipTraceAngles, colours, topOnly, pos=pos, **kwargs)
 
-    def addSlipBands(self, grainMapData, pos=None, thres=None, min_dist=None, **kwargs):
-        slipBandAngles = self.callingGrain.calcSlipBands(grainMapData,
-                                                         thres=thres,
-                                                         min_dist=min_dist)
+    def addSlipBands(self, topOnly=False, grainMapData=None, angles=None, pos=None,
+                     thres=None, min_dist=None, **kwargs):
 
-        self.addTraces(slipBandAngles, ["yellow"], pos=pos, **kwargs)
+        if angles is None:
+            slipBandAngles = self.callingGrain.calcSlipBands(grainMapData,
+                                                             thres=thres,
+                                                             min_dist=min_dist)
+        else:
+            slipBandAngles = angles
+
+        self.addTraces(slipBandAngles, ["black"], topOnly,  pos=pos, **kwargs)
 
     @classmethod
     def create(
         cls, callingGrain, mapData,
-        fig=None, ax=None, plot=None, makeInteractive=False,
+        fig=None, figParams={}, ax=None, axParams={},
+        plot=None, makeInteractive=False,
         plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
         plotScaleBar=False, scale=None,
         plotSlipTraces=False, plotSlipBands=False, **kwargs
     ):
         if plot is None:
-            plot = cls(callingGrain, fig=fig, ax=ax, makeInteractive=makeInteractive)
+            plot = cls(callingGrain, fig=fig, ax=ax, axParams=axParams,
+                       makeInteractive=makeInteractive, **figParams)
         plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
         if plotColourBar:
@@ -333,17 +470,22 @@ class GrainPlot(Plot):
             plot.addSlipTraces()
 
         if plotSlipBands:
-            plot.addSlipBands(mapData)
+            plot.addSlipBands(grainMapData=mapData)
 
         return plot
 
 
 class PolePlot(Plot):
+    """ Class for creating an inverse pole figure
+    """
     defaultProjection = "stereographic"
 
     def __init__(self, plotType, crystalSym, projection=None,
-                 fig=None, ax=None, makeInteractive=False):
-        super(PolePlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
+                 fig=None, ax=None, axParams={}, makeInteractive=False,
+                 **kwargs):
+        super(PolePlot, self).__init__(
+            ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
+            **kwargs)
 
         self.plotType = plotType
         self.crystalSym = crystalSym
@@ -535,9 +677,14 @@ class PolePlot(Plot):
 
 
 class HistPlot(Plot):
-    def __init__(self, plotType="linear", density=True,
-                 fig=None, ax=None, makeInteractive=False):
-        super(HistPlot, self).__init__(ax, fig=fig, makeInteractive=makeInteractive)
+    """ Class for creating a histogram
+    """
+    def __init__(self, plotType="linear", density=True, fig=None,
+                 ax=None, axParams={}, makeInteractive=False, **kwargs):
+        super(HistPlot, self).__init__(
+            ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
+            **kwargs
+        )
 
         plotType = plotType.lower()
         if plotType in ["linear", "log"]:
@@ -571,14 +718,60 @@ class HistPlot(Plot):
 
     @classmethod
     def create(
-        cls, histData, fig=None, ax=None, plot=None, makeInteractive=False,
+        cls, histData, fig=None, figParams={}, ax=None, axParams={},
+        plot=None, makeInteractive=False,
         plotType="linear", density=True, bins=10, range=None,
         line='o', label=None, **kwargs
     ):
         if plot is None:
             plot = cls(plotType=plotType, density=density, fig=fig, ax=ax,
-                       makeInteractive=makeInteractive)
+                       axParams=axParams, makeInteractive=makeInteractive,
+                       **figParams)
         plot.addHist(histData, bins=bins, range=range, line=line,
                      label=label, **kwargs)
 
         return plot
+
+
+class CrystalPlot(Plot):
+    """ Class for creating a 3D plot for plotting unit cells
+    """
+    def __init__(self, fig=None, ax=None, axParams={},
+                 makeInteractive=False, **kwargs):
+        # Set default plot parameters then update with input
+        figParams = {
+            'figsize': (6, 6)
+        }
+        figParams.update(kwargs)
+        axParamsDefault = {
+            'projection': '3d',
+            'proj_type': 'ortho'
+        }
+        axParamsDefault.update(axParams)
+        axParams = axParamsDefault
+
+        super(CrystalPlot, self).__init__(
+            ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
+            **figParams
+        )
+
+        # Set plotting parameters
+        self.ax.set_xlim3d(-0.15, 0.15)
+        self.ax.set_ylim3d(-0.15, 0.15)
+        self.ax.set_zlim3d(-0.15, 0.15)
+        self.ax.view_init(azim=270, elev=90)
+        self.ax._axis3don = False
+
+    def addVerts(self, verts, **kwargs):
+        # Set default plot parameters then update with any input
+        plotParams = {
+            'alpha' : 0.6,
+            'facecolor' : '0.8',
+            'linewidths' : 3,
+            'edgecolor' : 'k'
+        }
+        plotParams.update(kwargs)
+
+        # Add list of planes defined by given vertices to the 3D plot
+        pc = Poly3DCollection(verts, **plotParams)
+        self.ax.add_collection3d(pc)

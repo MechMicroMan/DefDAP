@@ -14,10 +14,13 @@
 # limitations under the License.
 
 import numpy as np
+import networkx as nx
 
 from defdap.quat import Quat
 from defdap import plotting
 from defdap.plotting import MapPlot, GrainPlot
+
+from defdap.utils import reportProgress
 
 
 class Map(object):
@@ -27,6 +30,7 @@ class Map(object):
         self.homogPoints = []
 
         self.proxigramArr = None
+        self.neighbourNetwork = None
 
         self.grainPlot = None
 
@@ -40,6 +44,10 @@ class Map(object):
 
         return self.grainList[key]
 
+    @property
+    def shape(self):
+        return self.yDim, self.xDim
+
     def checkGrainsDetected(self):
         """Check if grains have been detected
 
@@ -49,7 +57,9 @@ class Map(object):
         Raises:
             Exception: if grains not detected
         """
-        if self.grainList is None or type(self.grainList) is not list or len(self.grainList) < 1:
+        if (self.grainList is None or
+                type(self.grainList) is not list or
+                len(self.grainList) < 1):
             raise Exception("No grains detected.")
         return True
 
@@ -110,33 +120,63 @@ class Map(object):
                     self.grainPlot.callingGrain = currGrain
                     currGrain.plotDefault(plot=self.grainPlot)
 
-    def setHomogPoint(self, binSize=1, points=None):
+    def setHomogPoint(self, binSize=1, points=None, **kwargs):
         if points is None:
-            plot = self.plotHomog(makeInteractive=True)
+            plot = self.plotHomog(makeInteractive=True, **kwargs)
             # Plot stored homogo points if there are any
             if len(self.homogPoints) > 0:
                 homogPoints = np.array(self.homogPoints) * binSize
-                plot.addPoints(homogPoints[:, 0], homogPoints[:, 1], c='y', s=60)
+                plot.addPoints(homogPoints[:, 0], homogPoints[:, 1],
+                               c='y', s=60)
             else:
                 # add empty points layer to update later
                 plot.addPoints([None], [None], c='y', s=60)
 
             # add empty points layer for current selected point
-            plot.addPoints([None], [None], c='w',s=60, marker='x')
+            plot.addPoints([None], [None], c='w', s=60, marker='x')
 
             plot.addEventHandler('button_press_event', self.clickHomog)
-
-            plot.addButton(
-                "Save point",
-                lambda e, p: self.clickSaveHomog(e, p, binSize),
-                color="0.85", hovercolor="blue"
-            )
+            plot.addEventHandler('key_press_event', self.keyHomog)
+            plot.addButton("Save point",
+                           lambda e, p: self.clickSaveHomog(e, p, binSize),
+                           color="0.85", hovercolor="blue")
         else:
             self.homogPoints = points
 
     def clickHomog(self, event, plot):
         if event.inaxes is plot.ax:
-            plot.addPoints([int(event.xdata)], [int(event.ydata)], updateLayer=1)
+            # right mouse click or shift + left mouse click
+            # shift click doesn't work in osx backend
+            if (event.button == 3 or
+                    (event.button == 1 and event.key == 'shift')):
+                plot.addPoints([int(event.xdata)], [int(event.ydata)],
+                               updateLayer=1)
+
+    def keyHomog(self, event, plot):
+        keys = ['left', 'right', 'up', 'down']
+        key = event.key.split('+')
+        if key[-1] in keys:
+            # get the selected point
+            points = plot.imgLayers[plot.pointsLayerIDs[1]]
+            selPoint = points.get_offsets()[0]
+
+            # check if a point is selected
+            if selPoint[0] is not None and selPoint[1] is not None:
+                # print(event.key)
+                move = 1
+                if len(key) == 2 and key[0] == 'shift':
+                    move = 10
+
+                if key[-1] == keys[0]:
+                    selPoint[0] -= move
+                elif key[-1] == keys[1]:
+                    selPoint[0] += move
+                elif key[-1] == keys[2]:
+                    selPoint[1] -= move
+                elif key[-1] == keys[3]:
+                    selPoint[1] += move
+
+                plot.addPoints([selPoint[0]], [selPoint[1]], updateLayer=1)
 
     def clickSaveHomog(self, event, plot, binSize):
         # get the selected point
@@ -193,16 +233,20 @@ class Map(object):
             self.homogPoints[homogID] = newPoint
 
     def buildNeighbourNetwork(self):
-        # Construct a list of neighbours
-
+        """Construct a list of neighbours
+        """
         yLocs, xLocs = np.nonzero(self.boundaries)
         neighboursList = []
 
         for y, x in zip(yLocs, xLocs):
-            if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or y == self.grains.shape[0] - 1):
+            if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
+                    y == self.grains.shape[0] - 1):
                 # exclude boundary pixel of map
                 continue
             else:
+                # use 4 nearest neighbour points as potential neighbour grains
+                # (this maybe needs changing considering the position of
+                # boundary pixels relative to the actual edges)
                 # use sets as they do not allow duplicate elements
                 # minus 1 on all as the grain image starts labeling at 1
                 neighbours = {
@@ -212,7 +256,8 @@ class Map(object):
                     self.grains[y, x - 1] - 1
                 }
                 # neighbours = set(neighbours)
-                # remove boundary points (-2) and points in small grains (-3) (Normally -1 and -2)
+                # remove boundary points (-2) and points in small
+                # grains (-3) (Normally -1 and -2)
                 neighbours.discard(-2)
                 neighbours.discard(-3)
 
@@ -234,7 +279,6 @@ class Map(object):
                         neighboursList.append(trialNeig)
 
         # create network
-        import networkx as nx
         self.neighbourNetwork = nx.Graph()
         self.neighbourNetwork.add_nodes_from(range(len(self)))
         self.neighbourNetwork.add_edges_from(neighboursList)
@@ -263,7 +307,6 @@ class Map(object):
                         secondNeighbours.append(secondNeighbour)
             highlightGrains.extend(secondNeighbours)
 
-            # highlightGrains = [self.currGrainId] + firstNeighbours + secondNeighbours
             highlightColours = ['white']
             highlightColours.extend(['yellow'] * len(firstNeighbours))
             highlightColours.append('green')
@@ -277,6 +320,7 @@ class Map(object):
 
         return self.proxigramArr
 
+    @reportProgress("calculating proxigram")
     def calcProxigram(self, numTrials=500, forceCalc=True):
         if self.proxigramArr is not None and not forceCalc:
             return
@@ -303,15 +347,17 @@ class Map(object):
 
         # array of x and y coordinate of each pixel in the map
         coords = np.zeros((2, proxShape[0], proxShape[1]), dtype=float)
-        coords[0], coords[1] = np.meshgrid(range(proxShape[0]), range(proxShape[1]), indexing='ij')
+        coords[0], coords[1] = np.meshgrid(
+            range(proxShape[0]), range(proxShape[1]), indexing='ij'
+        )
 
         # array to store trial distance from each boundary point
-        trialDistances = np.full((numTrials + 1, proxShape[0], proxShape[1]), 1000, dtype=float)
+        trialDistances = np.full((numTrials + 1, proxShape[0], proxShape[1]),
+                                 1000, dtype=float)
 
         # loop over each boundary point (p) and calculate distance from
         # p to all points in the map store minimum once numTrails have
         # been made and start a new batch of trials
-        print("Calculating proxigram ", end='')
         numBoundaryPoints = len(indexBoundaries)
         j = 1
         for i, indexBoundary in enumerate(indexBoundaries):
@@ -322,7 +368,8 @@ class Map(object):
                 # find current minimum distances and store
                 trialDistances[0] = trialDistances.min(axis=0)
                 j = 0
-                print("{:.1f}% ".format(i / numBoundaryPoints * 100), end='')
+                # report progress
+                yield i / numBoundaryPoints
             j += 1
 
         # find final minimum distances to a boundary
@@ -334,7 +381,8 @@ class Map(object):
         """Calculate grain average of any DIC map data.
 
         Args:
-            mapData (np.array): Array of map data to grain average. This must be cropped!
+            mapData (np.array): Array of map data to grain average. This
+            must be cropped!
 
         Returns:
             np.array: Array containing the grain average values
@@ -356,6 +404,30 @@ class Map(object):
 
     def plotGrainDataMap(self, mapData=None, grainData=None,
                          grainIds=-1, bg=0, **kwargs):
+        """Plot a grain map with grains coloured by given data. The data
+        can be provided as a list of values per grain or as a map which
+        a grain average will be applied.
+
+        Parameters
+        ----------
+        mapData : np.array, optional
+            Array of map data. This must be cropped! You must supply either
+            mapData or grainData.
+        grainData : list or np.array, optional
+            Grain values. This an be a single value per grain or RGB
+            values. You must supply either mapData or grainData.
+        grainIds: list of int or int, optional
+            IDs of grains to plot for. Use -1 for all grains in the map.
+        bg: int or real, optional
+            Value to fill the background with.
+        kwargs:
+            Other parameters are passed to defdap.plotting.MapPlot.create
+
+        Returns
+        -------
+        plot: defdap.plotting.MapPlot
+            Plot object created
+        """
         # Set default plot parameters then update with any input
         plotParams = {}
         plotParams.update(kwargs)
@@ -367,17 +439,28 @@ class Map(object):
             else:
                 grainData = self.calcGrainAv(mapData, grainIds=grainIds)
 
-
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
-        if type(grainIds) is int and grainIds == -1:
-            grainIds = range(len(self))
+        if type(grainIds) is int:
+            if grainIds == -1:
+                grainIds = range(len(self))
+            else:
+                grainIds = [grainIds]
 
-        if len(grainData) != len(grainIds):
-            raise Exception("Must be 1 value for each grain in grainData.")
+        grainData = np.array(grainData)
+        if grainData.shape[0] != len(grainIds):
+            raise Exception("The length of supplied grain data does not"
+                            "match the number of grains.")
+        if len(grainData.shape) == 1:
+            mapShape = [self.yDim, self.xDim]
+        elif len(grainData.shape) == 2 and grainData.shape[1] == 3:
+            mapShape = [self.yDim, self.xDim, 3]
+        else:
+            raise Exception("The grain data supplied must be either a"
+                            "single value or RGB values per grain.")
 
-        grainMap = np.full([self.yDim, self.xDim], bg, dtype=type(grainData[0]))
+        grainMap = np.full(mapShape, bg, dtype=grainData.dtype)
         for grainId, grainValue in zip(grainIds, grainData):
             grain = self.grainList[grainId]
             for coord in grain.coordList:
@@ -395,9 +478,11 @@ class Map(object):
         points coloured by grain average values from map data.
 
         Args:
-            mapData (np.array): Array of map data to grain average. This must be cropped!
+            mapData (np.array): Array of map data to grain average. This
+            must be cropped!
             direction (np.array): Vector of reference direction for the IPF
-            plotColourBar (bool, optional): Set to Flase to exclude the colour bar
+            plotColourBar (bool, optional): Set to Flase to exclude the
+            colour bar
             vmin (float, optional): Minimum value of colour scale
             vmax (float, optional): Maximum value for colour scale
             cLabel (str, optional): Colour bar label text

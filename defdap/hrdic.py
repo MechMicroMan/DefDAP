@@ -27,13 +27,17 @@ import peakutils
 from defdap.file_readers import DICDataLoader
 from defdap import base
 from defdap.quat import Quat
-from defdap import plotting
 
 from defdap.plotting import MapPlot, GrainPlot
+from defdap.inspector import GrainInspector
+from defdap.utils import reportProgress
 
 
 class Map(base.Map):
-
+    """
+    Class to encapsulate DIC data and useful analysis and plotting
+    methods.
+    """
     def __init__(self, path, fname, dataType=None):
         """Initialise class and import DIC data from file
 
@@ -41,11 +45,8 @@ class Map(base.Map):
             path(str): Path to file
             fname(str): Name of file including extension
         """
-
         # Call base class constructor
         super(Map, self).__init__()
-
-        print("\rLoading DIC data...", end="")
 
         # Initialise variables
         self.format = None      # Software name
@@ -58,6 +59,8 @@ class Map(base.Map):
         self.yc = None          # y coordinates
         self.xd = None          # x displacement
         self.yd = None          # y displacement
+        
+        self.corrVal = None     # correlation value
 
         self.ebsdMap = None                 # EBSD map linked to DIC map
         self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
@@ -81,23 +84,29 @@ class Map(base.Map):
         self.xDim = self.xdim
         self.yDim = self.ydim
         
-        self.x_map = self._map(self.xd)     # u (displacement component along x)
-        self.y_map = self._map(self.yd)     # v (displacement component along x)
-        xDispGrad = self._grad(self.x_map)
+        self.x_map = self._map(self.xd)     # u displacement component along x
+        self.y_map = self._map(self.yd)     # v displacement component along x
+        xDispGrad = self._grad(self.x_map)  #d/dy is first term, d/dx is second
         yDispGrad = self._grad(self.y_map)
-        self.f11 = xDispGrad[1] + 1         # f11
-        self.f22 = yDispGrad[0] + 1         # f22
-        self.f12 = xDispGrad[0]             # f12
-        self.f21 = yDispGrad[1]             # f21
 
-        self.max_shear = np.sqrt((((self.f11 - self.f22) / 2.)**2) +
-                                 ((self.f12 + self.f21) / 2.)**2)   # max shear component
-        self.mapshape = np.shape(self.max_shear)                    # map shape
+        # Deformation gradient
+        self.f11 = xDispGrad[1] + 1
+        self.f22 = yDispGrad[0] + 1
+        self.f12 = xDispGrad[0]
+        self.f21 = yDispGrad[1]
 
-        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)      # crop distances (default all zeros)
+        # Green strain
+        self.e11 = xDispGrad[1] + \
+                   0.5*(xDispGrad[1]*xDispGrad[1] + yDispGrad[1]*yDispGrad[1])
+        self.e22 = yDispGrad[0] + \
+                   0.5*(xDispGrad[0]*xDispGrad[0] + yDispGrad[0]*yDispGrad[0])
+        self.e12 = 0.5*(xDispGrad[0] + yDispGrad[1] +
+                        xDispGrad[1]*xDispGrad[0] + yDispGrad[1]*yDispGrad[0])
+        # max shear component
+        self.eMaxShear = np.sqrt(((self.e11 - self.e22) / 2.)**2 + self.e12**2)
 
-        print("\rLoaded {0} {1} data (dimensions: {2} x {3} pixels, sub-window size: {4} x {4} pixels)".
-              format(self.format, self.version, self.xdim, self.ydim, self.binning))
+        # crop distances (default all zeros)
+        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
 
     @property
     def plotDefault(self):
@@ -108,7 +117,15 @@ class Map(base.Map):
     def crystalSym(self):
         return self.ebsdMap.crystalSym
 
+    @reportProgress("loading HRDIC data")
     def loadData(self, fileDir, fileName, dataType=None):
+        """Load DIC data
+
+        Args:
+            fileDir(str): Path to file
+            fileName(str): Name of file including extension
+            dataType(str): Type of data file - see file_readers.py
+        """
         dataType = "DavisText" if dataType is None else dataType
 
         dataLoader = DICDataLoader()
@@ -129,6 +146,35 @@ class Map(base.Map):
         self.xd = dataDict['xd']    # x displacement
         self.yd = dataDict['yd']    # y displacement
 
+        # write final status
+        yield "Loaded {0} {1} data (dimensions: {2} x {3} pixels, " \
+              "sub-window size: {4} x {4} pixels)".format(
+            self.format, self.version, self.xdim, self.ydim, self.binning
+        )
+        
+    def loadCorrValData(self, fileDir, fileName, dataType=None):
+        """Load correlation value for DIC data
+
+        Args:
+            fileDir(str): Path to file
+            fileName(str): Name of file including extension
+            dataType(str): Type of data file - see file_readers.py
+        """
+        dataType = "DavisImage" if dataType is None else dataType
+
+        dataLoader = DICDataLoader()
+        if dataType == "DavisImage":
+            loadedData = dataLoader.loadDavisImageData(fileName, fileDir)
+        else:
+            raise Exception("No loader found for this DIC data.")
+            
+        self.corrVal = loadedData
+        
+        assert self.xdim == self.corrVal.shape[1], \
+            "Dimensions of imported data and dic data do not match"
+        assert self.ydim == self.corrVal.shape[0], \
+            "Dimensions of imported data and dic data do not match"
+
     def _map(self, data_col):
         data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))
         return data_map
@@ -141,8 +187,6 @@ class Map(base.Map):
     def retrieveName(self):
         """
         Gets the first name assigned to the a map, as a string
-
-        var(obj) variable to get name of
         """
         for fi in reversed(inspect.stack()):
             names = [var_name for var_name, var_val in fi.frame.f_locals.items() if var_val is self]
@@ -152,8 +196,8 @@ class Map(base.Map):
     def setScale(self, micrometrePerPixel):
         """
         Sets the scale of the map
-
-        micrometrePerPixel(float) length of pixel in original BSE image in micrometres
+        Args:
+            micrometrePerPixel(float) length of pixel in original BSE image in micrometres
         """
         self.bseScale = micrometrePerPixel
 
@@ -168,19 +212,17 @@ class Map(base.Map):
         """
         Print out statistics table for a DIC map
 
-        percentiles(list) list of percentiles to print (number, Min, Mean or Max)
-        components(list of str) lis of map components to print i.e. f11, mss
+        Args:
+            percentiles(list) list of percentiles to print (number, Min, Mean or Max)
+            components(list of str) lis of map components to print i.e. f11, mss
         """
 
         # Print map info
         print('\033[1m', end='')    # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} "
               "x {3} pixels, number of points: {4})\n".format(
-            self.retrieveName(),
-            self.xDim,
-            self.yDim,
-            self.binning,
-            self.xDim * self.yDim
+            self.retrieveName(), self.xDim, self.yDim,
+            self.binning, self.xDim * self.yDim
         ))
 
         # Print table header
@@ -197,15 +239,13 @@ class Map(base.Map):
         for c in components:
             selmap = []
             if c == 'mss':
-                selmap = self.crop(self.max_shear) * 100
-            if c == 'f11':
-                selmap = (self.crop(self.f11) - 1) * 100
-            if c == 'f12':
-                selmap = self.crop(self.f12) * 100
-            if c == 'f21':
-                selmap = self.crop(self.f21) * 100
-            if c == 'f22':
-                selmap = (self.crop(self.f22) - 1) * 100
+                selmap = self.crop(self.eMaxShear) * 100
+            if c == 'e11':
+                selmap = self.crop(self.e11) * 100
+            if c == 'e12':
+                selmap = self.crop(self.e12) * 100
+            if c == 'e22':
+                selmap = self.crop(self.e22) * 100
             plist = []
             for p in percentiles:
                 if p == 'Min':
@@ -259,6 +299,13 @@ class Map(base.Map):
         self.yDim = self.ydim - self.cropDists[1, 0] - self.cropDists[1, 1]
 
     def crop(self, mapData, binned=True):
+        """ Crop given data using crop paramaters stored in map
+        i.e. cropped_data = DicMap.crop(DicMap.data_to_crop)
+
+        Args:
+            mapData(map): map data to crop
+            binned(boolean): true if mapData is binned i.e. binned BSE pattern
+        """
         if binned:
             multiplier = 1
         else:
@@ -272,8 +319,14 @@ class Map(base.Map):
 
         return mapData[minY:maxY, minX:maxX]
 
-    def setHomogPoint(self, points=None, display=None):
-        
+    def setHomogPoint(self, points=None, display=None, **kwargs):
+        """Set homologous points
+        Uses GUI if points is None
+
+        Args:
+            points(list): homologous points to set
+            display(string, optional): maxshear or pattern
+        """        
         if points is not None:
             self.homogPoints = points
             
@@ -291,7 +344,7 @@ class Map(base.Map):
                 binSize = 1
 
             # Call set homog points from base class setting the bin size
-            super(type(self), self).setHomogPoint(binSize=binSize, points=points)
+            super(type(self), self).setHomogPoint(binSize=binSize, points=points, **kwargs)
 
     def linkEbsdMap(self, ebsdMap, transformType="affine", order=2):
         """Calculates the transformation required to align EBSD dataset to DIC
@@ -301,12 +354,14 @@ class Map(base.Map):
             transformType(string, optional): affine, piecewiseAffine or polynomial
             order(int, optional): Order of polynomial transform to apply
         """
-
         self.ebsdMap = ebsdMap
-        if transformType == "piecewiseAffine":
+        if transformType.lower() == "piecewiseaffine":
             self.ebsdTransform = tf.PiecewiseAffineTransform()
             self.ebsdTransformInv = self.ebsdTransform.inverse
-        elif transformType == "polynomial":
+        elif transformType.lower() == "projective":
+            self.ebsdTransform = tf.ProjectiveTransform()
+            self.ebsdTransformInv = self.ebsdTransform.inverse
+        elif transformType.lower() == "polynomial":
             self.ebsdTransform = tf.PolynomialTransform()
             # You can't calculate the inverse of a polynomial transform
             # so have to estimate by swapping source and destination
@@ -325,6 +380,7 @@ class Map(base.Map):
             )
             return
         else:
+            # default to using affine
             self.ebsdTransform = tf.AffineTransform()
             self.ebsdTransformInv = self.ebsdTransform.inverse
 
@@ -481,7 +537,7 @@ class Map(base.Map):
         }
         plotParams.update(kwargs)
 
-        plot = MapPlot.create(self, self.crop(self.max_shear), **plotParams)
+        plot = MapPlot.create(self, self.crop(self.eMaxShear), **plotParams)
 
         return plot
 
@@ -504,14 +560,13 @@ class Map(base.Map):
         plotParams.update(kwargs)
 
         plot = self.plotGrainDataMap(
-            mapData=self.crop(self.max_shear), **plotParams
+            mapData=self.crop(self.eMaxShear), **plotParams
         )
 
         return plot
 
+    @reportProgress("finding grains")
     def findGrains(self, minGrainSize=10):
-        print("\rFinding grains in DIC map...", end="")
-
         # Check a EBSD map is linked
         self.checkEbsdLinked()
 
@@ -522,12 +577,17 @@ class Map(base.Map):
 
         # List of points where no grain has been set yet
         unknownPoints = np.where(self.grains == 0)
+        numPoints = unknownPoints[0].shape[0]
+        totalPoints = numPoints
         # Start counter for grains
         grainIndex = 1
 
         # Loop until all points (except boundaries) have been assigned
         # to a grain or ignored
-        while unknownPoints[0].shape[0] > 0:
+        while numPoints > 0:
+            # report progress
+            yield 1. - numPoints / totalPoints
+
             # Flood fill first unknown point and return grain object
             currentGrain = self.floodFill(unknownPoints[1][0], unknownPoints[0][0], grainIndex)
 
@@ -544,6 +604,7 @@ class Map(base.Map):
 
             # update unknown points
             unknownPoints = np.where(self.grains == 0)
+            numPoints = unknownPoints[0].shape[0]
 
         # Now link grains to those in ebsd Map
         # Warp DIC grain map to EBSD frame
@@ -566,12 +627,10 @@ class Map(base.Map):
             self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
             self.grainList[i].ebsdMap = self.ebsdMap
 
-        print("\rDone                                               ", end="")
-
     def floodFill(self, x, y, grainIndex):
         currentGrain = Grain(self)
 
-        currentGrain.addPoint((x, y), self.max_shear[y + self.cropDists[1, 0], x + self.cropDists[0, 0]])
+        currentGrain.addPoint((x, y), self.eMaxShear[y + self.cropDists[1, 0], x + self.cropDists[0, 0]])
 
         edge = [(x, y)]
         grain = [(x, y)]
@@ -601,13 +660,13 @@ class Map(base.Map):
 
                 for (s, t) in moves:
                     if self.grains[t, s] == 0:
-                        currentGrain.addPoint((s, t), self.max_shear[y + self.cropDists[1, 0],
+                        currentGrain.addPoint((s, t), self.eMaxShear[y + self.cropDists[1, 0],
                                                                      x + self.cropDists[0, 0]])
                         newedge.append((s, t))
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
                     elif self.grains[t, s] == -1 and (s > x or t > y):
-                        currentGrain.addPoint((s, t), self.max_shear[y + self.cropDists[1, 0],
+                        currentGrain.addPoint((s, t), self.eMaxShear[y + self.cropDists[1, 0],
                                                                      x + self.cropDists[0, 0]])
                         grain.append((s, t))
                         self.grains[t, s] = grainIndex
@@ -617,6 +676,9 @@ class Map(base.Map):
             else:
                 edge = newedge
 
+    def runGrainInspector(self, vmax=0.1):
+        GrainInspector(currMap=self, vmax=vmax)
+
 
 class Grain(base.Grain):
 
@@ -624,11 +686,14 @@ class Grain(base.Grain):
         # Call base class constructor
         super(Grain, self).__init__()
 
-        self.dicMap = dicMap       # dic map this grain is a member of
+        self.dicMap = dicMap        # DIC map this grain is a member of
         self.ownerMap = dicMap
         self.maxShearList = []
         self.ebsdGrain = None
         self.ebsdMap = None
+
+        self.pointsList = []        # Lines drawn for STA
+        self.groupsList = []        # Unique angles drawn for STA
 
     @property
     def plotDefault(self):

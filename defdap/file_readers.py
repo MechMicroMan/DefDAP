@@ -35,6 +35,8 @@ class EBSDDataLoader(object):
         }
 
     def checkMetadata(self):
+        """ Checks that the number of phases from metadata matches
+        the amount of phase names."""
         if len(self.loadedMetadata['phaseNames']) != self.loadedMetadata['numPhases']:
             print("Number of phases mismatch.")
             raise AssertionError
@@ -156,7 +158,7 @@ class EBSDDataLoader(object):
             ('BC', 'uint8')
         ])
         binData = np.loadtxt(
-            str(filePath), dataFormat, delimiter='\t',
+            str(filePath), dataFormat,
             skiprows=numHeaderLines, usecols=(0, 5, 6, 7, 8, 9)
         )
 
@@ -200,8 +202,8 @@ class DICDataLoader(object):
         return
 
     def checkData(self):
-        # Calculate size of map from loaded data and check it matches
-        # values from metadata
+        """ Calculate size of map from loaded data and check it matches
+        values from metadata"""
         coords = self.loadedData['xc']
         xdim = int(
             (coords.max() - coords.min()) / min(abs(np.diff(coords))) + 1
@@ -216,7 +218,7 @@ class DICDataLoader(object):
         assert ydim == self.loadedMetadata['yDim'], "Dimensions of data and header do not match"
 
     def loadDavisMetadata(self, fileName, fileDir=""):
-        # Load metadata
+        """ Load DaVis metadata"""
         filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
@@ -239,6 +241,8 @@ class DICDataLoader(object):
         return self.loadedMetadata
 
     def loadDavisData(self, fileName, fileDir=""):
+        """ A .txt file from DaVis contains x and y coordinates
+        and x and y displacements for each coordinate"""
         filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
@@ -254,3 +258,17 @@ class DICDataLoader(object):
         self.checkData()
 
         return self.loadedData
+        
+    def loadDavisImageData(self, fileName, fileDir=""):
+        """ A .txt file from DaVis containing a 2D image
+        """
+        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
+        if not filePath.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(filePath))
+
+        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1, header=None)
+       
+       # x and y coordinates
+        loadedData = np.array(data)
+
+        return loadedData

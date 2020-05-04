@@ -1,4 +1,4 @@
-# OS generated files #
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -7,21 +7,24 @@
 ehthumbs.db
 Thumbs.db
 
-# My files #
-.ipynb_checkpoints
+# Python generated files
 __pycache__
-*.sublime-project
-*.sublime-workspace
 *.pyc
+
+# ipython generated files
+.ipynb_checkpoints
 
 # Intellij IDE files
 .idea/
 
-#Python Virtual Environment
+# Python Virtual Environment
 venv/
 
-#Sphinx docs
+# Sphinx docs
 docs/_build
 
-#Pip install
+# Pip install
 DefDAP.egg-info/
+
+# pytest
+.pytest_cache
