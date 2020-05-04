@@ -650,9 +650,8 @@ class Quat(object):
 
         numQuats = len(quats)
 
-        # Calculating as float32 seems to speed this up
         alphaFund, betaFund = Quat.calcFundDirs(
-            quats, direction, symGroup, dtype=np.float32
+            quats, direction, symGroup, dtype=np.float
         )
 
         # revert to cartesians
@@ -813,25 +812,11 @@ class Quat(object):
                 trialPoles = np.logical_and(beta >= -deltaBeta,
                                             beta <= np.pi / 4 + deltaBeta)
 
-            # create array to store angles of pols in fundamental triangle
-            alphaFund = np.empty((quatCompsSym.shape[2]))
-            betaFund = np.empty((quatCompsSym.shape[2]))
-
             # now of symmetric equivalents left we want the one with
-            # minimum alpha, loop over different orientations
-            # this seems quite slow so might be worth finding a
-            # different way to do it
-            for i in range(trialPoles.shape[1]):
-                # create array of indexes of poles kept in previous step
-                trialPoleIdxs = np.arange(trialPoles.shape[0])[trialPoles[:, i]]
-
-                # find pole with minimum alpha of those kept in previous step
-                # then use trialPoleIdxs to get its index in original arrays
-                poleIdx = trialPoleIdxs[np.argmin(alpha[trialPoles[:, i], i])]
-
-                # add to final array of poles
-                alphaFund[i] = alpha[poleIdx, i]
-                betaFund[i] = beta[poleIdx, i]
+            # minimum alpha
+            min_alpha_idx = np.nanargmin(np.where(trialPoles==False, np.nan, alpha), axis=0)
+            betaFund = beta[min_alpha_idx, np.arange(len(min_alpha_idx))]
+            alphaFund = alpha[min_alpha_idx, np.arange(len(min_alpha_idx))]
 
         elif symGroup == "hexagonal":
             # first beta should be between 0 and 30 deg leaving 1
