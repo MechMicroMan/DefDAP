@@ -290,6 +290,10 @@ class Map(base.Map):
             direction,
             self.crystalSym
         )
+        
+        # Make non-indexed points NaN
+        IPFcolours=np.where(np.tile(self.phaseArray.flatten(), (3,1)).transpose()==0, np.nan, IPFcolours)
+
         # reshape back to map shape array
         IPFcolours = np.reshape(IPFcolours, (self.yDim, self.xDim, 3))
 

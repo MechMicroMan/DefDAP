@@ -646,7 +646,7 @@ class Quat(object):
     @staticmethod
     def calcIPFcolours(quats, direction, symGroup):
         if symGroup != "cubic":
-            raise NotImplementedError("Only available for cubic currently")
+            print("WARNING: Not currently working correctly for hexagonal")
 
         numQuats = len(quats)
 
@@ -830,8 +830,11 @@ class Quat(object):
                 trialPoles = np.logical_and(beta >= -deltaBeta,
                                             beta <= np.pi / 6 + deltaBeta)
 
-            alphaFund = alpha[trialPoles]
-            betaFund = beta[trialPoles]
+            # non-indexed points cause more than 1 symmetric equivelant, use this
+            # to pick one and filter non-indexed points later
+            min_alpha_idx = np.nanargmin(np.where(trialPoles==False, np.nan, alpha), axis=0)
+            betaFund = beta[min_alpha_idx, np.arange(len(min_alpha_idx))]
+            alphaFund = alpha[min_alpha_idx, np.arange(len(min_alpha_idx))]
 
         else:
             raise Exception("symGroup must be cubic or hexagonal")
