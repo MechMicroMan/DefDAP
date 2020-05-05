@@ -711,7 +711,7 @@ class Map(base.Map):
     def buildNeighbourNetwork(self):
         # create network
         nn = nx.Graph()
-        nn.add_nodes_from(range(len(self)))
+        nn.add_nodes_from(self.grainList)
 
         for i, boundaries in enumerate((self.boundariesX, self.boundariesY)):
             yLocs, xLocs = np.nonzero(boundaries)
@@ -727,31 +727,30 @@ class Map(base.Map):
                     # exclude boundary pixels of map
                     continue
 
-                grainID = self.grains[y, x]
-                neiGrainID = self.grains[y + i, x - i + 1]
+                grainID = self.grains[y, x] - 1
+                neiGrainID = self.grains[y + i, x - i + 1] - 1
 
                 if neiGrainID == grainID:
                     # ignore if neighbour is same as grain
                     continue
-                if neiGrainID <= 0 or grainID <= 0:
+                if neiGrainID < 0 or grainID < 0:
                     # ignore if not a grain (boundary points -1 and
                     # points in small grains -2)
                     continue
 
-                grainID -= 1
-                neiGrainID -= 1
+                grain = self[grainID]
+                neiGrain = self[neiGrainID]
 
                 try:
                     # look up boundary segment if it exists
-                    boundarySegment = nn[grainID][neiGrainID]['boundary']
+                    bSeg = nn[grain][neiGrain]['boundary']
                 except KeyError:
                     # neighbour relation doesn't exist so add it
-                    boundarySegment = BoundarySegment(self,
-                                                      grainID, neiGrainID)
-                    nn.add_edge(grainID, neiGrainID, boundary=boundarySegment)
+                    bSeg = BoundarySegment(self, grain, neiGrain)
+                    nn.add_edge(grain, neiGrain, boundary=bSeg)
 
                 # add the boundary point
-                boundarySegment.addBoundaryPoint(x, y, i)
+                bSeg.addBoundaryPoint((x, y), i, grain)
 
         self.neighbourNetwork = nn
 
@@ -1354,36 +1353,79 @@ class Grain(base.Grain):
 
 
 class BoundarySegment(object):
-    def __init__(self, ebsdMap, grainID1, grainID2):
+    def __init__(self, ebsdMap, grain1, grain2):
         self.ebsdMap = ebsdMap
-        self.grainID1 = grainID1
-        self.grainID2 = grainID2
 
-        self.grain1 = ebsdMap[grainID1]
-        self.grain2 = ebsdMap[grainID2]
+        self.grain1 = grain1
+        self.grain2 = grain2
 
+        # list of boundary points (x, y) for horizontal (X) and
+        # vertical (Y) boundaries
         self.boundaryPointsX = []
         self.boundaryPointsY = []
+        # Boolean value for each point above, True if boundary point is
+        # in grain1 and False if in grain2
+        self.boundaryPointOwnersX = []
+        self.boundaryPointOwnersY = []
 
     def __eq__(self, right):
         if type(self) is not type(right):
-            raise TypeError()
+            raise NotImplementedError()
 
-        return ((self.grainID1 == right.grainID1 and
-                 self.grainID2 == right.grainID2) or
-                (self.grainID1 == right.grainID2 and
-                 self.grainID2 == right.grainID1))
+        return ((self.grain1 is right.grain1 and
+                self.grain2 is right.grain2) or
+                (self.grain1 is right.grain2 and
+                 self.grain2 is right.grain1))
 
     def __len__(self):
         return len(self.boundaryPointsX) + len(self.boundaryPointsY)
 
-    def addBoundaryPoint(self, x, y, kind):
+    def addBoundaryPoint(self, point, kind, ownerGrain):
         if kind == 0:
-            self.boundaryPointsX.append((x, y))
+            self.boundaryPointsX.append(point)
+            self.boundaryPointOwnersX.append(ownerGrain is self.grain1)
         elif kind == 1:
-            self.boundaryPointsY.append((x, y))
+            self.boundaryPointsY.append(point)
+            self.boundaryPointOwnersY.append(ownerGrain is self.grain1)
         else:
             raise ValueError("Boundary point kind is 0 for x and 1 for y")
+
+    def boundaryPointPairs(self, kind):
+        """Return pairs of points either side of the boundary. The first
+        point is always in grain1
+        """
+        if kind == 0:
+            boundaryPoints = self.boundaryPointsX
+            boundaryPointOwners = self.boundaryPointOwnersX
+            delta = (1, 0)
+        else:
+            boundaryPoints = self.boundaryPointsY
+            boundaryPointOwners = self.boundaryPointOwnersY
+            delta = (0, 1)
+
+        boundaryPointPairs = []
+        for point, owner in zip(boundaryPoints, boundaryPointOwners):
+            otherPoint = (point[0] + delta[0], point[1] + delta[1])
+            if owner:
+                boundaryPointPairs.append((point, otherPoint))
+            else:
+                boundaryPointPairs.append((otherPoint, point))
+
+        return boundaryPointPairs
+
+    @property
+    def boundaryPointPairsX(self):
+        """Return pairs of points either side of the boundary. The first
+        point is always in grain1
+        """
+        return self.boundaryPointPairs(0)
+
+    @property
+    def boundaryPointPairsY(self):
+        """Return pairs of points either side of the boundary. The first
+        point is always in grain1
+        """
+        return self.boundaryPointPairs(1)
 
     def misorientation(self):
         misOri, minSymm = self.grain1.refOri.misOri(
