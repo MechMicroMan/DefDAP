@@ -55,6 +55,7 @@ The software uses the following open source packages:
 - [numpy](http://numpy.org/)
 - [matplotlib](http://matplotlib.org/)
 - [scikit-image](http://scikit-image.org/)
+- [scikit-learn](https://scikit-learn.org/stable/)
 - [networkx](https://networkx.github.io/)
 - [pandas](http://pandas.pydata.org)
 - [peakutils](https://peakutils.readthedocs.io/en/latest/)
