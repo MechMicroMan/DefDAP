@@ -645,8 +645,6 @@ class Quat(object):
 
     @staticmethod
     def calcIPFcolours(quats, direction, symGroup):
-        if symGroup != "cubic":
-            print("WARNING: Not currently working correctly for hexagonal")
 
         numQuats = len(quats)
 
@@ -664,12 +662,15 @@ class Quat(object):
         dirvec[:, 1] = np.sin(alphaFund) * np.sin(betaFund)
         dirvec[:, 2] = np.cos(alphaFund)
 
-        rvect = np.repeat(np.array([0., 0., 1.])[np.newaxis, :],
-                          numQuats, axis=0)
-        gvect = np.repeat(np.array([1., 0., 1.])[np.newaxis, :] / np.sqrt(2),
-                          numQuats, axis=0)
-        bvect = np.repeat(np.array([1., 1., 1.])[np.newaxis, :] / np.sqrt(3),
-                          numQuats, axis=0)
+        if symGroup == 'cubic':
+            poleDirections = np.array([[0, 0, 1], [1, 0, 1], [1, 1, 1]])
+        if symGroup == 'hexagonal':
+            poleDirections = np.array([[0, 0, 1], [np.sqrt(3), 1, 0], [1, 0, 0]])
+
+        rvect = np.tile(poleDirections[0] / np.sqrt(np.sum(poleDirections[0]**2)), (numQuats,1))
+        gvect = np.tile(poleDirections[1] / np.sqrt(np.sum(poleDirections[1]**2)), (numQuats,1))
+        bvect = np.tile(poleDirections[2] / np.sqrt(np.sum(poleDirections[2]**2)), (numQuats,1))
+
         rgb = np.zeros((numQuats, 3))
 
         # Red Component; these subroutines are converted from
@@ -822,7 +823,6 @@ class Quat(object):
             # first beta should be between 0 and 30 deg leaving 1
             # symmetric equivalent per orientation
             trialPoles = np.logical_and(beta >= 0, beta <= np.pi / 6)
-
             # if less than 1 left need to expand search slighly to
             # catch edge cases
             if np.sum(np.sum(trialPoles, axis=0) < 1) > 0:
@@ -832,9 +832,9 @@ class Quat(object):
 
             # non-indexed points cause more than 1 symmetric equivelant, use this
             # to pick one and filter non-indexed points later
-            min_alpha_idx = np.nanargmin(np.where(trialPoles==False, np.nan, alpha), axis=0)
-            betaFund = beta[min_alpha_idx, np.arange(len(min_alpha_idx))]
-            alphaFund = alpha[min_alpha_idx, np.arange(len(min_alpha_idx))]
+            first_idx = (trialPoles==True).argmax(axis=0)
+            betaFund = beta[first_idx, np.arange(len(first_idx))]
+            alphaFund = alpha[first_idx, np.arange(len(first_idx))]
 
         else:
             raise Exception("symGroup must be cubic or hexagonal")
