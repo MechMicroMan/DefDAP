@@ -1,9 +1,19 @@
 import functools
 
-
-# taking inspiration from:
-# https://gist.github.com/Garfounkel/20aa1f06234e1eedd419efe93137c004
 def reportProgress(message=""):
+    """Decorator for reporting progress of given function
+
+    Parameters
+    ----------
+    message : str
+        Message to display (prefixed by 'Starting ', progress percentage and then 'Finished '
+
+    References
+    ----------
+    Inspiration from :
+    https://gist.github.com/Garfounkel/20aa1f06234e1eedd419efe93137c004
+
+    """
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
