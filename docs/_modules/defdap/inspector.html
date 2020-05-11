@@ -37,7 +37,7 @@
           <div class="body" role="main">
             
   <h1>Source code for defdap.inspector</h1><div class="highlight"><pre>
-<span></span><span class="c1"># Copyright 2019 Mechanics of Microstructures Group</span>
+<span></span><span class="c1"># Copyright 2020 Mechanics of Microstructures Group</span>
 <span class="c1">#    at The University of Manchester</span>
 <span class="c1">#</span>
 <span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -61,7 +61,12 @@
 <span class="kn">from</span> <span class="nn">defdap.plotting</span> <span class="kn">import</span> <span class="n">Plot</span><span class="p">,</span> <span class="n">GrainPlot</span><span class="p">,</span> <span class="n">LineSlice</span>
 
 
-<div class="viewcode-block" id="GrainInspector"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector">[docs]</a><span class="k">class</span> <span class="nc">GrainInspector</span><span class="p">:</span>
+<div class="viewcode-block" id="GrainInspector"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector">[docs]</a><span class="k">class</span> <span class="nc">GrainInspector</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class containing the interactive grain inspector tool for slip trace analysis</span>
+<span class="sd">    and relative displacement ratio analysis.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">currMap</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
         <span class="c1"># Initialise some values</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grainID</span> <span class="o">=</span> <span class="mi">0</span>
@@ -74,8 +79,9 @@
         <span class="c1"># Draw the figure</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
 
-<div class="viewcode-block" id="GrainInspector.draw"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.draw">[docs]</a>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Draw the main window, buttons, text boxes and axes </span>
+<div class="viewcode-block" id="GrainInspector.draw"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.draw">[docs]</a>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Draw the main window, buttons, text boxes and axes.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Plot window</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">plot</span> <span class="o">=</span> <span class="n">Plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">makeInteractive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="mi">8</span><span class="p">),</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Grain Inspector&#39;</span><span class="p">)</span>
@@ -107,13 +113,14 @@
         <span class="c1"># Draw the stuff that will need to be redrawn often in a seperate function</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="GrainInspector.gotoGrain"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.gotoGrain">[docs]</a>    <span class="k">def</span> <span class="nf">gotoGrain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Go to a specified grain ID</span>
+<div class="viewcode-block" id="GrainInspector.gotoGrain"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.gotoGrain">[docs]</a>    <span class="k">def</span> <span class="nf">gotoGrain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Go to a specified grain ID.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        event: int</span>
-<span class="sd">            Grain ID to go to</span>
+<span class="sd">            Grain ID to go to.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1">## Go to grain ID specified in event</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grainID</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
@@ -122,13 +129,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">currEBSDGrain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">ebsdGrain</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="GrainInspector.saveLine"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.saveLine">[docs]</a>    <span class="k">def</span> <span class="nf">saveLine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;  Save the start point, end point and angle of drawn line into the grain</span>
+<div class="viewcode-block" id="GrainInspector.saveLine"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.saveLine">[docs]</a>    <span class="k">def</span> <span class="nf">saveLine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;  Save the start point, end point and angle of drawn line into the grain.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        event: array</span>
-<span class="sd">            Start x, start y, end x, end y point of line passed from drawn line</span>
+<span class="sd">        event: numpy.ndarray</span>
+<span class="sd">            Start x, start y, end x, end y point of line passed from drawn line.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1">## Save lines and angles into grain</span>
         <span class="c1"># Get angle of lines</span>
@@ -144,9 +152,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">groupLines</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
         
-<div class="viewcode-block" id="GrainInspector.groupLines"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.groupLines">[docs]</a>    <span class="k">def</span> <span class="nf">groupLines</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;  Group the lines drawn in the current grain item using a mean shift algorithm, </span>
-<span class="sd">        save the average angle and detect the active slip planes</span>
+<div class="viewcode-block" id="GrainInspector.groupLines"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.groupLines">[docs]</a>    <span class="k">def</span> <span class="nf">groupLines</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Group the lines drawn in the current grain item using a mean shift algorithm,</span>
+<span class="sd">        save the average angle and detect the active slip planes.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">angles</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span><span class="p">]</span>
@@ -179,29 +189,32 @@
             <span class="n">group</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">activePlanes</span>
             <span class="n">group</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">deviation</span></div>
             
-<div class="viewcode-block" id="GrainInspector.clearAllLines"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.clearAllLines">[docs]</a>    <span class="k">def</span> <span class="nf">clearAllLines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Clear all lines in a given grain</span>
+<div class="viewcode-block" id="GrainInspector.clearAllLines"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.clearAllLines">[docs]</a>    <span class="k">def</span> <span class="nf">clearAllLines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Clear all lines in a given grain.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">groupsList</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="GrainInspector.removeLine"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.removeLine">[docs]</a>    <span class="k">def</span> <span class="nf">removeLine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;  Remove single line [runs after submitting a text box]</span>
+<div class="viewcode-block" id="GrainInspector.removeLine"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.removeLine">[docs]</a>    <span class="k">def</span> <span class="nf">removeLine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;  Remove single line [runs after submitting a text box].</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        event: int</span>
-<span class="sd">            Line ID to remove</span>
+<span class="sd">            Line ID to remove.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1">## Remove single line</span>
         <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="p">)]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="GrainInspector.redraw"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.redraw">[docs]</a>    <span class="k">def</span> <span class="nf">redraw</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="GrainInspector.redraw"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.redraw">[docs]</a>    <span class="k">def</span> <span class="nf">redraw</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Draw items which need to be redrawn often (i.e. when changing grain ID)</span>
+<span class="sd">        Draw items which need to be redrawn often (i.e. when changing grain ID).</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Plot max shear for grain</span>
@@ -262,21 +275,23 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">groupsInfoAx</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">groupsInfoAx</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">groupsTxt</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="GrainInspector.runRDRGroup"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.runRDRGroup">[docs]</a>    <span class="k">def</span> <span class="nf">runRDRGroup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;  Run RDR on a specified group, upon submitting a text box</span>
+<div class="viewcode-block" id="GrainInspector.runRDRGroup"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.runRDRGroup">[docs]</a>    <span class="k">def</span> <span class="nf">runRDRGroup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;  Run RDR on a specified group, upon submitting a text box.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        event: int</span>
-<span class="sd">            Group ID specified from text box</span>
+<span class="sd">            Group ID specified from text box.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1">## Run RDR for group of lines</span>
         <span class="k">if</span> <span class="n">event</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">calcRDR</span><span class="p">(</span><span class="n">grain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">RDRGroupBox</span><span class="o">.</span><span class="n">set_val</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span></div>
         
-<div class="viewcode-block" id="GrainInspector.batchRunSTA"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.batchRunSTA">[docs]</a>    <span class="k">def</span> <span class="nf">batchRunSTA</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;  Run slip trace analysis on all grains which hve slip trace lines drawn</span>
+<div class="viewcode-block" id="GrainInspector.batchRunSTA"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.batchRunSTA">[docs]</a>    <span class="k">def</span> <span class="nf">batchRunSTA</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;  Run slip trace analysis on all grains which hve slip trace lines drawn.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Print header</span>
@@ -294,19 +309,20 @@
                                                     <span class="n">group</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">group</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">group</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">group</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="mi">3</span><span class="p">),</span> <span class="n">group</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
                     <span class="nb">print</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="GrainInspector.calcRDR"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.calcRDR">[docs]</a>    <span class="k">def</span> <span class="nf">calcRDR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grain</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">showPlot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mf">2.5</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Calculates the relative displacement ratio for a given grain and group</span>
+<div class="viewcode-block" id="GrainInspector.calcRDR"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.calcRDR">[docs]</a>    <span class="k">def</span> <span class="nf">calcRDR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grain</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">showPlot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mf">2.5</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Calculates the relative displacement ratio for a given grain and group.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        grain: int</span>
-<span class="sd">            DIC grain ID to run RDR on</span>
+<span class="sd">            DIC grain ID to run RDR on.</span>
 <span class="sd">        group: int</span>
-<span class="sd">            group ID to run RDR on</span>
+<span class="sd">            group ID to run RDR on.</span>
 <span class="sd">        showPlot: bool</span>
-<span class="sd">            if True, show plot window</span>
+<span class="sd">            if True, show plot window.</span>
 <span class="sd">        length: int</span>
-<span class="sd">            length of perpendicular lines used for RDR</span>
+<span class="sd">            length of perpendicular lines used for RDR.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         
         <span class="n">ulist</span><span class="o">=</span><span class="p">[];</span> <span class="n">vlist</span><span class="o">=</span><span class="p">[];</span> <span class="n">allxlist</span> <span class="o">=</span> <span class="p">[];</span> <span class="n">allylist</span> <span class="o">=</span> <span class="p">[];</span>      
@@ -374,26 +390,27 @@
 
         <span class="k">if</span> <span class="n">showPlot</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotRDR</span><span class="p">(</span><span class="n">grain</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">ulist</span><span class="p">,</span> <span class="n">vlist</span><span class="p">,</span> <span class="n">allxlist</span><span class="p">,</span> <span class="n">allylist</span><span class="p">,</span> <span class="n">linRegResults</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="GrainInspector.plotRDR"><a class="viewcode-back" href="../../defdap.inspector.html#defdap.inspector.GrainInspector.plotRDR">[docs]</a>    <span class="k">def</span> <span class="nf">plotRDR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grain</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">ulist</span><span class="p">,</span> <span class="n">vlist</span><span class="p">,</span> <span class="n">allxlist</span><span class="p">,</span> <span class="n">allylist</span><span class="p">,</span> <span class="n">linRegResults</span><span class="p">):</span>
+<div class="viewcode-block" id="GrainInspector.plotRDR"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.plotRDR">[docs]</a>    <span class="k">def</span> <span class="nf">plotRDR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grain</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">ulist</span><span class="p">,</span> <span class="n">vlist</span><span class="p">,</span> <span class="n">allxlist</span><span class="p">,</span> <span class="n">allylist</span><span class="p">,</span> <span class="n">linRegResults</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Plot RDR figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered</span>
+<span class="sd">        Plot RDR figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered.</span>
 <span class="sd">        </span>
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        grain: int</span>
-<span class="sd">            DIC grain to plot</span>
+<span class="sd">            DIC grain to plot.</span>
 <span class="sd">        group: int</span>
-<span class="sd">            Group ID to plot</span>
+<span class="sd">            Group ID to plot.</span>
 <span class="sd">        ulist: list</span>
-<span class="sd">            List of ucentered values</span>
+<span class="sd">            List of ucentered values.</span>
 <span class="sd">        vlist: list</span>
-<span class="sd">            List of vcentered values</span>
+<span class="sd">            List of vcentered values.</span>
 <span class="sd">        allxlist: list</span>
-<span class="sd">            List of all x values</span>
+<span class="sd">            List of all x values.</span>
 <span class="sd">        allylist: list</span>
-<span class="sd">            List of all y values</span>
-<span class="sd">        linRegResults: array</span>
-<span class="sd">            Results from linear regression of ucentered vs vcentered</span>
+<span class="sd">            List of all y values.</span>
+<span class="sd">        linRegResults: numpy.ndarray, {slope, intercept, rvalue, pvalue, stderr}</span>
+<span class="sd">            Results from linear regression of ucentered vs vcentered.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Draw window and axes</span>

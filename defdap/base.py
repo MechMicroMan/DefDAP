@@ -1,4 +1,4 @@
-# Copyright 2019 Mechanics of Microstructures Group
+# Copyright 2020 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,9 @@ from defdap.utils import reportProgress
 
 
 class Map(object):
-
+    """
+    Base class for a map.
+    """
     def __init__(self):
         self.grainList = None
         self.homogPoints = []
@@ -76,14 +78,14 @@ class Map(object):
         ----------
         dilateBoundaries : bool, optional
             Set to true to dilate boundaries.
-        ax : matplotlib.pyplot.axis, optional
+        ax : matplotlib.axes.Axes, optional
             axis to plot on, if not provided the current active axis is used.
         kwargs : dict
             Keyword arguments to pass to matplotlib.
 
         Returns
         -------
-        defdap.plotting.MapPlot object
+        defdap.plotting.MapPlot
 
         """
 
@@ -130,7 +132,7 @@ class Map(object):
         ----------
         event :
             Click event.
-        plot : defdap.plotting.Plot object
+        plot : defdap.plotting.Plot
             Plot to capture clicks from.
         displaySelected : bool
             If true, plot the selected grain alone in pop-out window.
@@ -163,7 +165,7 @@ class Map(object):
         ----------
         binSize : int, optional
             Binning applied to image, if applicable.
-        points : np.array, optional
+        points : numpy.ndarray, optional
             Array of (x,y) homologous points to set explicitly.
         kwargs : dict, optional
             Keyword arguments for matplotlib.
@@ -417,7 +419,7 @@ class Map(object):
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Distance from a grain boundary at each point in map.
 
         """
@@ -497,14 +499,14 @@ class Map(object):
 
         Parameters
         ----------
-        mapData : np.ndarray
+        mapData : numpy.ndarray
             Array of map data to grain average. This must be cropped!
         grainIds : list, optional
             grainIDs to perform operation on, set to -1 for all grains.
 
         Returns
         -------
-        np.array
+        numpy.ndarray
             Array containing the grain average values.
 
         """
@@ -533,13 +535,13 @@ class Map(object):
 
         Parameters
         ----------
-        mapData : np.array, optional
+        mapData : numpy.ndarray, optional
             Array of map data. This must be cropped! You must supply either
             mapData or grainData.
-        grainData : list or np.array, optional
+        grainData : list or numpy.array, optional
             Grain values. This an be a single value per grain or RGB
             values. You must supply either mapData or grainData.
-        grainIds : list of int or int, optional
+        grainIds : list(int) or int, optional
             IDs of grains to plot for. Use -1 for all grains in the map.
         bg : int or real, optional
             Value to fill the background with.
@@ -604,9 +606,9 @@ class Map(object):
 
         Parameters
         ----------
-        mapData : np.array
+        mapData : numpy.ndarray
             Array of map data to grain average. This must be cropped!
-        direction : np.array
+        direction : numpy.ndarray
             Vector of reference direction for the IPF.
         plotColourBar : bool, optional
             Set to False to exclude the colour bar from the plot.
@@ -651,7 +653,9 @@ class Map(object):
 
 
 class Grain(object):
-
+    """
+    Base class for a grain.
+    """
     def __init__(self):
         # list of coords stored as tuples (x, y). These are coords in a
         # cropped image if crop exists.
@@ -724,7 +728,7 @@ class Grain(object):
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Bounding box for grain with np.nan outside the grain and given number within.
 
         """
@@ -743,12 +747,12 @@ class Grain(object):
 
         Parameters
         ----------
-        ax : matplotlib.pyplot.axis
+        ax : matplotlib.axes.Axes
             axis to plot on, if not provided the current active axis is used.
         plotScaleBar : bool
             plots the scale bar on the grain if true.
         kwargs : dict
-            keyword arguments to pass to matplotlib.
+            keyword arguments to pass to plotting.GrainPlot.addMap.
 
         Returns
         -------

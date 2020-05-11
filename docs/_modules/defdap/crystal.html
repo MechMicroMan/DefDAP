@@ -37,7 +37,7 @@
           <div class="body" role="main">
             
   <h1>Source code for defdap.crystal</h1><div class="highlight"><pre>
-<span></span><span class="c1"># Copyright 2019 Mechanics of Microstructures Group</span>
+<span></span><span class="c1"># Copyright 2020 Mechanics of Microstructures Group</span>
 <span class="c1">#    at The University of Manchester</span>
 <span class="c1">#</span>
 <span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -56,8 +56,25 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 
-<div class="viewcode-block" id="SlipSystem"><a class="viewcode-back" href="../../defdap.crystal.html#defdap.crystal.SlipSystem">[docs]</a><span class="k">class</span> <span class="nc">SlipSystem</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="SlipSystem"><a class="viewcode-back" href="../../defdap.html#defdap.crystal.SlipSystem">[docs]</a><span class="k">class</span> <span class="nc">SlipSystem</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class used for defining and performing operations on a slip system.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slipPlane</span><span class="p">,</span> <span class="n">slipDir</span><span class="p">,</span> <span class="n">crystalSym</span><span class="p">,</span> <span class="n">cOverA</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialise a slip system object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        slipPlane: nunpy.ndarray</span>
+<span class="sd">            Slip plane.</span>
+<span class="sd">        slipDir: numpy.ndarray</span>
+<span class="sd">            Slip direction.</span>
+<span class="sd">        crystalSym : str</span>
+<span class="sd">            The crystal symmetry (&quot;cubic&quot; or &quot;hexagonal&quot;).</span>
+<span class="sd">        cOverA : float, optional</span>
+<span class="sd">            C over a ratio for hexagonal crystals.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Currently only for cubic</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span> <span class="o">=</span> <span class="n">crystalSym</span>    <span class="c1"># symmetry of material e.g. &quot;cubic&quot;, &quot;hexagonal&quot;</span>
 
@@ -100,14 +117,38 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">slipPlane</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the slip plane as an array. For example [0, 0, 1].</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Slip plane.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipPlaneOrtho</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">slipDir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the slip direction as an array. For example [0, 0, 1].</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Slip direction.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipDirOrtho</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">slipPlaneLabel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the slip plane label. For example &#39;(111)&#39;.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            Slip plane label.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">slipPlane</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipPlaneMiller</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span> <span class="o">==</span> <span class="s2">&quot;hexagonal&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="s2">&quot;(</span><span class="si">{:d}{:d}{:d}{:d}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">slipPlane</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">slipPlane</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">slipPlane</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">slipPlane</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
@@ -116,33 +157,48 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">slipDirLabel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the slip direction label. For example &#39;[110]&#39;.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            Slip direction label.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">slipDir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slipDirMiller</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span> <span class="o">==</span> <span class="s2">&quot;hexagonal&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="s2">&quot;[</span><span class="si">{:d}{:d}{:d}{:d}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">slipDir</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">slipDir</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">slipDir</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">slipDir</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="s2">&quot;[</span><span class="si">{:d}{:d}{:d}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">slipDir</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">slipDir</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">slipDir</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
 
-<div class="viewcode-block" id="SlipSystem.loadSlipSystems"><a class="viewcode-back" href="../../defdap.crystal.html#defdap.crystal.SlipSystem.loadSlipSystems">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="SlipSystem.loadSlipSystems"><a class="viewcode-back" href="../../defdap.html#defdap.crystal.SlipSystem.loadSlipSystems">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">loadSlipSystems</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">crystalSym</span><span class="p">,</span> <span class="n">cOverA</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Load in slip systems from file. 3 integers for slip plane</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load in slip systems from file. 3 integers for slip plane</span>
 <span class="sd">        normal and 3 for slip direction. Returns a list of list of slip</span>
 <span class="sd">        systems grouped by slip plane.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            name (string): name of the slip system file (without file</span>
-<span class="sd">            extension) stored in the defdap install dir or path to a file</span>
-<span class="sd">            crystalSym (string): The crystal symmetry (&quot;cubic&quot; or &quot;hexagonal&quot;)</span>
-<span class="sd">            cOverA (float, optional): c over a ratio for hexagonal crystals</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Name of the slip system file (without file extension)</span>
+<span class="sd">            stored in the defdap install dir or path to a file.</span>
+<span class="sd">        crystalSym : str</span>
+<span class="sd">            The crystal symmetry (&quot;cubic&quot; or &quot;hexagonal&quot;).</span>
+<span class="sd">        cOverA : float, optional</span>
+<span class="sd">            C over a ratio for hexagonal crystals.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            list(list(SlipSystem)): A list of list of slip systems</span>
-<span class="sd">            grouped slip plane.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list(list(SlipSystem))</span>
+<span class="sd">            A list of list of slip systems grouped slip plane.</span>
 
-<span class="sd">        Raises:</span>
-<span class="sd">            IOError: Raised if not 6/8 integers per line</span>
+<span class="sd">        Raises</span>
+<span class="sd">        -------</span>
+<span class="sd">        IOError</span>
+<span class="sd">            Raised if not 6/8 integers per line.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
-
-
         <span class="c1"># try and load from package dir first</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">fileExt</span> <span class="o">=</span> <span class="s2">&quot;.txt&quot;</span>
@@ -154,7 +210,7 @@
             <span class="n">slipSystemFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
 
         <span class="k">except</span><span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">):</span>
-            <span class="c1"># if it doesn&#39;t exist in the package dir try and load the path</span>
+            <span class="c1"># if it doesn&#39;t exist in the package dir, try and load the path</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">filepath</span> <span class="o">=</span> <span class="n">name</span>
 
@@ -183,20 +239,25 @@
                 <span class="n">crystalSym</span><span class="p">,</span> <span class="n">cOverA</span><span class="o">=</span><span class="n">cOverA</span>
             <span class="p">))</span>
 
-        <span class="c1"># Group slip sytems by slip plane</span>
+        <span class="c1"># Group slip systems by slip plane</span>
         <span class="n">groupedSlipSystems</span> <span class="o">=</span> <span class="n">SlipSystem</span><span class="o">.</span><span class="n">groupSlipSystems</span><span class="p">(</span><span class="n">slipSystems</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">groupedSlipSystems</span><span class="p">,</span> <span class="n">slipTraceColours</span></div>
 
-<div class="viewcode-block" id="SlipSystem.groupSlipSystems"><a class="viewcode-back" href="../../defdap.crystal.html#defdap.crystal.SlipSystem.groupSlipSystems">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="SlipSystem.groupSlipSystems"><a class="viewcode-back" href="../../defdap.html#defdap.crystal.SlipSystem.groupSlipSystems">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">groupSlipSystems</span><span class="p">(</span><span class="n">slipSystems</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Groups slip systems by there slip plane.</span>
+        <span class="sd">&quot;&quot;&quot;Groups slip systems by their slip plane.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            slipSytems (list(SlipSystem)): A list of slip systems</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        slipSytems : (list(SlipSystem))</span>
+<span class="sd">            A list of slip systems.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            list(list(SlipSystem)): A list of list of slip systems grouped slip plane.</span>
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        list(list(SlipSystem))</span>
+<span class="sd">            A list of list of slip systems grouped slip plane.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">distSlipSystems</span> <span class="o">=</span> <span class="p">[</span><span class="n">slipSystems</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
         <span class="n">groupedSlipSystems</span> <span class="o">=</span> <span class="p">[[</span><span class="n">slipSystems</span><span class="p">[</span><span class="mi">0</span><span class="p">]]]</span>
@@ -213,10 +274,30 @@
 
         <span class="k">return</span> <span class="n">groupedSlipSystems</span></div>
 
-<div class="viewcode-block" id="SlipSystem.lMatrix"><a class="viewcode-back" href="../../defdap.crystal.html#defdap.crystal.SlipSystem.lMatrix">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="SlipSystem.lMatrix"><a class="viewcode-back" href="../../defdap.html#defdap.crystal.SlipSystem.lMatrix">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">lMatrix</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">gamma</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Construct L matrix based on Page 22 of</span>
-<span class="sd">        Randle and Engle - Introduction to texture analysis&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Construct l matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        a : float</span>
+<span class="sd">        b : float</span>
+<span class="sd">        c : float</span>
+<span class="sd">        alpha : float</span>
+<span class="sd">        beta : float</span>
+<span class="sd">        gamma : float</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            l matrix.</span>
+
+<span class="sd">        References</span>
+<span class="sd">        -------</span>
+<span class="sd">        based on Page 22 of</span>
+<span class="sd">        Randle and Engle - Introduction To Texture Analysis</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">lMatrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
 
         <span class="n">cosAlpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span>
@@ -251,10 +332,25 @@
 
         <span class="k">return</span> <span class="n">lMatrix</span></div>
 
-<div class="viewcode-block" id="SlipSystem.qMatrix"><a class="viewcode-back" href="../../defdap.crystal.html#defdap.crystal.SlipSystem.qMatrix">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="SlipSystem.qMatrix"><a class="viewcode-back" href="../../defdap.html#defdap.crystal.SlipSystem.qMatrix">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">qMatrix</span><span class="p">(</span><span class="n">lMatrix</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Construct matrix of reciprocal lattice vectors to transform plane normals</span>
-<span class="sd">        See C. T. Young and J. L. Lytton, J. Appl. Phys., vol. 43, no. 4, pp. 1408–1417, 1972.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Construct matrix of reciprocal lattice vectors to transform plane normals.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        lMatrix : numpy.ndarray</span>
+<span class="sd">            l matrix.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            q matrix.</span>
+
+<span class="sd">        References</span>
+<span class="sd">        -------</span>
+<span class="sd">        C. T. Young and J. L. Lytton, J. Appl. Phys., vol. 43, no. 4, pp. 1408–1417, 1972.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">a</span> <span class="o">=</span> <span class="n">lMatrix</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
         <span class="n">b</span> <span class="o">=</span> <span class="n">lMatrix</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
         <span class="n">c</span> <span class="o">=</span> <span class="n">lMatrix</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
