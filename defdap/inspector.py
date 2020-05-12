@@ -99,11 +99,11 @@ class GrainInspector:
             Start x, start y, end x, end y point of line passed from drawn line.
 
         """
-        ## Save lines and angles into grain
         # Get angle of lines
-        lineAngle = 270-np.rad2deg(np.arctan2(self.drawnLine.points[3]-self.drawnLine.points[1], 
+        lineAngle = 90-np.rad2deg(np.arctan2(self.drawnLine.points[3]-self.drawnLine.points[1], 
                                               self.drawnLine.points[2]-self.drawnLine.points[0]))
         if lineAngle > 180: lineAngle -= 180
+        elif lineAngle < 0: lineAngle += 180
         #lineAngle += self.currMap.ebsdTransform.rotation*-180/np.pi
             
         # Save drawn line to the DIC grain
@@ -119,7 +119,6 @@ class GrainInspector:
         save the average angle and detect the active slip planes.
 
         """
-
         angles = [x[1] for x in self.currDICGrain.pointsList]
         # For single line, don't group
         if len(angles) == 1:
