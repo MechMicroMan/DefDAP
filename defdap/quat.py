@@ -792,7 +792,7 @@ class Quat(object):
         numQuats = len(quats)
 
         alphaFund, betaFund = Quat.calcFundDirs(
-            quats, direction, symGroup, dtype=np.float
+            quats, direction, symGroup, dtype=np.float32
         )
 
         # revert to cartesians
@@ -829,11 +829,11 @@ class Quat(object):
         )
         print(np.min(np.einsum("ij,ij->i", dirvec, Rintersect)))
         print(np.max(np.einsum("ij,ij->i", dirvec, Rintersect)))
-        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Rintersect))
+        temp = np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Rintersect), -1, 1))
         Rintersect[temp > (np.pi / 2), :] *= -1
         rgb[:, 0] = np.divide(
-            np.arccos(np.einsum("ij,ij->i", dirvec, Rintersect)),
-            np.arccos(np.einsum("ij,ij->i", rvect, Rintersect))
+            np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Rintersect), -1, 1)),
+            np.arccos(np.clip(np.einsum("ij,ij->i", rvect, Rintersect), -1, 1))
         )
 
         # Green Component
@@ -848,11 +848,11 @@ class Quat(object):
             np.repeat(NORM[NORM != 0][:, np.newaxis], 3, axis=1)
         )
 
-        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Gintersect))
+        temp = np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Gintersect), -1, 1))
         Gintersect[temp > (np.pi / 2), :] *= -1
         rgb[:, 1] = np.divide(
-            np.arccos(np.einsum("ij,ij->i", dirvec, Gintersect)),
-            np.arccos(np.einsum("ij,ij->i", gvect, Gintersect))
+            np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Gintersect), -1, 1)),
+            np.arccos(np.clip(np.einsum("ij,ij->i", gvect, Gintersect), -1, 1))
         )
 
         # Blue Component
@@ -867,11 +867,11 @@ class Quat(object):
             np.repeat(NORM[NORM != 0][:, np.newaxis], 3, axis=1)
         )
 
-        temp = np.arccos(np.einsum("ij,ij->i", dirvec, Bintersect))
+        temp = np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Bintersect), -1, 1))
         Bintersect[temp > (np.pi / 2), :] *= -1
         rgb[:, 2] = np.divide(
-            np.arccos(np.einsum("ij,ij->i", dirvec, Bintersect)),
-            np.arccos(np.einsum("ij,ij->i", bvect, Bintersect))
+            np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Bintersect), -1, 1)),
+            np.arccos(np.clip(np.einsum("ij,ij->i", bvect, Bintersect), -1, 1))
         )
         rgb = np.divide(
             rgb,
