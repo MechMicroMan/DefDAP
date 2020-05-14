@@ -308,10 +308,10 @@ class Map(base.Map):
         )
         
         # Make non-indexed points NaN
-        IPFcolours=np.where(np.tile(self.phaseArray.flatten(), (3,1)).transpose()==0, np.nan, IPFcolours)
+        IPFcolours=np.where(np.tile(self.phaseArray.flatten()==0, (3,1)), np.nan, IPFcolours)
 
         # reshape back to map shape array
-        IPFcolours = np.reshape(IPFcolours, (self.yDim, self.xDim, 3))
+        IPFcolours = np.reshape(IPFcolours.T, (self.yDim, self.xDim, 3))
 
         plot = MapPlot.create(self, IPFcolours, **plotParams)
 

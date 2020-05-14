@@ -635,8 +635,7 @@ class Quat(object):
         quatComps = np.empty((len(syms), 4, len(quats)), dtype=dtype)
 
         # store quat components in array
-        for i, quat in enumerate(quats):
-            quatComps[0, :, i] = quat.quatCoef
+        quatComps[0, :, :] = np.asarray([quat.quatCoef for quat in quats]).T
 
         # calculate symmetrical equivalents
         for i, sym in enumerate(syms[1:], start=1):
@@ -738,11 +737,11 @@ class Quat(object):
 
         Parameters
         ----------
-        x : float
+        x : numpy.ndarray(float)
             x coordinate.
-        y : float
+        y : numpy.ndarray(float)
             y coordinate.
-        z : float
+        z : numpy.ndarray(float)
             z coordinate.
 
         Returns
@@ -751,7 +750,6 @@ class Quat(object):
             inclination angle and azimuthal angle (around z axis from x in anticlockwise as per ISO).
 
         """
-
         mod = np.sqrt(x**2 + y**2 + z**2)
         x = x / mod
         y = y / mod
@@ -763,7 +761,7 @@ class Quat(object):
         return alpha, beta
 
     @staticmethod
-    def calcIPFcolours(quats, direction, symGroup):
+    def calcIPFcolours(quats, direction, symGroup, dtype=np.float32):
         """
         Calculate the RGB colours, based on the location of the given quats
         on the fundamental region of the IPF for the sample direction specified.
@@ -776,10 +774,12 @@ class Quat(object):
             Direction in sample space.
         symGroup : str
             Crystal type (cubic, hexagonal).
+        dtype: numpy.dtype
+            Data type to use for calculation.
 
         Returns
         -------
-        rgb : numpy.ndarray
+        numpy.ndarray, shape (3, numQuats)
             Array of rgb colours for each quat.
 
         References
@@ -792,91 +792,75 @@ class Quat(object):
         numQuats = len(quats)
 
         alphaFund, betaFund = Quat.calcFundDirs(
-            quats, direction, symGroup, dtype=np.float32
+            quats, direction, symGroup, dtype=dtype
         )
 
         # revert to cartesians
-        # at some this should be changed to have the quats dimention
-        # last to fit with numpys row major storage direction vector in
-        # cartesians. Changes this to float32 causes errors in arccos,
-        # so leave to default to 64
-        dirvec = np.empty((numQuats, 3))
-        dirvec[:, 0] = np.sin(alphaFund) * np.cos(betaFund)
-        dirvec[:, 1] = np.sin(alphaFund) * np.sin(betaFund)
-        dirvec[:, 2] = np.cos(alphaFund)
+        dirvec = np.empty((3, numQuats), dtype=dtype)
+        dirvec[0, :] = np.sin(alphaFund) * np.cos(betaFund)
+        dirvec[1, :] = np.sin(alphaFund) * np.sin(betaFund)
+        dirvec[2, :] = np.cos(alphaFund)
 
         if symGroup == 'cubic':
-            poleDirections = np.array([[0, 0, 1], [1, 0, 1]/np.sqrt(2), [1, 1, 1]/np.sqrt(3)])
+            poleDirections = np.array([[0, 0, 1], 
+                                        [1, 0, 1]/np.sqrt(2), 
+                                        [1, 1, 1]/np.sqrt(3)], dtype=dtype)
         if symGroup == 'hexagonal':
-            poleDirections = np.array([[0, 0, 1], [np.sqrt(3), 1, 0]/np.sqrt(4), [1, 0, 0]])
+            poleDirections = np.array([[0, 0, 1], 
+                                        [np.sqrt(3), 1, 0]/np.sqrt(4), 
+                                        [1, 0, 0]], dtype=dtype)
 
-        rvect = np.tile(poleDirections[0], (numQuats,1))
-        gvect = np.tile(poleDirections[1], (numQuats,1))
-        bvect = np.tile(poleDirections[2], (numQuats,1))
+        rvect = np.broadcast_to(poleDirections[0].reshape((-1, 1)), (3, numQuats))
+        gvect = np.broadcast_to(poleDirections[1].reshape((-1, 1)), (3, numQuats))
+        bvect = np.broadcast_to(poleDirections[2].reshape((-1, 1)), (3, numQuats))
 
-        rgb = np.zeros((numQuats, 3))
+        rgb = np.zeros((3, numQuats), dtype=dtype)
 
         # Red Component
-        RDirPlane = np.cross(dirvec, rvect)
-        GBplane = np.cross(bvect, gvect)
-        Rintersect = np.cross(RDirPlane, GBplane)
-        NORM = np.sqrt(np.power(Rintersect[:, 0], 2) +
-                       np.power(Rintersect[:, 1], 2) +
-                       np.power(Rintersect[:, 2], 2))
-        Rintersect[NORM != 0, :] = np.divide(
-            Rintersect[NORM != 0, :],
-            np.repeat(NORM[NORM != 0][:, np.newaxis], 3, axis=1)
-        )
-        print(np.min(np.einsum("ij,ij->i", dirvec, Rintersect)))
-        print(np.max(np.einsum("ij,ij->i", dirvec, Rintersect)))
-        temp = np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Rintersect), -1, 1))
-        Rintersect[temp > (np.pi / 2), :] *= -1
-        rgb[:, 0] = np.divide(
-            np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Rintersect), -1, 1)),
-            np.arccos(np.clip(np.einsum("ij,ij->i", rvect, Rintersect), -1, 1))
+        RDirPlane = np.cross(dirvec, rvect, axis=0)
+        GBplane = np.cross(bvect, gvect, axis=0)
+        Rintersect = np.cross(RDirPlane, GBplane, axis=0)
+        NORM = np.linalg.norm(Rintersect, axis=0, keepdims=True)
+        NORM[NORM == 0] = 1       #Prevent division by zero
+        Rintersect /= NORM
+
+        temp = np.arccos(np.clip(np.einsum("ij,ij->j", dirvec, Rintersect), -1, 1))
+        Rintersect[:, temp > (np.pi / 2)] *= -1
+        rgb[0, :] = np.divide(
+            np.arccos(np.clip(np.einsum("ij,ij->j", dirvec, Rintersect), -1, 1)),
+            np.arccos(np.clip(np.einsum("ij,ij->j", rvect, Rintersect), -1, 1))
         )
 
         # Green Component
-        GDirPlane = np.cross(dirvec, gvect)
-        RBplane = np.cross(rvect, bvect)
-        Gintersect = np.cross(GDirPlane, RBplane)
-        NORM = np.sqrt(np.power(Gintersect[:, 0], 2) +
-                       np.power(Gintersect[:, 1], 2) +
-                       np.power(Gintersect[:, 2], 2))
-        Gintersect[NORM != 0, :] = np.divide(
-            Gintersect[NORM != 0, :],
-            np.repeat(NORM[NORM != 0][:, np.newaxis], 3, axis=1)
-        )
+        GDirPlane = np.cross(dirvec, gvect, axis=0)
+        RBplane = np.cross(rvect, bvect, axis=0)
+        Gintersect = np.cross(GDirPlane, RBplane, axis=0)
+        NORM = np.linalg.norm(Gintersect, axis=0, keepdims=True)
+        NORM[NORM == 0] = 1       #Prevent division by zero
+        Gintersect /= NORM
 
-        temp = np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Gintersect), -1, 1))
-        Gintersect[temp > (np.pi / 2), :] *= -1
-        rgb[:, 1] = np.divide(
-            np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Gintersect), -1, 1)),
-            np.arccos(np.clip(np.einsum("ij,ij->i", gvect, Gintersect), -1, 1))
+        temp = np.arccos(np.clip(np.einsum("ij,ij->j", dirvec, Gintersect), -1, 1))
+        Gintersect[:, temp > (np.pi / 2)] *= -1
+        rgb[1, :] = np.divide(
+            np.arccos(np.clip(np.einsum("ij,ij->j", dirvec, Gintersect), -1, 1)),
+            np.arccos(np.clip(np.einsum("ij,ij->j", gvect, Gintersect), -1, 1))
         )
 
         # Blue Component
-        BDirPlane = np.cross(dirvec, bvect)
-        RGplane = np.cross(gvect, rvect)
-        Bintersect = np.cross(BDirPlane, RGplane)
-        NORM = np.sqrt(np.power(Bintersect[:, 0], 2) +
-                       np.power(Bintersect[:, 1], 2) +
-                       np.power(Bintersect[:, 2], 2))
-        Bintersect[NORM != 0, :] = np.divide(
-            Bintersect[NORM != 0, :],
-            np.repeat(NORM[NORM != 0][:, np.newaxis], 3, axis=1)
-        )
+        BDirPlane = np.cross(dirvec, bvect, axis=0)
+        RGplane = np.cross(gvect, rvect, axis=0)
+        Bintersect = np.cross(BDirPlane, RGplane, axis=0)
+        NORM = np.linalg.norm(Bintersect, axis=0, keepdims=True)
+        NORM[NORM == 0] = 1       #Prevent division by zero
+        Bintersect /= NORM
 
-        temp = np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Bintersect), -1, 1))
-        Bintersect[temp > (np.pi / 2), :] *= -1
-        rgb[:, 2] = np.divide(
-            np.arccos(np.clip(np.einsum("ij,ij->i", dirvec, Bintersect), -1, 1)),
-            np.arccos(np.clip(np.einsum("ij,ij->i", bvect, Bintersect), -1, 1))
+        temp = np.arccos(np.clip(np.einsum("ij,ij->j", dirvec, Bintersect), -1, 1))
+        Bintersect[:, temp > (np.pi / 2)] *= -1
+        rgb[2, :] = np.divide(
+            np.arccos(np.clip(np.einsum("ij,ij->j", dirvec, Bintersect), -1, 1)),
+            np.arccos(np.clip(np.einsum("ij,ij->j", bvect, Bintersect), -1, 1))
         )
-        rgb = np.divide(
-            rgb,
-            np.repeat(np.amax(rgb, axis=1)[:, np.newaxis], 3, axis=1)
-        )
+        rgb /= np.amax(rgb, axis=0)
 
         return rgb
 
@@ -972,7 +956,7 @@ class Quat(object):
 
             # if less than 3 left need to expand search slighly to
             # catch edge cases
-            if np.sum(np.sum(trialPoles, axis=0) < 3) > 0:
+            if np.any(np.sum(trialPoles, axis=0) < 3):
                 deltaBeta = 1e-8
                 trialPoles = np.logical_and(beta >= -deltaBeta,
                                             beta <= np.pi / 4 + deltaBeta)
@@ -989,7 +973,7 @@ class Quat(object):
             trialPoles = np.logical_and(beta >= 0, beta <= np.pi / 6)
             # if less than 1 left need to expand search slighly to
             # catch edge cases
-            if np.sum(np.sum(trialPoles, axis=0) < 1) > 0:
+            if np.any(np.sum(trialPoles, axis=0) < 1):
                 deltaBeta = 1e-8
                 trialPoles = np.logical_and(beta >= -deltaBeta,
                                             beta <= np.pi / 6 + deltaBeta)
