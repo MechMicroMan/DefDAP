@@ -37,7 +37,7 @@
           <div class="body" role="main">
             
   <h1>Source code for defdap.hrdic</h1><div class="highlight"><pre>
-<span></span><span class="c1"># Copyright 2019 Mechanics of Microstructures Group</span>
+<span></span><span class="c1"># Copyright 2020 Mechanics of Microstructures Group</span>
 <span class="c1">#    at The University of Manchester</span>
 <span class="c1">#</span>
 <span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -72,17 +72,88 @@
 <span class="kn">from</span> <span class="nn">defdap.utils</span> <span class="kn">import</span> <span class="n">reportProgress</span>
 
 
-<div class="viewcode-block" id="Map"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map">[docs]</a><span class="k">class</span> <span class="nc">Map</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Map</span><span class="p">):</span>
+<div class="viewcode-block" id="Map"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map">[docs]</a><span class="k">class</span> <span class="nc">Map</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Map</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Class to encapsulate DIC data and useful analysis and plotting</span>
+<span class="sd">    Class to encapsulate DIC map data and useful analysis and plotting</span>
 <span class="sd">    methods.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    format : str</span>
+<span class="sd">        Software name.</span>
+<span class="sd">    version : str</span>
+<span class="sd">        Software version.</span>
+<span class="sd">    binning : int</span>
+<span class="sd">        Sub-window size in pixels.</span>
+<span class="sd">    xdim : int</span>
+<span class="sd">        Size of map along x (from header).</span>
+<span class="sd">    ydim : int</span>
+<span class="sd">        Size of map along y (from header).</span>
+<span class="sd">    xc : numpy.ndarray</span>
+<span class="sd">        X coordinates.</span>
+<span class="sd">    yc : numpy.ndarray</span>
+<span class="sd">        Y coordinates.</span>
+<span class="sd">    xd : numpy.ndarray</span>
+<span class="sd">        X displacement.</span>
+<span class="sd">    yd : numpy.ndarray</span>
+<span class="sd">        Y displacement.</span>
+<span class="sd">    corrVal : numpy.ndarray</span>
+<span class="sd">        Correlation value.</span>
+<span class="sd">    ebsdMap : defdap.ebsd.Map</span>
+<span class="sd">        EBSD map linked to DIC map.</span>
+<span class="sd">    ebsdTransform : various</span>
+<span class="sd">        Transform from EBSD to DIC coordinates.</span>
+<span class="sd">    ebsdTransformInv : various</span>
+<span class="sd">        Transform from DIC to EBSD coordinates.</span>
+<span class="sd">    currGrainId : int</span>
+<span class="sd">        ID of last selected grain.</span>
+<span class="sd">    ebsdGrainIds : list</span>
+<span class="sd">        EBSD grain IDs corresponding to DIC map grain IDs.</span>
+<span class="sd">    patternImPath : str</span>
+<span class="sd">        Path to BSE image of map.</span>
+<span class="sd">    plotHomog :</span>
+<span class="sd">        Map to use for defining homologous points (defaults to plotMaxShear).</span>
+<span class="sd">    highlightAlpha : float</span>
+<span class="sd">        Alpha (transparency) of grain highlight.</span>
+<span class="sd">    bseScale : float</span>
+<span class="sd">        Size of a pixel in the correlated images.</span>
+<span class="sd">    patScale : float</span>
+<span class="sd">        Size of pixel in loaded pattern relative to pixel size of dic data i.e 1 means they</span>
+<span class="sd">        are the same size and 2 means the pixels in the pattern are half the size of the dic data.</span>
+<span class="sd">    path : str</span>
+<span class="sd">        File path.</span>
+<span class="sd">    fname : str</span>
+<span class="sd">        File name.</span>
+<span class="sd">    xDim : int</span>
+<span class="sd">        Size of map along x (after cropping).</span>
+<span class="sd">    yDim : int</span>
+<span class="sd">        Size of map along y (after cropping).</span>
+<span class="sd">    self.x_map : numpy.ndarray</span>
+<span class="sd">        Map of u displacement component along x.</span>
+<span class="sd">    self.y_map : numpy.ndarray</span>
+<span class="sd">        Map of v displacement component along x.</span>
+<span class="sd">    f11, f22, f12, f21 ; numpy.ndarray</span>
+<span class="sd">        Components of the deformation gradient, where 1=x and 2=y.</span>
+<span class="sd">    e11, e22, e12 : numpy.ndarray</span>
+<span class="sd">        Components of the green strain , where 1=x and 2=y.</span>
+<span class="sd">    eMaxShear : numpy.ndarray</span>
+<span class="sd">        Max shear component np.sqrt(((e11 - e22) / 2.)**2 + e12**2).</span>
+<span class="sd">    cropDists : numpy.ndarray</span>
+<span class="sd">        Crop distances (default all zeros).</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">dataType</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialise class and import DIC data from file</span>
+        <span class="sd">&quot;&quot;&quot;Initialise class and import DIC data from file.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            path(str): Path to file</span>
-<span class="sd">            fname(str): Name of file including extension</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : str</span>
+<span class="sd">            Path to file.</span>
+<span class="sd">        fname : str</span>
+<span class="sd">            Name of file including extension.</span>
+<span class="sd">        dataType : str</span>
+<span class="sd">            Type of data file.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Call base class constructor</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">Map</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -156,14 +227,19 @@
     <span class="k">def</span> <span class="nf">crystalSym</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">crystalSym</span>
 
-<div class="viewcode-block" id="Map.loadData"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.loadData">[docs]</a>    <span class="nd">@reportProgress</span><span class="p">(</span><span class="s2">&quot;loading HRDIC data&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="Map.loadData"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.loadData">[docs]</a>    <span class="nd">@reportProgress</span><span class="p">(</span><span class="s2">&quot;loading HRDIC data&quot;</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">loadData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileDir</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">dataType</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Load DIC data</span>
+        <span class="sd">&quot;&quot;&quot;Load DIC data from file.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            fileDir(str): Path to file</span>
-<span class="sd">            fileName(str): Name of file including extension</span>
-<span class="sd">            dataType(str): Type of data file - see file_readers.py</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            Name of file including extension.</span>
+<span class="sd">        dataType : str,  {&#39;DavisText&#39;}</span>
+<span class="sd">            Type of data file.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">dataType</span> <span class="o">=</span> <span class="s2">&quot;DavisText&quot;</span> <span class="k">if</span> <span class="n">dataType</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dataType</span>
 
@@ -191,13 +267,18 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xdim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ydim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">binning</span>
         <span class="p">)</span></div>
         
-<div class="viewcode-block" id="Map.loadCorrValData"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.loadCorrValData">[docs]</a>    <span class="k">def</span> <span class="nf">loadCorrValData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileDir</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">dataType</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Map.loadCorrValData"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.loadCorrValData">[docs]</a>    <span class="k">def</span> <span class="nf">loadCorrValData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileDir</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">dataType</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Load correlation value for DIC data</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            fileDir(str): Path to file</span>
-<span class="sd">            fileName(str): Name of file including extension</span>
-<span class="sd">            dataType(str): Type of data file - see file_readers.py</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            Name of file including extension.</span>
+<span class="sd">        dataType : str,  {&#39;DavisImage&#39;}</span>
+<span class="sd">            Type of data file.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">dataType</span> <span class="o">=</span> <span class="s2">&quot;DavisImage&quot;</span> <span class="k">if</span> <span class="n">dataType</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dataType</span>
 
@@ -223,37 +304,46 @@
         <span class="n">data_grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">data_map</span><span class="p">,</span> <span class="n">grad_step</span><span class="p">,</span> <span class="n">grad_step</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">data_grad</span>
 
-<div class="viewcode-block" id="Map.retrieveName"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.retrieveName">[docs]</a>    <span class="k">def</span> <span class="nf">retrieveName</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Gets the first name assigned to the a map, as a string</span>
+<div class="viewcode-block" id="Map.retrieveName"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.retrieveName">[docs]</a>    <span class="k">def</span> <span class="nf">retrieveName</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Gets the first name assigned to the a map, as a string</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">fi</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()):</span>
             <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">var_name</span> <span class="k">for</span> <span class="n">var_name</span><span class="p">,</span> <span class="n">var_val</span> <span class="ow">in</span> <span class="n">fi</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">f_locals</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">var_val</span> <span class="ow">is</span> <span class="bp">self</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="Map.setScale"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.setScale">[docs]</a>    <span class="k">def</span> <span class="nf">setScale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">micrometrePerPixel</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Sets the scale of the map</span>
-<span class="sd">        Args:</span>
-<span class="sd">            micrometrePerPixel(float) length of pixel in original BSE image in micrometres</span>
+<div class="viewcode-block" id="Map.setScale"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.setScale">[docs]</a>    <span class="k">def</span> <span class="nf">setScale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">micrometrePerPixel</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sets the scale of the map.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        micrometrePerPixel : float</span>
+<span class="sd">            Length of pixel in original BSE image in micrometres.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">bseScale</span> <span class="o">=</span> <span class="n">micrometrePerPixel</span></div>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the number of micrometers per pixel in the DIC map.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bseScale</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Map scale not set. Set with setScale()&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">bseScale</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">binning</span>
 
-<div class="viewcode-block" id="Map.printStatsTable"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.printStatsTable">[docs]</a>    <span class="k">def</span> <span class="nf">printStatsTable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">percentiles</span><span class="p">,</span> <span class="n">components</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Print out statistics table for a DIC map</span>
+<div class="viewcode-block" id="Map.printStatsTable"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.printStatsTable">[docs]</a>    <span class="k">def</span> <span class="nf">printStatsTable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">percentiles</span><span class="p">,</span> <span class="n">components</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Print out a statistics table for a DIC map</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            percentiles(list) list of percentiles to print (number, Min, Mean or Max)</span>
-<span class="sd">            components(list of str) lis of map components to print i.e. f11, mss</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        percentiles : list</span>
+<span class="sd">            list of percentiles to print (number, Min, Mean or Max).</span>
+<span class="sd">        components : list(str)</span>
+<span class="sd">            list of map components to print i.e. f11, mss.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Print map info</span>
@@ -301,15 +391,22 @@
             <span class="nb">print</span><span class="p">()</span>
         <span class="nb">print</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="Map.setCrop"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.setCrop">[docs]</a>    <span class="k">def</span> <span class="nf">setCrop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xMin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">xMax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">yMin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">yMax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">updateHomogPoints</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set a crop for the DIC map</span>
+<div class="viewcode-block" id="Map.setCrop"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.setCrop">[docs]</a>    <span class="k">def</span> <span class="nf">setCrop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xMin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">xMax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">yMin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">yMax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">updateHomogPoints</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set a crop for the DIC map.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            xMin(int): Distance to crop from left in pixels</span>
-<span class="sd">            xMax(int): Distance to crop from right in pixels</span>
-<span class="sd">            yMin(int): Distance to crop from top in pixels</span>
-<span class="sd">            yMax(int): Distance to crop from bottom in pixels</span>
-<span class="sd">            updateHomogPoints (bool, optional): Change homologous points to reflect crop</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        xMin : int</span>
+<span class="sd">            Distance to crop from left in pixels.</span>
+<span class="sd">        xMax : int</span>
+<span class="sd">            Distance to crop from right in pixels.</span>
+<span class="sd">        yMin : int</span>
+<span class="sd">            Distance to crop from top in pixels.</span>
+<span class="sd">        yMax : int</span>
+<span class="sd">            Distance to crop from bottom in pixels.</span>
+<span class="sd">        updateHomogPoints : bool, optional</span>
+<span class="sd">            If true, change homologous points to reflect crop.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># changes in homog points</span>
         <span class="n">dx</span> <span class="o">=</span> <span class="mi">0</span>
@@ -337,13 +434,16 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">xDim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xdim</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">yDim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ydim</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="Map.crop"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.crop">[docs]</a>    <span class="k">def</span> <span class="nf">crop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapData</span><span class="p">,</span> <span class="n">binned</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Crop given data using crop paramaters stored in map</span>
-<span class="sd">        i.e. cropped_data = DicMap.crop(DicMap.data_to_crop)</span>
+<div class="viewcode-block" id="Map.crop"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.crop">[docs]</a>    <span class="k">def</span> <span class="nf">crop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapData</span><span class="p">,</span> <span class="n">binned</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Crop given data using crop parameters stored in map</span>
+<span class="sd">        i.e. cropped_data = DicMap.crop(DicMap.data_to_crop).</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            mapData(map): map data to crop</span>
-<span class="sd">            binned(boolean): true if mapData is binned i.e. binned BSE pattern</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mapData : numpy.ndarray</span>
+<span class="sd">            Bap data to crop.</span>
+<span class="sd">        binned : bool</span>
+<span class="sd">            True if mapData is binned i.e. binned BSE pattern.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">binned</span><span class="p">:</span>
             <span class="n">multiplier</span> <span class="o">=</span> <span class="mi">1</span>
@@ -358,13 +458,17 @@
 
         <span class="k">return</span> <span class="n">mapData</span><span class="p">[</span><span class="n">minY</span><span class="p">:</span><span class="n">maxY</span><span class="p">,</span> <span class="n">minX</span><span class="p">:</span><span class="n">maxX</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="Map.setHomogPoint"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.setHomogPoint">[docs]</a>    <span class="k">def</span> <span class="nf">setHomogPoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set homologous points</span>
-<span class="sd">        Uses GUI if points is None</span>
+<div class="viewcode-block" id="Map.setHomogPoint"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.setHomogPoint">[docs]</a>    <span class="k">def</span> <span class="nf">setHomogPoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set homologous points. Uses interactive GUI if points is None.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            points(list): homologous points to set</span>
-<span class="sd">            display(string, optional): maxshear or pattern</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        points : list, optional</span>
+<span class="sd">            homologous points to set.</span>
+<span class="sd">        display : string, optional</span>
+<span class="sd">            Use max shear map if set to &#39;maxshear&#39; or pattern if set to &#39;pattern&#39;.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>        
         <span class="k">if</span> <span class="n">points</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">homogPoints</span> <span class="o">=</span> <span class="n">points</span>
@@ -385,13 +489,18 @@
             <span class="c1"># Call set homog points from base class setting the bin size</span>
             <span class="nb">super</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">setHomogPoint</span><span class="p">(</span><span class="n">binSize</span><span class="o">=</span><span class="n">binSize</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="n">points</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Map.linkEbsdMap"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.linkEbsdMap">[docs]</a>    <span class="k">def</span> <span class="nf">linkEbsdMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ebsdMap</span><span class="p">,</span> <span class="n">transformType</span><span class="o">=</span><span class="s2">&quot;affine&quot;</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Calculates the transformation required to align EBSD dataset to DIC</span>
+<div class="viewcode-block" id="Map.linkEbsdMap"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.linkEbsdMap">[docs]</a>    <span class="k">def</span> <span class="nf">linkEbsdMap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ebsdMap</span><span class="p">,</span> <span class="n">transformType</span><span class="o">=</span><span class="s2">&quot;affine&quot;</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculates the transformation required to align EBSD dataset to DIC.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            ebsdMap(ebsd.Map): EBSD map object to link</span>
-<span class="sd">            transformType(string, optional): affine, piecewiseAffine or polynomial</span>
-<span class="sd">            order(int, optional): Order of polynomial transform to apply</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        ebsdMap : defdap.ebsd.Map</span>
+<span class="sd">            EBSD map object to link.</span>
+<span class="sd">        transformType : str, optional</span>
+<span class="sd">            affine, piecewiseAffine or polynomial.</span>
+<span class="sd">        order : int, optional</span>
+<span class="sd">            Order of polynomial transform to apply.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span> <span class="o">=</span> <span class="n">ebsdMap</span>
         <span class="k">if</span> <span class="n">transformType</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;piecewiseaffine&quot;</span><span class="p">:</span>
@@ -429,30 +538,43 @@
             <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">homogPoints</span><span class="p">)</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Map.checkEbsdLinked"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.checkEbsdLinked">[docs]</a>    <span class="k">def</span> <span class="nf">checkEbsdLinked</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Map.checkEbsdLinked"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.checkEbsdLinked">[docs]</a>    <span class="k">def</span> <span class="nf">checkEbsdLinked</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Check if an EBSD map has been linked.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            bool: Returns True if EBSD map linked</span>
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        bool</span>
+<span class="sd">            Returns True if EBSD map linked.</span>
 
-<span class="sd">        Raises:</span>
-<span class="sd">            Exception: if EBSD map not linked</span>
+<span class="sd">        Raises</span>
+<span class="sd">        ----------</span>
+<span class="sd">        Exception</span>
+<span class="sd">            If EBSD map not linked.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;No EBSD map linked.&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">True</span></div>
 
-<div class="viewcode-block" id="Map.warpToDicFrame"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.warpToDicFrame">[docs]</a>    <span class="k">def</span> <span class="nf">warpToDicFrame</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapData</span><span class="p">,</span> <span class="n">cropImage</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">preserve_range</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Warps a map to the DIC frame</span>
+<div class="viewcode-block" id="Map.warpToDicFrame"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.warpToDicFrame">[docs]</a>    <span class="k">def</span> <span class="nf">warpToDicFrame</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapData</span><span class="p">,</span> <span class="n">cropImage</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">preserve_range</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Warps a map to the DIC frame.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            warpedMap: Map (i.e. EBSD map) warped to the DIC frame</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mapData : numpy.ndarray</span>
+<span class="sd">            Data to warp.</span>
+<span class="sd">        cropImage : bool, optional</span>
+<span class="sd">            Crop to size of DIC map if true.</span>
+<span class="sd">        order : int, optional</span>
+<span class="sd">            Order of interpolation (0: Nearest-neighbor, 1: Bi-linear...).</span>
+<span class="sd">        preserve_range: bool, optional</span>
+<span class="sd">            Keep the original range of values.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            mapData(map): data to warp</span>
-<span class="sd">            cropImage(bool, optional):</span>
-<span class="sd">            order(int, optional): order of interpolation (0: Nearest-neighbor, 1: Bi-linear...)</span>
-<span class="sd">            preserve_range(bool, optional): keep the original range of values</span>
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        warpedMap</span>
+<span class="sd">            Map (i.e. EBSD map) warped to the DIC frame.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Check a EBSD map is linked</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">checkEbsdLinked</span><span class="p">()</span>
@@ -488,6 +610,9 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">boundaries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns EBSD map grain boundaries warped to DIC frame.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Check a EBSD map is linked</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">checkEbsdLinked</span><span class="p">()</span>
 
@@ -514,15 +639,37 @@
 
         <span class="k">return</span> <span class="n">boundaries</span>
 
-<div class="viewcode-block" id="Map.setPatternPath"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.setPatternPath">[docs]</a>    <span class="k">def</span> <span class="nf">setPatternPath</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filePath</span><span class="p">,</span> <span class="n">windowSize</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Set path of BSE image of pattern. filePath is relative to</span>
-<span class="sd">        the path set when constructing.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Map.setPatternPath"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.setPatternPath">[docs]</a>    <span class="k">def</span> <span class="nf">setPatternPath</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filePath</span><span class="p">,</span> <span class="n">windowSize</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the path to the image of the pattern.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filePath : str</span>
+<span class="sd">            Path to image.</span>
+<span class="sd">        windowSize : float</span>
+<span class="sd">            Size of pixel in pattern image relative to pixel size of DIC data</span>
+<span class="sd">            i.e 1 means they  are the same size and 2 means the pixels in</span>
+<span class="sd">            the pattern are half the size of the dic data.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
 
         <span class="bp">self</span><span class="o">.</span><span class="n">patternImPath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">+</span> <span class="n">filePath</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">patScale</span> <span class="o">=</span> <span class="n">windowSize</span></div>
 
-<div class="viewcode-block" id="Map.plotPattern"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.plotPattern">[docs]</a>    <span class="k">def</span> <span class="nf">plotPattern</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Plot BSE image of Map. For use with setting homog points&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Map.plotPattern"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotPattern">[docs]</a>    <span class="k">def</span> <span class="nf">plotPattern</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot BSE image of Map. For use with setting homog points.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        kwargs</span>
+<span class="sd">            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        defdap.plotting.MapPlot</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set default plot parameters then update with any input</span>
         <span class="n">plotParams</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s1">&#39;cmap&#39;</span><span class="p">:</span> <span class="s1">&#39;gray&#39;</span>
@@ -544,30 +691,19 @@
 
         <span class="k">return</span> <span class="n">plot</span></div>
 
-<div class="viewcode-block" id="Map.plotMaxShear"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.plotMaxShear">[docs]</a>    <span class="k">def</span> <span class="nf">plotMaxShear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Plot a map of maximum shear strain</span>
+<div class="viewcode-block" id="Map.plotMaxShear"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotMaxShear">[docs]</a>    <span class="k">def</span> <span class="nf">plotMaxShear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot a map of maximum shear strain.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        plotColourBar : bool, optional</span>
-<span class="sd">            Add a colourbar to plot</span>
-<span class="sd">        vmin : float, optional</span>
-<span class="sd">            Minimum value for colour scale, default is max value of data</span>
-<span class="sd">        vmax : float, optional</span>
-<span class="sd">            Maximum value for colour scale, default is min value of data</span>
-<span class="sd">        cmap</span>
-<span class="sd">        plotGBs : bool, optional</span>
-<span class="sd">            Add grain boundaries to the plot</span>
-<span class="sd">        dilateBoundaries : bool, optional</span>
-<span class="sd">        boundaryColour</span>
-<span class="sd">        plotScaleBar : bool, optional</span>
-<span class="sd">            Add scale bar to plot</span>
-<span class="sd">        highlightGrains</span>
+<span class="sd">        kwargs</span>
+<span class="sd">            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.</span>
 
-<span class="sd">        highlightColours</span>
-<span class="sd">        ax</span>
-<span class="sd">        updateCurrent : bool, optional</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        defdap.plotting.MapPlot</span>
+<span class="sd">            Plot containing BSE image of map.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set default plot parameters then update with any input</span>
         <span class="n">plotParams</span> <span class="o">=</span> <span class="p">{</span>
@@ -580,17 +716,16 @@
 
         <span class="k">return</span> <span class="n">plot</span></div>
 
-<div class="viewcode-block" id="Map.plotGrainAvMaxShear"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.plotGrainAvMaxShear">[docs]</a>    <span class="k">def</span> <span class="nf">plotGrainAvMaxShear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="Map.plotGrainAvMaxShear"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.plotGrainAvMaxShear">[docs]</a>    <span class="k">def</span> <span class="nf">plotGrainAvMaxShear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Plot grain map with grains filled with average value of max shear.</span>
 <span class="sd">        This uses the max shear values stored in grain objects, to plot other data</span>
-<span class="sd">        use plotGrainAv().</span>
+<span class="sd">        use :func:`~defdap.hrdic.Map.plotGrainAv`.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            plotGBs (bool, optional): Set to True to draw grain boundaries</span>
-<span class="sd">            plotColourBar (bool, optional): Set to Flase to exclude the colour bar</span>
-<span class="sd">            vmin (float, optional): Minimum value of colour scale</span>
-<span class="sd">            vmax (float, optional): Maximum value for colour scale</span>
-<span class="sd">            cLabel (str, optional): Colour bar label text</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        kwargs</span>
+<span class="sd">            All arguments are passed to :func:`defdap.base.Map.plotGrainDataMap`.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set default plot parameters then update with any input</span>
         <span class="n">plotParams</span> <span class="o">=</span> <span class="p">{</span>
@@ -604,8 +739,16 @@
 
         <span class="k">return</span> <span class="n">plot</span></div>
 
-<div class="viewcode-block" id="Map.findGrains"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.findGrains">[docs]</a>    <span class="nd">@reportProgress</span><span class="p">(</span><span class="s2">&quot;finding grains&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="Map.findGrains"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.findGrains">[docs]</a>    <span class="nd">@reportProgress</span><span class="p">(</span><span class="s2">&quot;finding grains&quot;</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">findGrains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">minGrainSize</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Finds grains in the DIC map.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        minGrainSize : int</span>
+<span class="sd">            Minimum grain area in pixels.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Check a EBSD map is linked</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">checkEbsdLinked</span><span class="p">()</span>
 
@@ -651,7 +794,7 @@
         <span class="n">warpedDicGrains</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">warp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">dicGrains</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdTransformInv</span><span class="p">,</span>
                                   <span class="n">output_shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">yDim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">xDim</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 
-        <span class="c1"># Initalise list to store ID of corresponding grain in EBSD map.</span>
+        <span class="c1"># Initialise list to store ID of corresponding grain in EBSD map.</span>
         <span class="c1"># Also stored in grain objects</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ebsdGrainIds</span> <span class="o">=</span> <span class="p">[]</span>
 
@@ -666,7 +809,23 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">ebsdGrain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">modeId</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">grainList</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">ebsdMap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdMap</span></div>
 
-<div class="viewcode-block" id="Map.floodFill"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.floodFill">[docs]</a>    <span class="k">def</span> <span class="nf">floodFill</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">grainIndex</span><span class="p">):</span>
+<div class="viewcode-block" id="Map.floodFill"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.floodFill">[docs]</a>    <span class="k">def</span> <span class="nf">floodFill</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">grainIndex</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Flood fill algorithm.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        x : int</span>
+<span class="sd">            X coordinate.</span>
+<span class="sd">        y : int</span>
+<span class="sd">            Y coordinate.</span>
+<span class="sd">        grainIndex : int</span>
+<span class="sd">            Grain index to assign.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        defdap.hrdic.Grain</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">currentGrain</span> <span class="o">=</span> <span class="n">Grain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
         <span class="n">currentGrain</span><span class="o">.</span><span class="n">addPoint</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">eMaxShear</span><span class="p">[</span><span class="n">y</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">cropDists</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
@@ -715,12 +874,42 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">edge</span> <span class="o">=</span> <span class="n">newedge</span></div>
 
-<div class="viewcode-block" id="Map.runGrainInspector"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Map.runGrainInspector">[docs]</a>    <span class="k">def</span> <span class="nf">runGrainInspector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+<div class="viewcode-block" id="Map.runGrainInspector"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Map.runGrainInspector">[docs]</a>    <span class="k">def</span> <span class="nf">runGrainInspector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Run the grain inspector interactive tool.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        vmax : float</span>
+<span class="sd">            Maximum value of the colour map.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">GrainInspector</span><span class="p">(</span><span class="n">currMap</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">)</span></div></div>
 
 
-<div class="viewcode-block" id="Grain"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Grain">[docs]</a><span class="k">class</span> <span class="nc">Grain</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Grain</span><span class="p">):</span>
+<div class="viewcode-block" id="Grain"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain">[docs]</a><span class="k">class</span> <span class="nc">Grain</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">Grain</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to encapsulate DIC grain data and useful analysis and plotting</span>
+<span class="sd">    methods.</span>
 
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dicMap : defdap.hrdic.Map</span>
+<span class="sd">        DIC map this grain is a member of</span>
+<span class="sd">    ownerMap : defdap.hrdic.Map</span>
+<span class="sd">        DIC map this grain is a member of</span>
+<span class="sd">    maxShearList : list</span>
+<span class="sd">        List of maximum shear values for grain.</span>
+<span class="sd">    ebsdGrain : defdap.ebsd.Grain</span>
+<span class="sd">        EBSD grain ID that this DIC grain corresponds to.</span>
+<span class="sd">    ebsdMap : defdap.ebsd.Map</span>
+<span class="sd">        EBSD map that this DIC grain belongs to.</span>
+<span class="sd">    pointsList : numpy.ndarray</span>
+<span class="sd">        Start and end points for lines drawn using defdap.inspector.GrainInspector.</span>
+<span class="sd">    groupsList :</span>
+<span class="sd">        Groups, angles and slip systems detected for</span>
+<span class="sd">        lines drawn using defdap.inspector.GrainInspector.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dicMap</span><span class="p">):</span>
         <span class="c1"># Call base class constructor</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">Grain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -742,11 +931,23 @@
         <span class="p">)</span>
 
     <span class="c1"># coord is a tuple (x, y)</span>
-<div class="viewcode-block" id="Grain.addPoint"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Grain.addPoint">[docs]</a>    <span class="k">def</span> <span class="nf">addPoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">maxShear</span><span class="p">):</span>
+<div class="viewcode-block" id="Grain.addPoint"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain.addPoint">[docs]</a>    <span class="k">def</span> <span class="nf">addPoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">maxShear</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">coordList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">maxShearList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">maxShear</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Grain.plotMaxShear"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Grain.plotMaxShear">[docs]</a>    <span class="k">def</span> <span class="nf">plotMaxShear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="Grain.plotMaxShear"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain.plotMaxShear">[docs]</a>    <span class="k">def</span> <span class="nf">plotMaxShear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Plot a maximum shear map for a grain.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        kwargs</span>
+<span class="sd">            All arguments are passed to :func:`defdap.base.plotGrainData`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        defdap.plotting.GrainPlot</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set default plot parameters then update with any input</span>
         <span class="n">plotParams</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s1">&#39;plotColourBar&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
@@ -760,25 +961,53 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">refOri</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns average grain orientation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        defdap.quat.Quat</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdGrain</span><span class="o">.</span><span class="n">refOri</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">slipTraces</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns list of slip trace angles based on EBSD grain orientation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebsdGrain</span><span class="o">.</span><span class="n">slipTraces</span>
 
-<div class="viewcode-block" id="Grain.calcSlipTraces"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Grain.calcSlipTraces">[docs]</a>    <span class="k">def</span> <span class="nf">calcSlipTraces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slipSystems</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Grain.calcSlipTraces"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain.calcSlipTraces">[docs]</a>    <span class="k">def</span> <span class="nf">calcSlipTraces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">slipSystems</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculates list of slip trace angles based on EBSD grain orientation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -------</span>
+<span class="sd">        slipSystems : defdap.crystal.SlipSystem, optional</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ebsdGrain</span><span class="o">.</span><span class="n">calcSlipTraces</span><span class="p">(</span><span class="n">slipSystems</span><span class="o">=</span><span class="n">slipSystems</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Grain.calcSlipBands"><a class="viewcode-back" href="../../defdap.hrdic.html#defdap.hrdic.Grain.calcSlipBands">[docs]</a>    <span class="k">def</span> <span class="nf">calcSlipBands</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grainMapData</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Use Radon transform to detect slip band angles</span>
+<div class="viewcode-block" id="Grain.calcSlipBands"><a class="viewcode-back" href="../../defdap.html#defdap.hrdic.Grain.calcSlipBands">[docs]</a>    <span class="k">def</span> <span class="nf">calcSlipBands</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grainMapData</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Use Radon transform to detect slip band angles.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            grainMapData (numpy.array): Data to find bands in</span>
-<span class="sd">            thres (float, optional): Normalised threshold for peaks</span>
-<span class="sd">            min_dist (int, optional): Minimum angle between bands</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        grainMapData : numpy.ndarray</span>
+<span class="sd">            Data to find bands in.</span>
+<span class="sd">        thres : float, optional</span>
+<span class="sd">            Normalised threshold for peaks.</span>
+<span class="sd">        min_dist : int, optional</span>
+<span class="sd">            Minimum angle between bands.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            list(float): Detected slip band angles</span>
+<span class="sd">        Returns</span>
+<span class="sd">        ----------</span>
+<span class="sd">        list(float)</span>
+<span class="sd">            Detected slip band angles</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">thres</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">thres</span> <span class="o">=</span> <span class="mf">0.3</span>

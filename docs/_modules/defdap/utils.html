@@ -37,12 +37,37 @@
           <div class="body" role="main">
             
   <h1>Source code for defdap.utils</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">functools</span>
+<span></span><span class="c1"># Copyright 2020 Mechanics of Microstructures Group</span>
+<span class="c1">#    at The University of Manchester</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
 
+<span class="kn">import</span> <span class="nn">functools</span>
 
-<span class="c1"># taking inspiration from:</span>
-<span class="c1"># https://gist.github.com/Garfounkel/20aa1f06234e1eedd419efe93137c004</span>
-<div class="viewcode-block" id="reportProgress"><a class="viewcode-back" href="../../defdap.utils.html#defdap.utils.reportProgress">[docs]</a><span class="k">def</span> <span class="nf">reportProgress</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+<div class="viewcode-block" id="reportProgress"><a class="viewcode-back" href="../../defdap.html#defdap.utils.reportProgress">[docs]</a><span class="k">def</span> <span class="nf">reportProgress</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decorator for reporting progress of given function</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    message : str</span>
+<span class="sd">        Message to display (prefixed by &#39;Starting &#39;, progress percentage and then &#39;Finished &#39;</span>
+
+<span class="sd">    References</span>
+<span class="sd">    ----------</span>
+<span class="sd">    Inspiration from :</span>
+<span class="sd">    https://gist.github.com/Garfounkel/20aa1f06234e1eedd419efe93137c004</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
         <span class="nd">@functools</span><span class="o">.</span><span class="n">wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
         <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>

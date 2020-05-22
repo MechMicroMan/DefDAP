@@ -8,8 +8,8 @@ DefDAP is a Python package which is designed to allow combined analysis of EBSD 
    
    introduction
    installation
-   example_analysis
    contributing
+   papers
    defdap
 
 

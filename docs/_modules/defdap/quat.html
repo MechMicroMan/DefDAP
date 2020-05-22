@@ -37,7 +37,7 @@
           <div class="body" role="main">
             
   <h1>Source code for defdap.quat</h1><div class="highlight"><pre>
-<span></span><span class="c1"># Copyright 2019 Mechanics of Microstructures Group</span>
+<span></span><span class="c1"># Copyright 2020 Mechanics of Microstructures Group</span>
 <span class="c1">#    at The University of Manchester</span>
 <span class="c1">#</span>
 <span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -57,13 +57,16 @@
 <span class="kn">from</span> <span class="nn">defdap</span> <span class="kn">import</span> <span class="n">plotting</span>
 
 
-<div class="viewcode-block" id="Quat"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat">[docs]</a><span class="k">class</span> <span class="nc">Quat</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat">[docs]</a><span class="k">class</span> <span class="nc">Quat</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class used to define and perform operations on quaternions</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;quatCoef&#39;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Construct a Quat object from 4 quat coefficients or an array of</span>
-<span class="sd">        quat coefficients</span>
+<span class="sd">        quat coefficients.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -90,23 +93,23 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span>
 
-<div class="viewcode-block" id="Quat.fromEulerAngles"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.fromEulerAngles">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Quat.fromEulerAngles"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.fromEulerAngles">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">fromEulerAngles</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">ph1</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">ph2</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create a quat object from 3 Bunge euler angles</span>
+        <span class="sd">&quot;&quot;&quot;Create a quat object from 3 Bunge euler angles.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        ph1 : float</span>
-<span class="sd">            First Euler angle, rotation around Z in radians</span>
+<span class="sd">            First Euler angle, rotation around Z in radians.</span>
 <span class="sd">        phi : float</span>
-<span class="sd">            Second Euler angle, rotation around new X in radians</span>
+<span class="sd">            Second Euler angle, rotation around new X in radians.</span>
 <span class="sd">        ph2 : float</span>
-<span class="sd">            Third Euler angle, rotation around new Z in radians</span>
+<span class="sd">            Third Euler angle, rotation around new Z in radians.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        defdap.Quat.quat</span>
-<span class="sd">            Initialised Quat object</span>
+<span class="sd">        defdap.quat.Quat</span>
+<span class="sd">            Initialised Quat object.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># calculate quat coefficients</span>
@@ -120,21 +123,21 @@
         <span class="c1"># call constructor</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">quatCoef</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.fromAxisAngle"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.fromAxisAngle">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Quat.fromAxisAngle"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.fromAxisAngle">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">fromAxisAngle</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">axis</span><span class="p">,</span> <span class="n">angle</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create a quat object from an axis angle pair</span>
+        <span class="sd">&quot;&quot;&quot;Create a quat object from an axis angle pair.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        axis : array_like shape 3</span>
-<span class="sd">            Axis rotaion is applied around</span>
+<span class="sd">        axis : np.ndarray</span>
+<span class="sd">            Axis that the rotation is applied around.</span>
 <span class="sd">        angle : float</span>
-<span class="sd">            Magnitude of rotation in radians</span>
+<span class="sd">            Magnitude of rotation in radians.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        defdap.Quat.quat</span>
-<span class="sd">            Initialised Quat object</span>
+<span class="sd">        defdap.quat.Quat</span>
+<span class="sd">            Initialised Quat object.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># normalise the axis vector</span>
@@ -148,13 +151,13 @@
         <span class="c1"># call constructor</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">quatCoef</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.eulerAngles"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.eulerAngles">[docs]</a>    <span class="k">def</span> <span class="nf">eulerAngles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Calculate the Euler angle representation for this rotation</span>
+<div class="viewcode-block" id="Quat.eulerAngles"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.eulerAngles">[docs]</a>    <span class="k">def</span> <span class="nf">eulerAngles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate the Euler angle representation for this rotation.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        eulers : np.ndarray shape 3</span>
-<span class="sd">            Bunge euler angles (in radians)</span>
+<span class="sd">        eulers : np.ndarray, shape 3</span>
+<span class="sd">            Bunge euler angles (in radians).</span>
 
 <span class="sd">        References</span>
 <span class="sd">        ----------</span>
@@ -205,13 +208,13 @@
 
         <span class="k">return</span> <span class="n">eulers</span></div>
 
-<div class="viewcode-block" id="Quat.rotMatrix"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.rotMatrix">[docs]</a>    <span class="k">def</span> <span class="nf">rotMatrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Calculate the rotation matrix representation for this rotation</span>
+<div class="viewcode-block" id="Quat.rotMatrix"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.rotMatrix">[docs]</a>    <span class="k">def</span> <span class="nf">rotMatrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate the rotation matrix representation for this rotation.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        rotMatrix : np.ndarray shape (3, 3)</span>
-<span class="sd">            Rotation matrix</span>
+<span class="sd">        rotMatrix : np.ndarray, shape (3, 3)</span>
+<span class="sd">            Rotation matrix.</span>
 
 <span class="sd">        References</span>
 <span class="sd">        ----------</span>
@@ -271,7 +274,20 @@
 
     <span class="c1"># # overload % operator for dot product</span>
     <span class="c1"># def __mod__(self, right):</span>
-<div class="viewcode-block" id="Quat.dot"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.dot">[docs]</a>    <span class="k">def</span> <span class="nf">dot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.dot"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.dot">[docs]</a>    <span class="k">def</span> <span class="nf">dot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Calculate dot product between two quaternions.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        right : defdap.quat.Quat</span>
+<span class="sd">            Right hand quaternion.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        defdap.quat.Quat</span>
+<span class="sd">            Dot product.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">,</span> <span class="n">right</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">)</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">()</span></div>
@@ -297,32 +313,56 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
         <span class="k">return</span>
 
-<div class="viewcode-block" id="Quat.norm"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.norm"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.norm">[docs]</a>    <span class="k">def</span> <span class="nf">norm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate the norm of the quaternion.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Norm of the quaternion.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]))</span></div>
 
-<div class="viewcode-block" id="Quat.normalise"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.normalise">[docs]</a>    <span class="k">def</span> <span class="nf">normalise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.normalise"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.normalise">[docs]</a>    <span class="k">def</span> <span class="nf">normalise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Normalise the quaternion (turn it into an unit quaternion).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        defdap.quat.Quat</span>
+<span class="sd">            Normalised quaternion.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">quatCoef</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span>
         <span class="k">return</span></div>
 
     <span class="c1"># also the inverse if this is a unit quaternion</span>
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">conjugate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate the conjugate of the quaternion.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        defdap.quat.Quat</span>
+<span class="sd">            Conjugate of quaternion.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">Quat</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="bp">self</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="bp">self</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="o">-</span><span class="bp">self</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
 
-<div class="viewcode-block" id="Quat.transformVector"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.transformVector">[docs]</a>    <span class="k">def</span> <span class="nf">transformVector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.transformVector"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.transformVector">[docs]</a>    <span class="k">def</span> <span class="nf">transformVector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Transforms vector by the quaternion. For EBSD quaterions this</span>
 <span class="sd">        is a transformation from sample space to crystal space. Perform</span>
 <span class="sd">        on conjugate of quaternion for crystal to sample.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        vector : array_like shape 3</span>
-<span class="sd">            Vector to transform</span>
+<span class="sd">        vector : array_like, shape 3</span>
+<span class="sd">            Vector to transform.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        np.ndarray shape 3</span>
-<span class="sd">            Transformed vector</span>
+<span class="sd">        np.ndarray, shape 3</span>
+<span class="sd">            Transformed vector.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vector</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">vector</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">3</span><span class="p">,):</span>
@@ -333,27 +373,28 @@
 
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Vector must be a size 3 numpy array.&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.misOri"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.misOri">[docs]</a>    <span class="k">def</span> <span class="nf">misOri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">returnQuat</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Calculate misorientation angle between 2 orientations taking</span>
+<div class="viewcode-block" id="Quat.misOri"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.misOri">[docs]</a>    <span class="k">def</span> <span class="nf">misOri</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">returnQuat</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate misorientation angle between 2 orientations taking</span>
 <span class="sd">        into account the symmetries of the crystal structure.</span>
 <span class="sd">        Angle is 2*arccos(output).</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        right : defdap.quat.Quat</span>
-<span class="sd">            Orientation to find misorientation to</span>
+<span class="sd">            Orientation to find misorientation to.</span>
 <span class="sd">        symGroup : str</span>
-<span class="sd">            Crystal type (cubic, hexagonal)</span>
+<span class="sd">            Crystal type (cubic, hexagonal).</span>
 <span class="sd">        returnQuat : int</span>
 <span class="sd">            What to return: 0 for minimum misorientation, 1 for</span>
-<span class="sd">            symmetric equivalent with minimum misorientation, 2 for both</span>
+<span class="sd">            symmetric equivalent with minimum misorientation, 2 for both.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        minMisOri : float</span>
-<span class="sd">            Minimum misorientation</span>
-<span class="sd">        minQuatSym : defdap.quat.Quat</span>
-<span class="sd">            Symmetric equivalent orientation with minimum  misorientation</span>
+<span class="sd">        float</span>
+<span class="sd">            Minimum misorientation.</span>
+<span class="sd">        defdap.quat.Quat</span>
+<span class="sd">            Symmetric equivalent orientation with minimum  misorientation.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
@@ -375,19 +416,20 @@
                 <span class="k">return</span> <span class="n">minMisOri</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Input must be a quaternion.&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.misOriAxis"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.misOriAxis">[docs]</a>    <span class="k">def</span> <span class="nf">misOriAxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Calculate misorientation axis between 2 orientations. This</span>
+<div class="viewcode-block" id="Quat.misOriAxis"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.misOriAxis">[docs]</a>    <span class="k">def</span> <span class="nf">misOriAxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">right</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate misorientation axis between 2 orientations. This</span>
 <span class="sd">        does not consider symmetries of the crystal structure.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        right : defdap.quat.Quat</span>
-<span class="sd">            Orientation to find misorientation axis to</span>
+<span class="sd">            Orientation to find misorientation axis to.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        numpy.ndarray shape 3</span>
-<span class="sd">            Axis of misorientation</span>
+<span class="sd">        numpy.ndarray, shape 3</span>
+<span class="sd">            Axis of misorientation.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
@@ -398,35 +440,41 @@
             <span class="k">return</span> <span class="n">misOriAxis</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Input must be a quaternion.&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Quat.plotIPF"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.plotIPF">[docs]</a>    <span class="k">def</span> <span class="nf">plotIPF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<div class="viewcode-block" id="Quat.plotIPF"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.plotIPF">[docs]</a>    <span class="k">def</span> <span class="nf">plotIPF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">plot</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fig</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">makeInteractive</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                 <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cLabel</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
                 <span class="n">markerColour</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">markerSize</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Plot IPF of orientations for specified sample diection.</span>
+<span class="sd">        Plot IPF of orientation, with relation to specified sample direction.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        quats : array_like of defda.quat.Quat</span>
-<span class="sd">            Orientations to plot on the IPF</span>
-<span class="sd">        direction : np.array</span>
-<span class="sd">            Sample reference direction for IPF</span>
-<span class="sd">        symGroup : string</span>
-<span class="sd">            Crystal type (cubic, hexagonal)</span>
+<span class="sd">        direction : np.ndarray</span>
+<span class="sd">            Sample reference direction for IPF.</span>
+<span class="sd">        symGroup : str</span>
+<span class="sd">            Crystal type (cubic, hexagonal).</span>
 <span class="sd">        projection : str</span>
 <span class="sd">             Projection to use. Either string (stereographic or lambert)</span>
-<span class="sd">             or a function</span>
-<span class="sd">        ax</span>
-<span class="sd">            matplotlib axis to plot on, if not provided the current</span>
-<span class="sd">            active axis is used</span>
-<span class="sd">        markerColour : string</span>
+<span class="sd">             or a function.</span>
+<span class="sd">        plot : defdap.plotting.Plot</span>
+<span class="sd">            Defdap plot to plot on.</span>
+<span class="sd">        fig : matplotlib.figure.Figure</span>
+<span class="sd">            Figure to plot on, if not provided the current</span>
+<span class="sd">            active axis is used.</span>
+<span class="sd">        ax : matplotlib.axes.Axes</span>
+<span class="sd">            Axis to plot on, if not provided the current</span>
+<span class="sd">            active axis is used.</span>
+<span class="sd">        makeInteractive : bool</span>
+<span class="sd">            If true, make the plot interactive.</span>
+<span class="sd">        markerColour : str</span>
 <span class="sd">            Colour of markers (only used for half and half colouring,</span>
-<span class="sd">            otherwise us arguemnt c)</span>
+<span class="sd">            otherwise us argument c).</span>
 <span class="sd">        markerSize : int</span>
 <span class="sd">            Size of markers (only used for half and half colouring,</span>
-<span class="sd">            otherwise us arguemnt s)</span>
+<span class="sd">            otherwise us argument s).</span>
 <span class="sd">        kwargs</span>
-<span class="sd">            All other arguments are passed to the matplotlib scatter call</span>
+<span class="sd">            All other arguments are passed to :func:`defdap.plotting.PolePlot.addPoints`.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">plotParams</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;marker&#39;</span><span class="p">:</span> <span class="s1">&#39;+&#39;</span><span class="p">}</span>
         <span class="n">plotParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
@@ -453,25 +501,31 @@
 
         <span class="k">return</span> <span class="n">plot</span></div>
 
-<div class="viewcode-block" id="Quat.plotUnitCell"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.plotUnitCell">[docs]</a>    <span class="k">def</span> <span class="nf">plotUnitCell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">cOverA</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">OI</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<div class="viewcode-block" id="Quat.plotUnitCell"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.plotUnitCell">[docs]</a>    <span class="k">def</span> <span class="nf">plotUnitCell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">cOverA</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">OI</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                      <span class="n">plot</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fig</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">makeInteractive</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                      <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Plots a unit cell</span>
+        <span class="sd">&quot;&quot;&quot;Plots a unit cell.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        symGroup : str</span>
-<span class="sd">            Crystal type, hexagonal or cubic</span>
+<span class="sd">            Crystal type, hexagonal or cubic.</span>
 <span class="sd">        cOverA : float</span>
-<span class="sd">            c over a ratio for hexagonal</span>
+<span class="sd">            C over a ratio for hexagonal.</span>
 <span class="sd">        OI : bool</span>
-<span class="sd">            true if using oxford instruments system</span>
-<span class="sd">        plot</span>
-<span class="sd">        fig</span>
-<span class="sd">        ax</span>
-<span class="sd">            matplotlib axis to plot on, if not provided the current</span>
-<span class="sd">            active axis is used</span>
-<span class="sd">        makeInteractive</span>
+<span class="sd">            True if using oxford instruments system.</span>
+<span class="sd">        plot : defdap.plotting.CrystalPlot</span>
+<span class="sd">            Plot object to plot to.</span>
+<span class="sd">        fig : matplotlib.figure.Figure</span>
+<span class="sd">            Figure to plot on, if not provided the current</span>
+<span class="sd">            active axis is used.</span>
+<span class="sd">        ax : matplotlib.axes.Axes</span>
+<span class="sd">            Axis to plot on, if not provided the current</span>
+<span class="sd">            active axis is used.</span>
+<span class="sd">        makeInteractive : bool</span>
+<span class="sd">            True to make the plot interactive.</span>
+<span class="sd">        kwargs</span>
+<span class="sd">            All other arguments are passed to :func:`defdap.plotting.CrystalPlot.addVerts`.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set default plot parameters then update with any input</span>
@@ -563,19 +617,19 @@
 
 <span class="c1"># Static methods</span>
 
-<div class="viewcode-block" id="Quat.createManyQuats"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.createManyQuats">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.createManyQuats"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.createManyQuats">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">createManyQuats</span><span class="p">(</span><span class="n">eulerArray</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create a an array of quats from an array of Euler angles</span>
+        <span class="sd">&quot;&quot;&quot;Create a an array of quats from an array of Euler angles.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        eulerArray : np.ndarray</span>
-<span class="sd">            Array of Bunge Euler angles of shape 3 x n x ... x m</span>
+<span class="sd">        eulerArray : numpy.ndarray</span>
+<span class="sd">            Array of Bunge Euler angles of shape 3 x n x ... x m.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        quats : np.ndarray of defdap.quat.Quat</span>
-<span class="sd">            Array of quat objects of shape n x ... x m</span>
+<span class="sd">        quats : numpy.ndarray(defdap.quat.Quat)</span>
+<span class="sd">            Array of quat objects of shape n x ... x m.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ph1</span> <span class="o">=</span> <span class="n">eulerArray</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -597,8 +651,25 @@
 
         <span class="k">return</span> <span class="n">quats</span></div>
 
-<div class="viewcode-block" id="Quat.calcSymEqvs"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.calcSymEqvs">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.calcSymEqvs"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.calcSymEqvs">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">calcSymEqvs</span><span class="p">(</span><span class="n">quats</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate all symmetrically equivalent quaternions of given quaternions.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        quats : numpy.ndarray(defdap.quat.Quat)</span>
+<span class="sd">            Array of quat objects.</span>
+<span class="sd">        symGroup : str</span>
+<span class="sd">            Crystal type (cubic, hexagonal).</span>
+<span class="sd">        dtype : numpy.dtype</span>
+<span class="sd">            Data type used for calculation, defaults to np.float.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        quatComps: np.ndarray, shape: (numSym x 4 x numQuats)</span>
+<span class="sd">            Array containing all symmetrically equivalent quaternion components of input quaternions.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">syms</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">symEqv</span><span class="p">(</span><span class="n">symGroup</span><span class="p">)</span>
         <span class="n">quatComps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">syms</span><span class="p">),</span> <span class="mi">4</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">quats</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
 
@@ -627,8 +698,22 @@
 
         <span class="k">return</span> <span class="n">quatComps</span></div>
 
-<div class="viewcode-block" id="Quat.calcAverageOri"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.calcAverageOri">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.calcAverageOri"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.calcAverageOri">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">calcAverageOri</span><span class="p">(</span><span class="n">quatComps</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate the average orientation of given quats.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        quatComps : numpy.ndarray</span>
+<span class="sd">            Array containing all symmetrically equivalent quaternion components of given quaternions</span>
+<span class="sd">            (shape: numSym x 4 x numQuats), can be calculated with Quat.calcSymEqvs.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        avOri : defdap.quat.Quat</span>
+<span class="sd">            Average orientation of input quaternions.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">avOri</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">quatComps</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">])</span>
         <span class="n">currMisOris</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">quatComps</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
@@ -650,8 +735,26 @@
 
         <span class="k">return</span> <span class="n">avOri</span></div>
 
-<div class="viewcode-block" id="Quat.calcMisOri"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.calcMisOri">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.calcMisOri"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.calcMisOri">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">calcMisOri</span><span class="p">(</span><span class="n">quatComps</span><span class="p">,</span> <span class="n">refOri</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate the misorientation between the quaternions and a reference quaternion.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        quatComps : numpy.ndarray</span>
+<span class="sd">            Array containing all symmetrically equivalent quaternion components of given quaternions</span>
+<span class="sd">            (shape: numSym x 4 x numQuats), can be calculated from quats with Quat.calcSymEqvs.</span>
+<span class="sd">        refOri : defdap.quat.Quat</span>
+<span class="sd">            Reference orientation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        minMisOris : numpy.ndarray, len numQuats</span>
+<span class="sd">            Minimum misorientation between quats and reference orientation.</span>
+<span class="sd">        minQuatComps : defdap.quat.Quat</span>
+<span class="sd">            Quaternion components describing minimum misorientation between quats and reference orientation.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">misOris</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">quatComps</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">quatComps</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
 
         <span class="c1"># Dot product of each quat in quatComps with refOri</span>
@@ -668,30 +771,67 @@
 
         <span class="k">return</span> <span class="n">minMisOris</span><span class="p">,</span> <span class="n">minQuatComps</span></div>
 
-<div class="viewcode-block" id="Quat.polarAngles"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.polarAngles">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.polarAngles"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.polarAngles">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">polarAngles</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>      <span class="c1"># spherical coordinates as per Wikipedia</span>
+        <span class="sd">&quot;&quot;&quot;Convert Cartesian coordinates to polar coordinates, for an unit vector.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        x : float</span>
+<span class="sd">            x coordinate.</span>
+<span class="sd">        y : float</span>
+<span class="sd">            y coordinate.</span>
+<span class="sd">        z : float</span>
+<span class="sd">            z coordinate.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float, float</span>
+<span class="sd">            inclination angle and azimuthal angle (around z axis from x in anticlockwise as per ISO).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">mod</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="n">mod</span>
         <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">/</span> <span class="n">mod</span>
         <span class="n">z</span> <span class="o">=</span> <span class="n">z</span> <span class="o">/</span> <span class="n">mod</span>
 
-        <span class="c1"># alpha - angle with z axis</span>
         <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
-        <span class="c1"># beta - angle around z axis from x in anticlockwise as per ISO</span>
         <span class="n">beta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span></div>
 
-<div class="viewcode-block" id="Quat.calcIPFcolours"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.calcIPFcolours">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.calcIPFcolours"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.calcIPFcolours">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">calcIPFcolours</span><span class="p">(</span><span class="n">quats</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">symGroup</span> <span class="o">!=</span> <span class="s2">&quot;cubic&quot;</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Only available for cubic currently&quot;</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the RGB colours, based on the location of the given quats</span>
+<span class="sd">        on the fundamental region of the IPF for the sample direction specified.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        quats : numpy.ndarray(defdap.quat.Quat)</span>
+<span class="sd">            Array of quat objects.</span>
+<span class="sd">        direction : numpy.ndarray</span>
+<span class="sd">            Direction in sample space.</span>
+<span class="sd">        symGroup : str</span>
+<span class="sd">            Crystal type (cubic, hexagonal).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        rgb : numpy.ndarray</span>
+<span class="sd">            Array of rgb colours for each quat.</span>
+
+<span class="sd">        References</span>
+<span class="sd">        -------</span>
+<span class="sd">        Stephen Cluff (BYU) - IPF_rgbcalc.m subroutine in OpenXY</span>
+<span class="sd">        https://github.com/BYU-MicrostructureOfMaterials/OpenXY/blob/master/Code/PlotIPF.m</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">numQuats</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">quats</span><span class="p">)</span>
 
-        <span class="c1"># Calculating as float32 seems to speed this up</span>
         <span class="n">alphaFund</span><span class="p">,</span> <span class="n">betaFund</span> <span class="o">=</span> <span class="n">Quat</span><span class="o">.</span><span class="n">calcFundDirs</span><span class="p">(</span>
-            <span class="n">quats</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span>
+            <span class="n">quats</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float</span>
         <span class="p">)</span>
 
         <span class="c1"># revert to cartesians</span>
@@ -704,16 +844,18 @@
         <span class="n">dirvec</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">alphaFund</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">betaFund</span><span class="p">)</span>
         <span class="n">dirvec</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">alphaFund</span><span class="p">)</span>
 
-        <span class="n">rvect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">])[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:],</span>
-                          <span class="n">numQuats</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">gvect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">])[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
-                          <span class="n">numQuats</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">bvect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">])[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span>
-                          <span class="n">numQuats</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">symGroup</span> <span class="o">==</span> <span class="s1">&#39;cubic&#39;</span><span class="p">:</span>
+            <span class="n">poleDirections</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+        <span class="k">if</span> <span class="n">symGroup</span> <span class="o">==</span> <span class="s1">&#39;hexagonal&#39;</span><span class="p">:</span>
+            <span class="n">poleDirections</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])</span>
+
+        <span class="n">rvect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">poleDirections</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">poleDirections</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span> <span class="p">(</span><span class="n">numQuats</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">gvect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">poleDirections</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">poleDirections</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span> <span class="p">(</span><span class="n">numQuats</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">bvect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">poleDirections</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">poleDirections</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)),</span> <span class="p">(</span><span class="n">numQuats</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+
         <span class="n">rgb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">numQuats</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
 
-        <span class="c1"># Red Component; these subroutines are converted from</span>
-        <span class="c1"># Stephen Cluff&#39;s IPF_rgbcalc.m (BYU)</span>
+        <span class="c1"># Red Component</span>
         <span class="n">RDirPlane</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">dirvec</span><span class="p">,</span> <span class="n">rvect</span><span class="p">)</span>
         <span class="n">GBplane</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">bvect</span><span class="p">,</span> <span class="n">gvect</span><span class="p">)</span>
         <span class="n">Rintersect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">RDirPlane</span><span class="p">,</span> <span class="n">GBplane</span><span class="p">)</span>
@@ -776,8 +918,29 @@
 
         <span class="k">return</span> <span class="n">rgb</span></div>
 
-<div class="viewcode-block" id="Quat.calcFundDirs"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.calcFundDirs">[docs]</a>    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Quat.calcFundDirs"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.calcFundDirs">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">calcFundDirs</span><span class="p">(</span><span class="n">quats</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transform the sample direction to crystal coords based on the quats</span>
+<span class="sd">        and find the ones in the fundamental sector of the IPF.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        quats : array_like(defdap.quat.Quat)</span>
+<span class="sd">            Array of quat objects.</span>
+<span class="sd">        direction: numpy.ndarray</span>
+<span class="sd">            Direction in sample space.</span>
+<span class="sd">        symGroup : str</span>
+<span class="sd">            Crystal type (cubic, hexagonal).</span>
+<span class="sd">        dtype: numpy.dtype</span>
+<span class="sd">            Data type to use for calculation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float, float</span>
+<span class="sd">            inclination angle and azimuthal angle (around z axis from x in anticlockwise as per ISO).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># convert direction to float array</span>
         <span class="n">direction</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">direction</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
 
@@ -789,7 +952,7 @@
             <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">quatCompsSym</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">quatCompsSym</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span>
         <span class="p">)</span>
 
-        <span class="c1"># temp variables to use bleow</span>
+        <span class="c1"># temp variables to use below</span>
         <span class="n">quatDotVec</span> <span class="o">=</span> <span class="p">(</span><span class="n">quatCompsSym</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">direction</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span>
                       <span class="n">quatCompsSym</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">direction</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span>
                       <span class="n">quatCompsSym</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">direction</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
@@ -852,31 +1015,16 @@
                 <span class="n">trialPoles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">beta</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="n">deltaBeta</span><span class="p">,</span>
                                             <span class="n">beta</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">4</span> <span class="o">+</span> <span class="n">deltaBeta</span><span class="p">)</span>
 
-            <span class="c1"># create array to store angles of pols in fundamental triangle</span>
-            <span class="n">alphaFund</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">quatCompsSym</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
-            <span class="n">betaFund</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">quatCompsSym</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
-
             <span class="c1"># now of symmetric equivalents left we want the one with</span>
-            <span class="c1"># minimum alpha, loop over different orientations</span>
-            <span class="c1"># this seems quite slow so might be worth finding a</span>
-            <span class="c1"># different way to do it</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">trialPoles</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-                <span class="c1"># create array of indexes of poles kept in previous step</span>
-                <span class="n">trialPoleIdxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">trialPoles</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="n">trialPoles</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]]</span>
-
-                <span class="c1"># find pole with minimum alpha of those kept in previous step</span>
-                <span class="c1"># then use trialPoleIdxs to get its index in original arrays</span>
-                <span class="n">poleIdx</span> <span class="o">=</span> <span class="n">trialPoleIdxs</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">alpha</span><span class="p">[</span><span class="n">trialPoles</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">i</span><span class="p">])]</span>
-
-                <span class="c1"># add to final array of poles</span>
-                <span class="n">alphaFund</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">alpha</span><span class="p">[</span><span class="n">poleIdx</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
-                <span class="n">betaFund</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">beta</span><span class="p">[</span><span class="n">poleIdx</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
+            <span class="c1"># minimum alpha</span>
+            <span class="n">min_alpha_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanargmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">trialPoles</span><span class="o">==</span><span class="kc">False</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">alpha</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">betaFund</span> <span class="o">=</span> <span class="n">beta</span><span class="p">[</span><span class="n">min_alpha_idx</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">min_alpha_idx</span><span class="p">))]</span>
+            <span class="n">alphaFund</span> <span class="o">=</span> <span class="n">alpha</span><span class="p">[</span><span class="n">min_alpha_idx</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">min_alpha_idx</span><span class="p">))]</span>
 
         <span class="k">elif</span> <span class="n">symGroup</span> <span class="o">==</span> <span class="s2">&quot;hexagonal&quot;</span><span class="p">:</span>
             <span class="c1"># first beta should be between 0 and 30 deg leaving 1</span>
             <span class="c1"># symmetric equivalent per orientation</span>
             <span class="n">trialPoles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">beta</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">beta</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">6</span><span class="p">)</span>
-
             <span class="c1"># if less than 1 left need to expand search slighly to</span>
             <span class="c1"># catch edge cases</span>
             <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">trialPoles</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -884,16 +1032,32 @@
                 <span class="n">trialPoles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">beta</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="n">deltaBeta</span><span class="p">,</span>
                                             <span class="n">beta</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">6</span> <span class="o">+</span> <span class="n">deltaBeta</span><span class="p">)</span>
 
-            <span class="n">alphaFund</span> <span class="o">=</span> <span class="n">alpha</span><span class="p">[</span><span class="n">trialPoles</span><span class="p">]</span>
-            <span class="n">betaFund</span> <span class="o">=</span> <span class="n">beta</span><span class="p">[</span><span class="n">trialPoles</span><span class="p">]</span>
+            <span class="c1"># non-indexed points cause more than 1 symmetric equivalent, use this</span>
+            <span class="c1"># to pick one and filter non-indexed points later</span>
+            <span class="n">first_idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">trialPoles</span><span class="o">==</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">betaFund</span> <span class="o">=</span> <span class="n">beta</span><span class="p">[</span><span class="n">first_idx</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">first_idx</span><span class="p">))]</span>
+            <span class="n">alphaFund</span> <span class="o">=</span> <span class="n">alpha</span><span class="p">[</span><span class="n">first_idx</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">first_idx</span><span class="p">))]</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;symGroup must be cubic or hexagonal&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">alphaFund</span><span class="p">,</span> <span class="n">betaFund</span></div>
 
-<div class="viewcode-block" id="Quat.symEqv"><a class="viewcode-back" href="../../defdap.quat.html#defdap.quat.Quat.symEqv">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">symEqv</span><span class="p">(</span><span class="n">group</span><span class="p">):</span>
+<div class="viewcode-block" id="Quat.symEqv"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.symEqv">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">symEqv</span><span class="p">(</span><span class="n">symGroup</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns all symmetric equivalents for a given crystal type.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        symGroup : str</span>
+<span class="sd">            Crystal type (cubic, hexagonal).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list(defdap.quat.Quat), shape (numQuats x 4)</span>
+<span class="sd">            Symmetrically equivalent quats.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">overRoot2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="n">sqrt3over2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
 
@@ -952,9 +1116,9 @@
             <span class="n">Quat</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="n">sqrt3over2</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
         <span class="p">]</span>
 
-        <span class="k">if</span> <span class="n">group</span> <span class="o">==</span> <span class="s1">&#39;cubic&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">symGroup</span> <span class="o">==</span> <span class="s1">&#39;cubic&#39;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">qsym</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">24</span><span class="p">]</span>
-        <span class="k">elif</span> <span class="n">group</span> <span class="o">==</span> <span class="s1">&#39;hexagonal&#39;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">symGroup</span> <span class="o">==</span> <span class="s1">&#39;hexagonal&#39;</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[</span><span class="n">qsym</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">qsym</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">qsym</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">qsym</span><span class="p">[</span><span class="mi">8</span><span class="p">]]</span> <span class="o">+</span> <span class="n">qsym</span><span class="p">[</span><span class="o">-</span><span class="mi">8</span><span class="p">:</span><span class="mi">32</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[</span><span class="n">qsym</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span></div></div>

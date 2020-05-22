@@ -37,7 +37,7 @@
           <div class="body" role="main">
             
   <h1>Source code for defdap.file_readers</h1><div class="highlight"><pre>
-<span></span><span class="c1"># Copyright 2019 Mechanics of Microstructures Group</span>
+<span></span><span class="c1"># Copyright 2020 Mechanics of Microstructures Group</span>
 <span class="c1">#    at The University of Manchester</span>
 <span class="c1">#</span>
 <span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
@@ -57,8 +57,10 @@
 <span class="kn">import</span> <span class="nn">pathlib</span>
 
 
-<div class="viewcode-block" id="EBSDDataLoader"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.EBSDDataLoader">[docs]</a><span class="k">class</span> <span class="nc">EBSDDataLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="EBSDDataLoader"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader">[docs]</a><span class="k">class</span> <span class="nc">EBSDDataLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class containing methods for loading and checking EBSD data</span>
 
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s1">&#39;xDim&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
@@ -73,20 +75,37 @@
             <span class="s1">&#39;phase&#39;</span><span class="p">:</span> <span class="kc">None</span>
         <span class="p">}</span>
 
-<div class="viewcode-block" id="EBSDDataLoader.checkMetadata"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.EBSDDataLoader.checkMetadata">[docs]</a>    <span class="k">def</span> <span class="nf">checkMetadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Checks that the number of phases from metadata matches</span>
-<span class="sd">        the amount of phase names.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="EBSDDataLoader.checkMetadata"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader.checkMetadata">[docs]</a>    <span class="k">def</span> <span class="nf">checkMetadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks that the number of phases from metadata matches</span>
+<span class="sd">        the amount of phase names.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;phaseNames&#39;</span><span class="p">])</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;numPhases&#39;</span><span class="p">]:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Number of phases mismatch.&quot;</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">AssertionError</span></div>
 
-<div class="viewcode-block" id="EBSDDataLoader.checkData"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.EBSDDataLoader.checkData">[docs]</a>    <span class="k">def</span> <span class="nf">checkData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">binData</span><span class="p">):</span>
+<div class="viewcode-block" id="EBSDDataLoader.checkData"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader.checkData">[docs]</a>    <span class="k">def</span> <span class="nf">checkData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">binData</span><span class="p">):</span>
         <span class="k">return</span></div>
 
-<div class="viewcode-block" id="EBSDDataLoader.loadOxfordCPR"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.EBSDDataLoader.loadOxfordCPR">[docs]</a>    <span class="k">def</span> <span class="nf">loadOxfordCPR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; A .cpr file is a metadata file describing EBSD data.</span>
-<span class="sd">        This function opens the cpr file, reading in the x and y</span>
-<span class="sd">        dimensions and phase names.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="EBSDDataLoader.loadOxfordCPR"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader.loadOxfordCPR">[docs]</a>    <span class="k">def</span> <span class="nf">loadOxfordCPR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read an Oxford Instruments .cpr file, which is a metadata file</span>
+<span class="sd">        describing EBSD data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Metadata for EBSD data, including dimensions and number of phases.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">fileName</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.cpr&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
         <span class="n">filePath</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileDir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">filePath</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
@@ -113,8 +132,22 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span></div>
 
-<div class="viewcode-block" id="EBSDDataLoader.loadOxfordCRC"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.EBSDDataLoader.loadOxfordCRC">[docs]</a>    <span class="k">def</span> <span class="nf">loadOxfordCRC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Read binary EBSD data from a .crc file&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="EBSDDataLoader.loadOxfordCRC"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader.loadOxfordCRC">[docs]</a>    <span class="k">def</span> <span class="nf">loadOxfordCRC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read binary EBSD data from an Oxford Instruments .crc file</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            EBSD data including phase, MAD and euler angle arrays.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">xDim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;xDim&#39;</span><span class="p">]</span>
         <span class="n">yDim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;yDim&#39;</span><span class="p">]</span>
 
@@ -153,9 +186,22 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span></div>
 
-<div class="viewcode-block" id="EBSDDataLoader.loadOxfordCTF"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.EBSDDataLoader.loadOxfordCTF">[docs]</a>    <span class="k">def</span> <span class="nf">loadOxfordCTF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; A .ctf file is a HKL single orientation file. This is a</span>
-<span class="sd">        data file generated by the Oxford EBSD instrument.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="EBSDDataLoader.loadOxfordCTF"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader.loadOxfordCTF">[docs]</a>    <span class="k">def</span> <span class="nf">loadOxfordCTF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Read an Oxford Instruments .ctf file, which is a HKL single orientation file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict, dict</span>
+<span class="sd">            EBSD metadata and EBSD data.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># open data file and read in metadata</span>
         <span class="n">fileName</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.ctf&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
@@ -220,8 +266,10 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span></div></div>
 
 
-<div class="viewcode-block" id="DICDataLoader"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.DICDataLoader">[docs]</a><span class="k">class</span> <span class="nc">DICDataLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="DICDataLoader"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader">[docs]</a><span class="k">class</span> <span class="nc">DICDataLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class containing methods for loading and checking HRDIC data</span>
 
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -237,12 +285,14 @@
             <span class="s1">&#39;yd&#39;</span><span class="p">:</span> <span class="kc">None</span>
         <span class="p">}</span>
 
-<div class="viewcode-block" id="DICDataLoader.checkMetadata"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.DICDataLoader.checkMetadata">[docs]</a>    <span class="k">def</span> <span class="nf">checkMetadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="DICDataLoader.checkMetadata"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader.checkMetadata">[docs]</a>    <span class="k">def</span> <span class="nf">checkMetadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span></div>
 
-<div class="viewcode-block" id="DICDataLoader.checkData"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.DICDataLoader.checkData">[docs]</a>    <span class="k">def</span> <span class="nf">checkData</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="DICDataLoader.checkData"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader.checkData">[docs]</a>    <span class="k">def</span> <span class="nf">checkData</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Calculate size of map from loaded data and check it matches</span>
-<span class="sd">        values from metadata&quot;&quot;&quot;</span>
+<span class="sd">        values from metadata.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;xc&#39;</span><span class="p">]</span>
         <span class="n">xdim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
             <span class="p">(</span><span class="n">coords</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">coords</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="nb">min</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">coords</span><span class="p">)))</span> <span class="o">+</span> <span class="mi">1</span>
@@ -256,8 +306,22 @@
         <span class="k">assert</span> <span class="n">xdim</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;xDim&#39;</span><span class="p">],</span> <span class="s2">&quot;Dimensions of data and header do not match&quot;</span>
         <span class="k">assert</span> <span class="n">ydim</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;yDim&#39;</span><span class="p">],</span> <span class="s2">&quot;Dimensions of data and header do not match&quot;</span></div>
 
-<div class="viewcode-block" id="DICDataLoader.loadDavisMetadata"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.DICDataLoader.loadDavisMetadata">[docs]</a>    <span class="k">def</span> <span class="nf">loadDavisMetadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Load DaVis metadata&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DICDataLoader.loadDavisMetadata"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader.loadDavisMetadata">[docs]</a>    <span class="k">def</span> <span class="nf">loadDavisMetadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Load DaVis metadata from Davis .txt file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Davis metadata.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">filePath</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileDir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">filePath</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Cannot open file </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filePath</span><span class="p">))</span>
@@ -279,9 +343,23 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span></div>
 
-<div class="viewcode-block" id="DICDataLoader.loadDavisData"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.DICDataLoader.loadDavisData">[docs]</a>    <span class="k">def</span> <span class="nf">loadDavisData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; A .txt file from DaVis contains x and y coordinates</span>
-<span class="sd">        and x and y displacements for each coordinate&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DICDataLoader.loadDavisData"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader.loadDavisData">[docs]</a>    <span class="k">def</span> <span class="nf">loadDavisData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Load displacement data from Davis .txt file containing x and y coordinates</span>
+<span class="sd">        and x and y displacements for each coordinate.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Coordinates and displacements.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">filePath</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileDir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">filePath</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
             <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Cannot open file </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filePath</span><span class="p">))</span>
@@ -298,8 +376,16 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span></div>
         
-<div class="viewcode-block" id="DICDataLoader.loadDavisImageData"><a class="viewcode-back" href="../../defdap.file_readers.html#defdap.file_readers.DICDataLoader.loadDavisImageData">[docs]</a>    <span class="k">def</span> <span class="nf">loadDavisImageData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+<div class="viewcode-block" id="DICDataLoader.loadDavisImageData"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader.loadDavisImageData">[docs]</a>    <span class="k">def</span> <span class="nf">loadDavisImageData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; A .txt file from DaVis containing a 2D image</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">filePath</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileDir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">filePath</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
