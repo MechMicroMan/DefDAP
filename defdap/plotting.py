@@ -1258,7 +1258,7 @@ class HistPlot(Plot):
 
         # set y-axis label
         yLabel = "Normalised frequency" if self.density else "Frequency"
-        if self.plotType is "log":
+        if self.plotType == "log":
             yLabel = "ln({})".format(yLabel)
         self.ax.set_ylabel(yLabel)
 
@@ -1287,7 +1287,7 @@ class HistPlot(Plot):
                             density=self.density)
 
         yVals = hist[0]
-        if self.plotType is "log":
+        if self.plotType == "log":
             yVals = np.log(yVals)
         xVals = 0.5 * (hist[1][1:] + hist[1][:-1])
 
