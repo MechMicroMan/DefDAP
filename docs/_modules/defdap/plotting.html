@@ -528,7 +528,7 @@
         <span class="bp">cls</span><span class="p">,</span> <span class="n">callingMap</span><span class="p">,</span> <span class="n">mapData</span><span class="p">,</span>
         <span class="n">fig</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figParams</span><span class="o">=</span><span class="p">{},</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axParams</span><span class="o">=</span><span class="p">{},</span>
         <span class="n">plot</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">makeInteractive</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cLabel</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">clabel</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
         <span class="n">plotGBs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dilateBoundaries</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">boundaryColour</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">plotScaleBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">highlightGrains</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">highlightColours</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">highlightAlpha</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -562,7 +562,7 @@
 <span class="sd">            Maximum value for the colour scale.</span>
 <span class="sd">        cmap : str</span>
 <span class="sd">            Colour map.</span>
-<span class="sd">        cLabel : str</span>
+<span class="sd">        clabel : str</span>
 <span class="sd">            Label for the colour bar.</span>
 <span class="sd">        plotGBs : bool</span>
 <span class="sd">            If true, plot the grain boundaries on the map.</span>
@@ -596,7 +596,7 @@
             <span class="n">plot</span><span class="o">.</span><span class="n">addMap</span><span class="p">(</span><span class="n">mapData</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">plotColourBar</span><span class="p">:</span>
-            <span class="n">plot</span><span class="o">.</span><span class="n">addColourBar</span><span class="p">(</span><span class="n">cLabel</span><span class="p">)</span>
+            <span class="n">plot</span><span class="o">.</span><span class="n">addColourBar</span><span class="p">(</span><span class="n">clabel</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">plotGBs</span><span class="p">:</span>
             <span class="n">plot</span><span class="o">.</span><span class="n">addGrainBoundaries</span><span class="p">(</span><span class="n">colour</span><span class="o">=</span><span class="n">boundaryColour</span><span class="p">,</span> <span class="n">dilate</span><span class="o">=</span><span class="n">dilateBoundaries</span><span class="p">)</span>
@@ -874,7 +874,7 @@
         <span class="bp">cls</span><span class="p">,</span> <span class="n">callingGrain</span><span class="p">,</span> <span class="n">mapData</span><span class="p">,</span>
         <span class="n">fig</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figParams</span><span class="o">=</span><span class="p">{},</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axParams</span><span class="o">=</span><span class="p">{},</span>
         <span class="n">plot</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">makeInteractive</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cLabel</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">clabel</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
         <span class="n">plotScaleBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">plotSlipTraces</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plotSlipBands</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
     <span class="p">):</span>
@@ -906,7 +906,7 @@
 <span class="sd">            Maximum value for the colour scale.</span>
 <span class="sd">        cmap :</span>
 <span class="sd">            Colour map.</span>
-<span class="sd">        cLabel : str</span>
+<span class="sd">        clabel : str</span>
 <span class="sd">            Label for the colour bar.</span>
 <span class="sd">        plotScaleBar : bool</span>
 <span class="sd">            If true, plot a scale bar in the map.</span>
@@ -930,7 +930,7 @@
         <span class="n">plot</span><span class="o">.</span><span class="n">addMap</span><span class="p">(</span><span class="n">mapData</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">plotColourBar</span><span class="p">:</span>
-            <span class="n">plot</span><span class="o">.</span><span class="n">addColourBar</span><span class="p">(</span><span class="n">cLabel</span><span class="p">)</span>
+            <span class="n">plot</span><span class="o">.</span><span class="n">addColourBar</span><span class="p">(</span><span class="n">clabel</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">plotScaleBar</span><span class="p">:</span>
             <span class="n">plot</span><span class="o">.</span><span class="n">addScaleBar</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span>
@@ -1297,7 +1297,7 @@
 
         <span class="c1"># set y-axis label</span>
         <span class="n">yLabel</span> <span class="o">=</span> <span class="s2">&quot;Normalised frequency&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">density</span> <span class="k">else</span> <span class="s2">&quot;Frequency&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotType</span> <span class="ow">is</span> <span class="s2">&quot;log&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotType</span> <span class="o">==</span> <span class="s2">&quot;log&quot;</span><span class="p">:</span>
             <span class="n">yLabel</span> <span class="o">=</span> <span class="s2">&quot;ln(</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">yLabel</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">yLabel</span><span class="p">)</span>
 
@@ -1326,7 +1326,7 @@
                             <span class="n">density</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">density</span><span class="p">)</span>
 
         <span class="n">yVals</span> <span class="o">=</span> <span class="n">hist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotType</span> <span class="ow">is</span> <span class="s2">&quot;log&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotType</span> <span class="o">==</span> <span class="s2">&quot;log&quot;</span><span class="p">:</span>
             <span class="n">yVals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">yVals</span><span class="p">)</span>
         <span class="n">xVals</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">hist</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">hist</span><span class="p">[</span><span class="mi">1</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
 

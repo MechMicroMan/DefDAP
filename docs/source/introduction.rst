@@ -11,7 +11,7 @@ Citation
 
 If this software is used in the preparation of published work please cite:
 
-Michael Atkinson et. al. "A good title for a paper", To be published
+`Atkinson, Michael D, Thomas, Rhys, Harte, Allan, Crowther, Peter, & Quinta da Fonseca, João. (2020, May 4). DefDAP: Deformation Data Analysis in Python - v0.92 (Version 0.92). Zenodo.  <http://doi.org/10.5281/zenodo.3784775>`_
 
 
 Licenses

@@ -138,11 +138,11 @@
 <span class="sd">            Start x, start y, end x, end y point of line passed from drawn line.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1">## Save lines and angles into grain</span>
         <span class="c1"># Get angle of lines</span>
-        <span class="n">lineAngle</span> <span class="o">=</span> <span class="mi">270</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+        <span class="n">lineAngle</span> <span class="o">=</span> <span class="mi">90</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
                                               <span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
         <span class="k">if</span> <span class="n">lineAngle</span> <span class="o">&gt;</span> <span class="mi">180</span><span class="p">:</span> <span class="n">lineAngle</span> <span class="o">-=</span> <span class="mi">180</span>
+        <span class="k">elif</span> <span class="n">lineAngle</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">lineAngle</span> <span class="o">+=</span> <span class="mi">180</span>
         <span class="c1">#lineAngle += self.currMap.ebsdTransform.rotation*-180/np.pi</span>
             
         <span class="c1"># Save drawn line to the DIC grain</span>
@@ -158,7 +158,6 @@
 <span class="sd">        save the average angle and detect the active slip planes.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-
         <span class="n">angles</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span><span class="p">]</span>
         <span class="c1"># For single line, don&#39;t group</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>

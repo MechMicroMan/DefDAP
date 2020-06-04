@@ -132,7 +132,7 @@ then click ‘save point’ to append to the homologous points list.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>binSize</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Binning applied to image, if applicable.</p></li>
-<li><p><strong>points</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a><em>, </em><em>optional</em>) – Array of (x,y) homologous points to set explicitly.</p></li>
+<li><p><strong>points</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a><em>, </em><em>optional</em>) – Array of (x,y) homologous points to set explicitly.</p></li>
 <li><p><strong>kwargs</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#dict" title="(in Python v3.7)"><em>dict</em></a><em>, </em><em>optional</em>) – Keyword arguments for matplotlib.</p></li>
 </ul>
 </dd>
@@ -232,7 +232,7 @@ incrementing the current values.</p>
 <dd class="field-odd"><p>Distance from a grain boundary at each point in map.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -258,7 +258,7 @@ incrementing the current values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Array of map data to grain average. This must be cropped!</p></li>
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Array of map data to grain average. This must be cropped!</p></li>
 <li><p><strong>grainIds</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a><em>, </em><em>optional</em>) – grainIDs to perform operation on, set to -1 for all grains.</p></li>
 </ul>
 </dd>
@@ -266,7 +266,7 @@ incrementing the current values.</p>
 <dd class="field-even"><p>Array containing the grain average values.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -280,7 +280,7 @@ a grain average will be applied.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a><em>, </em><em>optional</em>) – Array of map data. This must be cropped! You must supply either
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a><em>, </em><em>optional</em>) – Array of map data. This must be cropped! You must supply either
 mapData or grainData.</p></li>
 <li><p><strong>grainData</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a><em> or </em><em>numpy.array</em><em>, </em><em>optional</em>) – Grain values. This an be a single value per grain or RGB
 values. You must supply either mapData or grainData.</p></li>
@@ -306,8 +306,8 @@ points coloured by grain average values from map data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Array of map data to grain average. This must be cropped!</p></li>
-<li><p><strong>direction</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Vector of reference direction for the IPF.</p></li>
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Array of map data to grain average. This must be cropped!</p></li>
+<li><p><strong>direction</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Vector of reference direction for the IPF.</p></li>
 <li><p><strong>plotColourBar</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – Set to False to exclude the colour bar from the plot.</p></li>
 <li><p><strong>vmin</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>, </em><em>optional</em>) – Minimum value of colour scale.</p></li>
 <li><p><strong>vmax</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>, </em><em>optional</em>) – Maximum value for colour scale.</p></li>
@@ -376,7 +376,7 @@ otherwise in the map coordinates. Defaults is grain.</p></li>
 <dd class="field-even"><p>Bounding box for grain with np.nan outside the grain and given number within.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -408,13 +408,13 @@ otherwise in the map coordinates. Defaults is grain.</p></li>
 <dd><p>Extract this grains data from the given map data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Array of map data. This must be cropped!</p>
+<dd class="field-odd"><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Array of map data. This must be cropped!</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>Array containing this grains values from the given map data.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -426,9 +426,9 @@ otherwise in the map coordinates. Defaults is grain.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Array of map data. This must be cropped! Either this or
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Array of map data. This must be cropped! Either this or
 ‘grainData’ must be supplied and ‘grainData’ takes precedence.</p></li>
-<li><p><strong>grainData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Array of data at each point in the grain. Either this or
+<li><p><strong>grainData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Array of data at each point in the grain. Either this or
 ‘mapData’ must be supplied and ‘grainData’ takes precedence.</p></li>
 <li><p><strong>bg</strong> (<em>various</em><em>, </em><em>optional</em>) – Value to fill the background with. Must be same dtype as
 input array.</p></li>
@@ -438,7 +438,7 @@ input array.</p></li>
 <dd class="field-even"><p>Grain map extracted from given data.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -452,9 +452,9 @@ grain using only data in this grain.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Array of map data. This must be cropped! Either this or
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Array of map data. This must be cropped! Either this or
 ‘grainData’ must be supplied and ‘grainData’ takes precedence.</p></li>
-<li><p><strong>grainData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – List of data at each point in the grain. Either this or
+<li><p><strong>grainData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – List of data at each point in the grain. Either this or
 ‘mapData’ must be supplied and ‘grainData’ takes precedence.</p></li>
 <li><p><strong>kernelSize</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Size of kernel as the number of pixels to dilate by i.e 1
 gives a 3x3 kernel.</p></li>
@@ -466,7 +466,7 @@ input array.</p></li>
 <dd class="field-even"><p>Map of this grains coarsened data.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -478,9 +478,9 @@ input array.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Array of map data. This must be cropped! Either this or
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Array of map data. This must be cropped! Either this or
 ‘grainData’ must be supplied and ‘grainData’ takes precedence.</p></li>
-<li><p><strong>grainData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – List of data at each point in the grain. Either this or
+<li><p><strong>grainData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – List of data at each point in the grain. Either this or
 ‘mapData’ must be supplied and ‘grainData’ takes precedence.</p></li>
 <li><p><strong>vmin</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>, </em><em>optional</em>) – Minimum value of colour scale.</p></li>
 <li><p><strong>vmax</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>, </em><em>optional</em>) – Minimum value of colour scale.</p></li>
@@ -510,7 +510,7 @@ input array.</p></li>
 <dd class="field-odd"><p>Slip plane.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -524,7 +524,7 @@ input array.</p></li>
 <dd class="field-odd"><p>Slip direction.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -620,7 +620,7 @@ stored in the defdap install dir or path to a file.</p></li>
 <dd class="field-even"><p>l matrix.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 <p class="rubric">References</p>
@@ -634,13 +634,13 @@ Randle and Engle - Introduction To Texture Analysis</p>
 <dd><p>Construct matrix of reciprocal lattice vectors to transform plane normals.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>lMatrix</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – l matrix.</p>
+<dd class="field-odd"><p><strong>lMatrix</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – l matrix.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>q matrix.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 <p class="rubric">References</p>
@@ -713,7 +713,7 @@ methods.</p>
 <dd><p>Euler angles for eaxh point of the map.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -724,7 +724,7 @@ methods.</p>
 <dd><p>Band contrast for each point of map.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -735,7 +735,7 @@ methods.</p>
 <dd><p>Quaterions for each point of map.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a>(<a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat">defdap.quat.Quat</a>)</p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a>(<a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat">defdap.quat.Quat</a>)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -757,7 +757,7 @@ methods.</p>
 <dd><p>Map of phase ids.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -779,7 +779,7 @@ methods.</p>
 <dd><p>Map of boundaries. -1 for a boundary, 0 otherwise.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -790,7 +790,7 @@ methods.</p>
 <dd><p>Map of phase boundaries. -1 for boundary, 0 otherwise.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -808,7 +808,7 @@ grainID starts at 0. Regions that are smaller than the minimum
 grain size are given value -2.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -830,7 +830,7 @@ grain size are given value -2.</p>
 <dd><p>Map of misorientation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -841,7 +841,7 @@ grain size are given value -2.</p>
 <dd><p>Map of misorientation axis components.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)">list</a>(<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a>)</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)">list</a>(<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a>)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -852,7 +852,7 @@ grain size are given value -2.</p>
 <dd><p>Map of KAM.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -863,7 +863,7 @@ grain size are given value -2.</p>
 <dd><p>Map of average Schmid factor.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -914,7 +914,7 @@ homologue point of the maps.</p>
 <dd><p>GND scalar map.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -925,7 +925,7 @@ homologue point of the maps.</p>
 <dd><p>3x3 Nye tensor at each point.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1471,7 +1471,7 @@ methods.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>direction</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Sample direction for IPF.</p></li>
+<li><p><strong>direction</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Sample direction for IPF.</p></li>
 <li><p><strong>kwargs</strong> – All other arguments are passed to <a class="reference internal" href="#defdap.quat.Quat.plotIPF" title="defdap.quat.Quat.plotIPF"><code class="xref py py-func docutils literal notranslate"><span class="pre">defdap.quat.Quat.plotIPF()</span></code></a>.</p></li>
 </ul>
 </dd>
@@ -1491,7 +1491,7 @@ methods.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>direction</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Sample direction for IPF.</p></li>
+<li><p><strong>direction</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Sample direction for IPF.</p></li>
 <li><p><strong>kwargs</strong> – All other arguments are passed to <a class="reference internal" href="#defdap.quat.Quat.plotIPF" title="defdap.quat.Quat.plotIPF"><code class="xref py py-func docutils literal notranslate"><span class="pre">defdap.quat.Quat.plotIPF()</span></code></a>.</p></li>
 </ul>
 </dd>
@@ -1546,7 +1546,7 @@ methods.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>loadVector</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Loading vector, i.e. [1, 0, 0]</p></li>
+<li><p><strong>loadVector</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Loading vector, i.e. [1, 0, 0]</p></li>
 <li><p><strong>slipSystems</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a><em>, </em><em>optional</em>) – Slip planes to calculate Schmid factor for. Maximum for all planes
 used if not set.</p></li>
 </ul>
@@ -1807,7 +1807,7 @@ and x and y displacements for each coordinate.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>Coordinates and displacements.</p>
+<dd class="field-even"><p>x and y coordinates and x and y displacements.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#dict" title="(in Python v3.7)">dict</a></p>
@@ -1901,7 +1901,7 @@ methods.</p>
 <dd><p>X coordinates.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1912,7 +1912,7 @@ methods.</p>
 <dd><p>Y coordinates.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1923,7 +1923,7 @@ methods.</p>
 <dd><p>X displacement.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1934,7 +1934,7 @@ methods.</p>
 <dd><p>Y displacement.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1945,7 +1945,7 @@ methods.</p>
 <dd><p>Correlation value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2106,7 +2106,7 @@ are the same size and 2 means the pixels in the pattern are half the size of the
 <dd><p>Map of u displacement component along x.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2117,7 +2117,7 @@ are the same size and 2 means the pixels in the pattern are half the size of the
 <dd><p>Map of v displacement component along x.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2134,7 +2134,7 @@ are the same size and 2 means the pixels in the pattern are half the size of the
 <dd><p>Components of the green strain , where 1=x and 2=y.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2145,7 +2145,7 @@ are the same size and 2 means the pixels in the pattern are half the size of the
 <dd><p>Max shear component np.sqrt(((e11 - e22) / 2.)**2 + e12**2).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2156,7 +2156,7 @@ are the same size and 2 means the pixels in the pattern are half the size of the
 <dd><p>Crop distances (default all zeros).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2263,7 +2263,7 @@ i.e. cropped_data = DicMap.crop(DicMap.data_to_crop).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Bap data to crop.</p></li>
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Bap data to crop.</p></li>
 <li><p><strong>binned</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – True if mapData is binned i.e. binned BSE pattern.</p></li>
 </ul>
 </dd>
@@ -2323,7 +2323,7 @@ i.e. cropped_data = DicMap.crop(DicMap.data_to_crop).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Data to warp.</p></li>
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Data to warp.</p></li>
 <li><p><strong>cropImage</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – Crop to size of DIC map if true.</p></li>
 <li><p><strong>order</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Order of interpolation (0: Nearest-neighbor, 1: Bi-linear…).</p></li>
 <li><p><strong>preserve_range</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – Keep the original range of values.</p></li>
@@ -2519,7 +2519,7 @@ methods.</p>
 <dd><p>Start and end points for lines drawn using defdap.inspector.GrainInspector.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2604,7 +2604,7 @@ lines drawn using defdap.inspector.GrainInspector.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>grainMapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Data to find bands in.</p></li>
+<li><p><strong>grainMapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Data to find bands in.</p></li>
 <li><p><strong>thres</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>, </em><em>optional</em>) – Normalised threshold for peaks.</p></li>
 <li><p><strong>min_dist</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Minimum angle between bands.</p></li>
 </ul>
@@ -2652,7 +2652,7 @@ and relative displacement ratio analysis.</p>
 <dd><p>Save the start point, end point and angle of drawn line into the grain.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>event</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Start x, start y, end x, end y point of line passed from drawn line.</p>
+<dd class="field-odd"><p><strong>event</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Start x, start y, end x, end y point of line passed from drawn line.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -2733,7 +2733,7 @@ save the average angle and detect the active slip planes.</p>
 <li><p><strong>vlist</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – List of vcentered values.</p></li>
 <li><p><strong>allxlist</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – List of all x values.</p></li>
 <li><p><strong>allylist</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – List of all y values.</p></li>
-<li><p><strong>linRegResults</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a><em>, </em><em>{slope</em><em>, </em><em>intercept</em><em>, </em><em>rvalue</em><em>, </em><em>pvalue</em><em>, </em><em>stderr}</em>) – Results from linear regression of ucentered vs vcentered.</p></li>
+<li><p><strong>linRegResults</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a><em>, </em><em>{slope</em><em>, </em><em>intercept</em><em>, </em><em>rvalue</em><em>, </em><em>pvalue</em><em>, </em><em>stderr}</em>) – Results from linear regression of ucentered vs vcentered.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2893,7 +2893,7 @@ save the average angle and detect the active slip planes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Map data to plot.</p></li>
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Map data to plot.</p></li>
 <li><p><strong>vmin</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Minimum value for the colour scale.</p></li>
 <li><p><strong>vmax</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Maximum value for the colour scale.</p></li>
 <li><p><strong>cmap</strong> – Colour map.</p></li>
@@ -3025,13 +3025,13 @@ save the average angle and detect the active slip planes.</p>
 
 <dl class="py method">
 <dt id="defdap.plotting.MapPlot.create">
-<em class="property">classmethod </em><code class="sig-name descname">create</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">callingMap</span></em>, <em class="sig-param"><span class="n">mapData</span></em>, <em class="sig-param"><span class="n">fig</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">figParams</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">axParams</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">plot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">makeInteractive</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">plotColourBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">vmin</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vmax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cLabel</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">plotGBs</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">dilateBoundaries</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">boundaryColour</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">plotScaleBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">scale</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">highlightGrains</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">highlightColours</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">highlightAlpha</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/plotting.html#MapPlot.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.plotting.MapPlot.create" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">create</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">callingMap</span></em>, <em class="sig-param"><span class="n">mapData</span></em>, <em class="sig-param"><span class="n">fig</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">figParams</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">axParams</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">plot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">makeInteractive</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">plotColourBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">vmin</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vmax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">clabel</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">plotGBs</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">dilateBoundaries</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">boundaryColour</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">plotScaleBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">scale</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">highlightGrains</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">highlightColours</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">highlightAlpha</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/plotting.html#MapPlot.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.plotting.MapPlot.create" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a plot for a map.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>callingMap</strong> (<a class="reference internal" href="#defdap.base.Map" title="defdap.base.Map"><em>Map</em></a>) – DIC or EBSD map which called this plot.</p></li>
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Data to be plotted.</p></li>
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Data to be plotted.</p></li>
 <li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.1)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on.</p></li>
 <li><p><strong>figParams</strong> – Passed to defdap.plotting.Plot.</p></li>
 <li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><em>matplotlib.axes.Axes</em></a>) – Matplotlib axis to plot on.</p></li>
@@ -3042,7 +3042,7 @@ save the average angle and detect the active slip planes.</p>
 <li><p><strong>vmin</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>, </em><em>optional</em>) – Minimum value for the colour scale.</p></li>
 <li><p><strong>vmax</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>, </em><em>optional</em>) – Maximum value for the colour scale.</p></li>
 <li><p><strong>cmap</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Colour map.</p></li>
-<li><p><strong>cLabel</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Label for the colour bar.</p></li>
+<li><p><strong>clabel</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Label for the colour bar.</p></li>
 <li><p><strong>plotGBs</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – If true, plot the grain boundaries on the map.</p></li>
 <li><p><strong>dilateBoundaries</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – If true, dilate the grain boundaries.</p></li>
 <li><p><strong>boundaryColour</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Colour to use for the grain boundaries.</p></li>
@@ -3084,7 +3084,7 @@ save the average angle and detect the active slip planes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mapData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Grain data to plot</p></li>
+<li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Grain data to plot</p></li>
 <li><p><strong>vmin</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Minimum value for the colour scale.</p></li>
 <li><p><strong>vmax</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Maximum value for the colour scale.</p></li>
 <li><p><strong>cmap</strong> – Colour map to use.</p></li>
@@ -3199,7 +3199,7 @@ detected in <a class="reference internal" href="#defdap.hrdic.Grain.calcSlipBand
 
 <dl class="py method">
 <dt id="defdap.plotting.GrainPlot.create">
-<em class="property">classmethod </em><code class="sig-name descname">create</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">callingGrain</span></em>, <em class="sig-param"><span class="n">mapData</span></em>, <em class="sig-param"><span class="n">fig</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">figParams</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">axParams</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">plot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">makeInteractive</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">plotColourBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">vmin</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vmax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cLabel</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">plotScaleBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">scale</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">plotSlipTraces</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">plotSlipBands</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/plotting.html#GrainPlot.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.plotting.GrainPlot.create" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">create</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">callingGrain</span></em>, <em class="sig-param"><span class="n">mapData</span></em>, <em class="sig-param"><span class="n">fig</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">figParams</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">axParams</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">plot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">makeInteractive</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">plotColourBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">vmin</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vmax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">clabel</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">plotScaleBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">scale</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">plotSlipTraces</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">plotSlipBands</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/plotting.html#GrainPlot.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.plotting.GrainPlot.create" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create grain plot.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -3216,7 +3216,7 @@ detected in <a class="reference internal" href="#defdap.hrdic.Grain.calcSlipBand
 <li><p><strong>vmin</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Minimum value for the colour scale.</p></li>
 <li><p><strong>vmax</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Maximum value for the colour scale.</p></li>
 <li><p><strong>cmap</strong> – Colour map.</p></li>
-<li><p><strong>cLabel</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Label for the colour bar.</p></li>
+<li><p><strong>clabel</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Label for the colour bar.</p></li>
 <li><p><strong>plotScaleBar</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – If true, plot a scale bar in the map.</p></li>
 <li><p><strong>scale</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Size of pizel in microns.</p></li>
 <li><p><strong>plotSlipTraces</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – If true, plot slip traces with <a class="reference internal" href="#defdap.plotting.GrainPlot.addSlipTraces" title="defdap.plotting.GrainPlot.addSlipTraces"><code class="xref py py-func docutils literal notranslate"><span class="pre">addSlipTraces()</span></code></a></p></li>
@@ -3263,8 +3263,8 @@ detected in <a class="reference internal" href="#defdap.hrdic.Grain.calcSlipBand
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>startPoint</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Start point in crystal coordinates (i.e. [0,0,1]).</p></li>
-<li><p><strong>endPoint</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – End point in crystal coordinates, (i.e. [1,0,0]).</p></li>
+<li><p><strong>startPoint</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Start point in crystal coordinates (i.e. [0,0,1]).</p></li>
+<li><p><strong>endPoint</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – End point in crystal coordinates, (i.e. [1,0,0]).</p></li>
 <li><p><strong>plotSyms</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If true, plot all symmetrically equivelant points.</p></li>
 <li><p><strong>res</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Number of points within each line to plot.</p></li>
 <li><p><strong>kwargs</strong> – All other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.plot.html#matplotlib.pyplot.plot" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.plot()</span></code></a>.</p></li>
@@ -3332,7 +3332,7 @@ semicircles of different colour.</p></li>
 <dd><p>Stereographic projection of pole direction or pair of polar angles.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>args</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a><em>, </em><em>len 2</em><em> or </em><em>3</em>) – 2 arguments for polar angles or 3 arguments for pole directions.</p>
+<dd class="field-odd"><p><strong>args</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a><em>, </em><em>len 2</em><em> or </em><em>3</em>) – 2 arguments for polar angles or 3 arguments for pole directions.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>x coordinate, y coordinate</p>
@@ -3352,7 +3352,7 @@ semicircles of different colour.</p></li>
 <dd><p>Lambert Projection of pole direction or pair of polar angles.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>args</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a><em>, </em><em>len 2</em><em> or </em><em>3</em>) – 2 arguments for polar angles or 3 arguments for pole directions.</p>
+<dd class="field-odd"><p><strong>args</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a><em>, </em><em>len 2</em><em> or </em><em>3</em>) – 2 arguments for polar angles or 3 arguments for pole directions.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>x coordinate, y coordinate</p>
@@ -3380,12 +3380,12 @@ semicircles of different colour.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>histData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Data to be used in the histogram.</p></li>
+<li><p><strong>histData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Data to be used in the histogram.</p></li>
 <li><p><strong>bins</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Number of bins to use for histogram.</p></li>
 <li><p><strong>range</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3.7/library/constants.html#None" title="(in Python v3.7)"><em>None</em></a><em>, </em><em>optional</em>) – The lower and upper range of the bins</p></li>
 <li><p><strong>line</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a><em>, </em><em>optional</em>) – Marker or line type to be used.</p></li>
 <li><p><strong>label</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a><em>, </em><em>optional</em>) – Label to use for data (will be used for legend).</p></li>
-<li><p><strong>kwargs</strong> – Other arguments will be passed to <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram.html#numpy.histogram" title="(in NumPy v1.17)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.histogram()</span></code></a></p></li>
+<li><p><strong>kwargs</strong> – Other arguments will be passed to <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.histogram.html#numpy.histogram" title="(in NumPy v1.18)"><code class="xref py py-func docutils literal notranslate"><span class="pre">numpy.histogram()</span></code></a></p></li>
 </ul>
 </dd>
 </dl>
@@ -3409,7 +3409,7 @@ semicircles of different colour.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>histData</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Data to be used in the histogram.</p></li>
+<li><p><strong>histData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Data to be used in the histogram.</p></li>
 <li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.1)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on.</p></li>
 <li><p><strong>figParams</strong> – Passed to defdap.plotting.Plot.</p></li>
 <li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><em>matplotlib.axes.Axes</em></a>) – Matplotlib axis to plot on.</p></li>
@@ -3669,7 +3669,7 @@ does not consider symmetries of the crystal structure.</p>
 <dd class="field-even"><p>Axis of misorientation.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a>, shape 3</p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a>, shape 3</p>
 </dd>
 </dl>
 </dd></dl>
@@ -3729,13 +3729,13 @@ active axis is used.</p></li>
 <dd><p>Create a an array of quats from an array of Euler angles.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>eulerArray</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Array of Bunge Euler angles of shape 3 x n x … x m.</p>
+<dd class="field-odd"><p><strong>eulerArray</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Array of Bunge Euler angles of shape 3 x n x … x m.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><strong>quats</strong> – Array of quat objects of shape n x … x m.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a>(<a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat">defdap.quat.Quat</a>)</p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a>(<a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat">defdap.quat.Quat</a>)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -3747,9 +3747,9 @@ active axis is used.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>quats</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a><em>(</em><a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat"><em>defdap.quat.Quat</em></a><em>)</em>) – Array of quat objects.</p></li>
+<li><p><strong>quats</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a><em>(</em><a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat"><em>defdap.quat.Quat</em></a><em>)</em>) – Array of quat objects.</p></li>
 <li><p><strong>symGroup</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Crystal type (cubic, hexagonal).</p></li>
-<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.17)"><em>numpy.dtype</em></a>) – Data type used for calculation, defaults to np.float.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.18)"><em>numpy.dtype</em></a>) – Data type used for calculation, defaults to np.float.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -3767,7 +3767,7 @@ active axis is used.</p></li>
 <dd><p>Calculate the average orientation of given quats.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>quatComps</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Array containing all symmetrically equivalent quaternion components of given quaternions
+<dd class="field-odd"><p><strong>quatComps</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Array containing all symmetrically equivalent quaternion components of given quaternions
 (shape: numSym x 4 x numQuats), can be calculated with Quat.calcSymEqvs.</p>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -3786,7 +3786,7 @@ active axis is used.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>quatComps</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Array containing all symmetrically equivalent quaternion components of given quaternions
+<li><p><strong>quatComps</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Array containing all symmetrically equivalent quaternion components of given quaternions
 (shape: numSym x 4 x numQuats), can be calculated from quats with Quat.calcSymEqvs.</p></li>
 <li><p><strong>refOri</strong> (<a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat"><em>defdap.quat.Quat</em></a>) – Reference orientation.</p></li>
 </ul>
@@ -3808,9 +3808,9 @@ active axis is used.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>x</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – x coordinate.</p></li>
-<li><p><strong>y</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – y coordinate.</p></li>
-<li><p><strong>z</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – z coordinate.</p></li>
+<li><p><strong>x</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>)</em>) – x coordinate.</p></li>
+<li><p><strong>y</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>)</em>) – y coordinate.</p></li>
+<li><p><strong>z</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>)</em>) – z coordinate.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -3824,22 +3824,23 @@ active axis is used.</p></li>
 
 <dl class="py method">
 <dt id="defdap.quat.Quat.calcIPFcolours">
-<em class="property">static </em><code class="sig-name descname">calcIPFcolours</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">quats</span></em>, <em class="sig-param"><span class="n">direction</span></em>, <em class="sig-param"><span class="n">symGroup</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.calcIPFcolours"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.calcIPFcolours" title="Permalink to this definition">¶</a></dt>
+<em class="property">static </em><code class="sig-name descname">calcIPFcolours</code><span class="sig-paren">(</span><em class="sig-param">quats</em>, <em class="sig-param">direction</em>, <em class="sig-param">symGroup</em>, <em class="sig-param">dtype=&lt;class 'numpy.float32'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.calcIPFcolours"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.calcIPFcolours" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the RGB colours, based on the location of the given quats
 on the fundamental region of the IPF for the sample direction specified.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>quats</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a><em>(</em><a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat"><em>defdap.quat.Quat</em></a><em>)</em>) – Array of quat objects.</p></li>
-<li><p><strong>direction</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Direction in sample space.</p></li>
+<li><p><strong>quats</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a><em>(</em><a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat"><em>defdap.quat.Quat</em></a><em>)</em>) – Array of quat objects.</p></li>
+<li><p><strong>direction</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Direction in sample space.</p></li>
 <li><p><strong>symGroup</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Crystal type (cubic, hexagonal).</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.18)"><em>numpy.dtype</em></a>) – Data type to use for calculation.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>rgb</strong> – Array of rgb colours for each quat.</p>
+<dd class="field-even"><p>Array of rgb colours for each quat.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)">numpy.ndarray</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)">numpy.ndarray</a>, shape (3, numQuats)</p>
 </dd>
 </dl>
 <p class="rubric">References</p>
@@ -3856,9 +3857,9 @@ and find the ones in the fundamental sector of the IPF.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>quats</strong> (<em>array_like</em><em>(</em><a class="reference internal" href="#defdap.quat.Quat" title="defdap.quat.Quat"><em>defdap.quat.Quat</em></a><em>)</em>) – Array of quat objects.</p></li>
-<li><p><strong>direction</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><em>numpy.ndarray</em></a>) – Direction in sample space.</p></li>
+<li><p><strong>direction</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Direction in sample space.</p></li>
 <li><p><strong>symGroup</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Crystal type (cubic, hexagonal).</p></li>
-<li><p><strong>dtype</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.17)"><em>numpy.dtype</em></a>) – Data type to use for calculation.</p></li>
+<li><p><strong>dtype</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.dtype.html#numpy.dtype" title="(in NumPy v1.18)"><em>numpy.dtype</em></a>) – Data type to use for calculation.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
