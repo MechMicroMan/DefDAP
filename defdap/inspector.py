@@ -1,4 +1,4 @@
-# Copyright 2019 Mechanics of Microstructures Group
+# Copyright 2020 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,11 @@ from defdap.plotting import Plot, GrainPlot, LineSlice
 
 
 class GrainInspector:
+    """
+    Class containing the interactive grain inspector tool for slip trace analysis
+    and relative displacement ratio analysis.
+
+    """
     def __init__(self, currMap, vmax=0.1):
         # Initialise some values
         self.grainID = 0
@@ -36,7 +41,8 @@ class GrainInspector:
         self.draw()
 
     def draw(self):
-        """ Draw the main window, buttons, text boxes and axes 
+        """ Draw the main window, buttons, text boxes and axes.
+
         """
         # Plot window
         self.plot = Plot(ax=None, makeInteractive=True, figsize=(14,8), title='Grain Inspector')
@@ -69,12 +75,13 @@ class GrainInspector:
         self.redraw()
 
     def gotoGrain(self, event, plot):
-        """ Go to a specified grain ID
+        """ Go to a specified grain ID.
 
         Parameters
         ----------
         event: int
-            Grain ID to go to
+            Grain ID to go to.
+
         """
         ## Go to grain ID specified in event
         self.grainID=int(event)
@@ -84,18 +91,19 @@ class GrainInspector:
         self.redraw()
 
     def saveLine(self, event, plot):
-        """  Save the start point, end point and angle of drawn line into the grain
+        """  Save the start point, end point and angle of drawn line into the grain.
 
         Parameters
         ----------
-        event: array
-            Start x, start y, end x, end y point of line passed from drawn line
+        event: numpy.ndarray
+            Start x, start y, end x, end y point of line passed from drawn line.
+
         """
-        ## Save lines and angles into grain
         # Get angle of lines
-        lineAngle = 270-np.rad2deg(np.arctan2(self.drawnLine.points[3]-self.drawnLine.points[1], 
+        lineAngle = 90-np.rad2deg(np.arctan2(self.drawnLine.points[3]-self.drawnLine.points[1], 
                                               self.drawnLine.points[2]-self.drawnLine.points[0]))
         if lineAngle > 180: lineAngle -= 180
+        elif lineAngle < 0: lineAngle += 180
         #lineAngle += self.currMap.ebsdTransform.rotation*-180/np.pi
             
         # Save drawn line to the DIC grain
@@ -106,10 +114,11 @@ class GrainInspector:
         self.redraw()
         
     def groupLines(self):
-        """  Group the lines drawn in the current grain item using a mean shift algorithm, 
-        save the average angle and detect the active slip planes
         """
+        Group the lines drawn in the current grain item using a mean shift algorithm,
+        save the average angle and detect the active slip planes.
 
+        """
         angles = [x[1] for x in self.currDICGrain.pointsList]
         # For single line, don't group
         if len(angles) == 1:
@@ -141,7 +150,8 @@ class GrainInspector:
             group[3] = deviation
             
     def clearAllLines(self, event, plot):
-        """ Clear all lines in a given grain
+        """ Clear all lines in a given grain.
+
         """
 
         self.currDICGrain.pointsList = []
@@ -149,12 +159,13 @@ class GrainInspector:
         self.redraw()
 
     def removeLine(self, event, plot):
-        """  Remove single line [runs after submitting a text box]
+        """  Remove single line [runs after submitting a text box].
 
         Parameters
         ----------
         event: int
-            Line ID to remove
+            Line ID to remove.
+
         """
         ## Remove single line
         del self.currDICGrain.pointsList[int(event)]
@@ -162,7 +173,8 @@ class GrainInspector:
 
     def redraw(self):
         """
-        Draw items which need to be redrawn often (i.e. when changing grain ID)
+        Draw items which need to be redrawn often (i.e. when changing grain ID).
+
         """
 
         # Plot max shear for grain
@@ -224,12 +236,13 @@ class GrainInspector:
         self.plot.addText(self.groupsInfoAx, 0, 1, groupsTxt, va='top', fontsize=10)
 
     def runRDRGroup(self, event, plot):
-        """  Run RDR on a specified group, upon submitting a text box
+        """  Run RDR on a specified group, upon submitting a text box.
 
         Parameters
         ----------
         event: int
-            Group ID specified from text box
+            Group ID specified from text box.
+
         """
         ## Run RDR for group of lines
         if event != '':
@@ -237,7 +250,8 @@ class GrainInspector:
             self.RDRGroupBox.set_val('')
         
     def batchRunSTA(self, event, plot):
-        """  Run slip trace analysis on all grains which hve slip trace lines drawn
+        """  Run slip trace analysis on all grains which hve slip trace lines drawn.
+
         """
 
         # Print header
@@ -256,18 +270,19 @@ class GrainInspector:
                     print(text)
 
     def calcRDR(self, grain, group, showPlot=True, length=2.5):
-        """ Calculates the relative displacement ratio for a given grain and group
+        """ Calculates the relative displacement ratio for a given grain and group.
 
         Parameters
         ----------
         grain: int
-            DIC grain ID to run RDR on
+            DIC grain ID to run RDR on.
         group: int
-            group ID to run RDR on
+            group ID to run RDR on.
         showPlot: bool
-            if True, show plot window
+            if True, show plot window.
         length: int
-            length of perpendicular lines used for RDR
+            length of perpendicular lines used for RDR.
+
         """
         
         ulist=[]; vlist=[]; allxlist = []; allylist = [];      
@@ -337,24 +352,25 @@ class GrainInspector:
 
     def plotRDR(self, grain, group, ulist, vlist, allxlist, allylist, linRegResults):
         """
-        Plot RDR figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered
+        Plot RDR figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered.
         
         Parameters
         ----------
         grain: int
-            DIC grain to plot
+            DIC grain to plot.
         group: int
-            Group ID to plot
+            Group ID to plot.
         ulist: list
-            List of ucentered values
+            List of ucentered values.
         vlist: list
-            List of vcentered values
+            List of vcentered values.
         allxlist: list
-            List of all x values
+            List of all x values.
         allylist: list
-            List of all y values
-        linRegResults: array
-            Results from linear regression of ucentered vs vcentered
+            List of all y values.
+        linRegResults: numpy.ndarray, {slope, intercept, rvalue, pvalue, stderr}
+            Results from linear regression of ucentered vs vcentered.
+
         """
 
         # Draw window and axes

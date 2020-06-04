@@ -1,4 +1,4 @@
-# Copyright 2019 Mechanics of Microstructures Group
+# Copyright 2020 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,24 @@ import numpy as np
 
 
 class SlipSystem(object):
+    """Class used for defining and performing operations on a slip system.
+
+    """
     def __init__(self, slipPlane, slipDir, crystalSym, cOverA=None):
+        """Initialise a slip system object.
+
+        Parameters
+        ----------
+        slipPlane: nunpy.ndarray
+            Slip plane.
+        slipDir: numpy.ndarray
+            Slip direction.
+        crystalSym : str
+            The crystal symmetry ("cubic" or "hexagonal").
+        cOverA : float, optional
+            C over a ratio for hexagonal crystals.
+
+        """
         # Currently only for cubic
         self.crystalSym = crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
 
@@ -61,14 +78,38 @@ class SlipSystem(object):
 
     @property
     def slipPlane(self):
+        """Return the slip plane as an array. For example [0, 0, 1].
+
+        Returns
+        -------
+        numpy.ndarray
+            Slip plane.
+
+        """
         return self.slipPlaneOrtho
 
     @property
     def slipDir(self):
+        """Return the slip direction as an array. For example [0, 0, 1].
+
+        Returns
+        -------
+        numpy.ndarray
+            Slip direction.
+
+        """
         return self.slipDirOrtho
 
     @property
     def slipPlaneLabel(self):
+        """Return the slip plane label. For example '(111)'.
+
+        Returns
+        -------
+        str
+            Slip plane label.
+
+        """
         slipPlane = self.slipPlaneMiller
         if self.crystalSym == "hexagonal":
             return "({:d}{:d}{:d}{:d})".format(slipPlane[0], slipPlane[1], slipPlane[2], slipPlane[3])
@@ -77,6 +118,14 @@ class SlipSystem(object):
 
     @property
     def slipDirLabel(self):
+        """Returns the slip direction label. For example '[110]'.
+
+        Returns
+        -------
+        str
+            Slip direction label.
+
+        """
         slipDir = self.slipDirMiller
         if self.crystalSym == "hexagonal":
             return "[{:d}{:d}{:d}{:d}]".format(slipDir[0], slipDir[1], slipDir[2], slipDir[3])
@@ -85,25 +134,32 @@ class SlipSystem(object):
 
     @staticmethod
     def loadSlipSystems(name, crystalSym, cOverA=None):
-        """Load in slip systems from file. 3 integers for slip plane
+        """
+        Load in slip systems from file. 3 integers for slip plane
         normal and 3 for slip direction. Returns a list of list of slip
         systems grouped by slip plane.
 
-        Args:
-            name (string): name of the slip system file (without file
-            extension) stored in the defdap install dir or path to a file
-            crystalSym (string): The crystal symmetry ("cubic" or "hexagonal")
-            cOverA (float, optional): c over a ratio for hexagonal crystals
+        Parameters
+        ----------
+        name : str
+            Name of the slip system file (without file extension)
+            stored in the defdap install dir or path to a file.
+        crystalSym : str
+            The crystal symmetry ("cubic" or "hexagonal").
+        cOverA : float, optional
+            C over a ratio for hexagonal crystals.
 
-        Returns:
-            list(list(SlipSystem)): A list of list of slip systems
-            grouped slip plane.
+        Returns
+        -------
+        list(list(SlipSystem))
+            A list of list of slip systems grouped slip plane.
 
-        Raises:
-            IOError: Raised if not 6/8 integers per line
+        Raises
+        -------
+        IOError
+            Raised if not 6/8 integers per line.
+
         """
-
-
         # try and load from package dir first
         try:
             fileExt = ".txt"
@@ -115,7 +171,7 @@ class SlipSystem(object):
             slipSystemFile = open(filepath)
 
         except(FileNotFoundError):
-            # if it doesn't exist in the package dir try and load the path
+            # if it doesn't exist in the package dir, try and load the path
             try:
                 filepath = name
 
@@ -144,20 +200,25 @@ class SlipSystem(object):
                 crystalSym, cOverA=cOverA
             ))
 
-        # Group slip sytems by slip plane
+        # Group slip systems by slip plane
         groupedSlipSystems = SlipSystem.groupSlipSystems(slipSystems)
 
         return groupedSlipSystems, slipTraceColours
 
     @staticmethod
     def groupSlipSystems(slipSystems):
-        """Groups slip systems by there slip plane.
+        """Groups slip systems by their slip plane.
 
-        Args:
-            slipSytems (list(SlipSystem)): A list of slip systems
+        Parameters
+        ----------
+        slipSytems : (list(SlipSystem))
+            A list of slip systems.
 
-        Returns:
-            list(list(SlipSystem)): A list of list of slip systems grouped slip plane.
+        Returns
+        ----------
+        list(list(SlipSystem))
+            A list of list of slip systems grouped slip plane.
+
         """
         distSlipSystems = [slipSystems[0]]
         groupedSlipSystems = [[slipSystems[0]]]
@@ -176,8 +237,28 @@ class SlipSystem(object):
 
     @staticmethod
     def lMatrix(a, b, c, alpha, beta, gamma):
-        """ Construct L matrix based on Page 22 of
-        Randle and Engle - Introduction to texture analysis"""
+        """Construct l matrix.
+
+        Parameters
+        ----------
+        a : float
+        b : float
+        c : float
+        alpha : float
+        beta : float
+        gamma : float
+
+        Returns
+        -------
+        numpy.ndarray
+            l matrix.
+
+        References
+        -------
+        based on Page 22 of
+        Randle and Engle - Introduction To Texture Analysis
+
+        """
         lMatrix = np.zeros((3, 3))
 
         cosAlpha = np.cos(alpha)
@@ -214,8 +295,23 @@ class SlipSystem(object):
 
     @staticmethod
     def qMatrix(lMatrix):
-        """ Construct matrix of reciprocal lattice vectors to transform plane normals
-        See C. T. Young and J. L. Lytton, J. Appl. Phys., vol. 43, no. 4, pp. 1408–1417, 1972."""
+        """Construct matrix of reciprocal lattice vectors to transform plane normals.
+
+        Parameters
+        ----------
+        lMatrix : numpy.ndarray
+            l matrix.
+
+        Returns
+        -------
+        numpy.ndarray
+            q matrix.
+
+        References
+        -------
+        C. T. Young and J. L. Lytton, J. Appl. Phys., vol. 43, no. 4, pp. 1408–1417, 1972.
+
+        """
         a = lMatrix[:, 0]
         b = lMatrix[:, 1]
         c = lMatrix[:, 2]

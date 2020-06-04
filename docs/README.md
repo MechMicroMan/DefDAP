@@ -13,12 +13,12 @@ Install: Sphinx (http://www.sphinx-doc.org/en/master/) - (conda install sphinx/p
 Compiling documentation
 =========================
 
-To recompile the documentation after a change, from the docs folder use the command::
+First, autogenerate the API documentation by running the following command::
 
-sphinx-build -b html ./source ./html
+sphinx-apidoc ../defdap -o ./source -f
 
-If the structure of the Python scripts is significantly changed, api-doc can autogenerate the API documentation with the command::
+Then to recompile the html documentation, use the following command (run from the docs folder)::
 
-sphinx-apidoc ../defdap -o ./source
+sphinx-build -b html ./source ./
 
-Once a commit is made to the master branch the docs folder is mirrored to NOT YET IMPLEMENTED, providing an online version of the documentation.
+Once a commit is made to the master branch the docs folder is mirrored to mehcmicroman.github.io/defdap, providing an online version of the documentation.
