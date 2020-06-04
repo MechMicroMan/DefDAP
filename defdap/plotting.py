@@ -489,7 +489,7 @@ class MapPlot(Plot):
         cls, callingMap, mapData,
         fig=None, figParams={}, ax=None, axParams={},
         plot=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
+        plotColourBar=False, vmin=None, vmax=None, cmap=None, clabel="",
         plotGBs=False, dilateBoundaries=False, boundaryColour=None,
         plotScaleBar=False, scale=None,
         highlightGrains=None, highlightColours=None, highlightAlpha=None,
@@ -523,7 +523,7 @@ class MapPlot(Plot):
             Maximum value for the colour scale.
         cmap : str
             Colour map.
-        cLabel : str
+        clabel : str
             Label for the colour bar.
         plotGBs : bool
             If true, plot the grain boundaries on the map.
@@ -557,7 +557,7 @@ class MapPlot(Plot):
             plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
         if plotColourBar:
-            plot.addColourBar(cLabel)
+            plot.addColourBar(clabel)
 
         if plotGBs:
             plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
@@ -835,7 +835,7 @@ class GrainPlot(Plot):
         cls, callingGrain, mapData,
         fig=None, figParams={}, ax=None, axParams={},
         plot=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
+        plotColourBar=False, vmin=None, vmax=None, cmap=None, clabel="",
         plotScaleBar=False, scale=None,
         plotSlipTraces=False, plotSlipBands=False, **kwargs
     ):
@@ -867,7 +867,7 @@ class GrainPlot(Plot):
             Maximum value for the colour scale.
         cmap :
             Colour map.
-        cLabel : str
+        clabel : str
             Label for the colour bar.
         plotScaleBar : bool
             If true, plot a scale bar in the map.
@@ -891,7 +891,7 @@ class GrainPlot(Plot):
         plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
         if plotColourBar:
-            plot.addColourBar(cLabel)
+            plot.addColourBar(clabel)
 
         if plotScaleBar:
             plot.addScaleBar(scale=scale)
