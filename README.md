@@ -45,11 +45,12 @@
 
 ## Documentation
 
-- For more help, see the documentation under /docs/html
+- For more help, see the documentation at http://mechmicroman.github.io/DefDAP/
 
 ## Contributing
 
-- For information about contributing see the [guidelines](/docs/contributing.md)
+- For information about contributing see the [guidelines](http://mechmicroman.github.io/DefDAP/contributing.html)
+- Any new functions or changes to arguments should be documented. Details on how to regenerate html documentation is given [here](/docs/README.md).
 
 ## Credits
 
