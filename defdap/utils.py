@@ -1,9 +1,34 @@
+# Copyright 2020 Mechanics of Microstructures Group
+#    at The University of Manchester
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import functools
 
-
-# taking inspiration from:
-# https://gist.github.com/Garfounkel/20aa1f06234e1eedd419efe93137c004
 def reportProgress(message=""):
+    """Decorator for reporting progress of given function
+
+    Parameters
+    ----------
+    message : str
+        Message to display (prefixed by 'Starting ', progress percentage and then 'Finished '
+
+    References
+    ----------
+    Inspiration from :
+    https://gist.github.com/Garfounkel/20aa1f06234e1eedd419efe93137c004
+
+    """
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):

@@ -1,4 +1,4 @@
-# Copyright 2019 Mechanics of Microstructures Group
+# Copyright 2020 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +30,8 @@ from defdap import quat
 
 
 class Plot(object):
-    """ Class for creating a plot
+    """ Class used for creating and manipulating plots.
+
     """
     def __init__(self, ax, axParams={}, fig=None, makeInteractive=False,
                  title=None, **kwargs):
@@ -60,6 +61,14 @@ class Plot(object):
             self.setTitle(title)
 
     def checkInteractive(self):
+        """Checks if current plot is interactive.
+
+        Raises
+        -------
+        Exception
+            If plot is not interactive
+
+        """
         if not self.interactive:
             raise Exception("Plot must be interactive")
 
@@ -69,12 +78,40 @@ class Plot(object):
         self.fig.canvas.mpl_connect(eventName, lambda e: eventHandler(e, self))
 
     def addAxes(self, loc, proj='2d'):
+        """Add axis to current plot
+
+        Parameters
+        ----------
+        loc
+            Location of axis.
+        proj : str, {2d, 3d}
+            2D or 3D projection.
+
+        Returns
+        -------
+        matplotlib.Axes.axes
+
+        """
         if proj == '2d':
             return self.fig.add_axes(loc)
         if proj == '3d':
             return Axes3D(self.fig, rect=loc, proj_type='ortho', azim=270, elev=90)
 
     def addButton(self, label, clickHandler, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
+        """Add a button to the plot.
+
+        Parameters
+        ----------
+        label : str
+            Label for the button.
+        clickHandler
+            Click handler to assign.
+        loc : list(float), len 4
+            Left, bottom, width, height.
+        kwargs
+            All other arguments passed to :class:`matplotlib.widgets.Button`.
+
+        """
         self.checkInteractive()
         btnAx = self.fig.add_axes(loc)
         btn = Button(btnAx, label, **kwargs)
@@ -83,6 +120,24 @@ class Plot(object):
         self.btnStore.append(btn)
 
     def addTextBox(self, label, submitHandler, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
+        """Add a text box to the plot.
+
+        Parameters
+        ----------
+        label : str
+            Label for the button.
+        submitHandler
+            Submit handler to assign.
+        loc : list(float), len 4
+            Left, bottom, width, height.
+        kwargs
+            All other arguments passed to :class:`matplotlib.widgets.TextBox`.
+
+        Returns
+        -------
+        matplotlotlib.widgets.TextBox
+
+        """
         self.checkInteractive()
         txtBoxAx = self.fig.add_axes(loc)
         txtBox = TextBox(txtBoxAx, label, **kwargs)
@@ -93,13 +148,46 @@ class Plot(object):
         return txtBox
 
     def addText(self, ax, x, y, txt, **kwargs):
+        """Add text to the plot.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Matplotlib axis to plot on.
+        x : float
+            x position.
+        y : float
+            y position.
+        txt : str
+            Text to write onto the plot.
+
+        kwargs :
+            All other arguments passed to :func:`matplotlib.pyplot.text`.
+
+        """
         txt = ax.text(x, y, txt, **kwargs)
         self.txtStore.append(txt)
 
     def setSize(self, size):
+        """Set size of plot.
+
+        Parameters
+        ----------
+        size : float, float
+            Width and height in inches.
+
+        """
         self.fig.set_size_inches(size[0], size[1], forward=True)
 
     def setTitle(self, txt):
+        """Set title of plot.
+
+        Parameters
+        ----------
+        txt : str
+            Title to set.
+
+        """
         self.fig.canvas.set_window_title(txt)
 
     @property
@@ -109,6 +197,9 @@ class Plot(object):
         return plt.fignum_exists(self.fig.number)
 
     def clear(self):
+        """Clear plot.
+
+        """
         self.checkInteractive()
 
         self.ax.clear()
@@ -117,14 +208,35 @@ class Plot(object):
         self.draw()
 
     def draw(self):
+        """Draw plot
+
+        """
         self.fig.canvas.draw()
 
 
 class MapPlot(Plot):
-    """ Class for creating a map
+    """ Class for creating a map plot.
+
     """
     def __init__(self, callingMap, fig=None, ax=None, axParams={},
                  makeInteractive=False, **kwargs):
+        """Initialise a map plot.
+
+        Parameters
+        ----------
+        callingMap : Map
+            DIC or EBSD map which called this plot.
+        fig : matplotlib.figure.Figure
+            Matplotlib figure to plot on
+        ax : matplotlib.axes.Axes
+            Matplotlib axis to plot on
+        axParams :
+            Passed to defdap.plotting.Plot as axParams.
+        makeInteractive : bool, optional
+            If true, make interactive
+        kwargs
+            Other arguments passed to :class:`defdap.plotting.Plot`.
+        """
         super(MapPlot, self).__init__(
             ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
             **kwargs
@@ -139,6 +251,26 @@ class MapPlot(Plot):
         self.ax.set_yticks([])
 
     def addMap(self, mapData, vmin=None, vmax=None, cmap='viridis', **kwargs):
+        """Add a map to a plot.
+
+        Parameters
+        ----------
+        mapData : numpy.ndarray
+            Map data to plot.
+        vmin : float
+            Minimum value for the colour scale.
+        vmax : float
+            Maximum value for the colour scale.
+        cmap
+            Colour map.
+        kwargs
+            Other arguments are passed to :func:`matplotlib.pyplot.imshow`.
+
+        Returns
+        -------
+        matplotlib.image.AxesImage
+
+        """
         img = self.ax.imshow(mapData, vmin=vmin, vmax=vmax,
                              interpolation='None', cmap=cmap, **kwargs)
         self.draw()
@@ -148,16 +280,61 @@ class MapPlot(Plot):
         return img
 
     def addColourBar(self, label, layer=0, **kwargs):
+        """Add a colour bar to plot.
+
+        Parameters
+        ----------
+        label : str
+            Label for the colour bar.
+        layer : int
+            Layer ID.
+        kwargs
+            Other arguments are passed to :func:`matplotlib.pyplot.colorbar`.
+
+        """
         img = self.imgLayers[layer]
         self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
 
     def addScaleBar(self, scale=None):
+        """Add scale bar to plot.
+
+        Parameters
+        ----------
+        scale : float
+            Size of a pixel in microns.
+
+        """
         if scale is None:
             scale = self.callingMap.scale * 1e-6
         self.ax.add_artist(ScaleBar(scale))
 
-    def addGrainBoundaries(self, colour=None, dilate=False, kind="pixel",
-                           boundaries=None, **kwargs):
+
+    def addGrainBoundaries(self, kind="pixel", boundaries=None, colour=None, 
+                           dilate=False, **kwargs):
+        """Add grain boundaries to the plot.
+
+        Parameters
+        ----------
+        kind : str, {"pixel", "line"}
+            Type of boundaries to plot, either an a boundary image or a
+            collection of line segments.
+        boundaries : various, optional
+            Boundaries to plot, either a boundary image or a list of pairs
+            of coordinates representing the start and end of each boundary 
+            segment. If not provided the boundaries are loaded from the 
+            calling map.
+        colour : str
+            Colour of grain boundaries.
+        dilate : bool
+            If true, dilate the grain boundaries.
+        kind
+
+        Returns
+        -------
+        Various :
+            matplotlib.image.AxesImage if type is pixel
+
+        """
         if colour is None:
             colour = "white"
 
@@ -200,6 +377,24 @@ class MapPlot(Plot):
 
     def addGrainHighlights(self, grainIds, grainColours=None, alpha=None,
                            newLayer=False):
+        """Highlight grains in the plot.
+
+        Parameters
+        ----------
+        grainIds : list
+            List of grain IDs to highlight.
+        grainColours :
+            Colour to use for grain highlight.
+        alpha : float
+            Alpha (transparency) to use for grain highlight.
+        newLayer : bool
+            If true, make a new layer in imgLayers.
+
+        Returns
+        -------
+        matplotlib.image.AxesImage
+
+        """
         if grainColours is None:
             grainColours = ['white']
         if alpha is None:
@@ -244,6 +439,16 @@ class MapPlot(Plot):
         return img
 
     def addGrainNumbers(self, fontsize=10, **kwargs):
+        """Add grain numbers to a map.
+
+        Parameters
+        ----------
+        fontsize : float
+            Font size.
+        kwargs
+            Pass other arguments to :func:`matplotlib.pyplot.text`.
+
+        """
         for grainID, grain in enumerate(self.callingMap):
             xCentre, yCentre = grain.centreCoords(centreType="com",
                                                   grainCoords=False)
@@ -253,6 +458,20 @@ class MapPlot(Plot):
         self.draw()
 
     def addLegend(self, values, labels, layer=0, **kwargs):
+        """Add a legend to a map.
+
+        Parameters
+        ----------
+        values : list
+            Values to find colour patched for.
+        labels : list
+            Labels to assign to values.
+        layer : int
+            Image layer to generate legend for.
+        kwargs
+            Pass other arguments to :func:`matplotlib.pyplot.legend`.
+
+        """
         # Find colour values for given values
         img = self.imgLayers[layer]
         colors = [img.cmap(img.norm(value)) for value in values]
@@ -265,6 +484,20 @@ class MapPlot(Plot):
         self.ax.legend(handles=patches, **kwargs)
 
     def addPoints(self, x, y, updateLayer=None, **kwargs):
+        """Add points to plot.
+
+        Parameters
+        ----------
+        x : float
+            x coordinate.
+        y : float
+            y coordinate.
+        updateLayer : int, optional
+            Layer to place points on
+        kwargs
+            Other arguments passed to :func:`matplotlib.pyplot.scatter`.
+
+        """
         x, y = np.array(x), np.array(y)
         if len(self.pointsLayerIDs) == 0 or updateLayer is None:
             points = self.ax.scatter(x, y, **kwargs)
@@ -283,12 +516,66 @@ class MapPlot(Plot):
         cls, callingMap, mapData,
         fig=None, figParams={}, ax=None, axParams={},
         plot=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
+        plotColourBar=False, vmin=None, vmax=None, cmap=None, clabel="",
         plotGBs=False, dilateBoundaries=False, boundaryColour=None,
         plotScaleBar=False, scale=None,
         highlightGrains=None, highlightColours=None, highlightAlpha=None,
         **kwargs
     ):
+        """Create a plot for a map.
+
+        Parameters
+        ----------
+        callingMap : Map
+            DIC or EBSD map which called this plot.
+        mapData : numpy.ndarray
+            Data to be plotted.
+        fig : matplotlib.figure.Figure
+            Matplotlib figure to plot on.
+        figParams :
+            Passed to defdap.plotting.Plot.
+        ax : matplotlib.axes.Axes
+            Matplotlib axis to plot on.
+        axParams :
+            Passed to defdap.plotting.Plot as axParams.
+        plot : defdap.plotting.Plot
+            If none, use current plot.
+        makeInteractive :
+            If true, make plot interactive
+        plotColourBar : bool
+            If true, plot a colour bar next to the map.
+        vmin : float, optional
+            Minimum value for the colour scale.
+        vmax : float, optional
+            Maximum value for the colour scale.
+        cmap : str
+            Colour map.
+        clabel : str
+            Label for the colour bar.
+        plotGBs : bool
+            If true, plot the grain boundaries on the map.
+        dilateBoundaries : bool
+            If true, dilate the grain boundaries.
+        boundaryColour : str
+            Colour to use for the grain boundaries.
+        plotScaleBar : bool
+            If true, plot a scale bar in the map.
+        scale : float
+            Size of pizel in microns.
+        highlightGrains : list(int)
+            List of grain IDs to highlight.
+        highlightColours : str
+            Colour to hightlight grains.
+        highlightAlpha : float
+            Alpha (transparency) by which to highlight grains.
+        kwargs :
+            All other arguments passed to :func:`defdap.plotting.MapPlot.addMap`
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
+        """
         if plot is None:
             plot = cls(callingMap, fig=fig, ax=ax, axParams=axParams,
                        makeInteractive=makeInteractive, **figParams)
@@ -297,7 +584,7 @@ class MapPlot(Plot):
             plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
         if plotColourBar:
-            plot.addColourBar(cLabel)
+            plot.addColourBar(clabel)
 
         if plotGBs:
             plot.addGrainBoundaries(
@@ -317,10 +604,10 @@ class MapPlot(Plot):
 
 
 class LineSlice:
-    """ Class to catch click and drag and determine positions
+    """ Class to catch click and drag and return start and end positions.
+
     """
     def __init__(self, fig, ax, action):
-
         self.p1=[0,0]
         self.p2=[0,0]
         self.ax = ax
@@ -344,7 +631,8 @@ class LineSlice:
 
 
 class GrainPlot(Plot):
-    """ Class for creating a map for a grain
+    """ Class for creating a map for a grain.
+
     """
     def __init__(self, callingGrain, fig=None, ax=None, axParams={},
                  makeInteractive=False, **kwargs):
@@ -360,6 +648,26 @@ class GrainPlot(Plot):
         self.ax.set_yticks([])
 
     def addMap(self, mapData, vmin=None, vmax=None, cmap='viridis', **kwargs):
+        """Add a map to a grain plot.
+
+        Parameters
+        ----------
+        mapData : numpy.ndarray
+            Grain data to plot
+        vmin : float
+            Minimum value for the colour scale.
+        vmax : float
+            Maximum value for the colour scale.
+        cmap
+            Colour map to use.
+        kwargs
+            Other arguments are passed to :func:`matplotlib.pyplot.imshow`.
+
+        Returns
+        -------
+        matplotlib.image.AxesImage
+
+        """
         img = self.ax.imshow(mapData, vmin=vmin, vmax=vmax,
                              interpolation='None', cmap=cmap, **kwargs)
         self.draw()
@@ -370,6 +678,20 @@ class GrainPlot(Plot):
         return img
 
     def addArrow(self, startEnd, persistent=False, clearPrev=True, label=None):
+        """Add arrow to grain plot.
+
+        Parameters
+        ----------
+        startEnd: 4-tuple
+            Starting (x, y), Ending (x, y).
+        persistent :
+            If persistent, do not clear arrow with clearPrev.
+        clearPrev :
+            Clear all non-persistent arrows.
+        label
+            Label to place near arrow.
+
+        """
 
         x0 = startEnd[0]
         y0 = startEnd[1]
@@ -407,15 +729,52 @@ class GrainPlot(Plot):
                              c='red', fontsize=12)
 
     def addColourBar(self, label, layer=0, **kwargs):
+        """Add colour bar to grain plot.
+
+        Parameters
+        ----------
+        label : str
+            Label to add to colour bar.
+        layer : int
+            Layer on which to add colourbar.
+        kwargs
+            Other arguments passed to :func:`matplotlib.pyplot.colorbar`.
+
+        """
         img = self.imgLayers[layer]
         self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
 
     def addScaleBar(self, scale=None):
+        """Add scale bar to grain plot.
+
+        Parameters
+        ----------
+        scale : float
+            Size of pixel in micron.
+
+        """
         if scale is None:
             scale = self.callingGrain.ownerMap.scale * 1e-6
         self.ax.add_artist(ScaleBar(scale))
 
     def addTraces(self, angles, colours, topOnly=False, pos=None, **kwargs):
+        """Add slip trace angles to grain plot. Illustrated by lines
+        crossing through central pivot point to create a circle.
+
+        Parameters
+        ----------
+        angles : list
+            Angles of slip traces.
+        colours : list
+            Colours to plot.
+        topOnly : bool, optional
+            If true, plot only a semi-circle instead of a circle.
+        pos : tuple
+            Position of slip traces.
+        kwargs
+            Other arguments are passed to :func:`matplotlib.pyplot.quiver`
+
+        """
         if pos is None:
             pos = self.callingGrain.centreCoords()
         traces = np.array((-np.sin(angles), np.cos(angles)))
@@ -445,6 +804,20 @@ class GrainPlot(Plot):
             self.draw()
 
     def addSlipTraces(self, topOnly=False, colours=None, pos=None, **kwargs):
+        """Add slip traces to plot, based on the calling grain's slip systems.
+
+        Parameters
+        ----------
+        colours : list
+            Colours to plot.
+        topOnly : bool, optional
+            If true, plot only a semi-circle instead of a circle.
+        pos : tuple
+            Position of slip traces.
+        kwargs
+            Other arguments are passed to :func:`matplotlib.pyplot.quiver`
+
+        """
 
         if colours is None:
             colours = self.callingGrain.ebsdMap.slipTraceColours
@@ -454,6 +827,28 @@ class GrainPlot(Plot):
 
     def addSlipBands(self, topOnly=False, grainMapData=None, angles=None, pos=None,
                      thres=None, min_dist=None, **kwargs):
+        """Add lines representing slip bands detected by Radon transform
+        in :func:`~defdap.hrdic.grain.calcSlipBands`.
+
+        Parameters
+        ----------
+        topOnly : bool, optional
+            If true, plot only a semi-circle instead of a circle.
+        grainMapData :
+            Map data to pass to :func:`~defdap.hrdic.Grain.calcSlipBands`.
+        angles : list(float), optional
+            List of angles to plot, otherwise, use angles
+            detected in :func:`~defdap.hrdic.Grain.calcSlipBands`.
+        pos : tuple
+            Position in which to plot slip traces.
+        thres : float
+            Threshold to use in :func:`~defdap.hrdic.Grain.calcSlipBands`.
+        min_dist :
+            Minimum angle between bands in :func:`~defdap.hrdic.Grain.calcSlipBands`.
+        kwargs
+            Other arguments are passed to :func:`matplotlib.pyplot.quiver`.
+
+        """
 
         if angles is None:
             slipBandAngles = self.callingGrain.calcSlipBands(grainMapData,
@@ -469,17 +864,63 @@ class GrainPlot(Plot):
         cls, callingGrain, mapData,
         fig=None, figParams={}, ax=None, axParams={},
         plot=None, makeInteractive=False,
-        plotColourBar=False, vmin=None, vmax=None, cmap=None, cLabel="",
+        plotColourBar=False, vmin=None, vmax=None, cmap=None, clabel="",
         plotScaleBar=False, scale=None,
         plotSlipTraces=False, plotSlipBands=False, **kwargs
     ):
+        """Create grain plot.
+
+        Parameters
+        ----------
+        callingGrain : Grain
+            DIC or EBSD grain which called this plot.
+        mapData :
+            Data to be plotted.
+        fig : matplotlib.figure.Figure
+            Matplotlib figure to plot on.
+        figParams :
+            Passed to defdap.plotting.Plot.
+        ax : matplotlib.axes.Axes
+            Matplotlib axis to plot on.
+        axParams :
+            Passed to defdap.plotting.Plot as axParams.
+        plot : defdap.plotting.Plot
+            If none, use current plot.
+        makeInteractive :
+            If true, make plot interactive
+        plotColourBar : bool
+            If true, plot a colour bar next to the map.
+        vmin : float
+            Minimum value for the colour scale.
+        vmax : float
+            Maximum value for the colour scale.
+        cmap :
+            Colour map.
+        clabel : str
+            Label for the colour bar.
+        plotScaleBar : bool
+            If true, plot a scale bar in the map.
+        scale : float
+            Size of pizel in microns.
+        plotSlipTraces : bool
+            If true, plot slip traces with :func:`~defdap.plotting.GrainPlot.addSlipTraces`
+        plotSlipBands : bool
+            If true, plot slip traces with :func:`~defdap.plotting.GrainPlot.addSlipBands`
+        kwargs :
+            All other arguments passed to :func:`defdap.plotting.GrainPlot.addMap`
+
+        Returns
+        -------
+        defdap.plotting.GrainPlot
+
+        """
         if plot is None:
             plot = cls(callingGrain, fig=fig, ax=ax, axParams=axParams,
                        makeInteractive=makeInteractive, **figParams)
         plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
         if plotColourBar:
-            plot.addColourBar(cLabel)
+            plot.addColourBar(clabel)
 
         if plotScaleBar:
             plot.addScaleBar(scale=scale)
@@ -494,7 +935,8 @@ class GrainPlot(Plot):
 
 
 class PolePlot(Plot):
-    """ Class for creating an inverse pole figure
+    """ Class for creating an inverse pole figure plot.
+
     """
     defaultProjection = "stereographic"
 
@@ -514,6 +956,14 @@ class PolePlot(Plot):
         self.addAxis()
 
     def addAxis(self):
+        """Draw axes on the IPF based on crystal symmetry.
+
+        Raises
+        -------
+        NotImplementedError
+            If a crystal type other than 'cubic' or 'hexagonal' are selected.
+
+        """
         if self.plotType == "IPF" and self.crystalSym == "cubic":
             # line between [001] and [111]
             self.addLine([0, 0, 1], [1, 1, 1], c='k', lw=2)
@@ -526,11 +976,11 @@ class PolePlot(Plot):
 
             # label poles
             self.labelPoint([0, 0, 1], '001',
-                            padY=-0.005, va='top', ha='center')
+                            padY=-0.005, va='top', ha='center', fontsize=12)
             self.labelPoint([1, 0, 1], '101',
-                            padY=-0.005, va='top', ha='center')
+                            padY=-0.005, va='top', ha='center', fontsize=12)
             self.labelPoint([1, 1, 1], '111',
-                            padY=0.005, va='bottom', ha='center')
+                            padY=0.005, va='bottom', ha='center', fontsize=12)
 
         elif self.plotType == "IPF" and self.crystalSym == "hexagonal":
             # line between [0001] and [10-10] ([001] and [210])
@@ -545,11 +995,11 @@ class PolePlot(Plot):
 
             # label poles
             self.labelPoint([0, 0, 1], '0001',
-                            padY=-0.008, va='top', ha='center')
-            self.labelPoint([1, 0, 0], '2-1-10',
-                            padY=-0.008, va='top', ha='center')
-            self.labelPoint([np.sqrt(3), 1, 0], '10-10',
-                            padY=0.008, va='bottom', ha='center')
+                            padY=-0.012, va='top', ha='center', fontsize=12)
+            self.labelPoint([1, 0, 0], r'$2\bar{1}\bar{1}0$',
+                            padY=-0.012, va='top', ha='center', fontsize=12)
+            self.labelPoint([np.sqrt(3), 1, 0], r'$10\bar{1}0$',
+                            padY=0.009, va='bottom', ha='center', fontsize=12)
 
         else:
             raise NotImplementedError("Only works for cubic and hexagonal IPFs")
@@ -558,6 +1008,22 @@ class PolePlot(Plot):
         self.ax.axis('off')
 
     def addLine(self, startPoint, endPoint, plotSyms=False, res=100, **kwargs):
+        """Draw lines on the IPF plot.
+
+        Parameters
+        ----------
+        startPoint : numpy.ndarray
+            Start point in crystal coordinates (i.e. [0,0,1]).
+        endPoint : numpy.ndarray
+            End point in crystal coordinates, (i.e. [1,0,0]).
+        plotSyms : bool, optional
+            If true, plot all symmetrically equivelant points.
+        res : int
+            Number of points within each line to plot.
+        kwargs
+            All other arguments are passed to :func:`matplotlib.pyplot.plot`.
+
+        """
         lines = [(startPoint, endPoint)]
         if plotSyms:
             for symm in quat.Quat.symEqv(self.crystalSym)[1:]:
@@ -583,10 +1049,48 @@ class PolePlot(Plot):
             self.ax.plot(xp, yp, **kwargs)
 
     def labelPoint(self, point, label, padX=0, padY=0, **kwargs):
+        """Place a label near a coordinate in the pole plot.
+
+        Parameters
+        ----------
+        point : tuple
+            (x, y) coordinate to place text.
+        label : str
+            Text to use in label.
+        padX : int, optional
+            Pad added to x coordinate.
+        padY : int, optional
+            Pad added to y coordinate.
+        kwargs
+            Other arguments will be passed to :func:`matplotlib.axes.Axes.text`.
+
+        """
         xp, yp = self.projection(*point)
         self.ax.text(xp + padX, yp + padY, label, **kwargs)
 
     def addPoints(self, alphaAng, betaAng, markerColour=None, markerSize=None, **kwargs):
+        """Add a point to the pole plot.
+
+        Parameters
+        ----------
+        alphaAng
+            Inclination angle to plot.
+        betaAng
+            Azimuthal angle (around z axis from x in anticlockwise as per ISO) to plot.
+        markerColour : str or list(str), optional
+            Colour of marker. If two specified, then the point will have two
+            semicircles of different colour.
+        markerSize : float
+            Size of marker.
+        kwargs
+            Other arguments will be passed to :func:`matplotlib.axes.Axes.scatter`.
+
+        Raises
+        -------
+        Exception
+            If more than two colours are specified
+
+        """
         # project onto equatorial plane
         xp, yp = self.projection(alphaAng, betaAng)
 
@@ -626,6 +1130,18 @@ class PolePlot(Plot):
             raise Exception("specify one colour for solid markers or list two for 'half and half'")
 
     def addColourBar(self, label, layer=0, **kwargs):
+        """Add colourbar to pole plot.
+
+        Parameters
+        ----------
+        label : str
+            Label to place next to colour bar.
+        layer : int
+            Layer number to add the colour bar to.
+        kwargs
+            Other argument will be passed to :func:`matplotlib.pyplot.colorbar`.
+
+        """
         img = self.imgLayers[layer]
         self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
 
@@ -665,6 +1181,24 @@ class PolePlot(Plot):
 
     @staticmethod
     def stereoProject(*args):
+        """Stereographic projection of pole direction or pair of polar angles.
+
+        Parameters
+        ----------
+        args : numpy.ndarray, len 2 or 3
+            2 arguments for polar angles or 3 arguments for pole directions.
+
+        Returns
+        -------
+        float, float
+            x coordinate, y coordinate
+
+        Raises
+        -------
+        Exception
+            If input array has incorrect length
+
+        """
         if len(args) == 3:
             alpha, beta = quat.Quat.polarAngles(args[0], args[1], args[2])
         elif len(args) == 2:
@@ -680,6 +1214,24 @@ class PolePlot(Plot):
 
     @staticmethod
     def lambertProject(*args):
+        """Lambert Projection of pole direction or pair of polar angles.
+
+        Parameters
+        ----------
+        args : numpy.ndarray, len 2 or 3
+            2 arguments for polar angles or 3 arguments for pole directions.
+
+        Returns
+        -------
+        float, float
+            x coordinate, y coordinate
+
+        Raises
+        -------
+        Exception
+            If input array has incorrect length
+
+        """
         if len(args) == 3:
             alpha, beta = quat.Quat.polarAngles(args[0], args[1], args[2])
         elif len(args) == 2:
@@ -695,10 +1247,31 @@ class PolePlot(Plot):
 
 
 class HistPlot(Plot):
-    """ Class for creating a histogram
+    """ Class for creating a histogram.
+
     """
     def __init__(self, plotType="linear", density=True, fig=None,
                  ax=None, axParams={}, makeInteractive=False, **kwargs):
+        """Initialise a histogram plot
+
+        Parameters
+        ----------
+        plotType : str, {'log', 'None'}, optional
+            If 'log' is specified, logarithmic y scale will be used.
+        density :
+            If true, histogram will be normalised such that the integral sums to 1.
+        fig : matplotlib.figure.Figure
+            Matplotlib figure to plot on.
+        ax : matplotlib.axes.Axes
+            Matplotlib axis to plot on.
+        axParams :
+            Passed to defdap.plotting.Plot as axParams.
+        makeInteractive : bool
+            If true, make the plot interactive.
+        kwargs
+            Other arguments will be passed to :class:`defdap.plotting.Plot`
+
+        """
         super(HistPlot, self).__init__(
             ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
             **kwargs
@@ -714,24 +1287,50 @@ class HistPlot(Plot):
 
         # set y-axis label
         yLabel = "Normalised frequency" if self.density else "Frequency"
-        if self.plotType is "log":
+        if self.plotType == "log":
             yLabel = "ln({})".format(yLabel)
         self.ax.set_ylabel(yLabel)
 
     def addHist(self, histData, bins=10, range=None, line='o',
                 label=None, **kwargs):
+        """Add a histogram to the current plot
+
+        Parameters
+        ----------
+        histData : numpy.ndarray
+            Data to be used in the histogram.
+        bins : int
+            Number of bins to use for histogram.
+        range : tuple or None, optional
+            The lower and upper range of the bins
+        line : str, optional
+            Marker or line type to be used.
+        label : str, optional
+            Label to use for data (will be used for legend).
+        kwargs
+            Other arguments will be passed to :func:`numpy.histogram`
+
+        """
 
         hist = np.histogram(histData.flatten(), bins=bins, range=range,
                             density=self.density)
 
         yVals = hist[0]
-        if self.plotType is "log":
+        if self.plotType == "log":
             yVals = np.log(yVals)
         xVals = 0.5 * (hist[1][1:] + hist[1][:-1])
 
         self.ax.plot(xVals, yVals, line, label=label, **kwargs)
 
     def addLegend(self, **kwargs):
+        """Add legend to histogram.
+
+        Parameters
+        ----------
+        kwargs
+            All arguments passed to :func:`matplotlib.axes.Axes.legend`.
+
+        """
         self.ax.legend(**kwargs)
 
     @classmethod
@@ -741,6 +1340,44 @@ class HistPlot(Plot):
         plotType="linear", density=True, bins=10, range=None,
         line='o', label=None, **kwargs
     ):
+        """Create a histogram plot.
+
+        Parameters
+        ----------
+        histData : numpy.ndarray
+            Data to be used in the histogram.
+        fig : matplotlib.figure.Figure
+            Matplotlib figure to plot on.
+        figParams :
+            Passed to defdap.plotting.Plot.
+        ax : matplotlib.axes.Axes
+            Matplotlib axis to plot on.
+        axParams :
+            Passed to defdap.plotting.Plot as axParams.
+        plot : defdap.plotting.HistPlot
+            Plot where histgram will be places. If none, placed on current active plot.
+        makeInteractive : bool, optional
+            If true, make plot interactive.
+        plotType : str, {'log', 'None'}, optional
+            If 'log' is specified, logarithmic y scale will be used.
+        density :
+            If true, histogram will be normalised such that the integral sums to 1.
+        bins : int
+            Number of bins to use for histogram.
+        range : tuple or None, optional
+            The lower and upper range of the bins
+        line : str, optional
+            Marker or line type to be used.
+        label : str, optional
+            Label to use for data (will be used for legend).
+        kwargs
+            Other arguments will be passed to :func:`defdap.plotting.HistPlot.addHist`
+
+        Returns
+        -------
+        defdap.plotting.HistPlot
+
+        """
         if plot is None:
             plot = cls(plotType=plotType, density=density, fig=fig, ax=ax,
                        axParams=axParams, makeInteractive=makeInteractive,
@@ -752,10 +1389,27 @@ class HistPlot(Plot):
 
 
 class CrystalPlot(Plot):
-    """ Class for creating a 3D plot for plotting unit cells
+    """ Class for creating a 3D plot for plotting unit cells.
+
     """
     def __init__(self, fig=None, ax=None, axParams={},
                  makeInteractive=False, **kwargs):
+        """Initialise a 3D plot.
+
+        Parameters
+        ----------
+        fig : matplotlib.pyplot.Figure
+            Figure to plot to.
+        ax : matplotlib.pyplot.Axis
+            Axis to plot to.
+        axParams
+            Passed to defdap.plotting.Plot as axParams.
+        makeInteractive : bool, optional
+            If true, make plot interactive.
+        kwargs
+            All other arguments are passed to :class:`defdap.plotting.Plot`.
+
+        """
         # Set default plot parameters then update with input
         figParams = {
             'figsize': (6, 6)
@@ -781,6 +1435,16 @@ class CrystalPlot(Plot):
         self.ax._axis3don = False
 
     def addVerts(self, verts, **kwargs):
+        """Plots planes, defined by the vertices provided.
+
+        Parameters
+        ----------
+        verts : list
+            List of vertices.
+        kwargs
+            All other arguments are passed to :class:`matplotlib.collections.PolyCollection`.
+
+        """
         # Set default plot parameters then update with any input
         plotParams = {
             'alpha' : 0.6,

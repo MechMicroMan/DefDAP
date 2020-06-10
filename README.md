@@ -10,6 +10,9 @@
   <img alt="License" src="https://img.shields.io/github/license/MechMicroMan/DefDAP">
   <a href="https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb">
     <img alt="Binder" src="https://mybinder.org/badge_logo.svg">
+  <a href="https://zenodo.org/record/3688096">
+    <img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.3688096.svg">
+    
   </a>
 </p>
 
@@ -18,13 +21,14 @@
   <a href="#how-to-use">How To Use</a> •
   <a href="#documentation">Documentation</a> •
   <a href="#credits">Credits</a> •
+  <a href="#contributing">Contributing</a> •
   <a href="#license">License</a>
 </p>
 
 
 ## How to install
 
-- Download and install Anaconda from https://repo.continuum.io/archive/ (Anaconda3-2019.10 has been tested)
+- Download and install Anaconda from https://repo.continuum.io/archive/ (Anaconda3-2020.02 has been tested)
 
 - Download the DefDAP package using the 'Clone or download' button above, and extract to a directory
 
@@ -55,6 +59,7 @@ The software uses the following open source packages:
 - [numpy](http://numpy.org/)
 - [matplotlib](http://matplotlib.org/)
 - [scikit-image](http://scikit-image.org/)
+- [scikit-learn](https://scikit-learn.org/stable/)
 - [networkx](https://networkx.github.io/)
 - [pandas](http://pandas.pydata.org)
 - [peakutils](https://peakutils.readthedocs.io/en/latest/)
