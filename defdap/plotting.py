@@ -947,11 +947,11 @@ class PolePlot(Plot):
 
             # label poles
             self.labelPoint([0, 0, 1], '001',
-                            padY=-0.005, va='top', ha='center')
+                            padY=-0.005, va='top', ha='center', fontsize=12)
             self.labelPoint([1, 0, 1], '101',
-                            padY=-0.005, va='top', ha='center')
+                            padY=-0.005, va='top', ha='center', fontsize=12)
             self.labelPoint([1, 1, 1], '111',
-                            padY=0.005, va='bottom', ha='center')
+                            padY=0.005, va='bottom', ha='center', fontsize=12)
 
         elif self.plotType == "IPF" and self.crystalSym == "hexagonal":
             # line between [0001] and [10-10] ([001] and [210])
@@ -966,11 +966,11 @@ class PolePlot(Plot):
 
             # label poles
             self.labelPoint([0, 0, 1], '0001',
-                            padY=-0.008, va='top', ha='center')
-            self.labelPoint([1, 0, 0], '2-1-10',
-                            padY=-0.008, va='top', ha='center')
-            self.labelPoint([np.sqrt(3), 1, 0], '10-10',
-                            padY=0.008, va='bottom', ha='center')
+                            padY=-0.012, va='top', ha='center', fontsize=12)
+            self.labelPoint([1, 0, 0], r'$2\bar{1}\bar{1}0$',
+                            padY=-0.012, va='top', ha='center', fontsize=12)
+            self.labelPoint([np.sqrt(3), 1, 0], r'$10\bar{1}0$',
+                            padY=0.009, va='bottom', ha='center', fontsize=12)
 
         else:
             raise NotImplementedError("Only works for cubic and hexagonal IPFs")
@@ -1033,7 +1033,7 @@ class PolePlot(Plot):
         padY : int, optional
             Pad added to y coordinate.
         kwargs
-            Other arguments will be passed to :func:`matplitlib.axes.Axes.text`.
+            Other arguments will be passed to :func:`matplotlib.axes.Axes.text`.
 
         """
         xp, yp = self.projection(*point)
@@ -1054,7 +1054,7 @@ class PolePlot(Plot):
         markerSize : float
             Size of marker.
         kwargs
-            Other arguments will be passed to :func:`matplitlib.axes.Axes.scatter`.
+            Other arguments will be passed to :func:`matplotlib.axes.Axes.scatter`.
 
         Raises
         -------
