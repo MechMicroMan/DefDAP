@@ -669,7 +669,7 @@ class Map(base.Map):
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cLabel': "Effective shear strain"
+            'clabel': "Effective shear strain"
         }
         plotParams.update(kwargs)
 
@@ -690,7 +690,7 @@ class Map(base.Map):
         """
         # Set default plot parameters then update with any input
         plotParams = {
-            'cLabel': "Effective shear strain"
+            'clabel': "Effective shear strain"
         }
         plotParams.update(kwargs)
 
@@ -912,7 +912,7 @@ class Grain(base.Grain):
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cLabel': "Effective shear strain"
+            'clabel': "Effective shear strain"
         }
         plotParams.update(kwargs)
 
