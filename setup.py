@@ -17,6 +17,8 @@ setup(
         'matplotlib_scalebar',
         'networkx',
         'IPython',
-        'jupyter'
+        'jupyter',
+        'pytest',
+        'pytest_cases'
     ]
 )

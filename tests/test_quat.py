@@ -1,7 +1,8 @@
 import pytest
 from pytest import approx
-import numpy as np
+from pytest_cases import cases_data, CaseData, CaseDataGetter, cases_generator, fixture_plus
 
+import numpy as np
 from defdap.quat import Quat
 
 
@@ -122,121 +123,480 @@ def testFromAxisAngleStr2(axis, angle):
         Quat.fromAxisAngle(axis, angle)
 
 
-# Test conversions
-
-
 @pytest.fixture
-def single_quat():
+def single_quat() -> Quat:
     """From Eulers (20, 10, 40)"""
     return Quat(0.86272992, -0.08583165,  0.01513444, -0.49809735)
 
 
 @pytest.fixture
-def single_quat2():
+def single_quat2() -> Quat:
     """From Eulers (110, 70, 160)"""
     return Quat(0.57922797,  0.51983679, -0.24240388,  0.57922797)
 
 
-def test_eulerAngles_return_type(single_quat):
-    returnEulers = single_quat.eulerAngles()
-
-    assert type(returnEulers) is np.ndarray
-    assert returnEulers.shape == (3, )
-
-
-def test_eulerAngles_calc(single_quat):
-    returnEulers = single_quat.eulerAngles()
-
-    assert np.allclose(returnEulers*180/np.pi, [20., 10., 40.])
+@pytest.fixture
+def single_quat_not_unit() -> Quat:
+    """From Eulers (110, 70, 160)"""
+    return Quat(1., 2., -3., 4.)
 
 
-def test_eulerAngles_calc_chi_q12_0():
-    in_quat = Quat(0.70710678, 0., 0., 0.70710678)
-    returnEulers = in_quat.eulerAngles()
-
-    assert np.allclose(returnEulers, [4.71238898, 0., 0.])
+# Test conversions
 
 
-def test_eulerAngles_calc_chi_q03_0():
-    in_quat = Quat(0., 0.70710678, 0.70710678, 0.)
-    returnEulers = in_quat.eulerAngles()
+class TestEulerAngles:
 
-    assert np.allclose(returnEulers, [1.57079633, 3.14159265, 0.])
+    @staticmethod
+    def test_return_type(single_quat):
+        returnEulers = single_quat.eulerAngles()
+
+        assert type(returnEulers) is np.ndarray
+        assert returnEulers.shape == (3, )
+
+    @staticmethod
+    def test_calc(single_quat):
+        returnEulers = single_quat.eulerAngles()
+
+        assert np.allclose(returnEulers*180/np.pi, [20., 10., 40.])
+
+    @staticmethod
+    def test_calc_chi_q12_0():
+        in_quat = Quat(0.70710678, 0., 0., 0.70710678)
+        returnEulers = in_quat.eulerAngles()
+
+        assert np.allclose(returnEulers, [4.71238898, 0., 0.])
+
+    @staticmethod
+    def test_calc_chi_q03_0():
+        in_quat = Quat(0., 0.70710678, 0.70710678, 0.)
+        returnEulers = in_quat.eulerAngles()
+
+        assert np.allclose(returnEulers, [1.57079633, 3.14159265, 0.])
 
 
-def test_rotMatrix_return_type(single_quat):
-    returnMatrix = single_quat.rotMatrix()
+class TestRotMatrix:
 
-    assert type(returnMatrix) is np.ndarray
-    assert returnMatrix.shape == (3, 3)
+    @staticmethod
+    def test_return_type(single_quat):
+        returnMatrix = single_quat.rotMatrix()
 
+        assert type(returnMatrix) is np.ndarray
+        assert returnMatrix.shape == (3, 3)
 
-def test_rotMatrix_calc(single_quat):
-    returnMatrix = single_quat.rotMatrix()
+    @staticmethod
+    def test_calc(single_quat):
+        returnMatrix = single_quat.rotMatrix()
 
-    expectedMatrix = np.array([
-        [ 0.50333996,  0.85684894,  0.1116189 ],
-        [-0.862045  ,  0.48906392,  0.13302222],
-        [ 0.05939117, -0.16317591,  0.98480775]
-    ])
+        expectedMatrix = np.array([
+            [ 0.50333996,  0.85684894,  0.1116189 ],
+            [-0.862045  ,  0.48906392,  0.13302222],
+            [ 0.05939117, -0.16317591,  0.98480775]
+        ])
 
-    assert np.allclose(returnMatrix, expectedMatrix)
+        assert np.allclose(returnMatrix, expectedMatrix)
 
 
 # Test arithmetic
 
 
-def test_mul_return_type(single_quat, single_quat2):
-    result = single_quat * single_quat2
+class TestMul:
 
-    assert type(result) is Quat
+    @staticmethod
+    def test_return_type(single_quat, single_quat2):
+        result = single_quat * single_quat2
+
+        assert type(result) is Quat
+        assert result is not single_quat and result is not single_quat2
+
+    @staticmethod
+    def test_calc(single_quat, single_quat2):
+        result = single_quat * single_quat2
+
+        assert np.allclose(result.quatCoef,
+                           [0.8365163, 0.28678822, -0.40957602, 0.22414387])
+
+    @staticmethod
+    def test_bad_in_type(single_quat):
+        with pytest.raises(TypeError):
+            single_quat * 4
 
 
-def test_mul_calc(single_quat, single_quat2):
-    result = single_quat * single_quat2
+class TestDot:
 
-    assert np.allclose(result.quatCoef,
-                       [0.8365163, 0.28678822, -0.40957602, 0.22414387])
+    @staticmethod
+    def test_return_type(single_quat, single_quat2):
+        result = single_quat.dot(single_quat2)
+
+        assert type(result) is np.float64
+
+    @staticmethod
+    def test_calc(single_quat, single_quat2):
+        result = single_quat.dot(single_quat2)
+
+        assert result == approx(0.16291828363609984)
+
+    @staticmethod
+    def test_bad_in_type(single_quat):
+        with pytest.raises(TypeError):
+            single_quat.dot(4)
 
 
-def test_dot_return_type(single_quat, single_quat2):
-    result = single_quat.dot(single_quat2)
+class TestAdd:
 
-    assert type(result) is np.float64
+    @staticmethod
+    def test_return_type(single_quat, single_quat2):
+        result = single_quat + single_quat2
+
+        assert type(result) is Quat
+        assert result is not single_quat and result is not single_quat2
+
+    @staticmethod
+    def test__calc(single_quat, single_quat2):
+        result = single_quat + single_quat2
+
+        assert np.allclose(result.quatCoef,
+                           [1.44195788, 0.43400514, -0.22726944, 0.08113062])
+
+    @staticmethod
+    def test_bad_in_type(single_quat):
+        with pytest.raises(TypeError):
+            single_quat + 4
 
 
-def test_dot_calc(single_quat, single_quat2):
-    result = single_quat.dot(single_quat2)
+class TestIadd:
 
-    assert result == approx(0.16291828363609984)
+    @staticmethod
+    def test_return_type(single_quat, single_quat2):
+        single_quat_in = single_quat
+        single_quat += single_quat2
+
+        assert type(single_quat) is Quat
+        assert single_quat is single_quat_in
+
+    @staticmethod
+    def test_calc(single_quat, single_quat2):
+        single_quat += single_quat2
+
+        assert np.allclose(single_quat.quatCoef,
+                           [1.44195788, 0.43400514, -0.22726944, 0.08113062])
+
+    @staticmethod
+    def test_bad_in_type(single_quat):
+        with pytest.raises(TypeError):
+            single_quat += 4
+
+
+class TestGetitem:
+
+    @staticmethod
+    def test_return_type(single_quat):
+        for i in range(4):
+            assert type(single_quat[i]) is np.float64
+
+    @staticmethod
+    def test_val(single_quat):
+        assert single_quat[0] == approx(0.86272992)
+        assert single_quat[1] == approx(-0.08583165)
+        assert single_quat[2] == approx(0.01513444)
+        assert single_quat[3] == approx(-0.49809735)
+
+
+class TestSetitem:
+
+    @staticmethod
+    def test_val(single_quat):
+        single_quat[0] = 0.1
+        assert np.allclose(single_quat.quatCoef,
+                           [0.1, -0.08583165, 0.01513444, -0.49809735])
+
+        single_quat[1] = 0.2
+        assert np.allclose(single_quat.quatCoef,
+                           [0.1, 0.2, 0.01513444, -0.49809735])
+
+        single_quat[2] = 0.3
+        assert np.allclose(single_quat.quatCoef,
+                           [0.1, 0.2, 0.3, -0.49809735])
+
+        single_quat[3] = 0.4
+        assert np.allclose(single_quat.quatCoef, [0.1, 0.2, 0.3, 0.4])
+
+
+class TestNorm:
+
+    @staticmethod
+    def test_return_type(single_quat_not_unit):
+        result = single_quat_not_unit.norm()
+
+        assert type(result) is np.float64
+
+    @staticmethod
+    def test_calc(single_quat_not_unit):
+        result = single_quat_not_unit.norm()
+
+        assert result == approx(5.477225575051661)
+
+
+class TestNormalise:
+
+    @staticmethod
+    def test_calc(single_quat_not_unit):
+        single_quat_not_unit.normalise()
+
+        assert np.allclose(single_quat_not_unit.quatCoef,
+                           [0.18257419, 0.36514837, -0.54772256, 0.73029674])
+
+
+class TestConjugate:
+
+    @staticmethod
+    def test_return_type(single_quat):
+        result = single_quat.conjugate
+
+        assert type(result) is Quat
+        assert result is not single_quat
+
+    @staticmethod
+    def test_calc(single_quat):
+        result = single_quat.conjugate
+
+        assert np.allclose(result.quatCoef,
+                           [0.86272992, 0.08583165, -0.01513444, 0.49809735])
+
+
+class TestTransformVector:
+
+    @staticmethod
+    def test_return_type(single_quat):
+        result = single_quat.transformVector(np.array([1., 2., 3.]))
+
+        assert type(result) is np.ndarray
+        assert result.shape == (3,)
+
+    @staticmethod
+    def test_calc(single_quat):
+        result = single_quat.transformVector(np.array([1., 2., 3.]))
+
+        assert np.allclose(result, [-2.55189453, -0.5151495, -2.68746261])
+
+    @staticmethod
+    def test_bad_in_type(single_quat):
+        with pytest.raises(TypeError):
+            single_quat.transformVector(10)
+
+        with pytest.raises(TypeError):
+            single_quat.transformVector(np.array([1., 2., 3., 4.]))
+
+
+class TestMisOri:
+
+    # ---- CASES ---- #
+
+    @cases_generator("case_cubic_return_{rtn_quat}", rtn_quat=[0, 1, 2, 'potato'])
+    def case_cubic(rtn_quat) -> CaseData:
+
+        # TODO: Would be better to get quaternions from a fixture but
+        #  not currently supported by pytest-cases
+        ins = (Quat(0.86272992, -0.08583165, 0.01513444, -0.49809735),
+               Quat(0.57922797, 0.51983679, -0.24240388, 0.57922797),
+               "cubic", rtn_quat)
+
+        outs = (0.8887075008823285,
+                [0.96034831, 0.13871646, 0.19810764, -0.13871646])
+
+        return ins, outs, None
+
+    @cases_generator("case_hexagonal_return_{rtn_quat}", rtn_quat=[0, 1, 2, 'potato'])
+    def case_hexagonal(rtn_quat) -> CaseData:
+
+        ins = (Quat(0.86272992, -0.08583165, 0.01513444, -0.49809735),
+               Quat(0.57922797, 0.51983679, -0.24240388, 0.57922797),
+               "hexagonal", rtn_quat)
+
+        outs = (0.8011677034014963,
+                [0.57922797, -0.24240388, -0.51983679, -0.57922797])
+
+        return ins, outs, None
+
+    @cases_generator("case_null_return_{rtn_quat}", rtn_quat=[0, 1, 2, 'potato'])
+    def case_null(rtn_quat) -> CaseData:
+
+        ins = (Quat(0.86272992, -0.08583165, 0.01513444, -0.49809735),
+               Quat(0.57922797, 0.51983679, -0.24240388, 0.57922797),
+               "potato", rtn_quat)
+
+        outs = (0.16291828692295218,
+                [0.57922797,  0.51983679, -0.24240388,  0.57922797])
+
+        return ins, outs, None
+
+    # ---- TESTS ---- #
+
+    CASESS = [case_cubic, case_hexagonal, case_null]
+
+    @staticmethod
+    @cases_data(cases=[case_cubic])
+    def test_return_type(case_data: CaseDataGetter):
+        i, expt_o, expt_e = case_data.get()
+
+        result = i[0].misOri(*i[1:])
+
+        if i[3] == 1:
+            assert type(result) is Quat
+        elif i[3] == 2:
+            assert type(result) is tuple
+            assert len(result) == 2
+            assert type(result[0]) is np.float64
+            assert type(result[1]) is Quat
+        else:
+            assert type(result) is np.float64
+
+    @staticmethod
+    @cases_data(cases=CASESS)
+    def test_calc(case_data: CaseDataGetter):
+        i, expt_o, expt_e = case_data.get()
+
+        result = i[0].misOri(*i[1:])
+
+        if i[3] == 1:
+            assert np.allclose(result.quatCoef, expt_o[1])
+        elif i[3] == 2:
+            assert result[0] == approx(expt_o[0])
+            assert np.allclose(result[1].quatCoef, expt_o[1])
+        else:
+            assert result == approx(expt_o[0])
+
+    @staticmethod
+    def test_bad_in_type(single_quat):
+        with pytest.raises(TypeError):
+            single_quat.misOri(4, "blah")
+
+
+class TestMisOriAxis:
+
+    @staticmethod
+    def test_return_type(single_quat, single_quat2):
+        result = single_quat.misOriAxis(single_quat2)
+
+        assert type(result) is np.ndarray
+        assert result.shape == (3,)
+
+    @staticmethod
+    def test_calc(single_quat, single_quat2):
+        result = single_quat.misOriAxis(single_quat2)
+
+        assert np.allclose(result, [1.10165762, -1.21828737, 2.285256])
+
+    @staticmethod
+    def test_bad_in_type(single_quat):
+        with pytest.raises(TypeError):
+            single_quat.misOriAxis(4)
+
+
+class TestSymEqv:
+
+    # ---- CASES ---- #
+
+    def case_cubic() -> CaseData:
+        ins = ('cubic',)
+        outs = (
+            [[1.0, 0.0, 0.0, 0.0],
+             [0.7071067811865476, 0.7071067811865476, 0.0, 0.0],
+             [0.0, 1.0, 0.0, 0.0],
+             [0.7071067811865476, -0.7071067811865476, 0.0, 0.0],
+             [0.7071067811865476, 0.0, 0.7071067811865476, 0.0],
+             [0.0, 0.0, 1.0, 0.0],
+             [0.7071067811865476, 0.0, -0.7071067811865476, 0.0],
+             [0.7071067811865476, 0.0, 0.0, 0.7071067811865476],
+             [0.0, 0.0, 0.0, 1.0],
+             [0.7071067811865476, 0.0, 0.0, -0.7071067811865476],
+             [0.0, 0.7071067811865476, 0.7071067811865476, 0.0],
+             [0.0, -0.7071067811865476, 0.7071067811865476, 0.0],
+             [0.0, 0.7071067811865476, 0.0, 0.7071067811865476],
+             [0.0, -0.7071067811865476, 0.0, 0.7071067811865476],
+             [0.0, 0.0, 0.7071067811865476, 0.7071067811865476],
+             [0.0, 0.0, -0.7071067811865476, 0.7071067811865476],
+             [0.5, 0.5, 0.5, 0.5],
+             [0.5, -0.5, -0.5, -0.5],
+             [0.5, -0.5, 0.5, 0.5],
+             [0.5, 0.5, -0.5, -0.5],
+             [0.5, 0.5, -0.5, 0.5],
+             [0.5, -0.5, 0.5, -0.5],
+             [0.5, 0.5, 0.5, -0.5],
+             [0.5, -0.5, -0.5, 0.5]],
+        )
+
+        return ins, outs, None
+
+    def case_hexagonal() -> CaseData:
+        ins = ('hexagonal',)
+        outs = (
+            [[1.0, 0.0, 0.0, 0.0],
+             [0.0, 1.0, 0.0, 0.0],
+             [0.0, 0.0, 1.0, 0.0],
+             [0.0, 0.0, 0.0, 1.0],
+             [0.8660254037844386, 0.0, 0.0, 0.5],
+             [0.5, 0.0, 0.0, 0.8660254037844386],
+             [0.5, 0.0, 0.0, -0.8660254037844386],
+             [0.8660254037844386, 0.0, 0.0, -0.5],
+             [0.0, -0.5, -0.8660254037844386, 0.0],
+             [0.0, 0.5, -0.8660254037844386, 0.0],
+             [0.0, 0.8660254037844386, -0.5, 0.0],
+             [0.0, -0.8660254037844386, -0.5, 0.0]],
+        )
+
+        return ins, outs, None
+
+    def case_null() -> CaseData:
+        ins = ('potato',)
+        outs = ([[1.0, 0.0, 0.0, 0.0]],)
+
+        return ins, outs, None
+
+    # ---- TESTS ---- #
+
+    CASESS = [case_cubic, case_hexagonal, case_null]
+
+    @staticmethod
+    @cases_data(cases=CASESS)
+    def test_return_type(case_data: CaseDataGetter):
+        i, expt_o, expt_e = case_data.get()
+
+        syms = Quat.symEqv(*i)
+
+        assert type(syms) is list
+        assert len(syms) == len(expt_o[0])
+        assert all([type(sym) is Quat for sym in syms])
+
+    @staticmethod
+    @cases_data(cases=CASESS)
+    def test_calc(case_data: CaseDataGetter):
+        i, expt_o, expt_e = case_data.get()
+
+        syms = Quat.symEqv(*i)
+
+        assert all([np.allclose(sym.quatCoef, row) for sym, row
+                    in zip(syms, expt_o[0])])
+
+
+
+
+
+
 
 ''' Functions left to test
 __repr__(self):
 __str__(self):
-__add__(self, right)
-__iadd__(self, right)
-__getitem__(self, key)
-__setitem__(self, key, value)
-norm(self)
-normalise(self)
-conjugate(self)
-transformVector(self, vector)
-misOri(self, right, symGroup, returnQuat=0)
-misOriAxis(self, right)
+plotIPF
+plotUnitCell
+
 createManyQuats(eulerArray)
 calcSymEqvs(quats, symGroup, dtype=np.float)
 calcAverageOri(quatComps)
 calcMisOri(quatComps, refOri)
 polarAngles(x, y, z)
-stereoProject(*args)
-lambertProject(*args)
-_validateProjection(projectionIn, validateDefault=False)
-plotLine(startPoint, endPoint, plotSymmetries=False, symGroup=None,
-labelPoint(point, label, projection=None, ax=None, padX=0, padY=0, **kwargs)
-plotPoleAxis(plotType, symGroup, projection=None, ax=None)
-plotIPF(quats, direction, symGroup, projection=None, ax=None, markerColour=None, markerSize=40, **kwargs)
-plotIPFmap(quatArray, direction, symGroup, **kwargs)
 calcIPFcolours(quats, direction, symGroup)
 calcFundDirs(quats, direction, symGroup, dtype=np.float)
-symEqv(group)
 '''
+
+
+
