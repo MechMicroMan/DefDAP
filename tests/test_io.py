@@ -3,8 +3,9 @@ import numpy as np
 
 import defdap.file_readers
 
-EXAMPLE_EBSD = "data/testDataEBSD"
-EXAMPLE_DIC = "data/testDataDIC.txt"
+DATA_DIR = "tests/data/"
+EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
+EXAMPLE_DIC = DATA_DIR + "testDataDIC.txt"
 
 
 class TestEBSDDataLoader:

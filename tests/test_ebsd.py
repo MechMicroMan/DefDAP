@@ -6,7 +6,7 @@ import numpy as np
 import defdap.ebsd as ebsd
 
 
-DATA_DIR = "data/"
+DATA_DIR = "tests/data/"
 EXPECTED_RESULTS_DIR = DATA_DIR + "expected_output/"
 EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
 

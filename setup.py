@@ -5,7 +5,7 @@ setup(
     version='0.92.2',
     description='A python library for correlating EBSD and HRDIC data.',
     author='Michael D. Atkinson',
-    packages=find_packages(),
+    packages=find_packages(exclude=['tests']),
     install_requires=[
         'scipy',
         'numpy',
@@ -17,8 +17,10 @@ setup(
         'matplotlib_scalebar',
         'networkx',
         'IPython',
-        'jupyter',
-        'pytest',
-        'pytest_cases'
-    ]
+        'jupyter'
+    ],
+    extras_require={
+        'testing': ['pytest', 'coverage', 'pytest-cov', 'pytest_cases']
+    }
+
 )
