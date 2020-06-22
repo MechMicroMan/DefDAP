@@ -230,8 +230,8 @@ class Map(base.Map):
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cmap': 'gray',
-            'cLabel': "Band contrast"
+            'cmap:': 'grey',
+            'clabel': "Band contrast"
         }
         plotParams.update(kwargs)
 
@@ -397,7 +397,7 @@ class Map(base.Map):
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cLabel': "Kernel average misorientation (KAM) ($^\circ$)"
+            'clabel': "Kernel average misorientation (KAM) ($^\circ$)"
         }
         plotParams.update(kwargs)
 
@@ -547,7 +547,7 @@ class Map(base.Map):
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cLabel': "Geometrically necessary dislocation (GND) content"
+            'clabel': "Geometrically necessary dislocation (GND) content"
         }
         plotParams.update(kwargs)
 
@@ -939,7 +939,7 @@ class Map(base.Map):
         """
         # Set default plot parameters then update with any input
         plotParams = {
-            'cLabel': "Grain number"
+            'clabel': "Grain number"
         }
         plotParams.update(kwargs)
 
@@ -1079,7 +1079,7 @@ class Map(base.Map):
                     self.misOri[coord[1], coord[0]] = misOriAxis[component - 1]
 
             misOri = self.misOri * 180 / np.pi
-            cLabel = "Rotation around {:} axis ($^\circ$)".format(
+            clabel = "Rotation around {:} axis ($^\circ$)".format(
                 ['X', 'Y', 'Z'][component-1]
             )
         else:
@@ -1088,12 +1088,12 @@ class Map(base.Map):
                     self.misOri[coord[1], coord[0]] = misOri
 
             misOri = np.arccos(self.misOri) * 360 / np.pi
-            cLabel = "Grain reference orienation deviation (GROD) ($^\circ$)"
+            clabel = "Grain reference orienation deviation (GROD) ($^\circ$)"
 
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cLabel': cLabel
+            'clabel': clabel
         }
         plotParams.update(kwargs)
 
@@ -1182,7 +1182,7 @@ class Map(base.Map):
             'vmax': 0.5,
             'cmap': 'gray',
             'plotColourBar': True,
-            'cLabel': "Schmid factor"
+            'clabel': "Schmid factor"
         }
         plotParams.update(kwargs)
 
@@ -1428,12 +1428,12 @@ class Grain(base.Grain):
             'plotColourBar': True
         }
         if component == 0:
-            plotParams['cLabel'] = "Grain reference orientation " \
+            plotParams['clabel'] = "Grain reference orientation " \
                                    "deviation (GROD) ($^\circ$)"
             plotData = 2 * np.arccos(self.misOriList)
 
         elif 0 < component < 4:
-            plotParams['cLabel'] = "Rotation around {:} ($^\circ$)".format(
+            plotParams['clabel'] = "Rotation around {:} ($^\circ$)".format(
                 ['X', 'Y', 'Z'][component-1]
             )
             plotData = np.array(self.misOriAxisList)[:, component-1]

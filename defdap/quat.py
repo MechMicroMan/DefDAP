@@ -402,7 +402,7 @@ class Quat(object):
 
     def plotIPF(self, direction, symGroup, projection=None,
                 plot=None, fig=None, ax=None, makeInteractive=False,
-                plotColourBar=False, cLabel="",
+                plotColourBar=False, clabel="",
                 markerColour=None, markerSize=40, **kwargs):
         """
         Plot IPF of orientation, with relation to specified sample direction.
@@ -457,7 +457,7 @@ class Quat(object):
                        **plotParams)
 
         if plotColourBar:
-            plot.addColourBar(cLabel)
+            plot.addColourBar(clabel)
 
         return plot
 
