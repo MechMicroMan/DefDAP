@@ -19,13 +19,13 @@ sys.path.insert(0, os.path.abspath('../../defdap')) 	# Reference the root direct
 # -- Project information -----------------------------------------------------
 
 project = 'DefDAP'
-copyright = '2020, Michael Atkinson'
-author = 'Michael Atkinson'
+copyright = '2020, Mechanics of Microstructures Group at The University of Manchester'
+author = 'Michael D. Atkinson, Rhys Thomas, João Quinta da Fonseca'
 
 # The short X.Y version
 version = '0.92'
 # The full version, including alpha/beta/rc tags
-release = '0.92'
+release = '0.92.3'
 
 
 # -- General configuration ---------------------------------------------------

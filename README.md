@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/source/_static/logo.png">
+  <img src="http://mechmicroman.github.io/DefDAP/_images/logo.png">
 </p>
 
 <h4 align="center">A python library for correlating EBSD and HRDIC data.</h4>
@@ -10,9 +10,9 @@
   <img alt="License" src="https://img.shields.io/github/license/MechMicroMan/DefDAP">
   <a href="https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb">
     <img alt="Binder" src="https://mybinder.org/badge_logo.svg">
+  </a>
   <a href="https://zenodo.org/record/3688096">
     <img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.3688096.svg">
-    
   </a>
 </p>
 
@@ -28,11 +28,11 @@
 
 ## How to install
 
-- Download and install Anaconda from https://repo.continuum.io/archive/ (Anaconda3-2020.02 has been tested)
+- DefDAP can be installed from PyPI using the command `pip install defdap`
 
-- Download the DefDAP package using the 'Clone or download' button above, and extract to a directory
+- If you use conda as your package manager (https://www.anaconda.com/), the prerequisite packages that are available from anaconda can be installed using the command `conda install scipy numpy matplotlib scikit-image scikit-learn pandas networkx jupyter ipython` (Anaconda3-2020.02 has been tested)
 
-- Open a terminal in that directory and run `pip install -e .`
+- For more information, see the [documentation](http://mechmicroman.github.io/DefDAP/installation.html)
 
 ## How to use
 
@@ -45,11 +45,11 @@
 
 ## Documentation
 
-- For more help, see the documentation under /docs/html
+- For more help, see the online [documentation](http://mechmicroman.github.io/DefDAP) or browse in the /docs directory.
 
 ## Contributing
 
-- For information about contributing see the [guidelines](/docs/contributing.md)
+- For information about contributing see the [guidelines](http://mechmicroman.github.io/DefDAP/contributing.html).
 
 ## Credits
 
@@ -69,4 +69,4 @@ The software uses the following open source packages:
 
 ## License
 
-[Apache 2.0 license](/LICENSE)
+[Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0)

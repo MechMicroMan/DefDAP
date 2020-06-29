@@ -4,7 +4,8 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>defdap package &#8212; DefDAP 0.92 documentation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>defdap package &#8212; DefDAP 0.92.3 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
@@ -30,7 +31,8 @@
         <li class="right" >
           <a href="papers.html" title="Papers"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap package</a></li> 
       </ul>
     </div>  
 
@@ -81,7 +83,7 @@
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>dilateBoundaries</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – Set to true to dilate boundaries.</p></li>
-<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><em>matplotlib.axes.Axes</em></a><em>, </em><em>optional</em>) – axis to plot on, if not provided the current active axis is used.</p></li>
+<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.2)"><em>matplotlib.axes.Axes</em></a><em>, </em><em>optional</em>) – axis to plot on, if not provided the current active axis is used.</p></li>
 <li><p><strong>kwargs</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#dict" title="(in Python v3.7)"><em>dict</em></a>) – Keyword arguments to pass to matplotlib.</p></li>
 </ul>
 </dd>
@@ -239,7 +241,7 @@ incrementing the current values.</p>
 
 <dl class="py method">
 <dt id="defdap.base.Map.calcProxigram">
-<code class="sig-name descname">calcProxigram</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">numTrials</span><span class="o">=</span><span class="default_value">500</span></em>, <em class="sig-param"><span class="n">forceCalc</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.calcProxigram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.calcProxigram" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">calcProxigram</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/base.html#Map.calcProxigram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.base.Map.calcProxigram" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate distance from a grain boundary at each point in map.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -388,7 +390,7 @@ otherwise in the map coordinates. Defaults is grain.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><em>matplotlib.axes.Axes</em></a>) – axis to plot on, if not provided the current active axis is used.</p></li>
+<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.2)"><em>matplotlib.axes.Axes</em></a>) – axis to plot on, if not provided the current active axis is used.</p></li>
 <li><p><strong>plotScaleBar</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – plots the scale bar on the grain if true.</p></li>
 <li><p><strong>kwargs</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#dict" title="(in Python v3.7)"><em>dict</em></a>) – keyword arguments to pass to plotting.GrainPlot.addMap.</p></li>
 </ul>
@@ -590,7 +592,7 @@ stored in the defdap install dir or path to a file.</p></li>
 <dd><p>Groups slip systems by their slip plane.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>slipSytems</strong> (<em>(</em><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a><em>(</em><a class="reference internal" href="#defdap.crystal.SlipSystem" title="defdap.crystal.SlipSystem"><em>SlipSystem</em></a><em>)</em><em>)</em>) – A list of slip systems.</p>
+<dd class="field-odd"><p><strong>slipSystems</strong> (<em>(</em><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a><em>(</em><a class="reference internal" href="#defdap.crystal.SlipSystem" title="defdap.crystal.SlipSystem"><em>SlipSystem</em></a><em>)</em><em>)</em>) – A list of slip systems.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>A list of list of slip systems grouped slip plane.</p>
@@ -599,6 +601,12 @@ stored in the defdap install dir or path to a file.</p></li>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)">list</a>(<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)">list</a>(<a class="reference internal" href="#defdap.crystal.SlipSystem" title="defdap.crystal.SlipSystem">SlipSystem</a>))</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="defdap.crystal.SlipSystem.printSlipSystemDirectory">
+<em class="property">static </em><code class="sig-name descname">printSlipSystemDirectory</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/crystal.html#SlipSystem.printSlipSystemDirectory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.crystal.SlipSystem.printSlipSystemDirectory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints the location where slip system definition files are stored.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -937,7 +945,7 @@ homologue point of the maps.</p>
 
 <dl class="py method">
 <dt id="defdap.ebsd.Map.loadData">
-<code class="sig-name descname">loadData</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fileName</span></em>, <em class="sig-param"><span class="n">crystalSym</span></em>, <em class="sig-param"><span class="n">cOverA</span></em>, <em class="sig-param"><span class="n">dataType</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.loadData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.loadData" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">loadData</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.loadData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.loadData" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load in EBSD data from file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -957,7 +965,7 @@ homologue point of the maps.</p>
 
 <dl class="py method">
 <dt id="defdap.ebsd.Map.transformData">
-<code class="sig-name descname">transformData</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.transformData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.transformData" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">transformData</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.transformData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.transformData" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rotate map by 180 degrees and transform quats accordingly.</p>
 </dd></dl>
 
@@ -1061,7 +1069,7 @@ considered. Stores result in self.kam.</p>
 
 <dl class="py method">
 <dt id="defdap.ebsd.Map.calcNye">
-<code class="sig-name descname">calcNye</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcNye"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcNye" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">calcNye</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcNye"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcNye" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates Nye tensor and related GND density for the EBSD map.
 Stores result in self.Nye and self.GND.</p>
 </dd></dl>
@@ -1099,13 +1107,13 @@ Stores result in self.Nye and self.GND.</p>
 
 <dl class="py method">
 <dt id="defdap.ebsd.Map.buildQuatArray">
-<code class="sig-name descname">buildQuatArray</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.buildQuatArray"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.buildQuatArray" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">buildQuatArray</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.buildQuatArray"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.buildQuatArray" title="Permalink to this definition">¶</a></dt>
 <dd><p>Build quaternion array</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="defdap.ebsd.Map.findBoundaries">
-<code class="sig-name descname">findBoundaries</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">boundDef</span><span class="o">=</span><span class="default_value">10</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.findBoundaries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.findBoundaries" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">findBoundaries</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.findBoundaries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.findBoundaries" title="Permalink to this definition">¶</a></dt>
 <dd><p>Find grain boundaries</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1116,7 +1124,7 @@ Stores result in self.Nye and self.GND.</p>
 
 <dl class="py method">
 <dt id="defdap.ebsd.Map.findPhaseBoundaries">
-<code class="sig-name descname">findPhaseBoundaries</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">treatNonIndexedAs</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.findPhaseBoundaries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.findPhaseBoundaries" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">findPhaseBoundaries</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.findPhaseBoundaries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.findPhaseBoundaries" title="Permalink to this definition">¶</a></dt>
 <dd><p>Finds boundaries in the phase map.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1164,7 +1172,7 @@ Stores result in self.Nye and self.GND.</p>
 
 <dl class="py method">
 <dt id="defdap.ebsd.Map.findGrains">
-<code class="sig-name descname">findGrains</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">minGrainSize</span><span class="o">=</span><span class="default_value">10</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.findGrains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.findGrains" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">findGrains</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.findGrains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.findGrains" title="Permalink to this definition">¶</a></dt>
 <dd><p>Find grains and assign IDs.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1207,13 +1215,13 @@ Stores result in self.Nye and self.GND.</p>
 
 <dl class="py method">
 <dt id="defdap.ebsd.Map.calcGrainAvOris">
-<code class="sig-name descname">calcGrainAvOris</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcGrainAvOris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcGrainAvOris" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">calcGrainAvOris</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcGrainAvOris"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcGrainAvOris" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the average orientation of grains.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="defdap.ebsd.Map.calcGrainMisOri">
-<code class="sig-name descname">calcGrainMisOri</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">calcAxis</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcGrainMisOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcGrainMisOri" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">calcGrainMisOri</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcGrainMisOri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcGrainMisOri" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculate the misorientation within grains.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1262,7 +1270,7 @@ stored in the defdap install dir or path to a file.</p>
 
 <dl class="py method">
 <dt id="defdap.ebsd.Map.calcAverageGrainSchmidFactors">
-<code class="sig-name descname">calcAverageGrainSchmidFactors</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">loadVector</span></em>, <em class="sig-param"><span class="n">slipSystems</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcAverageGrainSchmidFactors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcAverageGrainSchmidFactors" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">calcAverageGrainSchmidFactors</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/ebsd.html#Map.calcAverageGrainSchmidFactors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.ebsd.Map.calcAverageGrainSchmidFactors" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates Schmid factors for all slip systems, for all grains,
 based on average grain orientation.</p>
 <dl class="field-list simple">
@@ -1511,8 +1519,8 @@ methods.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.1)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on</p></li>
-<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.1)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on</p></li>
+<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.2)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on</p></li>
+<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.2)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on</p></li>
 <li><p><strong>kwargs</strong> – All other arguments are passed to <a class="reference internal" href="#defdap.quat.Quat.plotUnitCell" title="defdap.quat.Quat.plotUnitCell"><code class="xref py py-func docutils literal notranslate"><span class="pre">defdap.quat.Quat.plotUnitCell()</span></code></a>.</p></li>
 </ul>
 </dd>
@@ -1807,7 +1815,7 @@ and x and y displacements for each coordinate.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>x and y coordinates and x and y displacements.</p>
+<dd class="field-even"><p>Coordinates and displacements.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#dict" title="(in Python v3.7)">dict</a></p>
@@ -2173,7 +2181,7 @@ are the same size and 2 means the pixels in the pattern are half the size of the
 
 <dl class="py method">
 <dt id="defdap.hrdic.Map.loadData">
-<code class="sig-name descname">loadData</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fileDir</span></em>, <em class="sig-param"><span class="n">fileName</span></em>, <em class="sig-param"><span class="n">dataType</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.loadData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.loadData" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">loadData</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.loadData"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.loadData" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load DIC data from file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2409,7 +2417,7 @@ use <code class="xref py py-func docutils literal notranslate"><span class="pre"
 
 <dl class="py method">
 <dt id="defdap.hrdic.Map.findGrains">
-<code class="sig-name descname">findGrains</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">minGrainSize</span><span class="o">=</span><span class="default_value">10</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.findGrains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.findGrains" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">findGrains</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/hrdic.html#Map.findGrains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.hrdic.Map.findGrains" title="Permalink to this definition">¶</a></dt>
 <dd><p>Finds grains in the DIC map.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -2795,7 +2803,7 @@ save the average angle and detect the active slip planes.</p>
 <li><p><strong>label</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Label for the button.</p></li>
 <li><p><strong>clickHandler</strong> – Click handler to assign.</p></li>
 <li><p><strong>loc</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>)</em><em>, </em><em>len 4</em>) – Left, bottom, width, height.</p></li>
-<li><p><strong>kwargs</strong> – All other arguments passed to <a class="reference external" href="https://matplotlib.org/api/widgets_api.html#matplotlib.widgets.Button" title="(in Matplotlib v3.2.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">matplotlib.widgets.Button</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – All other arguments passed to <a class="reference external" href="https://matplotlib.org/api/widgets_api.html#matplotlib.widgets.Button" title="(in Matplotlib v3.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">matplotlib.widgets.Button</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2811,7 +2819,7 @@ save the average angle and detect the active slip planes.</p>
 <li><p><strong>label</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Label for the button.</p></li>
 <li><p><strong>submitHandler</strong> – Submit handler to assign.</p></li>
 <li><p><strong>loc</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a><em>)</em><em>, </em><em>len 4</em>) – Left, bottom, width, height.</p></li>
-<li><p><strong>kwargs</strong> – All other arguments passed to <a class="reference external" href="https://matplotlib.org/api/widgets_api.html#matplotlib.widgets.TextBox" title="(in Matplotlib v3.2.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">matplotlib.widgets.TextBox</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – All other arguments passed to <a class="reference external" href="https://matplotlib.org/api/widgets_api.html#matplotlib.widgets.TextBox" title="(in Matplotlib v3.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">matplotlib.widgets.TextBox</span></code></a>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -2830,11 +2838,11 @@ save the average angle and detect the active slip planes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><em>matplotlib.axes.Axes</em></a>) – Matplotlib axis to plot on.</p></li>
+<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.2)"><em>matplotlib.axes.Axes</em></a>) – Matplotlib axis to plot on.</p></li>
 <li><p><strong>x</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – x position.</p></li>
 <li><p><strong>y</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – y position.</p></li>
 <li><p><strong>txt</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Text to write onto the plot.</p></li>
-<li><p><strong>kwargs</strong> – All other arguments passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.text.html#matplotlib.pyplot.text" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.text()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – All other arguments passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.text.html#matplotlib.pyplot.text" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.text()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2897,14 +2905,14 @@ save the average angle and detect the active slip planes.</p>
 <li><p><strong>vmin</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Minimum value for the colour scale.</p></li>
 <li><p><strong>vmax</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Maximum value for the colour scale.</p></li>
 <li><p><strong>cmap</strong> – Colour map.</p></li>
-<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.imshow.html#matplotlib.pyplot.imshow" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.imshow()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.imshow.html#matplotlib.pyplot.imshow" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.imshow()</span></code></a>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p></p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://matplotlib.org/api/image_api.html#matplotlib.image.AxesImage" title="(in Matplotlib v3.2.1)">matplotlib.image.AxesImage</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://matplotlib.org/api/image_api.html#matplotlib.image.AxesImage" title="(in Matplotlib v3.2.2)">matplotlib.image.AxesImage</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2918,7 +2926,7 @@ save the average angle and detect the active slip planes.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>label</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Label for the colour bar.</p></li>
 <li><p><strong>layer</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Layer ID.</p></li>
-<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.colorbar.html#matplotlib.pyplot.colorbar" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.colorbar()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.colorbar.html#matplotlib.pyplot.colorbar" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.colorbar()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -2950,7 +2958,7 @@ save the average angle and detect the active slip planes.</p>
 <dd class="field-even"><p></p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://matplotlib.org/api/image_api.html#matplotlib.image.AxesImage" title="(in Matplotlib v3.2.1)">matplotlib.image.AxesImage</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://matplotlib.org/api/image_api.html#matplotlib.image.AxesImage" title="(in Matplotlib v3.2.2)">matplotlib.image.AxesImage</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2972,7 +2980,7 @@ save the average angle and detect the active slip planes.</p>
 <dd class="field-even"><p></p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://matplotlib.org/api/image_api.html#matplotlib.image.AxesImage" title="(in Matplotlib v3.2.1)">matplotlib.image.AxesImage</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://matplotlib.org/api/image_api.html#matplotlib.image.AxesImage" title="(in Matplotlib v3.2.2)">matplotlib.image.AxesImage</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -2985,7 +2993,7 @@ save the average angle and detect the active slip planes.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>fontsize</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Font size.</p></li>
-<li><p><strong>kwargs</strong> – Pass other arguments to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.text.html#matplotlib.pyplot.text" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.text()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Pass other arguments to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.text.html#matplotlib.pyplot.text" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.text()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3001,7 +3009,7 @@ save the average angle and detect the active slip planes.</p>
 <li><p><strong>values</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – Values to find colour patched for.</p></li>
 <li><p><strong>labels</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – Labels to assign to values.</p></li>
 <li><p><strong>layer</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Image layer to generate legend for.</p></li>
-<li><p><strong>kwargs</strong> – Pass other arguments to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html#matplotlib.pyplot.legend" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.legend()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Pass other arguments to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.legend.html#matplotlib.pyplot.legend" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.legend()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3017,7 +3025,7 @@ save the average angle and detect the active slip planes.</p>
 <li><p><strong>x</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – x coordinate.</p></li>
 <li><p><strong>y</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – y coordinate.</p></li>
 <li><p><strong>updateLayer</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Layer to place points on</p></li>
-<li><p><strong>kwargs</strong> – Other arguments passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.scatter.html#matplotlib.pyplot.scatter" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.scatter()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Other arguments passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.scatter.html#matplotlib.pyplot.scatter" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.scatter()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3032,9 +3040,9 @@ save the average angle and detect the active slip planes.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>callingMap</strong> (<a class="reference internal" href="#defdap.base.Map" title="defdap.base.Map"><em>Map</em></a>) – DIC or EBSD map which called this plot.</p></li>
 <li><p><strong>mapData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Data to be plotted.</p></li>
-<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.1)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on.</p></li>
+<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.2)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on.</p></li>
 <li><p><strong>figParams</strong> – Passed to defdap.plotting.Plot.</p></li>
-<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><em>matplotlib.axes.Axes</em></a>) – Matplotlib axis to plot on.</p></li>
+<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.2)"><em>matplotlib.axes.Axes</em></a>) – Matplotlib axis to plot on.</p></li>
 <li><p><strong>axParams</strong> – Passed to defdap.plotting.Plot as axParams.</p></li>
 <li><p><strong>plot</strong> (<a class="reference internal" href="#defdap.plotting.Plot" title="defdap.plotting.Plot"><em>defdap.plotting.Plot</em></a>) – If none, use current plot.</p></li>
 <li><p><strong>makeInteractive</strong> – If true, make plot interactive</p></li>
@@ -3088,14 +3096,14 @@ save the average angle and detect the active slip planes.</p>
 <li><p><strong>vmin</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Minimum value for the colour scale.</p></li>
 <li><p><strong>vmax</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Maximum value for the colour scale.</p></li>
 <li><p><strong>cmap</strong> – Colour map to use.</p></li>
-<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.imshow.html#matplotlib.pyplot.imshow" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.imshow()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.imshow.html#matplotlib.pyplot.imshow" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.imshow()</span></code></a>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p></p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://matplotlib.org/api/image_api.html#matplotlib.image.AxesImage" title="(in Matplotlib v3.2.1)">matplotlib.image.AxesImage</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://matplotlib.org/api/image_api.html#matplotlib.image.AxesImage" title="(in Matplotlib v3.2.2)">matplotlib.image.AxesImage</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -3125,7 +3133,7 @@ save the average angle and detect the active slip planes.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>label</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Label to add to colour bar.</p></li>
 <li><p><strong>layer</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Layer on which to add colourbar.</p></li>
-<li><p><strong>kwargs</strong> – Other arguments passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.colorbar.html#matplotlib.pyplot.colorbar" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.colorbar()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Other arguments passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.colorbar.html#matplotlib.pyplot.colorbar" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.colorbar()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3154,7 +3162,7 @@ crossing through central pivot point to create a circle.</p>
 <li><p><strong>colours</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – Colours to plot.</p></li>
 <li><p><strong>topOnly</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If true, plot only a semi-circle instead of a circle.</p></li>
 <li><p><strong>pos</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a>) – Position of slip traces.</p></li>
-<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.quiver.html#matplotlib.pyplot.quiver" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.quiver()</span></code></a></p></li>
+<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.quiver.html#matplotlib.pyplot.quiver" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.quiver()</span></code></a></p></li>
 </ul>
 </dd>
 </dl>
@@ -3170,7 +3178,7 @@ crossing through central pivot point to create a circle.</p>
 <li><p><strong>colours</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – Colours to plot.</p></li>
 <li><p><strong>topOnly</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If true, plot only a semi-circle instead of a circle.</p></li>
 <li><p><strong>pos</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a>) – Position of slip traces.</p></li>
-<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.quiver.html#matplotlib.pyplot.quiver" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.quiver()</span></code></a></p></li>
+<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.quiver.html#matplotlib.pyplot.quiver" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.quiver()</span></code></a></p></li>
 </ul>
 </dd>
 </dl>
@@ -3191,7 +3199,7 @@ detected in <a class="reference internal" href="#defdap.hrdic.Grain.calcSlipBand
 <li><p><strong>pos</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a>) – Position in which to plot slip traces.</p></li>
 <li><p><strong>thres</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Threshold to use in <a class="reference internal" href="#defdap.hrdic.Grain.calcSlipBands" title="defdap.hrdic.Grain.calcSlipBands"><code class="xref py py-func docutils literal notranslate"><span class="pre">calcSlipBands()</span></code></a>.</p></li>
 <li><p><strong>min_dist</strong> – Minimum angle between bands in <a class="reference internal" href="#defdap.hrdic.Grain.calcSlipBands" title="defdap.hrdic.Grain.calcSlipBands"><code class="xref py py-func docutils literal notranslate"><span class="pre">calcSlipBands()</span></code></a>.</p></li>
-<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.quiver.html#matplotlib.pyplot.quiver" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.quiver()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.quiver.html#matplotlib.pyplot.quiver" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.quiver()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3206,9 +3214,9 @@ detected in <a class="reference internal" href="#defdap.hrdic.Grain.calcSlipBand
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>callingGrain</strong> (<a class="reference internal" href="#defdap.base.Grain" title="defdap.base.Grain"><em>Grain</em></a>) – DIC or EBSD grain which called this plot.</p></li>
 <li><p><strong>mapData</strong> – Data to be plotted.</p></li>
-<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.1)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on.</p></li>
+<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.2)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on.</p></li>
 <li><p><strong>figParams</strong> – Passed to defdap.plotting.Plot.</p></li>
-<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><em>matplotlib.axes.Axes</em></a>) – Matplotlib axis to plot on.</p></li>
+<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.2)"><em>matplotlib.axes.Axes</em></a>) – Matplotlib axis to plot on.</p></li>
 <li><p><strong>axParams</strong> – Passed to defdap.plotting.Plot as axParams.</p></li>
 <li><p><strong>plot</strong> (<a class="reference internal" href="#defdap.plotting.Plot" title="defdap.plotting.Plot"><em>defdap.plotting.Plot</em></a>) – If none, use current plot.</p></li>
 <li><p><strong>makeInteractive</strong> – If true, make plot interactive</p></li>
@@ -3267,7 +3275,7 @@ detected in <a class="reference internal" href="#defdap.hrdic.Grain.calcSlipBand
 <li><p><strong>endPoint</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – End point in crystal coordinates, (i.e. [1,0,0]).</p></li>
 <li><p><strong>plotSyms</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If true, plot all symmetrically equivelant points.</p></li>
 <li><p><strong>res</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Number of points within each line to plot.</p></li>
-<li><p><strong>kwargs</strong> – All other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.plot.html#matplotlib.pyplot.plot" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.plot()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – All other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.plot.html#matplotlib.pyplot.plot" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.plot()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3284,7 +3292,7 @@ detected in <a class="reference internal" href="#defdap.hrdic.Grain.calcSlipBand
 <li><p><strong>label</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Text to use in label.</p></li>
 <li><p><strong>padX</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Pad added to x coordinate.</p></li>
 <li><p><strong>padY</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Pad added to y coordinate.</p></li>
-<li><p><strong>kwargs</strong> – Other arguments will be passed to <code class="xref py py-func docutils literal notranslate"><span class="pre">matplitlib.axes.Axes.text()</span></code>.</p></li>
+<li><p><strong>kwargs</strong> – Other arguments will be passed to <code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.axes.Axes.text()</span></code>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3302,7 +3310,7 @@ detected in <a class="reference internal" href="#defdap.hrdic.Grain.calcSlipBand
 <li><p><strong>markerColour</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a><em>(</em><a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a><em>)</em><em>, </em><em>optional</em>) – Colour of marker. If two specified, then the point will have two
 semicircles of different colour.</p></li>
 <li><p><strong>markerSize</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Size of marker.</p></li>
-<li><p><strong>kwargs</strong> – Other arguments will be passed to <code class="xref py py-func docutils literal notranslate"><span class="pre">matplitlib.axes.Axes.scatter()</span></code>.</p></li>
+<li><p><strong>kwargs</strong> – Other arguments will be passed to <code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.axes.Axes.scatter()</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises</dt>
@@ -3320,7 +3328,7 @@ semicircles of different colour.</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>label</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Label to place next to colour bar.</p></li>
 <li><p><strong>layer</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a>) – Layer number to add the colour bar to.</p></li>
-<li><p><strong>kwargs</strong> – Other argument will be passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.colorbar.html#matplotlib.pyplot.colorbar" title="(in Matplotlib v3.2.1)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.colorbar()</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – Other argument will be passed to <a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.pyplot.colorbar.html#matplotlib.pyplot.colorbar" title="(in Matplotlib v3.2.2)"><code class="xref py py-func docutils literal notranslate"><span class="pre">matplotlib.pyplot.colorbar()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3410,9 +3418,9 @@ semicircles of different colour.</p></li>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>histData</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.18)"><em>numpy.ndarray</em></a>) – Data to be used in the histogram.</p></li>
-<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.1)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on.</p></li>
+<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.2)"><em>matplotlib.figure.Figure</em></a>) – Matplotlib figure to plot on.</p></li>
 <li><p><strong>figParams</strong> – Passed to defdap.plotting.Plot.</p></li>
-<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><em>matplotlib.axes.Axes</em></a>) – Matplotlib axis to plot on.</p></li>
+<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.2)"><em>matplotlib.axes.Axes</em></a>) – Matplotlib axis to plot on.</p></li>
 <li><p><strong>axParams</strong> – Passed to defdap.plotting.Plot as axParams.</p></li>
 <li><p><strong>plot</strong> (<a class="reference internal" href="#defdap.plotting.HistPlot" title="defdap.plotting.HistPlot"><em>defdap.plotting.HistPlot</em></a>) – Plot where histgram will be places. If none, placed on current active plot.</p></li>
 <li><p><strong>makeInteractive</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If true, make plot interactive.</p></li>
@@ -3449,7 +3457,7 @@ semicircles of different colour.</p></li>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>verts</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – List of vertices.</p></li>
-<li><p><strong>kwargs</strong> – All other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/collections_api.html#matplotlib.collections.PolyCollection" title="(in Matplotlib v3.2.1)"><code class="xref py py-class docutils literal notranslate"><span class="pre">matplotlib.collections.PolyCollection</span></code></a>.</p></li>
+<li><p><strong>kwargs</strong> – All other arguments are passed to <a class="reference external" href="https://matplotlib.org/api/collections_api.html#matplotlib.collections.PolyCollection" title="(in Matplotlib v3.2.2)"><code class="xref py py-class docutils literal notranslate"><span class="pre">matplotlib.collections.PolyCollection</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -3676,7 +3684,7 @@ does not consider symmetries of the crystal structure.</p>
 
 <dl class="py method">
 <dt id="defdap.quat.Quat.plotIPF">
-<code class="sig-name descname">plotIPF</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">direction</span></em>, <em class="sig-param"><span class="n">symGroup</span></em>, <em class="sig-param"><span class="n">projection</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">plot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fig</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">makeInteractive</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">plotColourBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">cLabel</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">markerColour</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">markerSize</span><span class="o">=</span><span class="default_value">40</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.plotIPF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.plotIPF" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">plotIPF</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">direction</span></em>, <em class="sig-param"><span class="n">symGroup</span></em>, <em class="sig-param"><span class="n">projection</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">plot</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fig</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">makeInteractive</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">plotColourBar</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">clabel</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">markerColour</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">markerSize</span><span class="o">=</span><span class="default_value">40</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/defdap/quat.html#Quat.plotIPF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#defdap.quat.Quat.plotIPF" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot IPF of orientation, with relation to specified sample direction.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -3686,9 +3694,9 @@ does not consider symmetries of the crystal structure.</p>
 <li><p><strong>projection</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Projection to use. Either string (stereographic or lambert)
 or a function.</p></li>
 <li><p><strong>plot</strong> (<a class="reference internal" href="#defdap.plotting.Plot" title="defdap.plotting.Plot"><em>defdap.plotting.Plot</em></a>) – Defdap plot to plot on.</p></li>
-<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.1)"><em>matplotlib.figure.Figure</em></a>) – Figure to plot on, if not provided the current
+<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.2)"><em>matplotlib.figure.Figure</em></a>) – Figure to plot on, if not provided the current
 active axis is used.</p></li>
-<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><em>matplotlib.axes.Axes</em></a>) – Axis to plot on, if not provided the current
+<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.2)"><em>matplotlib.axes.Axes</em></a>) – Axis to plot on, if not provided the current
 active axis is used.</p></li>
 <li><p><strong>makeInteractive</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – If true, make the plot interactive.</p></li>
 <li><p><strong>markerColour</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a>) – Colour of markers (only used for half and half colouring,
@@ -3712,9 +3720,9 @@ otherwise us argument s).</p></li>
 <li><p><strong>cOverA</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – C over a ratio for hexagonal.</p></li>
 <li><p><strong>OI</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – True if using oxford instruments system.</p></li>
 <li><p><strong>plot</strong> (<a class="reference internal" href="#defdap.plotting.CrystalPlot" title="defdap.plotting.CrystalPlot"><em>defdap.plotting.CrystalPlot</em></a>) – Plot object to plot to.</p></li>
-<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.1)"><em>matplotlib.figure.Figure</em></a>) – Figure to plot on, if not provided the current
+<li><p><strong>fig</strong> (<a class="reference external" href="https://matplotlib.org/api/_as_gen/matplotlib.figure.Figure.html#matplotlib.figure.Figure" title="(in Matplotlib v3.2.2)"><em>matplotlib.figure.Figure</em></a>) – Figure to plot on, if not provided the current
 active axis is used.</p></li>
-<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><em>matplotlib.axes.Axes</em></a>) – Axis to plot on, if not provided the current
+<li><p><strong>ax</strong> (<a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.2)"><em>matplotlib.axes.Axes</em></a>) – Axis to plot on, if not provided the current
 active axis is used.</p></li>
 <li><p><strong>makeInteractive</strong> (<a class="reference external" href="https://docs.python.org/3.7/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a>) – True to make the plot interactive.</p></li>
 <li><p><strong>kwargs</strong> – All other arguments are passed to <a class="reference internal" href="#defdap.plotting.CrystalPlot.addVerts" title="defdap.plotting.CrystalPlot.addVerts"><code class="xref py py-func docutils literal notranslate"><span class="pre">defdap.plotting.CrystalPlot.addVerts()</span></code></a>.</p></li>
@@ -3914,6 +3922,7 @@ and find the ones in the fundamental sector of the IPF.</p>
 </div>
 
 
+            <div class="clearer"></div>
           </div>
         </div>
       </div>
@@ -3973,12 +3982,13 @@ and find the ones in the fundamental sector of the IPF.</p>
         <li class="right" >
           <a href="papers.html" title="Papers"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92 documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap package</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2020, Michael Atkinson.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+        &#169; Copyright 2020, Mechanics of Microstructures Group at The University of Manchester.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
     </div>
   </body>
 </html>
