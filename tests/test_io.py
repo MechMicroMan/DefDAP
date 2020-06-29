@@ -3,8 +3,9 @@ import numpy as np
 
 import defdap.file_readers
 
-EXAMPLE_DIC = "../example_data/Map Data 2-DIC area"
-EXAMPLE_TXT = "../example_data/B00005.txt"
+DATA_DIR = "tests/data/"
+EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
+EXAMPLE_DIC = DATA_DIR + "testDataDIC.txt"
 
 
 class TestEBSDDataLoader:
@@ -17,7 +18,7 @@ class TestEBSDDataLoader:
     @staticmethod
     @pytest.fixture
     def metadata_loaded(data_loader):
-        data_loader.loadOxfordCPR(EXAMPLE_DIC)
+        data_loader.loadOxfordCPR(EXAMPLE_EBSD)
         return data_loader
 
     @staticmethod
@@ -44,12 +45,12 @@ class TestEBSDDataLoader:
 
     @staticmethod
     def test_load_oxford_cpr_good_file(data_loader):
-        data_loader.loadOxfordCPR(EXAMPLE_DIC)
+        data_loader.loadOxfordCPR(EXAMPLE_EBSD)
         metadata = data_loader.loadedMetadata
-        assert metadata["xDim"] == 1006
-        assert metadata["yDim"] == 996
+        assert metadata["xDim"] == 359
+        assert metadata["yDim"] == 243
         # Testing for floating point equality so use approx
-        assert metadata["stepSize"] == pytest.approx(0.1)
+        assert metadata["stepSize"] == pytest.approx(0.12)
         assert metadata["numPhases"] == 1
         assert metadata["phaseNames"] == ["Ni-superalloy"]
 
@@ -60,7 +61,7 @@ class TestEBSDDataLoader:
 
     @staticmethod
     def test_load_oxford_crc_good_file(metadata_loaded):
-        metadata_loaded.loadOxfordCRC(EXAMPLE_DIC)
+        metadata_loaded.loadOxfordCRC(EXAMPLE_EBSD)
         x_dim = metadata_loaded.loadedMetadata["xDim"]
         y_dim = metadata_loaded.loadedMetadata["yDim"]
         assert metadata_loaded.loadedData['bandContrast'].shape == (y_dim, x_dim)
@@ -90,13 +91,13 @@ class TestDICDataLoader:
     @staticmethod
     @pytest.fixture
     def dic_metadata_loaded(dic_loader):
-        dic_loader.loadDavisMetadata(EXAMPLE_TXT)
+        dic_loader.loadDavisMetadata(EXAMPLE_DIC)
         return dic_loader
 
     @staticmethod
     @pytest.fixture
     def dic_data_loaded(dic_metadata_loaded):
-        dic_metadata_loaded.loadDavisData(EXAMPLE_TXT)
+        dic_metadata_loaded.loadDavisData(EXAMPLE_DIC)
         return dic_metadata_loaded
 
     @staticmethod
@@ -106,13 +107,13 @@ class TestDICDataLoader:
 
     @staticmethod
     def test_load_davis_metadata(dic_loader):
-        dic_loader.loadDavisMetadata(EXAMPLE_TXT)
+        dic_loader.loadDavisMetadata(EXAMPLE_DIC)
         metadata = dic_loader.loadedMetadata
         assert metadata['format'] == "DaVis"
-        assert metadata['version'] == "8.1.5"
+        assert metadata['version'] == "8.4.0"
         assert metadata['binning'] == 12
-        assert metadata['xDim'] == 586
-        assert metadata['yDim'] == 510
+        assert metadata['xDim'] == 300
+        assert metadata['yDim'] == 200
 
     @staticmethod
     def test_load_davis_metadata_bad_file(dic_loader):
@@ -121,7 +122,7 @@ class TestDICDataLoader:
 
     @staticmethod
     def test_load_davis_data(dic_metadata_loaded):
-        dic_metadata_loaded.loadDavisData(EXAMPLE_TXT)
+        dic_metadata_loaded.loadDavisData(EXAMPLE_DIC)
         data = dic_metadata_loaded.loadedData
         num_elements = dic_metadata_loaded.loadedMetadata["xDim"] * \
                        dic_metadata_loaded.loadedMetadata["yDim"]

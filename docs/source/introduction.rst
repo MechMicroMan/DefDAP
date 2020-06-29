@@ -1,6 +1,10 @@
 Introduction to DefDAP
 **************************
 
+.. figure:: ./_static/logo.png
+   :scale: 100 %
+   :alt: DefDAP
+
 This documentation gives information about the latest version of DefDAP.
 
 DefDAP is a python library for correlating EBSD and HRDIC data. It was developed by Michael Atkinson and Rhys Thomas during their PhDs at the Univeristy of Manchester.

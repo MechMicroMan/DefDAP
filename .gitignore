@@ -28,3 +28,6 @@ DefDAP.egg-info/
 
 # pytest
 .pytest_cache
+
+# coverage
+.coverage
