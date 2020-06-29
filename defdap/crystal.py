@@ -170,13 +170,14 @@ class SlipSystem(object):
 
             slipSystemFile = open(filepath)
 
-        except(FileNotFoundError):
+        except FileNotFoundError:
             # if it doesn't exist in the package dir, try and load the path
             try:
                 filepath = name
 
                 slipSystemFile = open(filepath)
-            except(FileNotFoundError):
+
+            except FileNotFoundError:
                 raise(FileNotFoundError("Couldn't find the slip systems file"))
 
         slipSystemFile.readline()
@@ -207,11 +208,12 @@ class SlipSystem(object):
 
     @staticmethod
     def groupSlipSystems(slipSystems):
-        """Groups slip systems by their slip plane.
+        """
+        Groups slip systems by their slip plane.
 
         Parameters
         ----------
-        slipSytems : (list(SlipSystem))
+        slipSystems : (list(SlipSystem))
             A list of slip systems.
 
         Returns
@@ -234,6 +236,16 @@ class SlipSystem(object):
                 groupedSlipSystems.append([slipSystem])
 
         return groupedSlipSystems
+
+    @staticmethod
+    def printSlipSystemDirectory():
+        """
+        Prints the location where slip system definition files are stored.
+
+        """
+        packageDir, _ = os.path.split(__file__)
+        print("Slip system definition files are stored in directory:")
+        print("{:}/slip_systems/".format(packageDir))
 
     @staticmethod
     def lMatrix(a, b, c, alpha, beta, gamma):

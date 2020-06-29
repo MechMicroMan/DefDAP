@@ -6,6 +6,7 @@ setup(
     description='A python library for correlating EBSD and HRDIC data.',
     author='Michael D. Atkinson',
     packages=find_packages(exclude=['tests']),
+    package_data={'defdap': ['slip_systems/*.txt']},
     install_requires=[
         'scipy',
         'numpy',
