@@ -49,7 +49,8 @@
 
 ## Contributing
 
-- For information about contributing see the [guidelines](http://mechmicroman.github.io/DefDAP/contributing.html).
+- For information about contributing see the [guidelines](http://mechmicroman.github.io/DefDAP/contributing.html)
+- Any new functions or changes to arguments should be documented. Details on how to regenerate html documentation is given [here](/docs/README.md).
 
 ## Credits
 
