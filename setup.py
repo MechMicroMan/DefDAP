@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='DefDAP',
-    version='0.92.2',
+    version='0.92.3',
     description='A python library for correlating EBSD and HRDIC data.',
     author='Michael D. Atkinson',
     packages=find_packages(exclude=['tests']),
