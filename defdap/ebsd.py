@@ -75,7 +75,7 @@ class Map(base.Map):
         Map of KAM.
     averageSchmidFactor : numpy.ndarray
         Map of average Schmid factor.
-    slipSystems : list(list(defdap.crystal.slipSystem))
+    slipSystems : list(list(defdap.crystal.SlipSystem))
         Slip systems grouped by slip plane.
     slipTraceColours list(str)
         Colours used when plotting slip traces.
