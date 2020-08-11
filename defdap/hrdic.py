@@ -701,7 +701,7 @@ class Map(base.Map):
         return plot
 
     @reportProgress("finding grains")
-    def findGrains(self, algorithm='warp', minGrainSize=10):
+    def findGrains(self, algorithm='floodfill', minGrainSize=10):
         """Finds grains in the DIC map.
 
         Parameters
