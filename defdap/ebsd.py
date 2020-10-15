@@ -1,4 +1,4 @@
-# Copyright 2019 Mechanics of Microstructures Group
+# Copyright 2020 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,77 +31,79 @@ from defdap.utils import reportProgress
 
 class Map(base.Map):
     """
-    Class to encapsulate EBSD data and useful analysis and plotting
+    Class to encapsulate an EBSD map and useful analysis and plotting
     methods.
 
     Attributes
     ----------
     crystalSym : str
-        symmetry of material e.g. "cubic", "hexagonal"
+        Symmetry of material e.g. "cubic", "hexagonal".
     xDim : int
-        size of map in x direction
+        Size of map in x direction.
     yDim : int
-        size of map in y direction
+        Size of map in y direction.
     stepSize : float
-        step size
-    eulerAngleArray
-    bandContrastArray
-    quatArray : numpy.ndarray
-        array of quaterions for each point of map
+        Step size in micron.
+    eulerAngleArray : numpy.ndarray
+        Euler angles for eaxh point of the map.
+    bandContrastArray : numpy.ndarray
+        Band contrast for each point of map.
+    quatArray : numpy.ndarray(defdap.quat.Quat)
+        Quaterions for each point of map.
     numPhases : int
-        number of phases
+        Number of phases.
     phaseArray : numpy.ndarray
-        map of phase ids
+        Map of phase ids.
     phaseNames : list(str)
-        list of phase names
+        List of phase names.
     boundaries : numpy.ndarray
-        map of boundaries. -1 for a boundary, 0 otherwise
+        Map of boundaries. -1 for a boundary, 0 otherwise.
     phaseBoundaries : numpy.ndarray
-        map of phase boundaries. -1 for boundary, 0 otherwise
+        Map of phase boundaries. -1 for boundary, 0 otherwise.
     cacheEulerMap
     grains : numpy.ndarray
-        map of grains. Grain numbers start at 1 here but everywhere else
+        Map of grains. Grain numbers start at 1 here but everywhere else
         grainID starts at 0. Regions that are smaller than the minimum
         grain size are given value -2.
     grainList : list(defdap.ebsd.Grain)
-        list of grains
+        List of grains.
     misOri : numpy.ndarray
-        map of misorientation
+        Map of misorientation.
     misOriAxis : list(numpy.ndarray)
-        map of misorientation axis components
+        Map of misorientation axis components.
     kam : numpy.ndarray
-        map of kam
+        Map of KAM.
     averageSchmidFactor : numpy.ndarray
-        map of average Schmid factor
-    slipSystems : list(list(slipSystems))
-        slip systems grouped by slip plane
+        Map of average Schmid factor.
+    slipSystems : list(list(defdap.crystal.SlipSystem))
+        Slip systems grouped by slip plane.
     slipTraceColours list(str)
-        colours used when plotting slip traces
+        Colours used when plotting slip traces.
     currGrainId : int
-        ID of last selected grain
+        ID of last selected grain.
     origin : tuple(int)
         Map origin (y, x). Used by linker class where origin is a
-        homologue point of the maps
-    GND
-        GND scalar map
-    Nye
-        3x3 Nye tensor at each point
-    fig
-    ax
+        homologue point of the maps.
+    GND : numpy.ndarray
+        GND scalar map.
+    Nye : numpy.ndarray
+        3x3 Nye tensor at each point.
+
     """
 
     def __init__(self, fileName, dataType=None):
         """
-        Initialise class and load EBSD data
+        Initialise class and load EBSD data.
 
         Parameters
         ----------
         fileName : str
-            Path to EBSD file, including name, excluding extension
+            Path to EBSD file, including name, excluding extension.
         crystalSym : str, {'cubic', 'hexagonal'}
-            Crystal structure
+            Crystal structure.
         dataType : str, {'OxfordBinary', 'OxfordText'}
-            Format of EBSD data file
+            Format of EBSD data file.
+
         """
         # Call base class constructor
         super(Map, self).__init__()
@@ -141,15 +143,15 @@ class Map(base.Map):
 
     @reportProgress("loading EBSD data")
     def loadData(self, fileName, dataType=None):
-        """
-        Load in EBSD data
+        """Load in EBSD data from file.
 
         Parameters
         ----------
         fileName : str
-            Path to EBSD file, including name, excluding extension
+            Path to EBSD file, including name, excluding extension.
         dataType : str, {'OxfordBinary', 'OxfordText'}
-            Format of EBSD data file
+            Format of EBSD data file.
+
         """
         if dataType is None:
             dataType = "OxfordBinary"
@@ -192,8 +194,8 @@ class Map(base.Map):
 
     @reportProgress("transforming EBSD data")
     def transformData(self):
-        """
-        Rotate map by 180 degrees and transform quats
+        """Rotate map by 180 degrees and transform quats accordingly.
+
         """
         self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
         self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
@@ -209,8 +211,15 @@ class Map(base.Map):
             yield i / self.xDim
 
     def plotBandContrastMap(self, **kwargs):
-        """
-        Plot band contrast map
+        """Plot band contrast map
+
+        kwargs
+            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
         """
         self.checkDataLoaded()
 
@@ -218,7 +227,7 @@ class Map(base.Map):
         plotParams = {
             'plotColourBar': True,
             'cmap:': 'grey',
-            'cLabel': "Band contrast"
+            'clabel': "Band contrast"
         }
         plotParams.update(kwargs)
 
@@ -227,26 +236,17 @@ class Map(base.Map):
         return plot
 
     def plotEulerMap(self, **kwargs):
-        """
-        Plot an orientation map in Euler colouring
+        """Plot an orientation map in Euler colouring
 
         Parameters
         ----------
-        ax
-        makeInteractive
-        plotGBs
-        dilateBoundaries
-        boundaryColour
-        plotScaleBar
         kwargs
-        updateCurrent : bool, optional
+            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
 
-        highlightGrains : iterable(int), optional
-            List of grain ids to highlight
-        highlightColours : str, optional
-            Colour of list of colours to highlight grains. If less
-            colours are given than grains, then the final colour is
-            used for the remaining grains.
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
         """
         self.checkDataLoaded()
 
@@ -275,6 +275,22 @@ class Map(base.Map):
         return plot
 
     def plotIPFMap(self, direction, **kwargs):
+        """
+        Plot a map with points coloured in IPF colouring,
+        with respect to a given sample direction.
+
+        Parameters
+        ----------
+        direction : np.array len 3
+            Sample directiom.
+        kwargs
+            All other arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
+        """
         # Set default plot parameters then update with any input
         plotParams = {}
         plotParams.update(kwargs)
@@ -285,21 +301,29 @@ class Map(base.Map):
             direction,
             self.crystalSym
         )
+        
+        # Make non-indexed points NaN
+        IPFcolours=np.where(np.tile(self.phaseArray.flatten()==0, (3,1)), np.nan, IPFcolours)
+
         # reshape back to map shape array
-        IPFcolours = np.reshape(IPFcolours, (self.yDim, self.xDim, 3))
+        IPFcolours = np.reshape(IPFcolours.T, (self.yDim, self.xDim, 3))
 
         plot = MapPlot.create(self, IPFcolours, **plotParams)
 
         return plot
 
     def plotPhaseMap(self, **kwargs):
-        """
-        Plot a phase map.
+        """Plot a phase map.
 
         Parameters
         ----------
-        cmap : str, optional
-            Colour scale to plot with.
+        kwargs
+            All arguments are passed to :func:`defdap.plotting.PolePlot.addPoints`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot.
+
         """
         # Set default plot parameters then update with any input
         plotParams = {
@@ -314,16 +338,16 @@ class Map(base.Map):
         phaseIDs = [-1] + list(range(1, self.numPhases + 1))
         phaseNames = ["Non-indexed"] + self.phaseNames
         plot.addLegend(phaseIDs, phaseNames,
-                       bbox_to_anchor=(1.05, 1),
                        loc=2, borderaxespad=0.)
 
         return plot
 
     def calcKam(self):
         """
-        Calculates Kernel Average Misorientaion (KAM) for the EBSD map.
-        Crystal symmetric equivalences are not considered. Stores
-        result in self.kam.
+        Calculates Kernel Average Misorientaion (KAM) for the EBSD map,
+        based on a 3x3 kernel. Crystal symmetric equivalences are not
+        considered. Stores result in self.kam.
+
         """
         quatComps = np.empty((4, self.yDim, self.xDim))
 
@@ -354,22 +378,22 @@ class Map(base.Map):
         self.kam[self.kam > 1] = 1
 
     def plotKamMap(self, **kwargs):
-        """
-        Plot Kernel Average Misorientaion (KAM) for the EBSD map.
+        """Plot Kernel Average Misorientaion (KAM) for the EBSD map.
 
         Parameters
         ----------
-        vmin : float, optional
-            Minimum of colour scale
-        vmax : float, optional
-            Maximum of colour scale
-        cmap : str, optional
-            Colour scale to plot with.
+        kwargs
+            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
         """
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cLabel': "Kernel average misorientation (KAM) ($^\circ$)"
+            'clabel': "Kernel average misorientation (KAM) ($^\circ$)"
         }
         plotParams.update(kwargs)
 
@@ -386,6 +410,7 @@ class Map(base.Map):
         """
         Calculates Nye tensor and related GND density for the EBSD map.
         Stores result in self.Nye and self.GND.
+
         """
         self.buildQuatArray()
         syms = Quat.symEqv(self.crystalSym)
@@ -503,10 +528,22 @@ class Map(base.Map):
         yield 1.
 
     def plotGNDMap(self, **kwargs):
+        """Plots a map of geometrically necessary dislocation (GND) density
+
+        Parameters
+        ----------
+        kwargs
+            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
+        """
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cLabel': "Geometrically necessary dislocation (GND) content"
+            'clabel': "Geometrically necessary dislocation (GND) content"
         }
         plotParams.update(kwargs)
 
@@ -519,7 +556,11 @@ class Map(base.Map):
     def checkDataLoaded(self):
         """ Checks if EBSD data is loaded
 
-        :return: True if data loaded
+        Returns
+        -------
+        bool
+            True if data loaded
+
         """
         if self.eulerAngleArray is None:
             raise Exception("Data not loaded")
@@ -527,8 +568,8 @@ class Map(base.Map):
 
     @reportProgress("building quaternion array")
     def buildQuatArray(self):
-        """
-        Build quaternion array
+        """Build quaternion array
+
         """
         self.checkDataLoaded()
 
@@ -540,11 +581,13 @@ class Map(base.Map):
 
     @reportProgress("finding grain boundaries")
     def findBoundaries(self, boundDef=10):
-        """
-        Find grain boundaries
+        """Find grain boundaries
 
-        :param boundDef: critical misorientation
-        :type boundDef: float
+        Parameters
+        ----------
+        boundDef : float
+            Critical misorientation.
+
         """
         syms = Quat.symEqv(self.crystalSym)
         numSyms = len(syms)
@@ -608,9 +651,13 @@ class Map(base.Map):
 
     @reportProgress("finding phase boundaries")
     def findPhaseBoundaries(self, treatNonIndexedAs=None):
-        """Finds boundaries in the phase map
+        """Finds boundaries in the phase map.
 
-        :param treatNonIndexedAs: value to assign to non-indexed points, defaults to -1
+        Parameters
+        ----------
+        treatNonIndexedAs : int
+            Value to assign to non-indexed points, defaults to -1.
+
         """
         # make new array shifted by one to left and up
         phaseArrayShifted = np.full((self.yDim, self.xDim), -3)
@@ -627,9 +674,19 @@ class Map(base.Map):
         yield 1.
 
     def plotPhaseBoundaryMap(self, dilate=False, **kwargs):
-        """Plot phase boundary map
+        """Plot phase boundary map.
 
-        :param dilate: Dilate boundary by one pixel
+        Parameters
+        ----------
+        dilate : bool
+            If true, dilate boundary.
+        kwargs
+            All other arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
         """
         # Set default plot parameters then update with any input
         plotParams = {
@@ -648,9 +705,17 @@ class Map(base.Map):
         return plot
 
     def plotBoundaryMap(self, **kwargs):
-        """Plot grain boundary map
+        """Plot grain boundary map.
 
-        :param dilate: Dilate boundary by one pixel
+        Parameters
+        ----------
+        kwargs
+            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
         """
         # Set default plot parameters then update with any input
         plotParams = {
@@ -665,10 +730,13 @@ class Map(base.Map):
 
     @reportProgress("finding grains")
     def findGrains(self, minGrainSize=10):
-        """
-        Find grains and assign ids
+        """Find grains and assign IDs.
 
-        :param minGrainSize: Minimum grain area in pixels
+        Parameters
+        ----------
+        minGrainSize : int
+            Minimum grain area in pixels.
+
         """
         # Initialise the grain map
         self.grains = np.copy(self.boundaries)
@@ -707,14 +775,21 @@ class Map(base.Map):
             numPoints = unknownPoints[0].shape[0]
 
     def plotGrainMap(self, **kwargs):
-        """
-        Plot a map with grains coloured
+        """Plot a map with grains coloured.
 
-        :return: Figure
+        Parameters
+        ----------
+        kwargs
+            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
         """
         # Set default plot parameters then update with any input
         plotParams = {
-            'cLabel': "Grain number"
+            'clabel': "Grain number"
         }
         plotParams.update(kwargs)
 
@@ -723,6 +798,18 @@ class Map(base.Map):
         return plot
 
     def floodFill(self, x, y, grainIndex):
+        """Flood filling algorithm.
+
+        Parameters
+        ----------
+        x : int
+            x coordinate in pixels.
+        y : int
+            y coordinate in pixels.
+        grainIndex : int
+            Grain ID.
+
+        """
         currentGrain = Grain(self)
 
         currentGrain.addPoint((x, y), self.quatArray[y, x])
@@ -768,6 +855,9 @@ class Map(base.Map):
 
     @reportProgress("calculating grain mean orientations")
     def calcGrainAvOris(self):
+        """Calculate the average orientation of grains.
+
+        """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
@@ -780,11 +870,13 @@ class Map(base.Map):
 
     @reportProgress("calculating grain misorientations")
     def calcGrainMisOri(self, calcAxis=False):
-        """
-        Calculate grain misorientation
+        """Calculate the misorientation within grains.
 
-        :param calcAxis: Calculate the misorientation axis also
-        :return:
+        Parameters
+        ----------
+        calcAxis : bool
+            Calculate the misorientation axis if True.
+
         """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
@@ -797,22 +889,20 @@ class Map(base.Map):
             yield (iGrain + 1) / numGrains
 
     def plotMisOriMap(self, component=0, **kwargs):
-        """
-        Plot misorientation map
+        """Plot misorientation map.
 
-        :param component: 0: misorientation, 1, 2, 3: rotation about x, y, z
-        :param plotGBs: Plot grain boundaries
-        :param boundaryColour: Colour of grain boundary
-        :param vmin: Minimum of colour scale (optional)
-        :type vmin: float
-        :param vmax: Maximum of colour scale (optional)
-        :type vmax: float
-        :param cmap: Colour map (optional)
-        :type cmap: str
-        :param cBarLabel: Label for colour bar
-        :return: Figure
-        """
+        Parameters
+        ----------
+        component : int, {0, 1, 2, 3}
+            0 gives misorientation, 1, 2, 3 gives rotation about x, y, z
+        kwargs
+            All other arguments are passed to :func:`defdap.plotting.MapPlot.create`.
 
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
+        """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
@@ -824,7 +914,7 @@ class Map(base.Map):
                     self.misOri[coord[1], coord[0]] = misOriAxis[component - 1]
 
             misOri = self.misOri * 180 / np.pi
-            cLabel = "Rotation around {:} axis ($^\circ$)".format(
+            clabel = "Rotation around {:} axis ($^\circ$)".format(
                 ['X', 'Y', 'Z'][component-1]
             )
         else:
@@ -833,12 +923,12 @@ class Map(base.Map):
                     self.misOri[coord[1], coord[0]] = misOri
 
             misOri = np.arccos(self.misOri) * 360 / np.pi
-            cLabel = "Grain reference orienation deviation (GROD) ($^\circ$)"
+            clabel = "Grain reference orienation deviation (GROD) ($^\circ$)"
 
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cLabel': cLabel
+            'clabel': clabel
         }
         plotParams.update(kwargs)
 
@@ -847,11 +937,14 @@ class Map(base.Map):
         return plot
 
     def loadSlipSystems(self, name):
-        """
-        Load slip system definitions from file
+        """Load slip system definitions from file.
 
-        :param name: name of the slip system file (without file
-        extension) stored in the defdap install dir or path to a file
+        Parameters
+        ----------
+        name : str
+            name of the slip system file (without file extension)
+            stored in the defdap install dir or path to a file.
+
         """
         self.slipSystems, self.slipTraceColours = SlipSystem.loadSlipSystems(
             name, self.crystalSym, cOverA=self.cOverA
@@ -862,29 +955,38 @@ class Map(base.Map):
                 grain.slipSystems = self.slipSystems
 
     def printSlipSystems(self):
+        """Print a list of slip planes (with colours) and slip directions.
+
         """
-        Print a list of slip planes (with colours) and slip directions
-        """
-        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems, self.slipTraceColours)):
-            print('Plane {0}: {1}\tColour: {2}'.format(i, ssGroup[0].slipPlaneLabel, colour))
+        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems,
+                                                  self.slipTraceColours)):
+            print('Plane {0}: {1}\tColour: {2}'.format(
+                i, ssGroup[0].slipPlaneLabel, colour
+            ))
             for j, ss in enumerate(ssGroup):
                 print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
 
     @reportProgress("calculating grain average Schmid factors")
-    def calcAverageGrainSchmidFactors(self, loadVector=np.array([0, 0, 1]), slipSystems=None):
+    def calcAverageGrainSchmidFactors(self, loadVector, slipSystems=None):
         """
-        Calculates Schmid factors for all slip systems, for all grains, based on average grain orientation
+        Calculates Schmid factors for all slip systems, for all grains,
+        based on average grain orientation.
 
-        :param loadVector: Loading vector, i.e. [1, 0, 0]
-        :param slipSystems: Slip systems
+        Parameters
+        ----------
+        loadVector :
+            Loading vector, e.g. [1, 0, 0].
+        slipSystems : list, optional
+            Slip planes to calculate Schmid factor for,
+            maximum of all planes calculated if not given.
+
         """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
         numGrains = len(self)
         for iGrain, grain in enumerate(self.grainList):
-            grain.calcAverageSchmidFactors(loadVector=loadVector,
-                                           slipSystems=slipSystems)
+            grain.calcAverageSchmidFactors(loadVector, slipSystems=slipSystems)
 
             # report progress
             yield (iGrain + 1) / numGrains
@@ -892,17 +994,22 @@ class Map(base.Map):
     def plotAverageGrainSchmidFactorsMap(self, planes=None, directions=None,
                                          **kwargs):
         """
-        Plot maximum Schmid factor map, based on average grain orientation (for all slip systems unless specified)
+        Plot maximum Schmid factor map, based on average grain
+        orientation (for all slip systems unless specified).
 
-        :param planes: Plane ID(s) to consider (optional)
-        :type planes: list
-        :param directions: Direction ID(s) to consider (optional)
-        :type directions: list
-        :param plotGBs: Plots grain boundaries if True
-        :param boundaryColour:  Colour of grain boundaries
-        :param dilateBoundaries: Dilates grain boundaries if True
-        :type boundaryColour: string
-        :return:
+        Parameters
+        ----------
+        planes : list, optional
+            Plane ID(s) to consider. All planes considered if not given.
+        directions : list, optional
+            Direction ID(s) to consider. All directions considered if not given.
+        kwargs
+            All other arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
         """
         # Set default plot parameters then update with any input
         plotParams = {
@@ -910,7 +1017,7 @@ class Map(base.Map):
             'vmax': 0.5,
             'cmap': 'gray',
             'plotColourBar': True,
-            'cLabel': "Schmid factor"
+            'clabel': "Schmid factor"
         }
         plotParams.update(kwargs)
 
@@ -953,6 +1060,38 @@ class Map(base.Map):
 
 
 class Grain(base.Grain):
+    """
+    Class to encapsulate a grain in an EBSD map and useful analysis and plotting
+    methods.
+
+    Attributes
+    ----------
+    crystalSym : str
+        Symmetry of material e.g. "cubic", "hexagonal"
+    slipSystems : list(list(defdap.crystal.SlipSystem))
+        Slip systems
+    ebsdMap : defdap.ebsd.Map
+        EBSD map this grain is a member of.
+    ownerMap : defdap.ebsd.Map
+        EBSD map this grain is a member of.
+    quatList : list
+        List of quats.
+    misOriList : list
+        MisOri at each point in grain.
+    misOriAxisList : list
+        MisOri axes at each point in grain.
+    refOri : defdap.quat.Quat
+        Average ori of grain
+    averageMisOri
+        Average misOri of grain.
+    averageSchmidFactors : list
+        List of list Schmid factors (grouped by slip plane).
+    slipTraceAngles : list
+        Slip trace angles in screen plane.
+    slipTraceInclinations : list
+         Angle between slip plane and screen plane.
+
+    """
 
     def __init__(self, ebsdMap):
         # Call base class constructor
@@ -972,17 +1111,37 @@ class Grain(base.Grain):
         self.slipTraceAngles = None             # list of slip trace angles
         self.slipTraceInclinations = None
 
-    # quat is a quaternion and coord is a tuple (x, y)
     def addPoint(self, coord, quat):
+        """Append a coordinate and a quat to a grain.
+
+        Parameters
+        ----------
+        coord : tuple
+            (x,y) coordinate to append
+        quat : defdap.quat.Quat
+            Quaternion to append.
+
+        """
         self.coordList.append(coord)
         self.quatList.append(quat)
 
     def calcAverageOri(self):
+        """Calculate the average orientation of a grain.
+
+        """
         quatCompsSym = Quat.calcSymEqvs(self.quatList, self.crystalSym)
 
         self.refOri = Quat.calcAverageOri(quatCompsSym)
 
     def buildMisOriList(self, calcAxis=False):
+        """Calculate the misorientation within given grain.
+
+        Parameters
+        ----------
+        calcAxis : bool
+            Calculate the misorientation axis if True.
+
+        """
         quatCompsSym = Quat.calcSymEqvs(self.quatList, self.crystalSym)
 
         if self.refOri is None:
@@ -1026,24 +1185,76 @@ class Grain(base.Grain):
                 self.misOriAxisList.append(row)
 
     def plotRefOri(self, direction=np.array([0, 0, 1]), **kwargs):
+        """Plot the average grain orientation on an IPF.
+
+        Parameters
+        ----------
+        direction : numpy.ndarray
+            Sample direction for IPF.
+        kwargs
+            All other arguments are passed to :func:`defdap.quat.Quat.plotIPF`.
+
+        Returns
+        -------
+        defdap.plotting.PolePlot
+
+        """
         plotParams = {'marker': '+'}
         plotParams.update(kwargs)
         return Quat.plotIPF([self.refOri], direction, self.crystalSym,
                             **plotParams)
 
     def plotOriSpread(self, direction=np.array([0, 0, 1]), **kwargs):
+        """Plot all orientations within a given grain, on an IPF.
+
+        Parameters
+        ----------
+        direction : numpy.ndarray
+            Sample direction for IPF.
+        kwargs
+            All other arguments are passed to :func:`defdap.quat.Quat.plotIPF`.
+
+        Returns
+        -------
+        defdap.plotting.PolePlot
+
+        """
         plotParams = {'marker': '.'}
         plotParams.update(kwargs)
         return Quat.plotIPF(self.quatList, direction, self.crystalSym,
                             **plotParams)
                             
-    def plotUnitCell(self, fig=None, ax=None):
-        Quat.plotUnitCell(self.refOri, fig, ax, symGroup=self.crystalSym, cOverA=self.ebsdMap.cOverA)
+    def plotUnitCell(self, fig=None, ax=None, **kwargs):
+        """Plot an unit cell of the average grain orientation.
 
-    # component
-    # 0 = misOri
-    # {1-3} = misOri axis {1-3}
+        Parameters
+        ----------
+        fig : matplotlib.figure.Figure
+            Matplotlib figure to plot on
+        ax : matplotlib.figure.Figure
+            Matplotlib figure to plot on
+        kwargs
+            All other arguments are passed to :func:`defdap.quat.Quat.plotUnitCell`.
+
+        """
+        Quat.plotUnitCell(self.refOri, fig=fig, ax=ax,
+                          symGroup=self.crystalSym, cOverA=self.ebsdMap.cOverA, **kwargs)
+
     def plotMisOri(self, component=0, **kwargs):
+        """Plot misorientation map for a given grain.
+
+        Parameters
+        ----------
+        component : int, {0, 1, 2, 3}
+            0 gives misorientation, 1, 2, 3 gives rotation about x, y, z.
+        kwargs
+            All other arguments are passed to :func:`defdap.ebsd.plotGrainData`.
+
+        Returns
+        -------
+        defdap.plotting.GrainPlot
+
+        """
         component = int(component)
 
         # Set default plot parameters then update with any input
@@ -1051,12 +1262,12 @@ class Grain(base.Grain):
             'plotColourBar': True
         }
         if component == 0:
-            plotParams['cLabel'] = "Grain reference orientation " \
+            plotParams['clabel'] = "Grain reference orientation " \
                                    "deviation (GROD) ($^\circ$)"
             plotData = 2 * np.arccos(self.misOriList)
 
         elif 0 < component < 4:
-            plotParams['cLabel'] = "Rotation around {:} ($^\circ$)".format(
+            plotParams['clabel'] = "Rotation around {:} ($^\circ$)".format(
                 ['X', 'Y', 'Z'][component-1]
             )
             plotData = np.array(self.misOriAxisList)[:, component-1]
@@ -1107,13 +1318,17 @@ class Grain(base.Grain):
         # return
 
     # define load axis as unit vector
-    def calcAverageSchmidFactors(self, loadVector=np.array([0, 0, 1]),
-                                 slipSystems=None):
-        """
-        Calculate Schmid factors for grain, using average orientation
+    def calcAverageSchmidFactors(self, loadVector, slipSystems=None):
+        """Calculate Schmid factors for grain, using average orientation.
 
-        :param loadVector: Loading vector, i.e. [1, 0, 0]
-        :param slipSystems: Slip systems
+        Parameters
+        ----------
+        loadVector : numpy.ndarray
+            Loading vector, i.e. [1, 0, 0]
+        slipSystems : list, optional
+            Slip planes to calculate Schmid factor for. Maximum for all planes
+            used if not set.
+
         """
         if slipSystems is None:
             slipSystems = self.slipSystems
@@ -1143,18 +1358,28 @@ class Grain(base.Grain):
 
     @property
     def slipTraces(self):
+        """Returns list of slip trace angles.
+
+        Returns
+        -------
+        list
+            Slip trace angles based on grain orientation in calcSlipTraces.
+
+        """
         if self.slipTraceAngles is None:
             self.calcSlipTraces()
 
         return self.slipTraceAngles
 
     def printSlipTraces(self):
-        """
-        Print a list of slip planes (with colours) and slip directions
+        """Print a list of slip planes (with colours) and slip directions
+
         """
 
         self.calcSlipTraces()
-        self.calcAverageSchmidFactors()
+
+        if self.averageSchmidFactors is None:
+            raise Exception("Run 'calcAverageGrainSchmidFactors' on the EBSD map first")
 
         for ssGroup, colour, sfGroup, slipTrace in zip(self.slipSystems, self.ebsdMap.slipTraceColours,
                                                        self.averageSchmidFactors, self.slipTraces):
@@ -1163,6 +1388,13 @@ class Grain(base.Grain):
                 print('  {0}   SF: {1:.3f}'.format(ss.slipDirLabel, sf))
 
     def calcSlipTraces(self, slipSystems=None):
+        """Calculates list of slip trace angles based on grain orientation.
+
+        Parameters
+        -------
+        slipSystems : defdap.crystal.SlipSystem, optional
+
+        """
         if slipSystems is None:
             slipSystems = self.slipSystems
         if self.refOri is None:
@@ -1207,13 +1439,18 @@ class Grain(base.Grain):
 
 
 class Linker(object):
-    """Class for linking multiple ebsd maps of the same region for analysis of deformation
+    """Class for linking multiple EBSD maps of the same region for analysis of deformation.
 
-    Attributes:
-        ebsdMaps (list(ebsd.Map)): List of ebsd.Map objects that are linked
-        links (list): List of grain link. Each link is stored as a tuple of grain IDs (one from each
-                      map stored in same order of maps)
-        numMaps (TYPE): Number of linked maps
+    Parameters
+    ----------
+    ebsdMaps : list(ebsd.Map)
+        List of ebsd.Map objects that are linked.
+    links : list
+        List of grain link. Each link is stored as a tuple of
+        grain IDs (one from each map stored in same order of maps).
+    numMaps : int
+        Number of linked maps.
+
     """
 
     def __init__(self, maps):
@@ -1223,14 +1460,30 @@ class Linker(object):
         return
 
     def setOrigin(self):
+        """Interacive tool to set origin of each EBSD map.
+
+        """
         for ebsdMap in self.ebsdMaps:
             ebsdMap.locateGrainID(clickEvent=self.clickSetOrigin)
 
     def clickSetOrigin(self, event, currentEbsdMap):
+        """Event handler for clicking to set origin of map.
+
+        Parameters
+        ----------
+        event
+            Click event.
+        currentEbsdMap : defdap.ebsd.Map
+            EBSD map to set origin for.
+
+        """
         currentEbsdMap.origin = (int(event.ydata), int(event.xdata))
         print("Origin set to ({:}, {:})".format(currentEbsdMap.origin[0], currentEbsdMap.origin[1]))
 
     def startLinking(self):
+        """Start interactive grain linking process of each EBSD map.
+
+        """
         for ebsdMap in self.ebsdMaps:
             ebsdMap.locateGrainID(clickEvent=self.clickGrainGuess)
 
@@ -1239,7 +1492,17 @@ class Linker(object):
             Button(btnAx, 'Make link', color='0.85', hovercolor='0.95')
 
     def clickGrainGuess(self, event, currentEbsdMap):
-        # self is cuurent linker instance even if run as click event handler from map class
+        """Guesses grain position in other maps, given click on one.
+
+        Parameters
+        ----------
+        event
+            Click handler.
+        currentEbsdMap : defdap.ebsd.Map
+            EBSD map that is clicked on.
+
+        """
+        # self is current linker instance even if run as click event handler from map class
         if event.inaxes is currentEbsdMap.fig.axes[0]:
             # axis 0 then is a click on the map
 
@@ -1277,6 +1540,9 @@ class Linker(object):
             self.makeLink()
 
     def makeLink(self):
+        """Make a link between the EBSD maps after clicking.
+
+        """
         # create empty list for link
         currLink = []
 
@@ -1291,15 +1557,20 @@ class Linker(object):
         print("Link added " + str(tuple(currLink)))
 
     def resetLinks(self):
+        """Reset links.
+
+        """
         self.links = []
 
 #   Analysis routines
 
     def setAvOriFromInitial(self):
+        """Loop over each map (not first/reference) and each link.
+        Sets refOri of linked grains to refOri of grain in first map.
+
+        """
         masterMap = self.ebsdMaps[0]
 
-        # loop over each map (not first/refernece) and each link. Set refOri of linked grains
-        # to refOri of grain in first map
         for i, ebsdMap in enumerate(self.ebsdMaps[1:], start=1):
             for link in self.links:
                 ebsdMap.grainList[link[i]].refOri = copy.deepcopy(masterMap.grainList[link[0]].refOri)
@@ -1307,7 +1578,14 @@ class Linker(object):
         return
 
     def updateMisOri(self, calcAxis=False):
-        # recalculate misorientation for linked grain (not for first map)
+        """Recalculate misorientation for linked grain (not for first map)
+
+        Parameters
+        ----------
+        calcAxis : bool
+            Calculate the misorientation axis if True.
+
+        """
         for i, ebsdMap in enumerate(self.ebsdMaps[1:], start=1):
             for link in self.links:
                 ebsdMap.grainList[link[i]].buildMisOriList(calcAxis=calcAxis)

@@ -1,0 +1,443 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>defdap.file_readers &#8212; DefDAP 0.92.3 documentation</title>
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.file_readers</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for defdap.file_readers</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Mechanics of Microstructures Group</span>
+<span class="c1">#    at The University of Manchester</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">pathlib</span>
+
+
+<div class="viewcode-block" id="EBSDDataLoader"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader">[docs]</a><span class="k">class</span> <span class="nc">EBSDDataLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class containing methods for loading and checking EBSD data</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;xDim&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;yDim&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;stepSize&#39;</span><span class="p">:</span> <span class="mf">0.</span><span class="p">,</span>
+            <span class="s1">&#39;numPhases&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;phaseNames&#39;</span><span class="p">:</span> <span class="p">[]</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;eulerAngle&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;bandContrast&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;phase&#39;</span><span class="p">:</span> <span class="kc">None</span>
+        <span class="p">}</span>
+
+<div class="viewcode-block" id="EBSDDataLoader.checkMetadata"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader.checkMetadata">[docs]</a>    <span class="k">def</span> <span class="nf">checkMetadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks that the number of phases from metadata matches</span>
+<span class="sd">        the amount of phase names.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;phaseNames&#39;</span><span class="p">])</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;numPhases&#39;</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Number of phases mismatch.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">AssertionError</span></div>
+
+<div class="viewcode-block" id="EBSDDataLoader.checkData"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader.checkData">[docs]</a>    <span class="k">def</span> <span class="nf">checkData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">binData</span><span class="p">):</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="EBSDDataLoader.loadOxfordCPR"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader.loadOxfordCPR">[docs]</a>    <span class="k">def</span> <span class="nf">loadOxfordCPR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read an Oxford Instruments .cpr file, which is a metadata file</span>
+<span class="sd">        describing EBSD data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Metadata for EBSD data, including dimensions and number of phases.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fileName</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.cpr&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+        <span class="n">filePath</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileDir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filePath</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Cannot open file </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filePath</span><span class="p">))</span>
+
+        <span class="n">cprFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">filePath</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">cprFile</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">&#39;xCells&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;xDim&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="s1">&#39;yCells&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;yDim&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="s1">&#39;GridDistX&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;stepSize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="s1">&#39;[Phases]&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;numPhases&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">cprFile</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="s1">&#39;[Phase&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">phaseName</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">cprFile</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;phaseNames&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">phaseName</span><span class="p">)</span>
+
+        <span class="n">cprFile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkMetadata</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span></div>
+
+<div class="viewcode-block" id="EBSDDataLoader.loadOxfordCRC"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader.loadOxfordCRC">[docs]</a>    <span class="k">def</span> <span class="nf">loadOxfordCRC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read binary EBSD data from an Oxford Instruments .crc file</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            EBSD data including phase, MAD and euler angle arrays.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">xDim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;xDim&#39;</span><span class="p">]</span>
+        <span class="n">yDim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;yDim&#39;</span><span class="p">]</span>
+
+        <span class="n">fileName</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.crc&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+        <span class="n">filePath</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileDir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filePath</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Cannot open file </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filePath</span><span class="p">))</span>
+
+        <span class="n">dataFormat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">([</span>
+            <span class="p">(</span><span class="s1">&#39;Phase&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;Eulers&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;ph1&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;phi&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;ph2&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">)]),</span>
+            <span class="p">(</span><span class="s1">&#39;MAD&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;BC&#39;</span><span class="p">,</span> <span class="s1">&#39;uint8&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;IB3&#39;</span><span class="p">,</span> <span class="s1">&#39;uint8&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;IB4&#39;</span><span class="p">,</span> <span class="s1">&#39;uint8&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;IB5&#39;</span><span class="p">,</span> <span class="s1">&#39;uint8&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;IB6&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">)</span>
+        <span class="p">])</span>
+        <span class="n">binData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">filePath</span><span class="p">),</span> <span class="n">dataFormat</span><span class="p">,</span> <span class="n">count</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkData</span><span class="p">(</span><span class="n">binData</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;bandContrast&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">binData</span><span class="p">[</span><span class="s1">&#39;BC&#39;</span><span class="p">],</span> <span class="p">(</span><span class="n">yDim</span><span class="p">,</span> <span class="n">xDim</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;phase&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">binData</span><span class="p">[</span><span class="s1">&#39;Phase&#39;</span><span class="p">],</span> <span class="p">(</span><span class="n">yDim</span><span class="p">,</span> <span class="n">xDim</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">eulerAngles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">binData</span><span class="p">[</span><span class="s1">&#39;Eulers&#39;</span><span class="p">],</span> <span class="p">(</span><span class="n">yDim</span><span class="p">,</span> <span class="n">xDim</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># flatten the structures so that the Euler angles are stored</span>
+        <span class="c1"># into a normal array</span>
+        <span class="n">eulerAngles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">eulerAngles</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span><span class="o">.</span><span class="n">transpose</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;eulerAngle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">eulerAngles</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span></div>
+
+<div class="viewcode-block" id="EBSDDataLoader.loadOxfordCTF"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.EBSDDataLoader.loadOxfordCTF">[docs]</a>    <span class="k">def</span> <span class="nf">loadOxfordCTF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Read an Oxford Instruments .ctf file, which is a HKL single orientation file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict, dict</span>
+<span class="sd">            EBSD metadata and EBSD data.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># open data file and read in metadata</span>
+        <span class="n">fileName</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.ctf&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+        <span class="n">filePath</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileDir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filePath</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Cannot open file </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filePath</span><span class="p">))</span>
+
+        <span class="n">ctfFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">filePath</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ctfFile</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s1">&#39;XCells&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">xDim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;xDim&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">xDim</span>
+            <span class="k">elif</span> <span class="s1">&#39;YCells&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">yDim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;yDim&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">yDim</span>
+            <span class="k">elif</span> <span class="s1">&#39;XStep&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;stepSize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="s1">&#39;Phases&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">numPhases</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;numPhases&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">numPhases</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numPhases</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;phaseNames&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="nb">next</span><span class="p">(</span><span class="n">ctfFile</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">2</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="n">numHeaderLines</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">3</span>
+                <span class="c1"># phases are last in the header so break out the loop</span>
+                <span class="k">break</span>
+
+        <span class="n">ctfFile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkMetadata</span><span class="p">()</span>
+
+        <span class="c1"># now read the data from file</span>
+        <span class="n">dataFormat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">([</span>
+            <span class="p">(</span><span class="s1">&#39;Phase&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;Eulers&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;ph1&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;phi&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;ph2&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">)]),</span>
+            <span class="p">(</span><span class="s1">&#39;MAD&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s1">&#39;BC&#39;</span><span class="p">,</span> <span class="s1">&#39;uint8&#39;</span><span class="p">)</span>
+        <span class="p">])</span>
+        <span class="n">binData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">filePath</span><span class="p">),</span> <span class="n">dataFormat</span><span class="p">,</span>
+            <span class="n">skiprows</span><span class="o">=</span><span class="n">numHeaderLines</span><span class="p">,</span> <span class="n">usecols</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkData</span><span class="p">(</span><span class="n">binData</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;bandContrast&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">binData</span><span class="p">[</span><span class="s1">&#39;BC&#39;</span><span class="p">],</span> <span class="p">(</span><span class="n">yDim</span><span class="p">,</span> <span class="n">xDim</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;phase&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">binData</span><span class="p">[</span><span class="s1">&#39;Phase&#39;</span><span class="p">],</span> <span class="p">(</span><span class="n">yDim</span><span class="p">,</span> <span class="n">xDim</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">eulerAngles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span>
+            <span class="n">binData</span><span class="p">[</span><span class="s1">&#39;Eulers&#39;</span><span class="p">],</span> <span class="p">(</span><span class="n">yDim</span><span class="p">,</span> <span class="n">xDim</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># flatten the structures the Euler angles are stored into a</span>
+        <span class="c1"># normal array</span>
+        <span class="n">eulerAngles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">eulerAngles</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span><span class="o">.</span><span class="n">transpose</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;eulerAngle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">eulerAngles</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span></div></div>
+
+
+<div class="viewcode-block" id="DICDataLoader"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader">[docs]</a><span class="k">class</span> <span class="nc">DICDataLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class containing methods for loading and checking HRDIC data</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;format&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;version&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;binning&#39;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="s1">&#39;xDim&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;yDim&#39;</span><span class="p">:</span> <span class="mi">0</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;xc&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;yc&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;xd&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;yd&#39;</span><span class="p">:</span> <span class="kc">None</span>
+        <span class="p">}</span>
+
+<div class="viewcode-block" id="DICDataLoader.checkMetadata"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader.checkMetadata">[docs]</a>    <span class="k">def</span> <span class="nf">checkMetadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="DICDataLoader.checkData"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader.checkData">[docs]</a>    <span class="k">def</span> <span class="nf">checkData</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Calculate size of map from loaded data and check it matches</span>
+<span class="sd">        values from metadata.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;xc&#39;</span><span class="p">]</span>
+        <span class="n">xdim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">coords</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">coords</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="nb">min</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">coords</span><span class="p">)))</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="p">)</span>
+
+        <span class="n">coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;yc&#39;</span><span class="p">]</span>
+        <span class="n">ydim</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">coords</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">coords</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">coords</span><span class="p">)))</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="p">)</span>
+
+        <span class="k">assert</span> <span class="n">xdim</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;xDim&#39;</span><span class="p">],</span> <span class="s2">&quot;Dimensions of data and header do not match&quot;</span>
+        <span class="k">assert</span> <span class="n">ydim</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;yDim&#39;</span><span class="p">],</span> <span class="s2">&quot;Dimensions of data and header do not match&quot;</span></div>
+
+<div class="viewcode-block" id="DICDataLoader.loadDavisMetadata"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader.loadDavisMetadata">[docs]</a>    <span class="k">def</span> <span class="nf">loadDavisMetadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Load DaVis metadata from Davis .txt file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Davis metadata.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">filePath</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileDir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filePath</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Cannot open file </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filePath</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">filePath</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+        <span class="c1"># Software name and version</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;format&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># Sub-window width in pixels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;binning&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+        <span class="c1"># size of map along x and y (from header)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;xDim&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span><span class="p">[</span><span class="s1">&#39;yDim&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkMetadata</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedMetadata</span></div>
+
+<div class="viewcode-block" id="DICDataLoader.loadDavisData"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader.loadDavisData">[docs]</a>    <span class="k">def</span> <span class="nf">loadDavisData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Load displacement data from Davis .txt file containing x and y coordinates</span>
+<span class="sd">        and x and y displacements for each coordinate.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Coordinates and displacements.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">filePath</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileDir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filePath</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Cannot open file </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filePath</span><span class="p">))</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">filePath</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="c1"># x and y coordinates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;xc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;yc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># x and y displacement</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;xd&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span><span class="p">[</span><span class="s1">&#39;yd&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">checkData</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadedData</span></div>
+        
+<div class="viewcode-block" id="DICDataLoader.loadDavisImageData"><a class="viewcode-back" href="../../defdap.html#defdap.file_readers.DICDataLoader.loadDavisImageData">[docs]</a>    <span class="k">def</span> <span class="nf">loadDavisImageData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">,</span> <span class="n">fileDir</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; A .txt file from DaVis containing a 2D image</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fileName : str</span>
+<span class="sd">            File name.</span>
+<span class="sd">        fileDir : str</span>
+<span class="sd">            Path to file.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">filePath</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileDir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filePath</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Cannot open file </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filePath</span><span class="p">))</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_table</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">filePath</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+       
+       <span class="c1"># x and y coordinates</span>
+        <span class="n">loadedData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">loadedData</span></div></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.file_readers</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Mechanics of Microstructures Group at The University of Manchester.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

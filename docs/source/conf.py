@@ -14,18 +14,18 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../DefDAP')) 	# Reference the root directory so autodocs can find the python modules
+sys.path.insert(0, os.path.abspath('../../defdap')) 	# Reference the root directory so autodocs can find the python modules
 
 # -- Project information -----------------------------------------------------
 
 project = 'DefDAP'
-copyright = '2019, Michael Atkinson'
-author = 'Michael Atkinson'
+copyright = '2020, Mechanics of Microstructures Group at The University of Manchester'
+author = 'Michael D. Atkinson, Rhys Thomas, João Quinta da Fonseca'
 
 # The short X.Y version
-version = ''
+version = '0.92'
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '0.92.3'
 
 
 # -- General configuration ---------------------------------------------------
@@ -43,7 +43,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-	'sphinx.ext.napoleon'
+	'sphinx.ext.napoleon',
+    'sphinx.ext.intersphinx'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -179,3 +180,10 @@ epub_exclude_files = ['search.html']
 
 
 # -- Extension configuration -------------------------------------------------
+
+autodoc_member_order = 'bysource'
+intersphinx_mapping = {'python': ('http://docs.python.org/3.7', None),
+                       'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+                       'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
+                       'matplotlib': ('http://matplotlib.org/', None),
+                       'skimage': ('http://scikit-image.org/docs/dev/', None)}

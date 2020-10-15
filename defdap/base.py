@@ -1,4 +1,4 @@
-# Copyright 2019 Mechanics of Microstructures Group
+# Copyright 2020 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import numpy as np
+import networkx as nx
 
 from defdap.quat import Quat
 from defdap import plotting
@@ -23,12 +24,15 @@ from defdap.utils import reportProgress
 
 
 class Map(object):
-
+    """
+    Base class for a map.
+    """
     def __init__(self):
         self.grainList = None
         self.homogPoints = []
 
         self.proxigramArr = None
+        self.neighbourNetwork = None
 
         self.grainPlot = None
 
@@ -42,26 +46,49 @@ class Map(object):
 
         return self.grainList[key]
 
+    @property
+    def shape(self):
+        return self.yDim, self.xDim
+
     def checkGrainsDetected(self):
-        """Check if grains have been detected
+        """Check if grains have been detected.
 
-        Returns:
-            bool: Returns True if grains detected
+        Returns
+        -------
+        bool:
+            True if grains detected.
 
-        Raises:
-            Exception: if grains not detected
+        Raises
+        -------
+        Exception
+            If grains not detected.
+
         """
-        if self.grainList is None or type(self.grainList) is not list or len(self.grainList) < 1:
+
+        if (self.grainList is None or
+                type(self.grainList) is not list or
+                len(self.grainList) < 1):
             raise Exception("No grains detected.")
         return True
 
     def plotGrainNumbers(self, dilateBoundaries=False, ax=None, **kwargs):
-        """Plot a map with grains numbered
+        """Plot a map with grains numbered.
 
-        Args:
-            dilateBoundaries(bool, optional): Set to true to dilate
-            boundaries by one pixel
+        Parameters
+        ----------
+        dilateBoundaries : bool, optional
+            Set to true to dilate boundaries.
+        ax : matplotlib.axes.Axes, optional
+            axis to plot on, if not provided the current active axis is used.
+        kwargs : dict
+            Keyword arguments to pass to matplotlib.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+
         """
+
         plot = plotting.MapPlot(self, ax=ax)
         plot.addGrainBoundaries(colour='black', dilate=dilateBoundaries)
         plot.addGrainNumbers(**kwargs)
@@ -69,10 +96,15 @@ class Map(object):
         return plot
 
     def locateGrainID(self, clickEvent=None, displaySelected=False, **kwargs):
-        """
-        Interactive plot for identifying grains
+        """Interactive plot for identifying grains.
 
-        :param displaySelected: Plot slip traces for selected grain
+        Parameters
+        ----------
+        clickEvent : optional
+            Click handler to use.
+        displaySelected : bool, optional
+            If true, plot slip traces for grain selected by click.
+
         """
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
@@ -94,6 +126,18 @@ class Map(object):
         return plot
 
     def clickGrainID(self, event, plot, displaySelected):
+        """Event handler to capture clicking on a map.
+
+        Parameters
+        ----------
+        event :
+            Click event.
+        plot : defdap.plotting.Plot
+            Plot to capture clicks from.
+        displaySelected : bool
+            If true, plot the selected grain alone in pop-out window.
+
+        """
         if event.inaxes is plot.ax:
             # grain id of selected grain
             self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
@@ -112,35 +156,111 @@ class Map(object):
                     self.grainPlot.callingGrain = currGrain
                     currGrain.plotDefault(plot=self.grainPlot)
 
-    def setHomogPoint(self, binSize=1, points=None):
+    def setHomogPoint(self, binSize=1, points=None, **kwargs):
+        """
+        Interactive tool to set homologous points. Right-click on a point
+        then click 'save point' to append to the homologous points list.
+
+        Parameters
+        ----------
+        binSize : int, optional
+            Binning applied to image, if applicable.
+        points : numpy.ndarray, optional
+            Array of (x,y) homologous points to set explicitly.
+        kwargs : dict, optional
+            Keyword arguments for matplotlib.
+
+        """
         if points is None:
-            plot = self.plotHomog(makeInteractive=True)
+            plot = self.plotHomog(makeInteractive=True, **kwargs)
             # Plot stored homogo points if there are any
             if len(self.homogPoints) > 0:
                 homogPoints = np.array(self.homogPoints) * binSize
-                plot.addPoints(homogPoints[:, 0], homogPoints[:, 1], c='y', s=60)
+                plot.addPoints(homogPoints[:, 0], homogPoints[:, 1],
+                               c='y', s=60)
             else:
                 # add empty points layer to update later
                 plot.addPoints([None], [None], c='y', s=60)
 
             # add empty points layer for current selected point
-            plot.addPoints([None], [None], c='w',s=60, marker='x')
+            plot.addPoints([None], [None], c='w', s=60, marker='x')
 
             plot.addEventHandler('button_press_event', self.clickHomog)
-
-            plot.addButton(
-                "Save point",
-                lambda e, p: self.clickSaveHomog(e, p, binSize),
-                color="0.85", hovercolor="blue"
-            )
+            plot.addEventHandler('key_press_event', self.keyHomog)
+            plot.addButton("Save point",
+                           lambda e, p: self.clickSaveHomog(e, p, binSize),
+                           color="0.85", hovercolor="blue")
         else:
             self.homogPoints = points
 
     def clickHomog(self, event, plot):
+        """Event handler for capturing position when clicking on a map.
+
+        Parameters
+        ----------
+        event :
+            Click event.
+        plot : defdap.plotting.Plot
+            Plot to monitor.
+
+        """
         if event.inaxes is plot.ax:
-            plot.addPoints([int(event.xdata)], [int(event.ydata)], updateLayer=1)
+            # right mouse click or shift + left mouse click
+            # shift click doesn't work in osx backend
+            if (event.button == 3 or
+                    (event.button == 1 and event.key == 'shift')):
+                plot.addPoints([int(event.xdata)], [int(event.ydata)],
+                               updateLayer=1)
+
+    def keyHomog(self, event, plot):
+        """Event handler for moving position using keyboard after clicking on a map.
+
+        Parameters
+        ----------
+        event :
+            Keypress event.
+        plot : defdap.plotting.Plot
+            Plot to monitor.
+
+        """
+        keys = ['left', 'right', 'up', 'down']
+        key = event.key.split('+')
+        if key[-1] in keys:
+            # get the selected point
+            points = plot.imgLayers[plot.pointsLayerIDs[1]]
+            selPoint = points.get_offsets()[0]
+
+            # check if a point is selected
+            if selPoint[0] is not None and selPoint[1] is not None:
+                # print(event.key)
+                move = 1
+                if len(key) == 2 and key[0] == 'shift':
+                    move = 10
+
+                if key[-1] == keys[0]:
+                    selPoint[0] -= move
+                elif key[-1] == keys[1]:
+                    selPoint[0] += move
+                elif key[-1] == keys[2]:
+                    selPoint[1] -= move
+                elif key[-1] == keys[3]:
+                    selPoint[1] += move
+
+                plot.addPoints([selPoint[0]], [selPoint[1]], updateLayer=1)
 
     def clickSaveHomog(self, event, plot, binSize):
+        """Append the selected point on the map to homogPoints.
+
+        Parameters
+        ----------
+        event :
+            Button click event.
+        plot : defdap.plotting.Plot
+            Plot to monitor.
+        binSize : int, optional
+            Binning applied to image, if applicable.
+
+        """
         # get the selected point
         points = plot.imgLayers[plot.pointsLayerIDs[1]]
         selPoint = points.get_offsets()[0]
@@ -159,13 +279,19 @@ class Map(object):
             plot.addPoints(homogPoints[:, 0], homogPoints[:, 1], updateLayer=0)
 
     def updateHomogPoint(self, homogID, newPoint=None, delta=None):
-        """Update a homog by either over wrting it with a new point or
+        """
+        Update a homog point by either over writing it with a new point or
         incrementing the current values.
 
-        Args:
-            homogID (int): ID (place in list) of point to update or -1 for all
-            newPoint (tuple, optional): New point
-            delta (tuple, optional): Increments to current point (dx, dy)
+        Parameters
+        ----------
+        homogID : int
+            ID (place in list) of point to update or -1 for all.
+        newPoint : tuple, optional
+            (x, y) coordinates of new point.
+        delta : tuple, optional
+            Increments to current point (dx, dy).
+
         """
         if type(homogID) is not int:
             raise Exception("homogID must be an integer.")
@@ -195,13 +321,15 @@ class Map(object):
             self.homogPoints[homogID] = newPoint
 
     def buildNeighbourNetwork(self):
-        # Construct a list of neighbours
+        """Construct a list of neighbours
 
+        """
         yLocs, xLocs = np.nonzero(self.boundaries)
         neighboursList = []
 
         for y, x in zip(yLocs, xLocs):
-            if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or y == self.grains.shape[0] - 1):
+            if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
+                    y == self.grains.shape[0] - 1):
                 # exclude boundary pixel of map
                 continue
             else:
@@ -217,7 +345,8 @@ class Map(object):
                     self.grains[y, x - 1] - 1
                 }
                 # neighbours = set(neighbours)
-                # remove boundary points (-2) and points in small grains (-3) (Normally -1 and -2)
+                # remove boundary points (-2) and points in small
+                # grains (-3) (Normally -1 and -2)
                 neighbours.discard(-2)
                 neighbours.discard(-3)
 
@@ -239,7 +368,6 @@ class Map(object):
                         neighboursList.append(trialNeig)
 
         # create network
-        import networkx as nx
         self.neighbourNetwork = nx.Graph()
         self.neighbourNetwork.add_nodes_from(range(len(self)))
         self.neighbourNetwork.add_edges_from(neighboursList)
@@ -248,6 +376,16 @@ class Map(object):
         self.locateGrainID(clickEvent=self.clickGrainNeighbours)
 
     def clickGrainNeighbours(self, event, plot):
+        """Event handler to capture clicking and show neighbours of selected grain.
+
+        Parameters
+        ----------
+        event :
+            Click event.
+        plot : defdap.plotting.Plot
+            Plot to monitor.
+
+        """
         if event.inaxes is plot.ax:
             # grain id of selected grain
             grainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
@@ -277,12 +415,30 @@ class Map(object):
 
     @property
     def proxigram(self):
+        """Proxigram for a map.
+
+        Returns
+        -------
+        numpy.ndarray
+            Distance from a grain boundary at each point in map.
+
+        """
         self.calcProxigram(forceCalc=False)
 
         return self.proxigramArr
 
     @reportProgress("calculating proxigram")
     def calcProxigram(self, numTrials=500, forceCalc=True):
+        """Calculate distance from a grain boundary at each point in map.
+
+        Parameters
+        ----------
+        numTrials : int, optional
+            number of trials.
+        forceCalc : bool, optional
+            Force calculation even is proxigramArr is populated.
+
+        """
         if self.proxigramArr is not None and not forceCalc:
             return
 
@@ -308,10 +464,13 @@ class Map(object):
 
         # array of x and y coordinate of each pixel in the map
         coords = np.zeros((2, proxShape[0], proxShape[1]), dtype=float)
-        coords[0], coords[1] = np.meshgrid(range(proxShape[0]), range(proxShape[1]), indexing='ij')
+        coords[0], coords[1] = np.meshgrid(
+            range(proxShape[0]), range(proxShape[1]), indexing='ij'
+        )
 
         # array to store trial distance from each boundary point
-        trialDistances = np.full((numTrials + 1, proxShape[0], proxShape[1]), 1000, dtype=float)
+        trialDistances = np.full((numTrials + 1, proxShape[0], proxShape[1]),
+                                 1000, dtype=float)
 
         # loop over each boundary point (p) and calculate distance from
         # p to all points in the map store minimum once numTrails have
@@ -338,12 +497,20 @@ class Map(object):
     def calcGrainAv(self, mapData, grainIds=-1):
         """Calculate grain average of any DIC map data.
 
-        Args:
-            mapData (np.array): Array of map data to grain average. This must be cropped!
+        Parameters
+        ----------
+        mapData : numpy.ndarray
+            Array of map data to grain average. This must be cropped!
+        grainIds : list, optional
+            grainIDs to perform operation on, set to -1 for all grains.
 
-        Returns:
-            np.array: Array containing the grain average values
+        Returns
+        -------
+        numpy.ndarray
+            Array containing the grain average values.
+
         """
+
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
@@ -361,29 +528,31 @@ class Map(object):
 
     def plotGrainDataMap(self, mapData=None, grainData=None,
                          grainIds=-1, bg=0, **kwargs):
-        """Plot a grain map with grains coloured by given data. The data
+        """
+        Plot a grain map with grains coloured by given data. The data
         can be provided as a list of values per grain or as a map which
         a grain average will be applied.
 
         Parameters
         ----------
-        mapData : np.array, optional
+        mapData : numpy.ndarray, optional
             Array of map data. This must be cropped! You must supply either
             mapData or grainData.
-        grainData : list or np.array, optional
+        grainData : list or numpy.array, optional
             Grain values. This an be a single value per grain or RGB
             values. You must supply either mapData or grainData.
-        grainIds: list of int or int, optional
+        grainIds : list(int) or int, optional
             IDs of grains to plot for. Use -1 for all grains in the map.
-        bg: int or real, optional
+        bg : int or real, optional
             Value to fill the background with.
-        kwargs:
-            Other parameters are passed to defdap.plotting.MapPlot.create
+        kwargs :
+            Other parameters are passed to defdap.plotting.MapPlot.create.
 
         Returns
         -------
-        plot: defdap.plotting.MapPlot
-            Plot object created
+        plot : defdap.plotting.MapPlot
+            Plot object created.
+
         """
         # Set default plot parameters then update with any input
         plotParams = {}
@@ -415,7 +584,7 @@ class Map(object):
             mapShape = [self.yDim, self.xDim, 3]
         else:
             raise Exception("The grain data supplied must be either a"
-                            "singel value or RGB values per grain.")
+                            "single value or RGB values per grain.")
 
         grainMap = np.full(mapShape, bg, dtype=grainData.dtype)
         for grainId, grainValue in zip(grainIds, grainData):
@@ -431,16 +600,25 @@ class Map(object):
             self, direction, mapData=None, grainData=None,
             grainIds=-1, **kwargs
     ):
-        """Plot IPF of grain reference (average) orientations with
+        """
+        Plot IPF of grain reference (average) orientations with
         points coloured by grain average values from map data.
 
-        Args:
-            mapData (np.array): Array of map data to grain average. This must be cropped!
-            direction (np.array): Vector of reference direction for the IPF
-            plotColourBar (bool, optional): Set to Flase to exclude the colour bar
-            vmin (float, optional): Minimum value of colour scale
-            vmax (float, optional): Maximum value for colour scale
-            cLabel (str, optional): Colour bar label text
+        Parameters
+        ----------
+        mapData : numpy.ndarray
+            Array of map data to grain average. This must be cropped!
+        direction : numpy.ndarray
+            Vector of reference direction for the IPF.
+        plotColourBar : bool, optional
+            Set to False to exclude the colour bar from the plot.
+        vmin : float, optional
+            Minimum value of colour scale.
+        vmax : float, optional
+            Maximum value for colour scale.
+        cLabel : str, optional
+            Colour bar label text.
+
         """
         # Set default plot parameters then update with any input
         plotParams = {}
@@ -475,7 +653,9 @@ class Map(object):
 
 
 class Grain(object):
-
+    """
+    Base class for a grain.
+    """
     def __init__(self):
         # list of coords stored as tuples (x, y). These are coords in a
         # cropped image if crop exists.
@@ -486,6 +666,14 @@ class Grain(object):
 
     @property
     def extremeCoords(self):
+        """Coordinates of the bounding box for a grain.
+
+        Returns
+        -------
+        int, int, int, int
+            minimum x, minimum y, maximum x, maximum y.
+
+        """
         coords = np.array(self.coordList, dtype=int)
 
         x0, y0 = coords.min(axis=0)
@@ -502,7 +690,7 @@ class Grain(object):
         ----------
         centreType : str, optional, {'box', 'com'}
             Set how to calculate the centre. Either 'box' for centre of
-            boundiing box or 'com' for centre of mass. Default is 'box'.
+            bounding box or 'com' for centre of mass. Default is 'box'.
         grainCoords : bool, optional
             If set True the centre is returned in the grain coordinates
             otherwise in the map coordinates. Defaults is grain.
@@ -510,7 +698,8 @@ class Grain(object):
         Returns
         -------
         int, int
-            Coordinates of centre of grain
+            Coordinates of centre of grain.
+
         """
         x0, y0, xmax, ymax = self.extremeCoords
         if centreType == "box":
@@ -528,6 +717,21 @@ class Grain(object):
         return int(xCentre), int(yCentre)
 
     def grainOutline(self, bg=np.nan, fg=0):
+        """Generate an array of the grain outline.
+
+        Parameters
+        ----------
+        bg : int
+            Value for points not within grain.
+        fg : int
+            Value for points within grain.
+
+        Returns
+        -------
+        numpy.ndarray
+            Bounding box for grain with np.nan outside the grain and given number within.
+
+        """
         x0, y0, xmax, ymax = self.extremeCoords
 
         # initialise array with nans so area not in grain displays white
@@ -539,6 +743,22 @@ class Grain(object):
         return outline
 
     def plotOutline(self, ax=None, plotScaleBar=False, **kwargs):
+        """Plot the outline of the grain.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            axis to plot on, if not provided the current active axis is used.
+        plotScaleBar : bool
+            plots the scale bar on the grain if true.
+        kwargs : dict
+            keyword arguments to pass to plotting.GrainPlot.addMap.
+
+        Returns
+        -------
+        defdap.plotting.GrainPlot
+
+        """
         plot = plotting.GrainPlot(self, ax=ax)
         plot.addMap(self.grainOutline(), **kwargs)
 
@@ -548,8 +768,7 @@ class Grain(object):
         return plot
 
     def grainData(self, mapData):
-        """
-        Extract this grains data from the given map data.
+        """Extract this grains data from the given map data.
 
         Parameters
         ----------
@@ -560,6 +779,7 @@ class Grain(object):
         -------
         numpy.ndarray
             Array containing this grains values from the given map data.
+
         """
         grainData = np.zeros(len(self), dtype=mapData.dtype)
 
@@ -569,25 +789,25 @@ class Grain(object):
         return grainData
 
     def grainMapData(self, mapData=None, grainData=None, bg=np.nan):
-        """
-        Extract a single grain map from the given map data.
+        """Extract a single grain map from the given map data.
 
         Parameters
         ----------
         mapData : numpy.ndarray
             Array of map data. This must be cropped! Either this or
-            'grainData' must be supllied and 'grainData' takes presidence.
+            'grainData' must be supplied and 'grainData' takes precedence.
         grainData : numpy.ndarray
             Array of data at each point in the grain. Either this or
-            'mapData' must be supllied and 'grainData' takes presidence.
+            'mapData' must be supplied and 'grainData' takes precedence.
         bg : various, optional
-            Value to fill the backgraound with. Must be same dtype as
+            Value to fill the background with. Must be same dtype as
             input array.
 
         Returns
         -------
         numpy.ndarray
             Grain map extracted from given data.
+
         """
         if grainData is None:
             if mapData is None:
@@ -609,28 +829,29 @@ class Grain(object):
                            kernelSize=2, bg=np.nan):
         """
         Create a coarsed data map of this grain only from the given map
-        data. Data is coarsened using a kenel at each pixel in the
+        data. Data is coarsened using a kernel at each pixel in the
         grain using only data in this grain.
 
         Parameters
         ----------
         mapData : numpy.ndarray
             Array of map data. This must be cropped! Either this or
-            'grainData' must be supllied and 'grainData' takes presidence.
+            'grainData' must be supplied and 'grainData' takes precedence.
         grainData : numpy.ndarray
             List of data at each point in the grain. Either this or
-            'mapData' must be supllied and 'grainData' takes presidence.
+            'mapData' must be supplied and 'grainData' takes precedence.
         kernelSize : int, optional
             Size of kernel as the number of pixels to dilate by i.e 1
             gives a 3x3 kernel.
         bg : various, optional
-            Value to fill the backgraound with. Must be same dtype as
+            Value to fill the background with. Must be same dtype as
             input array.
 
         Returns
         -------
         numpy.ndarray
             Map of this grains coarsened data.
+
         """
         grainMapData = self.grainMapData(mapData=mapData, grainData=grainData)
         grainMapDataCoarse = np.full_like(grainMapData, np.nan)
@@ -680,18 +901,19 @@ class Grain(object):
         ----------
         mapData : numpy.ndarray
             Array of map data. This must be cropped! Either this or
-            'grainData' must be supllied and 'grainData' takes presidence.
+            'grainData' must be supplied and 'grainData' takes precedence.
         grainData : numpy.ndarray
             List of data at each point in the grain. Either this or
-            'mapData' must be supllied and 'grainData' takes presidence.
+            'mapData' must be supplied and 'grainData' takes precedence.
         vmin : float, optional
-            Minimum value of colour scale
+            Minimum value of colour scale.
         vmax : float, optional
-            Minimum value of colour scale
+            Minimum value of colour scale.
         cLabel : str, optional
-            Colour bar label text
+            Colour bar label text.
         cmap : str, optional
-            Colour map to use, default is viridis
+            Colour map to use, default is viridis.
+
         """
         # Set default plot parameters then update with any input
         plotParams = {}

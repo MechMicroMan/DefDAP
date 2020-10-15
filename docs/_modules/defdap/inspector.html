@@ -1,0 +1,550 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>defdap.inspector &#8212; DefDAP 0.92.3 documentation</title>
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.inspector</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for defdap.inspector</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2020 Mechanics of Microstructures Group</span>
+<span class="c1">#    at The University of Manchester</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">MeanShift</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">linregress</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="kn">from</span> <span class="nn">defdap.plotting</span> <span class="kn">import</span> <span class="n">Plot</span><span class="p">,</span> <span class="n">GrainPlot</span><span class="p">,</span> <span class="n">LineSlice</span>
+
+
+<div class="viewcode-block" id="GrainInspector"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector">[docs]</a><span class="k">class</span> <span class="nc">GrainInspector</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class containing the interactive grain inspector tool for slip trace analysis</span>
+<span class="sd">    and relative displacement ratio analysis.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">currMap</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+        <span class="c1"># Initialise some values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainID</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currMap</span> <span class="o">=</span> <span class="n">currMap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currEBSDMap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="o">.</span><span class="n">ebsdMap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">grainID</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currEBSDGrain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">ebsdGrain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmax</span> <span class="o">=</span> <span class="n">vmax</span>
+        
+        <span class="c1"># Draw the figure</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+
+<div class="viewcode-block" id="GrainInspector.draw"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.draw">[docs]</a>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Draw the main window, buttons, text boxes and axes.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Plot window</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span> <span class="o">=</span> <span class="n">Plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">makeInteractive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span><span class="mi">8</span><span class="p">),</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Grain Inspector&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Buttons</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addButton</span><span class="p">(</span><span class="s1">&#39;Save</span><span class="se">\n</span><span class="s1">Line&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">saveLine</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.73</span><span class="p">,</span> <span class="mf">0.48</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addButton</span><span class="p">(</span><span class="s1">&#39;Previous</span><span class="se">\n</span><span class="s1">Grain&#39;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">gotoGrain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grainID</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">p</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.73</span><span class="p">,</span> <span class="mf">0.94</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addButton</span><span class="p">(</span><span class="s1">&#39;Next</span><span class="se">\n</span><span class="s1">Grain&#39;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">gotoGrain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grainID</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">p</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.79</span><span class="p">,</span> <span class="mf">0.94</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addButton</span><span class="p">(</span><span class="s1">&#39;Run</span><span class="se">\n</span><span class="s1">All STA&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">batchRunSTA</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.81</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addButton</span><span class="p">(</span><span class="s1">&#39;Clear</span><span class="se">\n</span><span class="s1">All Lines&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">clearAllLines</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.89</span><span class="p">,</span> <span class="mf">0.48</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">))</span>
+
+        <span class="c1"># Text boxes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addTextBox</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Go to </span><span class="se">\n</span><span class="s1">grain ID:&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="p">(</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.94</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span> <span class="n">submitHandler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gotoGrain</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addTextBox</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Remove</span><span class="se">\n</span><span class="s1">ID:&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="p">(</span><span class="mf">0.83</span><span class="p">,</span> <span class="mf">0.48</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span> <span class="n">submitHandler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">removeLine</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">RDRGroupBox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addTextBox</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Run RDR</span><span class="se">\n</span><span class="s1">on group:&#39;</span><span class="p">,</span>
+                                                <span class="n">loc</span><span class="o">=</span><span class="p">(</span><span class="mf">0.78</span><span class="p">,</span> <span class="mf">0.07</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.04</span><span class="p">),</span> <span class="n">submitHandler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">runRDRGroup</span><span class="p">)</span>
+
+        <span class="c1"># Axes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maxShearAx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addAxes</span><span class="p">((</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.65</span><span class="p">,</span> <span class="mf">0.55</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceAx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addAxes</span><span class="p">((</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unitCellAx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addAxes</span><span class="p">((</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.055</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">),</span> <span class="n">proj</span><span class="o">=</span><span class="s1">&#39;3d&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainInfoAx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addAxes</span><span class="p">((</span><span class="mf">0.73</span><span class="p">,</span> <span class="mf">0.86</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.06</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lineInfoAx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addAxes</span><span class="p">((</span><span class="mf">0.73</span><span class="p">,</span> <span class="mf">0.55</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">groupsInfoAx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addAxes</span><span class="p">((</span><span class="mf">0.73</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainPlot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">grainID</span><span class="p">]</span><span class="o">.</span><span class="n">plotMaxShear</span><span class="p">(</span><span class="n">fig</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">maxShearAx</span><span class="p">,</span> 
+                                                                 <span class="n">vmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">vmax</span><span class="p">,</span> <span class="n">plotScaleBar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Draw the stuff that will need to be redrawn often in a seperate function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="GrainInspector.gotoGrain"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.gotoGrain">[docs]</a>    <span class="k">def</span> <span class="nf">gotoGrain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Go to a specified grain ID.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        event: int</span>
+<span class="sd">            Grain ID to go to.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">## Go to grain ID specified in event</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainID</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainPlot</span><span class="o">.</span><span class="n">arrow</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">grainID</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currEBSDGrain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">ebsdGrain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="GrainInspector.saveLine"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.saveLine">[docs]</a>    <span class="k">def</span> <span class="nf">saveLine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;  Save the start point, end point and angle of drawn line into the grain.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        event: numpy.ndarray</span>
+<span class="sd">            Start x, start y, end x, end y point of line passed from drawn line.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get angle of lines</span>
+        <span class="n">lineAngle</span> <span class="o">=</span> <span class="mi">90</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">lineAngle</span> <span class="o">&gt;</span> <span class="mi">180</span><span class="p">:</span> <span class="n">lineAngle</span> <span class="o">-=</span> <span class="mi">180</span>
+        <span class="k">elif</span> <span class="n">lineAngle</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">lineAngle</span> <span class="o">+=</span> <span class="mi">180</span>
+        <span class="c1">#lineAngle += self.currMap.ebsdTransform.rotation*-180/np.pi</span>
+            
+        <span class="c1"># Save drawn line to the DIC grain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span><span class="o">.</span><span class="n">points</span><span class="p">,</span> <span class="n">lineAngle</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        
+        <span class="c1"># Group lines and redraw</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">groupLines</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="GrainInspector.groupLines"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.groupLines">[docs]</a>    <span class="k">def</span> <span class="nf">groupLines</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Group the lines drawn in the current grain item using a mean shift algorithm,</span>
+<span class="sd">        save the average angle and detect the active slip planes.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">angles</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span><span class="p">]</span>
+        <span class="c1"># For single line, don&#39;t group</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">angles</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">=</span><span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">groupsList</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="n">angles</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Run clustering algorithm for &gt;1 line</span>
+            <span class="n">ms</span> <span class="o">=</span> <span class="n">MeanShift</span><span class="p">(</span><span class="n">bandwidth</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">([</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">angles</span><span class="p">)),</span> <span class="n">angles</span><span class="p">])</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+            
+            <span class="c1"># Add group ID for each line to the points list</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">labels_</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">label</span>
+            
+            <span class="c1"># Make array of groups with mean angle</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">groupsList</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">ms</span><span class="o">.</span><span class="n">labels_</span><span class="o">+</span><span class="mi">1</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">groupsList</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">ms</span><span class="o">.</span><span class="n">cluster_centers_</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+                
+        <span class="c1"># Detect active slip systems in each group</span>
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">groupsList</span><span class="p">:</span>
+            <span class="n">activePlanes</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">deviation</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">experimentalAngle</span> <span class="o">=</span> <span class="n">group</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">theoreticalAngle</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currEBSDGrain</span><span class="o">.</span><span class="n">slipTraceAngles</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">theoreticalAngle</span><span class="o">-</span><span class="mi">5</span> <span class="o">&lt;</span> <span class="n">experimentalAngle</span> <span class="o">&lt;</span> <span class="n">theoreticalAngle</span><span class="o">+</span><span class="mi">5</span><span class="p">:</span>
+                    <span class="n">activePlanes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+                    <span class="n">deviation</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">experimentalAngle</span><span class="o">-</span><span class="n">theoreticalAngle</span><span class="p">)</span>
+            <span class="n">group</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">activePlanes</span>
+            <span class="n">group</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">deviation</span></div>
+            
+<div class="viewcode-block" id="GrainInspector.clearAllLines"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.clearAllLines">[docs]</a>    <span class="k">def</span> <span class="nf">clearAllLines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Clear all lines in a given grain.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">groupsList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="GrainInspector.removeLine"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.removeLine">[docs]</a>    <span class="k">def</span> <span class="nf">removeLine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;  Remove single line [runs after submitting a text box].</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        event: int</span>
+<span class="sd">            Line ID to remove.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">## Remove single line</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">redraw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="GrainInspector.redraw"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.redraw">[docs]</a>    <span class="k">def</span> <span class="nf">redraw</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw items which need to be redrawn often (i.e. when changing grain ID).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Plot max shear for grain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maxShearAx</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">grainPlot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">grainID</span><span class="p">]</span><span class="o">.</span><span class="n">plotMaxShear</span><span class="p">(</span>
+            <span class="n">fig</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">fig</span><span class="p">,</span><span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">maxShearAx</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">vmax</span><span class="p">,</span> <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plotScaleBar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Draw slip traces</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceAx</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceAx</span><span class="o">.</span><span class="n">set_aspect</span><span class="p">(</span><span class="s1">&#39;equal&#39;</span><span class="p">,</span> <span class="s1">&#39;box&#39;</span><span class="p">)</span>
+        <span class="n">slipPlot</span> <span class="o">=</span> <span class="n">GrainPlot</span><span class="p">(</span><span class="n">fig</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">fig</span><span class="p">,</span> <span class="n">callingGrain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">grainID</span><span class="p">],</span> <span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">slipTraceAx</span><span class="p">)</span>
+        <span class="n">traces</span> <span class="o">=</span> <span class="n">slipPlot</span><span class="o">.</span><span class="n">addSlipTraces</span><span class="p">(</span><span class="n">topOnly</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slipTraceAx</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+        
+        <span class="c1"># Draw slip bands</span>
+        <span class="n">bands</span> <span class="o">=</span> <span class="p">[</span><span class="n">elem</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">groupsList</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">groupsList</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">slipPlot</span><span class="o">.</span><span class="n">addSlipBands</span><span class="p">(</span><span class="n">topOnly</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">angles</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">bands</span><span class="p">)))</span>
+        
+        <span class="c1"># Draw unit cell</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unitCellAx</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currEBSDGrain</span><span class="o">.</span><span class="n">plotUnitCell</span><span class="p">(</span><span class="n">fig</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">unitCellAx</span><span class="p">)</span>
+        
+        <span class="c1"># Write grain info text</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainInfoAx</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grainInfoAx</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+        <span class="n">grainInfoText</span> <span class="o">=</span> <span class="s1">&#39;Grain ID: </span><span class="si">{0}</span><span class="s1"> / </span><span class="si">{1}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grainID</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="o">.</span><span class="n">grainList</span><span class="p">))</span>
+        <span class="n">grainInfoText</span> <span class="o">+=</span> <span class="s1">&#39;Min: </span><span class="si">{0:.1f}</span><span class="s1"> %     Mean:</span><span class="si">{1:.1f}</span><span class="s1"> %     Max: </span><span class="si">{2:.1f}</span><span class="s1"> %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">maxShearList</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">maxShearList</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">maxShearList</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grainInfoAx</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">grainInfoText</span><span class="p">,</span>  <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        
+        <span class="c1"># Detect lines</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">drawnLine</span> <span class="o">=</span> <span class="n">LineSlice</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">maxShearAx</span><span class="p">,</span> <span class="n">fig</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">fig</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">grainPlot</span><span class="o">.</span><span class="n">addArrow</span><span class="p">)</span>
+
+        <span class="c1"># Write lines text and draw lines</span>
+        <span class="n">linesTxt</span> <span class="o">=</span> <span class="s1">&#39;List of lines</span><span class="se">\n\n</span><span class="s1">LineID  x0     y0     x1     y1     Angle  Group</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span> <span class="o">!=</span> <span class="p">[]:</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">points</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">pointsList</span><span class="p">):</span>
+                <span class="n">linesTxt</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">          </span><span class="si">{1:.1f}</span><span class="s1">   </span><span class="si">{2:.1f}</span><span class="s1">    </span><span class="si">{3:.1f}</span><span class="s1">   </span><span class="si">{4:.1f}</span><span class="s1">   </span><span class="si">{5:.1f}</span><span class="s1">   </span><span class="si">{6}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span>
+                                    <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">3</span><span class="p">],</span> <span class="n">points</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">points</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">grainPlot</span><span class="o">.</span><span class="n">addArrow</span><span class="p">(</span><span class="n">startEnd</span><span class="o">=</span><span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">clearPrev</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">persistent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">idx</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">lineInfoAx</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lineInfoAx</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lineInfoAx</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">linesTxt</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        
+        <span class="c1"># Write groups info text</span>
+        <span class="n">groupsTxt</span> <span class="o">=</span> <span class="s1">&#39;List of groups</span><span class="se">\n\n</span><span class="s1">GroupID    Angle      System      Dev     RDR</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">groupsList</span> <span class="o">!=</span> <span class="p">[]:</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">groupsList</span><span class="p">):</span>
+                <span class="n">groupsTxt</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">                </span><span class="si">{1:.1f}</span><span class="s1">      </span><span class="si">{2}</span><span class="s1">      </span><span class="si">{3}</span><span class="s1">      </span><span class="si">{4:.2f}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">idx</span><span class="p">,</span> <span class="n">group</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">group</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">group</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="mi">3</span><span class="p">),</span> <span class="n">group</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">groupsInfoAx</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">groupsInfoAx</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">groupsInfoAx</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">groupsTxt</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GrainInspector.runRDRGroup"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.runRDRGroup">[docs]</a>    <span class="k">def</span> <span class="nf">runRDRGroup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;  Run RDR on a specified group, upon submitting a text box.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        event: int</span>
+<span class="sd">            Group ID specified from text box.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">## Run RDR for group of lines</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">calcRDR</span><span class="p">(</span><span class="n">grain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">event</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">RDRGroupBox</span><span class="o">.</span><span class="n">set_val</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span></div>
+        
+<div class="viewcode-block" id="GrainInspector.batchRunSTA"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.batchRunSTA">[docs]</a>    <span class="k">def</span> <span class="nf">batchRunSTA</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;  Run slip trace analysis on all grains which hve slip trace lines drawn.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Print header</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Grain</span><span class="se">\t</span><span class="s2">Eul1</span><span class="se">\t</span><span class="s2">Eul2</span><span class="se">\t</span><span class="s2">Eul3</span><span class="se">\t</span><span class="s2">MaxSF</span><span class="se">\t</span><span class="s2">Group</span><span class="se">\t</span><span class="s2">Angle</span><span class="se">\t</span><span class="s2">System</span><span class="se">\t</span><span class="s2">Dev\RDR&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Print information for each grain</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">grain</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">grain</span><span class="o">.</span><span class="n">pointsList</span> <span class="o">!=</span> <span class="p">[]:</span>
+                <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">grain</span><span class="o">.</span><span class="n">groupsList</span><span class="p">:</span>
+                    <span class="n">maxSF</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">item</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="n">grain</span><span class="o">.</span><span class="n">ebsdGrain</span><span class="o">.</span><span class="n">averageSchmidFactors</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sublist</span><span class="p">])</span>
+                    <span class="n">eulers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currEBSDGrain</span><span class="o">.</span><span class="n">refOri</span><span class="o">.</span><span class="n">eulerAngles</span><span class="p">()</span><span class="o">*</span><span class="mi">180</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+                    <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="se">\t</span><span class="si">{1:.1f}</span><span class="se">\t</span><span class="si">{2:.1f}</span><span class="se">\t</span><span class="si">{3:.1f}</span><span class="se">\t</span><span class="si">{4:.3f}</span><span class="se">\t</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                                    <span class="n">idx</span><span class="p">,</span> <span class="n">eulers</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">eulers</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">eulers</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">maxSF</span><span class="p">)</span>
+                    <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="se">\t</span><span class="si">{1:.1f}</span><span class="se">\t</span><span class="si">{2}</span><span class="se">\t</span><span class="si">{3}</span><span class="se">\t</span><span class="si">{4:.2f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                                    <span class="n">group</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">group</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">group</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">group</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="mi">3</span><span class="p">),</span> <span class="n">group</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GrainInspector.calcRDR"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.calcRDR">[docs]</a>    <span class="k">def</span> <span class="nf">calcRDR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grain</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">showPlot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mf">2.5</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Calculates the relative displacement ratio for a given grain and group.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        grain: int</span>
+<span class="sd">            DIC grain ID to run RDR on.</span>
+<span class="sd">        group: int</span>
+<span class="sd">            group ID to run RDR on.</span>
+<span class="sd">        showPlot: bool</span>
+<span class="sd">            if True, show plot window.</span>
+<span class="sd">        length: int</span>
+<span class="sd">            length of perpendicular lines used for RDR.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">ulist</span><span class="o">=</span><span class="p">[];</span> <span class="n">vlist</span><span class="o">=</span><span class="p">[];</span> <span class="n">allxlist</span> <span class="o">=</span> <span class="p">[];</span> <span class="n">allylist</span> <span class="o">=</span> <span class="p">[];</span>      
+
+        <span class="c1"># Get all lines belonging to group</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">grain</span><span class="o">.</span><span class="n">pointsList</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">group</span><span class="p">:</span>
+                <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">points</span><span class="p">:</span>
+            <span class="n">x0</span><span class="o">=</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>  <span class="n">y0</span><span class="o">=</span><span class="n">point</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span> <span class="n">x1</span><span class="o">=</span><span class="n">point</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>   <span class="n">y1</span><span class="o">=</span><span class="n">point</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
+            <span class="n">grad</span> <span class="o">=</span> <span class="p">(</span><span class="n">y1</span><span class="o">-</span><span class="n">y0</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">x1</span><span class="o">-</span><span class="n">x0</span><span class="p">)</span>
+            <span class="n">invgrad</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="o">/</span><span class="n">grad</span>
+            <span class="n">profile_length</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">y1</span><span class="o">-</span><span class="n">y0</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="p">(</span><span class="n">x1</span><span class="o">-</span><span class="n">x0</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">profile_length</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span>
+            
+            <span class="c1">### Calculate positions for each point along slip trace line (x,y)</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">num</span><span class="p">))),</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">y0</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">num</span><span class="p">)))</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span><span class="n">x</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span><span class="n">y</span><span class="p">})</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
+            <span class="n">x</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+            <span class="c1">## Calculate deviation from (0,0) for points along line with angle perpendicular to slip line (xnew,ynew)</span>
+            <span class="n">x0new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">length</span><span class="o">/</span><span class="p">(</span><span class="n">invgrad</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>
+            <span class="n">y0new</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">length</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">invgrad</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">x1new</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">length</span><span class="o">/</span><span class="p">(</span><span class="n">invgrad</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>
+            <span class="n">y1new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">length</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">invgrad</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">profile_length</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">y1new</span><span class="o">-</span><span class="n">y0new</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="p">(</span><span class="n">x1new</span><span class="o">-</span><span class="n">x0new</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">profile_length</span><span class="p">)</span>
+            <span class="n">xnew</span><span class="p">,</span> <span class="n">ynew</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">x0new</span><span class="p">,</span> <span class="n">x1new</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">num</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">y0new</span><span class="p">,</span> <span class="n">y1new</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">num</span><span class="p">))</span>
+            <span class="n">xnew</span><span class="p">,</span> <span class="n">ynew</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="n">xnew</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="n">ynew</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span><span class="n">xnew</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span><span class="n">ynew</span><span class="p">})</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
+            <span class="n">xnew</span><span class="p">,</span><span class="n">ynew</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                
+            <span class="k">for</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">):</span>
+                <span class="n">xperp</span> <span class="o">=</span> <span class="p">[];</span> <span class="n">yperp</span> <span class="o">=</span> <span class="p">[];</span>
+                <span class="k">for</span> <span class="n">xdiff</span><span class="p">,</span> <span class="n">ydiff</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">xnew</span><span class="p">,</span> <span class="n">ynew</span><span class="p">):</span>
+                    <span class="n">xperp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">xdiff</span><span class="p">))</span>
+                    <span class="n">yperp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">y</span><span class="o">+</span><span class="n">ydiff</span><span class="p">))</span>
+                <span class="n">allxlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xperp</span><span class="p">)</span>
+                <span class="n">allylist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">yperp</span><span class="p">)</span>
+
+                <span class="n">xmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">extremeCoords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">xperp</span>
+                <span class="n">ymap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">extremeCoords</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">yperp</span>
+                
+                <span class="c1">### For all points, append u and v to list</span>
+                <span class="n">u</span> <span class="o">=</span> <span class="p">[];</span> <span class="n">v</span> <span class="o">=</span> <span class="p">[];</span>
+                <span class="k">for</span> <span class="n">xmap</span><span class="p">,</span> <span class="n">ymap</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">xmap</span><span class="p">,</span><span class="n">ymap</span><span class="p">):</span>
+                    <span class="n">u</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="o">.</span><span class="n">x_map</span><span class="p">))[</span><span class="n">ymap</span><span class="p">,</span> <span class="n">xmap</span><span class="p">])</span>
+                    <span class="n">v</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currMap</span><span class="o">.</span><span class="n">y_map</span><span class="p">))[</span><span class="n">ymap</span><span class="p">,</span> <span class="n">xmap</span><span class="p">])</span>
+
+                <span class="c1">### Take away mean</span>
+                <span class="n">u</span> <span class="o">=</span> <span class="n">u</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">u</span><span class="p">);</span> <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+                <span class="c1">### Append to main lists (ulist,vlist)</span>
+                <span class="n">ulist</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+                <span class="n">vlist</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+        <span class="c1">### Linear regression of ucentered against vcentered</span>
+        <span class="n">linRegResults</span> <span class="o">=</span> <span class="n">linregress</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">vlist</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="n">ulist</span><span class="p">)</span>
+        
+        <span class="c1"># Save measured RDR</span>
+        <span class="n">grain</span><span class="o">.</span><span class="n">groupsList</span><span class="p">[</span><span class="n">group</span><span class="p">][</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">linRegResults</span><span class="o">.</span><span class="n">slope</span>
+        
+
+        <span class="k">if</span> <span class="n">showPlot</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotRDR</span><span class="p">(</span><span class="n">grain</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">ulist</span><span class="p">,</span> <span class="n">vlist</span><span class="p">,</span> <span class="n">allxlist</span><span class="p">,</span> <span class="n">allylist</span><span class="p">,</span> <span class="n">linRegResults</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GrainInspector.plotRDR"><a class="viewcode-back" href="../../defdap.html#defdap.inspector.GrainInspector.plotRDR">[docs]</a>    <span class="k">def</span> <span class="nf">plotRDR</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grain</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">ulist</span><span class="p">,</span> <span class="n">vlist</span><span class="p">,</span> <span class="n">allxlist</span><span class="p">,</span> <span class="n">allylist</span><span class="p">,</span> <span class="n">linRegResults</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot RDR figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        grain: int</span>
+<span class="sd">            DIC grain to plot.</span>
+<span class="sd">        group: int</span>
+<span class="sd">            Group ID to plot.</span>
+<span class="sd">        ulist: list</span>
+<span class="sd">            List of ucentered values.</span>
+<span class="sd">        vlist: list</span>
+<span class="sd">            List of vcentered values.</span>
+<span class="sd">        allxlist: list</span>
+<span class="sd">            List of all x values.</span>
+<span class="sd">        allylist: list</span>
+<span class="sd">            List of all y values.</span>
+<span class="sd">        linRegResults: numpy.ndarray, {slope, intercept, rvalue, pvalue, stderr}</span>
+<span class="sd">            Results from linear regression of ucentered vs vcentered.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Draw window and axes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span> <span class="o">=</span> <span class="n">Plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">makeInteractive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;RDR Calculation&#39;</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">grainAx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addAxes</span><span class="p">((</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.07</span><span class="p">,</span> <span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">textAx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addAxes</span><span class="p">((</span><span class="mf">0.27</span><span class="p">,</span> <span class="mf">0.07</span><span class="p">,</span> <span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">textAx</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addAxes</span><span class="p">((</span><span class="mf">0.48</span><span class="p">,</span> <span class="mf">0.07</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">plotAx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addAxes</span><span class="p">((</span><span class="mf">0.75</span><span class="p">,</span> <span class="mf">0.07</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">))</span>
+
+        <span class="c1">## Draw grain plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">grainPlot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currDICGrain</span><span class="o">.</span><span class="n">plotMaxShear</span><span class="p">(</span><span class="n">fig</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">grainAx</span><span class="p">,</span> 
+                                                                <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plotScaleBar</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">grainPlot</span><span class="o">.</span><span class="n">addColourBar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Effective Shear Strain&#39;</span><span class="p">,</span> <span class="n">fraction</span><span class="o">=</span><span class="mf">0.046</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mf">0.04</span><span class="p">)</span>
+
+        <span class="c1">## Draw all points</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">grainAx</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">allxlist</span><span class="p">,</span> <span class="n">allylist</span><span class="p">,</span> <span class="s1">&#39;rx&#39;</span><span class="p">,</span><span class="n">lw</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">xlist</span><span class="p">,</span> <span class="n">ylist</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">allxlist</span><span class="p">,</span> <span class="n">allylist</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">grainAx</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xlist</span><span class="p">,</span> <span class="n">ylist</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span><span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1">## Generate scatter plot</span>
+        <span class="n">slope</span> <span class="o">=</span> <span class="n">linRegResults</span><span class="o">.</span><span class="n">slope</span>
+        <span class="n">r_value</span> <span class="o">=</span> <span class="n">linRegResults</span><span class="o">.</span><span class="n">rvalue</span>
+        <span class="n">intercept</span> <span class="o">=</span> <span class="n">linRegResults</span><span class="o">.</span><span class="n">intercept</span>
+        <span class="n">std_err</span> <span class="o">=</span> <span class="n">linRegResults</span><span class="o">.</span><span class="n">stderr</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">plotAx</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">vlist</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="n">ulist</span><span class="p">,</span><span class="n">marker</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">plotAx</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">vlist</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">vlist</span><span class="p">)],[</span><span class="n">slope</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">vlist</span><span class="p">)</span><span class="o">+</span><span class="n">intercept</span><span class="p">,</span><span class="n">slope</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">vlist</span><span class="p">)</span><span class="o">+</span><span class="n">intercept</span><span class="p">],</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">plotAx</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;v-centered&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">plotAx</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;u-centered&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">plotAx</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s1">&#39;Slope = </span><span class="si">{0:.3f}</span><span class="s1"> ± </span><span class="si">{1:.3f}</span><span class="se">\n</span><span class="s1">R-squared = </span><span class="si">{2:.3f}</span><span class="se">\n</span><span class="s1">n=</span><span class="si">{3}</span><span class="s1">&#39;</span>
+                             <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">slope</span><span class="p">,</span><span class="n">std_err</span><span class="p">,</span><span class="n">r_value</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">ulist</span><span class="p">)),</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">,</span>
+                             <span class="n">transform</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">plotAx</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">);</span>
+
+        <span class="c1">## Write grain info</span>
+        <span class="n">ebsdGrain</span> <span class="o">=</span> <span class="n">grain</span><span class="o">.</span><span class="n">ebsdGrain</span>
+        <span class="n">ebsdGrain</span><span class="o">.</span><span class="n">calcSlipTraces</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">ebsdGrain</span><span class="o">.</span><span class="n">averageSchmidFactors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Run &#39;calcAverageGrainSchmidFactors&#39; first&quot;</span><span class="p">)</span>
+
+        <span class="n">eulers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span><span class="n">ebsdGrain</span><span class="o">.</span><span class="n">refOri</span><span class="o">.</span><span class="n">eulerAngles</span><span class="p">())</span>
+
+        <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;Average angle: </span><span class="si">{0:.2f}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">groupsList</span><span class="p">[</span><span class="n">group</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">text</span> <span class="o">+=</span> <span class="s1">&#39;Eulers: </span><span class="si">{0:.1f}</span><span class="s1">    </span><span class="si">{1:.1f}</span><span class="s1">    </span><span class="si">{2:.1f}</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">eulers</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">eulers</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">eulers</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">textAx</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">)</span>
+
+        <span class="c1">## Write slip system info</span>
+        <span class="n">RDRs</span> <span class="o">=</span> <span class="p">[];</span> <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> 
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="p">(</span><span class="n">ssGroup</span><span class="p">,</span> <span class="n">sfGroup</span><span class="p">,</span> <span class="n">slipTraceAngle</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+                <span class="nb">zip</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">ebsdMap</span><span class="o">.</span><span class="n">slipSystems</span><span class="p">,</span> <span class="n">ebsdGrain</span><span class="o">.</span><span class="n">averageSchmidFactors</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">rad2deg</span><span class="p">(</span><span class="n">ebsdGrain</span><span class="o">.</span><span class="n">slipTraceAngles</span><span class="p">))):</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{0:s}</span><span class="s2">    </span><span class="si">{1:.1f}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ssGroup</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">slipPlaneLabel</span><span class="p">,</span> <span class="n">slipTraceAngle</span><span class="p">)</span>
+            <span class="n">tempRDRs</span> <span class="o">=</span> <span class="p">[];</span>
+            <span class="k">for</span> <span class="n">ss</span><span class="p">,</span> <span class="n">sf</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ssGroup</span><span class="p">,</span> <span class="n">sfGroup</span><span class="p">):</span>
+                <span class="n">slipDirSample</span> <span class="o">=</span> <span class="n">ebsdGrain</span><span class="o">.</span><span class="n">refOri</span><span class="o">.</span><span class="n">conjugate</span><span class="o">.</span><span class="n">transformVector</span><span class="p">(</span><span class="n">ss</span><span class="o">.</span><span class="n">slipDir</span><span class="p">)</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">text</span> <span class="o">+</span> <span class="s2">&quot;          </span><span class="si">{0:s}</span><span class="s2">    SF: </span><span class="si">{1:.3f}</span><span class="s2">    RDR: </span><span class="si">{2:.3f}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span>\
+                    <span class="p">(</span><span class="n">ss</span><span class="o">.</span><span class="n">slipDirLabel</span><span class="p">,</span> <span class="n">sf</span><span class="p">,</span><span class="o">-</span><span class="n">slipDirSample</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">slipDirSample</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">RDR</span> <span class="o">=</span> <span class="o">-</span><span class="n">slipDirSample</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">slipDirSample</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">tempRDRs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RDR</span><span class="p">)</span>
+            <span class="n">RDRs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tempRDRs</span><span class="p">)</span>    
+
+            <span class="k">if</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">grain</span><span class="o">.</span><span class="n">groupsList</span><span class="p">[</span><span class="n">group</span><span class="p">][</span><span class="mi">2</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">textAx</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.9</span><span class="o">-</span><span class="n">offset</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">textAx</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.9</span><span class="o">-</span><span class="n">offset</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">)</span>
+
+            <span class="n">offset</span> <span class="o">+=</span> <span class="mf">0.0275</span> <span class="o">*</span> <span class="n">text</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Plot RDR values on number line</span>
+        <span class="n">uniqueRDRs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="n">RDRs</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sublist</span><span class="p">]:</span> <span class="n">uniqueRDRs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=-</span><span class="mi">20</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">uniqueRDRs</span><span class="p">)),</span> <span class="nb">list</span><span class="p">(</span><span class="n">uniqueRDRs</span><span class="p">),</span> <span class="s1">&#39;bo&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Theroretical RDR values&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="n">slope</span><span class="p">,</span> <span class="s1">&#39;ro&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Measured RDR value&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.009</span><span class="p">,</span> <span class="n">slope</span><span class="o">-</span><span class="mf">0.01</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">{0:.3f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">slope</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.15</span><span class="p">,</span> <span class="mf">1.05</span><span class="p">))</span>
+        
+        <span class="c1"># Label RDRs by slip system on number line </span>
+        <span class="k">for</span> <span class="n">RDR</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">uniqueRDRs</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.009</span><span class="p">,</span> <span class="n">RDR</span><span class="o">-</span><span class="mf">0.01</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">{0:.3f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">RDR</span><span class="p">)))</span>
+            <span class="n">txt</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">ssGroup</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">RDRs</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">idx2</span><span class="p">,</span> <span class="n">rdr</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ssGroup</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">rdr</span> <span class="o">==</span> <span class="n">RDR</span><span class="p">:</span>
+                        <span class="n">txt</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1"> </span><span class="si">{1}</span><span class="s1">  &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currEBSDMap</span><span class="o">.</span><span class="n">slipSystems</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="n">idx2</span><span class="p">]</span><span class="o">.</span><span class="n">slipPlaneLabel</span><span class="p">,</span> 
+                                                      <span class="bp">self</span><span class="o">.</span><span class="n">currEBSDMap</span><span class="o">.</span><span class="n">slipSystems</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="n">idx2</span><span class="p">]</span><span class="o">.</span><span class="n">slipDirLabel</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">addText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span><span class="p">,</span><span class="mf">0.002</span><span class="p">,</span> <span class="n">RDR</span><span class="o">-</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">txt</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">slope</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">slope</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rdrPlot</span><span class="o">.</span><span class="n">numLineAx</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)</span></div></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.inspector</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, Mechanics of Microstructures Group at The University of Manchester.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
+    </div>
+  </body>
+</html>

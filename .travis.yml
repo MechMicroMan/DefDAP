@@ -1,0 +1,15 @@
+git:
+  quiet: true
+language: python
+python:
+  - 3.5
+  - 3.6
+  - 3.7
+  - 3.8
+before_install:
+  - python --version
+  - pip install -U pip
+  - pip install -U pytest
+install:
+  - pip install .[testing]
+script: pytest
