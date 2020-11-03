@@ -45,17 +45,19 @@ class Phase(object):
         return text.format(self.name, self.crystalStructure.name,
                            *self.latticeParams)
 
+    @property
+    def cOverA(self):
+        if self.crystalStructure is crystalStructures['hexagonal']:
+            return self.latticeParams[2] / self.latticeParams[0]
+        return None
+
 
 class CrystalStructure(object):
     def __init__(self, name, symmetries, vertices, faces):
         self.name = name
-        self._symmetries = symmetries
-        self._vertices = vertices
-        self._faces = faces
-
-    @property
-    def symmetries(self):
-        return self.symmetries
+        self.symmetries = symmetries
+        self.vertices = vertices
+        self.faces = faces
 
     @staticmethod
     def lMatrix(a, b, c, alpha, beta, gamma):
@@ -118,6 +120,7 @@ class CrystalStructure(object):
 
 overRoot2 = np.sqrt(2) / 2
 sqrt3over2 = np.sqrt(3) / 2
+# Use ideal ratio as only used for plotting unit cell
 cOverA = 1.633 / 2
 
 crystalStructures = {

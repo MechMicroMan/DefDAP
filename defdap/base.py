@@ -25,10 +25,20 @@ from defdap.utils import reportProgress
 
 class Map(object):
     """
-    Base class for a map.
+    Base class for a map. Contains common functionality for all maps.
+
+    Attributes
+    ----------
+
+    grainList : list of defdap.base.Grain
+        List of grains.
+    currGrainId : int
+        ID of last selected grain.
+
     """
     def __init__(self):
         self.grainList = None
+        self.currGrainId = None  # ID of last selected grain
         self.homogPoints = []
 
         self.proxigramArr = None

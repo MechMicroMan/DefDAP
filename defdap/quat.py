@@ -462,7 +462,7 @@ class Quat(object):
 
         return plot
 
-    def plotUnitCell(self, symGroup, cOverA=None, OI=True,
+    def plotUnitCell(self, symGroup, OI=True,
                      plot=None, fig=None, ax=None, makeInteractive=False,
                      **kwargs):
         """Plots a unit cell.
@@ -471,8 +471,6 @@ class Quat(object):
         ----------
         symGroup : str
             Crystal type, hexagonal or cubic.
-        cOverA : float
-            C over a ratio for hexagonal.
         OI : bool
             True if using oxford instruments system.
         plot : defdap.plotting.CrystalPlot
@@ -493,43 +491,23 @@ class Quat(object):
         plotParams = {}
         plotParams.update(kwargs)
 
-        if symGroup is None:
-            raise ValueError("symGroup must be specified")
+        # TODO: most of this should be moved to either the crystal or
+        #  plotting module
+        # Dirty fix to stop circular dependency
+        from defdap.crystal import crystalStructures
+
+        try:
+            crystalStructure = crystalStructures[symGroup]
+        except KeyError:
+            raise ValueError("Invalid crystal type, only cubic or "
+                             "hexagonal available.")
+        vert = crystalStructure.vertices
+        faces = crystalStructure.faces
 
         quat = self
 
         if symGroup == 'hexagonal':
-            if cOverA is None:
-                raise ValueError("cOverA must be specified for hcp")
-
             szFac = 0.2
-            sqrt3over2 = np.sqrt(3) / 2
-            cOverA /= 2
-            vert = np.array([
-                [1, 0, -cOverA],
-                [0.5, sqrt3over2, -cOverA],
-                [-0.5, sqrt3over2, -cOverA],
-                [-1, 0, -cOverA],
-                [-0.5, -sqrt3over2, -cOverA],
-                [0.5, -sqrt3over2, -cOverA],
-                [1, 0, cOverA],
-                [0.5, sqrt3over2, cOverA],
-                [-0.5, sqrt3over2, cOverA],
-                [-1, 0, cOverA],
-                [-0.5, -sqrt3over2, cOverA],
-                [0.5, -sqrt3over2, cOverA]
-            ])
-            faces = [
-                [0, 1, 2, 3, 4, 5],
-                [6, 7, 8, 9, 10, 11],
-                [0, 6, 7, 1],
-                [1, 7, 8, 2],
-                [2, 8, 9, 3],
-                [3, 9, 10, 4],
-                [4, 10, 11, 5],
-                [5, 11, 6, 0]
-            ]
-
             if OI:
                 # Add 30 degrees to phi2 for OI
                 eulerAngles = quat.eulerAngles()
@@ -538,26 +516,6 @@ class Quat(object):
 
         elif symGroup == 'cubic':
             szFac = 0.3
-            vert = np.array([
-                [-0.5, -0.5, -0.5],
-                [0.5, -0.5, -0.5],
-                [0.5, 0.5, -0.5],
-                [-0.5, 0.5, -0.5],
-                [-0.5, -0.5, 0.5],
-                [0.5, -0.5, 0.5],
-                [0.5, 0.5, 0.5],
-                [-0.5, 0.5, 0.5]
-            ])
-            faces = [
-                [0, 1, 2, 3],
-                [4, 5, 6, 7],
-                [0, 1, 5, 4],
-                [1, 2, 6, 5],
-                [2, 3, 7, 6],
-                [3, 0, 4, 7]
-            ]
-        else:
-            raise ValueError("Only cubic and hexagonal supported")
 
         # Rotate the lattice cell points
         gg = quat.rotMatrix().T
@@ -992,6 +950,7 @@ class Quat(object):
     @staticmethod
     def symEqv(symGroup):
         """Returns all symmetric equivalents for a given crystal type.
+        LEGACY: move to use symmetries defined in crystal structures
 
         Parameters
         ----------
@@ -1000,71 +959,14 @@ class Quat(object):
 
         Returns
         -------
-        list(defdap.quat.Quat), shape (numQuats x 4)
+        list of defdap.quat.Quat
             Symmetrically equivalent quats.
 
         """
-        overRoot2 = np.sqrt(2) / 2
-        sqrt3over2 = np.sqrt(3) / 2
-
-        # from Pete Bate's fspl_orir.f90 code
-        # checked for consistency with mtex
-        qsym = [
-            # identity - this should always be returned as the first symmetry
-            Quat(1.0, 0.0, 0.0, 0.0),
-
-            # cubic tetrads(100)
-            Quat(overRoot2, overRoot2, 0.0, 0.0),
-            Quat(0.0, 1.0, 0.0, 0.0),
-            Quat(overRoot2, -overRoot2, 0.0, 0.0),
-
-            Quat(overRoot2, 0.0, overRoot2, 0.0),
-            Quat(0.0, 0.0, 1.0, 0.0),
-            Quat(overRoot2, 0.0, -overRoot2, 0.0),
-
-            Quat(overRoot2, 0.0, 0.0, overRoot2),
-            Quat(0.0, 0.0, 0.0, 1.0),
-            Quat(overRoot2, 0.0, 0.0, -overRoot2),
-
-            # cubic dyads (110)
-            Quat(0.0, overRoot2, overRoot2, 0.0),
-            Quat(0.0, -overRoot2, overRoot2, 0.0),
-
-            Quat(0.0, overRoot2, 0.0, overRoot2),
-            Quat(0.0, -overRoot2, 0.0, overRoot2),
-
-            Quat(0.0, 0.0, overRoot2, overRoot2),
-            Quat(0.0, 0.0, -overRoot2, overRoot2),
-
-            # cubic triads (111)
-            Quat(0.5, 0.5, 0.5, 0.5),
-            Quat(0.5, -0.5, -0.5, -0.5),
-
-            Quat(0.5, -0.5, 0.5, 0.5),
-            Quat(0.5, 0.5, -0.5, -0.5),
-
-            Quat(0.5, 0.5, -0.5, 0.5),
-            Quat(0.5, -0.5, 0.5, -0.5),
-
-            Quat(0.5, 0.5, 0.5, -0.5),
-            Quat(0.5, -0.5, -0.5, 0.5),
-
-            # hexagonal hexads
-            Quat(sqrt3over2, 0.0, 0.0, 0.5),
-            Quat(0.5, 0.0, 0.0, sqrt3over2),
-            Quat(0.5, 0.0, 0.0, -sqrt3over2),
-            Quat(sqrt3over2, 0.0, 0.0, -0.5),
-
-            # hexagonal diads
-            Quat(0.0, -0.5, -sqrt3over2, 0.0),
-            Quat(0.0, 0.5, -sqrt3over2, 0.0),
-            Quat(0.0, sqrt3over2, -0.5, 0.0),
-            Quat(0.0, -sqrt3over2, -0.5, 0.0)
-        ]
-
-        if symGroup == 'cubic':
-            return qsym[0:24]
-        elif symGroup == 'hexagonal':
-            return [qsym[0], qsym[2], qsym[5], qsym[8]] + qsym[-8:32]
-        else:
-            return [qsym[0]]
+        # Dirty fix to stop circular dependency
+        from defdap.crystal import crystalStructures
+        try:
+            return crystalStructures[symGroup].symmetries
+        except KeyError:
+            raise ValueError("Invalid crystal type, only cubic or "
+                             "hexagonal available.")

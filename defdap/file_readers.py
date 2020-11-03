@@ -77,6 +77,9 @@ class EBSDDataLoader(object):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
+        # CPR file is split into groups, load each group into a
+        # hierarchical dict
+
         metadata = dict()
         groupPat = re.compile("\[(.+)\]")
 
@@ -91,6 +94,7 @@ class EBSDDataLoader(object):
             while True:
                 line = cprFile.readline()
                 if not line:
+                    # End of file
                     break
 
                 groupName = groupPat.match(line.strip()).group(1)
@@ -98,6 +102,8 @@ class EBSDDataLoader(object):
                 readUntilComment(cprFile, commentChar='[',
                                  lineProcess=parseLine)
                 metadata[groupName] = groupDict
+
+        # Create phase objects and move metadata to object metadata dict
 
         self.loadedMetadata['xDim'] = int(metadata['Job']['xCells'])
         self.loadedMetadata['yDim'] = int(metadata['Job']['yCells'])
@@ -127,8 +133,8 @@ class EBSDDataLoader(object):
         self.checkMetadata()
 
         # Construct binary data format from listed fields
-        dataFormat = [('phase', 'uint8')]
 
+        dataFormat = [('phase', 'uint8')]
         fieldLookup = {
             3: ('ph1', 'float32'),
             4: ('phi', 'float32'),
@@ -291,7 +297,6 @@ class EBSDDataLoader(object):
                     loadCols.append(i)
         except KeyError:
             raise TypeError("Unknown data in EBSD file.")
-
         self.dataFormat = np.dtype(dataFormat)
 
         # now read the data from file
@@ -463,6 +468,25 @@ class DICDataLoader(object):
 
 
 def readUntilComment(file, commentChar='*', lineProcess=None):
+    """Read lines in a file until a line starting with the comment
+    character is encounted. The file position is returned before the
+    comment line when found.
+
+    Parameters
+    ----------
+    file : file
+        An open python text file object.
+    commentChar : str
+        Character at start of a comment line.
+    lineProcess : function
+        Function to apply to each line when loaded.
+
+    Returns
+    -------
+    list
+        List of lines loaded from file then processed
+
+    """
     lines = []
     while True:
         currPos = file.tell()  # save position in file
