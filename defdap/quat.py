@@ -968,5 +968,5 @@ class Quat(object):
         try:
             return crystalStructures[symGroup].symmetries
         except KeyError:
-            raise ValueError("Invalid crystal type, only cubic or "
-                             "hexagonal available.")
+            # return just identity if unknown structure
+            return [Quat(1.0, 0.0, 0.0, 0.0)]
