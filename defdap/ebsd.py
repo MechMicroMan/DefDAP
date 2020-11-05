@@ -18,14 +18,13 @@ from matplotlib.widgets import Button
 from skimage import morphology as mph
 
 import copy
-import warnings
 
 from defdap.file_readers import EBSDDataLoader
 from defdap.quat import Quat
 from defdap.crystal import SlipSystem
 from defdap import base
 
-from defdap.plotting import MapPlot, GrainPlot
+from defdap.plotting import MapPlot
 from defdap.utils import reportProgress
 
 
@@ -36,8 +35,6 @@ class Map(base.Map):
 
     Attributes
     ----------
-    crystalSym : str
-        Symmetry of material e.g. "cubic", "hexagonal".
     xDim : int
         Size of map in x direction.
     yDim : int
@@ -45,42 +42,37 @@ class Map(base.Map):
     stepSize : float
         Step size in micron.
     eulerAngleArray : numpy.ndarray
-        Euler angles for eaxh point of the map.
+        Euler angles for eaxh point of the map. Shape (3, yDim, xDim).
     bandContrastArray : numpy.ndarray
-        Band contrast for each point of map.
-    quatArray : numpy.ndarray(defdap.quat.Quat)
-        Quaterions for each point of map.
+        Band contrast for each point of map. Shape (yDim, xDim).
+    quatArray : numpy.ndarray of defdap.quat.Quat
+        Quaterions for each point of map. Shape (yDim, xDim).
     numPhases : int
         Number of phases.
     phaseArray : numpy.ndarray
-        Map of phase ids.
-    phaseNames : list(str)
-        List of phase names.
+        Map of phase ids. 1-based, 0 is non-indexed points
+    phases : list of defdap.crystal.Phase
+        List of phases.
     boundaries : numpy.ndarray
         Map of boundaries. -1 for a boundary, 0 otherwise.
     phaseBoundaries : numpy.ndarray
         Map of phase boundaries. -1 for boundary, 0 otherwise.
-    cacheEulerMap
     grains : numpy.ndarray
         Map of grains. Grain numbers start at 1 here but everywhere else
         grainID starts at 0. Regions that are smaller than the minimum
-        grain size are given value -2.
-    grainList : list(defdap.ebsd.Grain)
-        List of grains.
+        grain size are given value -2. Remnant boundary points are -1.
     misOri : numpy.ndarray
         Map of misorientation.
-    misOriAxis : list(numpy.ndarray)
+    misOriAxis : list of numpy.ndarray
         Map of misorientation axis components.
     kam : numpy.ndarray
         Map of KAM.
     averageSchmidFactor : numpy.ndarray
         Map of average Schmid factor.
-    slipSystems : list(list(defdap.crystal.SlipSystem))
+    slipSystems : list of list of defdap.crystal.SlipSystem
         Slip systems grouped by slip plane.
     slipTraceColours list(str)
         Colours used when plotting slip traces.
-    currGrainId : int
-        ID of last selected grain.
     origin : tuple(int)
         Map origin (y, x). Used by linker class where origin is a
         homologue point of the maps.
@@ -91,7 +83,7 @@ class Map(base.Map):
 
     """
 
-    def __init__(self, fileName, crystalSym, cOverA=None, dataType=None):
+    def __init__(self, fileName, dataType=None):
         """
         Initialise class and load EBSD data.
 
@@ -99,8 +91,6 @@ class Map(base.Map):
         ----------
         fileName : str
             Path to EBSD file, including name, excluding extension.
-        crystalSym : str, {'cubic', 'hexagonal'}
-            Crystal structure.
         dataType : str, {'OxfordBinary', 'OxfordText'}
             Format of EBSD data file.
 
@@ -108,8 +98,6 @@ class Map(base.Map):
         # Call base class constructor
         super(Map, self).__init__()
 
-        self.crystalSym = None
-        self.cOverA = None
         self.xDim = None
         self.yDim = None
         self.stepSize = None
@@ -118,27 +106,27 @@ class Map(base.Map):
         self.quatArray = None
         self.numPhases = None
         self.phaseArray = None
-        self.phaseNames = []
+        self.phases = []
         self.boundaries = None
         self.phaseBoundaries = None
-        self.cacheEulerMap = None
         self.grains = None
         self.misOri = None
         self.misOriAxis = None
         self.kam = None
         self.averageSchmidFactor = None
-        self.slipSystems = None
-        self.slipTraceColours = None
-        self.currGrainId = None
         self.origin = (0, 0)
         self.GND = None
         self.Nye = None
+
+        # Phase used for the maps crystal structure and cOverA. So old
+        # functions still work for the 'main' phase in the map. 0-based
+        self.primaryPhaseID = 0
 
         # Use euler map for defining homologous points
         self.plotHomog = self.plotEulerMap
         self.highlightAlpha = 1
 
-        self.loadData(fileName, crystalSym, cOverA, dataType=dataType)
+        self.loadData(fileName, dataType=dataType)
 
     @property
     def plotDefault(self):
@@ -146,15 +134,13 @@ class Map(base.Map):
         return lambda *args, **kwargs: self.plotEulerMap(*args, **kwargs)
 
     @reportProgress("loading EBSD data")
-    def loadData(self, fileName, crystalSym, cOverA, dataType=None):
+    def loadData(self, fileName, dataType=None):
         """Load in EBSD data from file.
 
         Parameters
         ----------
         fileName : str
             Path to EBSD file, including name, excluding extension.
-        crystalSym : str, {'cubic', 'hexagonal'}
-            Crystal structure.
         dataType : str, {'OxfordBinary', 'OxfordText'}
             Format of EBSD data file.
 
@@ -175,23 +161,51 @@ class Map(base.Map):
         self.yDim = metadataDict['yDim']
         self.stepSize = metadataDict['stepSize']
         self.numPhases = metadataDict['numPhases']
-        self.phaseNames = metadataDict['phaseNames']
+        self.phases = metadataDict['phases']
 
         self.eulerAngleArray = dataDict['eulerAngle']
         self.bandContrastArray = dataDict['bandContrast']
         self.phaseArray = dataDict['phase']
 
-        self.crystalSym = crystalSym
-        
-        if self.crystalSym == 'hexagonal':
-            if cOverA is None:
-                warnings.warn("No c/a ratio given. Using ideal ratio 1.633")
-                cOverA = 1.633
-            self.cOverA = cOverA
-
         # write final status
         yield "Loaded EBSD data (dimensions: {:} x {:} pixels, step " \
               "size: {:} um)".format(self.xDim, self.yDim, self.stepSize)
+
+    @property
+    def crystalSym(self):
+        """Crystal symmetry of the primary phase.
+
+        Returns
+        -------
+        str
+            Crystal symmetry
+
+        """
+        return self.primaryPhase.crystalStructure.name
+
+    @property
+    def cOverA(self):
+        """C over A ratio of the primary phase
+
+        Returns
+        -------
+        float or None
+            C over A ratio if hexagonal crystal structure otherwise None
+
+        """
+        return self.primaryPhase.cOverA
+
+    @property
+    def primaryPhase(self):
+        """Primary phase of the EBSD map.
+
+        Returns
+        -------
+        defdap.crystal.Phase
+            Primary phase
+
+        """
+        return self.phases[self.primaryPhaseID]
 
     @property
     def scale(self):
@@ -289,7 +303,7 @@ class Map(base.Map):
         direction : np.array len 3
             Sample directiom.
         kwargs
-            All other arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+            Other arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
         Returns
         -------
@@ -306,12 +320,12 @@ class Map(base.Map):
             direction,
             self.crystalSym
         )
-        
-        # Make non-indexed points NaN
-        IPFcolours=np.where(np.tile(self.phaseArray.flatten()==0, (3,1)), np.nan, IPFcolours)
 
         # reshape back to map shape array
         IPFcolours = np.reshape(IPFcolours.T, (self.yDim, self.xDim, 3))
+
+        # make non-indexed points NaN
+        IPFcolours[self.phaseArray == 0, :] = np.nan
 
         plot = MapPlot.create(self, IPFcolours, **plotParams)
 
@@ -323,7 +337,7 @@ class Map(base.Map):
         Parameters
         ----------
         kwargs
-            All arguments are passed to :func:`defdap.plotting.PolePlot.addPoints`.
+            All arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
         Returns
         -------
@@ -332,7 +346,7 @@ class Map(base.Map):
         """
         # Set default plot parameters then update with any input
         plotParams = {
-            'vmin': -1,
+            'vmin': 0,
             'vmax': self.numPhases
         }
         plotParams.update(kwargs)
@@ -340,10 +354,9 @@ class Map(base.Map):
         plot = MapPlot.create(self, self.phaseArray, **plotParams)
 
         # add a legend to the plot
-        phaseIDs = [-1] + list(range(1, self.numPhases + 1))
-        phaseNames = ["Non-indexed"] + self.phaseNames
-        plot.addLegend(phaseIDs, phaseNames,
-                       loc=2, borderaxespad=0.)
+        phaseIDs = list(range(0, self.numPhases + 1))
+        phaseNames = ["Non-indexed"] + [phase.name for phase in self.phases]
+        plot.addLegend(phaseIDs, phaseNames, loc=2, borderaxespad=0.)
 
         return plot
 
@@ -414,11 +427,12 @@ class Map(base.Map):
     def calcNye(self):
         """
         Calculates Nye tensor and related GND density for the EBSD map.
-        Stores result in self.Nye and self.GND.
+        Stores result in self.Nye and self.GND. Uses the crystal
+        symmetry of the primary phase.
 
         """
         self.buildQuatArray()
-        syms = Quat.symEqv(self.crystalSym)
+        syms = self.primaryPhase.crystalStructure.symmetries
         numSyms = len(syms)
 
         # array to store quat components of initial and symmetric equivalents
@@ -594,7 +608,9 @@ class Map(base.Map):
             Critical misorientation.
 
         """
-        syms = Quat.symEqv(self.crystalSym)
+        # TODO: should also use phase boundaries as grain boundaries
+        # TODO: what happens with non-indexed points
+        syms = self.primaryPhase.crystalStructure.symmetries
         numSyms = len(syms)
 
         # array to store quat components of initial and symmetric equivalents
@@ -669,8 +685,8 @@ class Map(base.Map):
         phaseArrayShifted[:-1, :-1] = self.phaseArray[1:, 1:]
 
         if treatNonIndexedAs:
-            self.phaseArray[self.phaseArray == -1] = treatNonIndexedAs
-            phaseArrayShifted[phaseArrayShifted == -1] = treatNonIndexedAs
+            self.phaseArray[self.phaseArray == 0] = treatNonIndexedAs
+            phaseArrayShifted[phaseArrayShifted == 0] = treatNonIndexedAs
 
         # where shifted array not equal to starting array, set to -1
         self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
@@ -743,6 +759,7 @@ class Map(base.Map):
             Minimum grain area in pixels.
 
         """
+        # TODO: grains need to be assigned a phase
         # Initialise the grain map
         self.grains = np.copy(self.boundaries)
 
@@ -762,7 +779,9 @@ class Map(base.Map):
             yield 1. - numPoints / totalPoints
 
             # Flood fill first unknown point and return grain object
-            currentGrain = self.floodFill(unknownPoints[1][0], unknownPoints[0][0], grainIndex)
+            currentGrain = self.floodFill(
+                unknownPoints[1][0], unknownPoints[0][0], grainIndex
+            )
 
             grainSize = len(currentGrain)
             if grainSize < minGrainSize:
@@ -951,18 +970,16 @@ class Map(base.Map):
             stored in the defdap install dir or path to a file.
 
         """
+        # TODO: should be loaded into the phases of the map
         self.slipSystems, self.slipTraceColours = SlipSystem.loadSlipSystems(
             name, self.crystalSym, cOverA=self.cOverA
         )
-
-        if self.grainList is not None:
-            for grain in self.grainList:
-                grain.slipSystems = self.slipSystems
 
     def printSlipSystems(self):
         """Print a list of slip planes (with colours) and slip directions.
 
         """
+        # TODO: this should be moved to static method of the SlipSystem class
         for i, (ssGroup, colour) in enumerate(zip(self.slipSystems,
                                                   self.slipTraceColours)):
             print('Plane {0}: {1}\tColour: {2}'.format(
@@ -1098,6 +1115,8 @@ class Grain(base.Grain):
 
     """
 
+    # TODO: each grain should be assigned a phase and slip systems
+    # slip systems accessed from the phase
     def __init__(self, ebsdMap):
         # Call base class constructor
         super(Grain, self).__init__()
@@ -1242,8 +1261,9 @@ class Grain(base.Grain):
             All other arguments are passed to :func:`defdap.quat.Quat.plotUnitCell`.
 
         """
+        # TODO: Update to use phase
         Quat.plotUnitCell(self.refOri, fig=fig, ax=ax,
-                          symGroup=self.crystalSym, cOverA=self.ebsdMap.cOverA, **kwargs)
+                          symGroup=self.crystalSym, **kwargs)
 
     def plotMisOri(self, component=0, **kwargs):
         """Plot misorientation map for a given grain.
@@ -1285,42 +1305,6 @@ class Grain(base.Grain):
         plot = self.plotGrainData(grainData=plotData, **plotParams)
 
         return plot
-
-    # def plotMisOriMulti(self, vmin=None, vmax=None, vRange=(None, None, None),
-        # cmap=("viridis", "bwr")):
-        #
-        # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-        #
-        # # TODO: Update plot grain misori method
-        #
-        # # subplots
-        # grainMisOri = np.full((4, ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
-        #
-        # for coord, misOri, misOriAxis in zip(self.coordList,
-        #                                      np.arccos(self.misOriList) * 360 / np.pi,
-        #                                      np.array(self.misOriAxisList) * 180 / np.pi):
-        #     grainMisOri[0, coord[1] - y0, coord[0] - x0] = misOri
-        #     grainMisOri[1:4, coord[1] - y0, coord[0] - x0] = misOriAxis
-        #
-        # f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-        #
-        # img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vmin, vmax=vmax)
-        # plt.colorbar(img, ax=ax1, label="Grain misorientation ($^\circ$)")
-        # vmin = None if vRange[0] is None else -vRange[0]
-        # img = ax2.imshow(grainMisOri[1], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[0])
-        # plt.colorbar(img, ax=ax2, label="x rotation ($^\circ$)")
-        # vmin = None if vRange[0] is None else -vRange[1]
-        # img = ax3.imshow(grainMisOri[2], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[1])
-        # plt.colorbar(img, ax=ax3, label="y rotation ($^\circ$)")
-        # vmin = None if vRange[0] is None else -vRange[2]
-        # img = ax4.imshow(grainMisOri[3], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[2])
-        # plt.colorbar(img, ax=ax4, label="z rotation ($^\circ$)")
-        #
-        # for ax in (ax1, ax2, ax3, ax4):
-        #     ax.set_xticks([])
-        #     ax.set_yticks([])
-        #
-        # return
 
     # define load axis as unit vector
     def calcAverageSchmidFactors(self, loadVector, slipSystems=None):
