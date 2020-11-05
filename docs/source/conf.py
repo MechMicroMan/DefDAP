@@ -14,7 +14,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../defdap')) 	# Reference the root directory so autodocs can find the python modules
+sys.path.insert(0, os.path.abspath('../../')) 	# Reference the root directory so autodocs can find the python modules
 
 # -- Project information -----------------------------------------------------
 
@@ -44,7 +44,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
 	'sphinx.ext.napoleon',
-    'sphinx.ext.intersphinx'
+    'sphinx.ext.intersphinx',
+    'sphinx_rtd_theme'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -54,7 +55,10 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
 
 # The master toctree document.
 master_doc = 'index'
@@ -69,7 +73,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'modules/DefDAP.rst']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -80,13 +84,19 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'default'
+html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {"body_max_width": "100%"}
+html_theme_options = {
+    'collapse_navigation': False,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': False
+  }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -112,7 +122,7 @@ htmlhelp_basename = 'DefDAPdoc'
 
 # -- Options for LaTeX output ------------------------------------------------
 
-latex_elements = {
+#latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
@@ -128,25 +138,25 @@ latex_elements = {
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
-}
+#}
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (master_doc, 'DefDAP.tex', 'DefDAP Documentation',
-     'Michael Atkinson', 'manual'),
-]
+#latex_documents = [
+#    (master_doc, 'DefDAP.tex', 'DefDAP Documentation',
+#     'Michael Atkinson', 'manual'),
+#]
 
 
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'defdap', 'DefDAP Documentation',
-     [author], 1)
-]
+#man_pages = [
+#    (master_doc, 'defdap', 'DefDAP Documentation',
+#     [author], 1)
+#]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -154,17 +164,17 @@ man_pages = [
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
-texinfo_documents = [
-    (master_doc, 'DefDAP', 'DefDAP Documentation',
-     author, 'DefDAP', 'One line description of project.',
-     'Miscellaneous'),
-]
+#texinfo_documents = [
+#    (master_doc, 'DefDAP', 'DefDAP Documentation',
+#     author, 'DefDAP', 'One line description of project.',
+#     'Miscellaneous'),
+#]
 
 
 # -- Options for Epub output -------------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = project
+#epub_title = project
 
 # The unique identifier of the text. This can be a ISBN number
 # or the project homepage.
@@ -176,14 +186,14 @@ epub_title = project
 # epub_uid = ''
 
 # A list of files that should not be packed into the epub file.
-epub_exclude_files = ['search.html']
+#epub_exclude_files = ['search.html']
 
 
 # -- Extension configuration -------------------------------------------------
 
 autodoc_member_order = 'bysource'
-intersphinx_mapping = {'python': ('http://docs.python.org/3.7', None),
-                       'numpy': ('http://docs.scipy.org/doc/numpy/', None),
-                       'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
-                       'matplotlib': ('http://matplotlib.org/', None),
-                       'skimage': ('http://scikit-image.org/docs/dev/', None)}
+intersphinx_mapping = {'python': ('https://docs.python.org/3.7', None),
+                       'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+                       'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+                       'matplotlib': ('https://matplotlib.org/', None),
+                       'skimage': ('https://scikit-image.org/docs/dev/', None)}
