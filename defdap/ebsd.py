@@ -118,6 +118,8 @@ class Map(base.Map):
         self.origin = (0, 0)
         self.GND = None
         self.Nye = None
+        self.slipSystems = None
+        self.slipTraceColours = None
 
         # Phase used for the maps crystal structure and cOverA. So old
         # functions still work for the 'main' phase in the map. 0-based
@@ -1136,6 +1138,11 @@ class Map(base.Map):
         self.slipSystems, self.slipTraceColours = SlipSystem.loadSlipSystems(
             name, self.crystalSym, cOverA=self.cOverA
         )
+
+        if self.checkGrainsDetected(raiseExc=False):
+            for grain in self:
+                grain.slipSystems = self.slipSystems
+
 
     def printSlipSystems(self):
         """Print a list of slip planes (with colours) and slip directions.

@@ -63,13 +63,19 @@ class Map(object):
     def shape(self):
         return self.yDim, self.xDim
 
-    def checkGrainsDetected(self):
+    def checkGrainsDetected(self, raiseExc=True):
         """Check if grains have been detected.
+
+        Parameters
+        ----------
+        raiseExc : bool
+            If True then an expception is raised if grains have not been
+            detected.
 
         Returns
         -------
         bool:
-            True if grains detected.
+            True if grains detected, False otherwise.
 
         Raises
         -------
@@ -81,7 +87,10 @@ class Map(object):
         if (self.grainList is None or
                 type(self.grainList) is not list or
                 len(self.grainList) < 1):
-            raise Exception("No grains detected.")
+            if raiseExc:
+                raise Exception("No grains detected.")
+            else:
+                return False
         return True
 
     def plotGrainNumbers(self, dilateBoundaries=False, ax=None, **kwargs):
