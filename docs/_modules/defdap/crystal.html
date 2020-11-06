@@ -4,7 +4,8 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>defdap.crystal &#8212; DefDAP 0.92 documentation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>defdap.crystal &#8212; DefDAP 0.92.3 documentation</title>
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     
@@ -26,8 +27,9 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.crystal</a></li> 
       </ul>
     </div>  
 
@@ -209,13 +211,14 @@
 
             <span class="n">slipSystemFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
 
-        <span class="k">except</span><span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">):</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
             <span class="c1"># if it doesn&#39;t exist in the package dir, try and load the path</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">filepath</span> <span class="o">=</span> <span class="n">name</span>
 
                 <span class="n">slipSystemFile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
-            <span class="k">except</span><span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">):</span>
+
+            <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
                 <span class="k">raise</span><span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;Couldn&#39;t find the slip systems file&quot;</span><span class="p">))</span>
 
         <span class="n">slipSystemFile</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
@@ -246,11 +249,12 @@
 
 <div class="viewcode-block" id="SlipSystem.groupSlipSystems"><a class="viewcode-back" href="../../defdap.html#defdap.crystal.SlipSystem.groupSlipSystems">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">groupSlipSystems</span><span class="p">(</span><span class="n">slipSystems</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Groups slip systems by their slip plane.</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Groups slip systems by their slip plane.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        slipSytems : (list(SlipSystem))</span>
+<span class="sd">        slipSystems : (list(SlipSystem))</span>
 <span class="sd">            A list of slip systems.</span>
 
 <span class="sd">        Returns</span>
@@ -273,6 +277,16 @@
                 <span class="n">groupedSlipSystems</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">slipSystem</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">groupedSlipSystems</span></div>
+
+<div class="viewcode-block" id="SlipSystem.printSlipSystemDirectory"><a class="viewcode-back" href="../../defdap.html#defdap.crystal.SlipSystem.printSlipSystemDirectory">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">printSlipSystemDirectory</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prints the location where slip system definition files are stored.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">packageDir</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Slip system definition files are stored in directory:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{:}</span><span class="s2">/slip_systems/&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">packageDir</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="SlipSystem.lMatrix"><a class="viewcode-back" href="../../defdap.html#defdap.crystal.SlipSystem.lMatrix">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">lMatrix</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">gamma</span><span class="p">):</span>
@@ -365,6 +379,7 @@
         <span class="k">return</span> <span class="n">qMatrix</span></div></div>
 </pre></div>
 
+            <div class="clearer"></div>
           </div>
         </div>
       </div>
@@ -393,13 +408,14 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.crystal</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2020, Michael Atkinson.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+        &#169; Copyright 2020, Mechanics of Microstructures Group at The University of Manchester.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
     </div>
   </body>
 </html>

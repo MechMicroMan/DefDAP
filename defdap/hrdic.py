@@ -66,8 +66,6 @@ class Map(base.Map):
         Transform from EBSD to DIC coordinates.
     ebsdTransformInv : various
         Transform from DIC to EBSD coordinates.
-    currGrainId : int
-        ID of last selected grain.
     ebsdGrainIds : list
         EBSD grain IDs corresponding to DIC map grain IDs.
     patternImPath : str
@@ -136,7 +134,6 @@ class Map(base.Map):
         self.ebsdMap = None                 # EBSD map linked to DIC map
         self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
         self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
-        self.currGrainId = None             # ID of last selected grain
         self.ebsdGrainIds = None
         self.patternImPath = None           # Path to BSE image of map
         self.plotHomog = self.plotMaxShear  # Use max shear map for defining homologous points

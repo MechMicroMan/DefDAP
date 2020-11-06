@@ -4,7 +4,8 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>defdap.plotting &#8212; DefDAP 0.92 documentation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>defdap.plotting &#8212; DefDAP 0.92.3 documentation</title>
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     
@@ -26,8 +27,9 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.plotting</a></li> 
       </ul>
     </div>  
 
@@ -986,11 +988,11 @@
 
             <span class="c1"># label poles</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">labelPoint</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;001&#39;</span><span class="p">,</span>
-                            <span class="n">padY</span><span class="o">=-</span><span class="mf">0.005</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+                            <span class="n">padY</span><span class="o">=-</span><span class="mf">0.005</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">labelPoint</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;101&#39;</span><span class="p">,</span>
-                            <span class="n">padY</span><span class="o">=-</span><span class="mf">0.005</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+                            <span class="n">padY</span><span class="o">=-</span><span class="mf">0.005</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">labelPoint</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;111&#39;</span><span class="p">,</span>
-                            <span class="n">padY</span><span class="o">=</span><span class="mf">0.005</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+                            <span class="n">padY</span><span class="o">=</span><span class="mf">0.005</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
 
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotType</span> <span class="o">==</span> <span class="s2">&quot;IPF&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">crystalSym</span> <span class="o">==</span> <span class="s2">&quot;hexagonal&quot;</span><span class="p">:</span>
             <span class="c1"># line between [0001] and [10-10] ([001] and [210])</span>
@@ -1005,11 +1007,11 @@
 
             <span class="c1"># label poles</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">labelPoint</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;0001&#39;</span><span class="p">,</span>
-                            <span class="n">padY</span><span class="o">=-</span><span class="mf">0.008</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">labelPoint</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;2-1-10&#39;</span><span class="p">,</span>
-                            <span class="n">padY</span><span class="o">=-</span><span class="mf">0.008</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">labelPoint</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;10-10&#39;</span><span class="p">,</span>
-                            <span class="n">padY</span><span class="o">=</span><span class="mf">0.008</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+                            <span class="n">padY</span><span class="o">=-</span><span class="mf">0.012</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">labelPoint</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="sa">r</span><span class="s1">&#39;$2\bar</span><span class="si">{1}</span><span class="s1">\bar</span><span class="si">{1}</span><span class="s1">0$&#39;</span><span class="p">,</span>
+                            <span class="n">padY</span><span class="o">=-</span><span class="mf">0.012</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">labelPoint</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="sa">r</span><span class="s1">&#39;$10\bar</span><span class="si">{1}</span><span class="s1">0$&#39;</span><span class="p">,</span>
+                            <span class="n">padY</span><span class="o">=</span><span class="mf">0.009</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Only works for cubic and hexagonal IPFs&quot;</span><span class="p">)</span>
@@ -1072,7 +1074,7 @@
 <span class="sd">        padY : int, optional</span>
 <span class="sd">            Pad added to y coordinate.</span>
 <span class="sd">        kwargs</span>
-<span class="sd">            Other arguments will be passed to :func:`matplitlib.axes.Axes.text`.</span>
+<span class="sd">            Other arguments will be passed to :func:`matplotlib.axes.Axes.text`.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">xp</span><span class="p">,</span> <span class="n">yp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">projection</span><span class="p">(</span><span class="o">*</span><span class="n">point</span><span class="p">)</span>
@@ -1093,7 +1095,7 @@
 <span class="sd">        markerSize : float</span>
 <span class="sd">            Size of marker.</span>
 <span class="sd">        kwargs</span>
-<span class="sd">            Other arguments will be passed to :func:`matplitlib.axes.Axes.scatter`.</span>
+<span class="sd">            Other arguments will be passed to :func:`matplotlib.axes.Axes.scatter`.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        -------</span>
@@ -1469,6 +1471,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">add_collection3d</span><span class="p">(</span><span class="n">pc</span><span class="p">)</span></div></div>
 </pre></div>
 
+            <div class="clearer"></div>
           </div>
         </div>
       </div>
@@ -1497,13 +1500,14 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.plotting</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2020, Michael Atkinson.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+        &#169; Copyright 2020, Mechanics of Microstructures Group at The University of Manchester.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
     </div>
   </body>
 </html>

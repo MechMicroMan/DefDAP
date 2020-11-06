@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 
 import defdap.file_readers
+from defdap.crystal import crystalStructures
 
 DATA_DIR = "tests/data/"
 EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
@@ -30,7 +31,7 @@ class TestEBSDDataLoader:
     def test_check_metadata_good(data_loader):
         """The check_metadata method should pass silently if phaseNames
         and numPhases match."""
-        data_loader.loadedMetadata["phaseNames"] = ["1", "2", "3"]
+        data_loader.loadedMetadata["phases"] = ["1", "2", "3"]
         data_loader.loadedMetadata["numPhases"] = 3
         assert data_loader.checkMetadata() is None
 
@@ -38,9 +39,9 @@ class TestEBSDDataLoader:
     def test_check_metadata_bad(data_loader):
         """The check_metadata method should fail if phaseNames and
         numPhases do not match."""
-        data_loader.loadedMetadata["phaseNames"] = ["1", "2"]
+        data_loader.loadedMetadata["phases"] = ["1", "2"]
         data_loader.loadedMetadata["numPhases"] = 3
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             data_loader.checkMetadata()
 
     @staticmethod
@@ -51,8 +52,17 @@ class TestEBSDDataLoader:
         assert metadata["yDim"] == 243
         # Testing for floating point equality so use approx
         assert metadata["stepSize"] == pytest.approx(0.12)
+        assert metadata["acquisitionRotation"].quatCoef == \
+               pytest.approx((1., 0., 0., 0.))
+
         assert metadata["numPhases"] == 1
-        assert metadata["phaseNames"] == ["Ni-superalloy"]
+        assert type(metadata["phases"]) is list
+        assert len(metadata["phases"]) == 1
+        loaded_phase = metadata["phases"][0]
+        assert loaded_phase.name == "Ni-superalloy"
+        assert loaded_phase.latticeParams == \
+               pytest.approx((3.57, 3.57, 3.57, 90., 90., 90.))
+        assert loaded_phase.crystalStructure is crystalStructures['cubic']
 
     @staticmethod
     def test_load_oxford_cpr_bad_file(data_loader):
@@ -64,16 +74,17 @@ class TestEBSDDataLoader:
         metadata_loaded.loadOxfordCRC(EXAMPLE_EBSD)
         x_dim = metadata_loaded.loadedMetadata["xDim"]
         y_dim = metadata_loaded.loadedMetadata["yDim"]
+        assert isinstance(metadata_loaded.loadedData['bandContrast'], np.ndarray)
         assert metadata_loaded.loadedData['bandContrast'].shape == (y_dim, x_dim)
-        assert isinstance(metadata_loaded.loadedData['bandContrast'][0][0], np.uint8)
+        assert isinstance(metadata_loaded.loadedData['bandContrast'][0, 0], np.uint8)
 
+        assert isinstance(metadata_loaded.loadedData['phase'], np.ndarray)
         assert metadata_loaded.loadedData['phase'].shape == (y_dim, x_dim)
-        assert isinstance(metadata_loaded.loadedData['phase'][0][0], np.int8)
+        assert isinstance(metadata_loaded.loadedData['phase'][0, 0], np.uint8)
 
+        assert isinstance(metadata_loaded.loadedData['eulerAngle'], np.ndarray)
         assert metadata_loaded.loadedData['eulerAngle'].shape == (3, y_dim, x_dim)
-        assert isinstance(metadata_loaded.loadedData['eulerAngle'][0], np.ndarray)
-        assert isinstance(metadata_loaded.loadedData['eulerAngle'][0][0], np.ndarray)
-        assert isinstance(metadata_loaded.loadedData['eulerAngle'][0][0][0], np.float64)
+        assert isinstance(metadata_loaded.loadedData['eulerAngle'][0, 0, 0], np.float64)
 
     @staticmethod
     def test_load_oxford_crc_bad(metadata_loaded):

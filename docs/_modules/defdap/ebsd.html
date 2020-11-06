@@ -4,7 +4,8 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>defdap.ebsd &#8212; DefDAP 0.92 documentation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>defdap.ebsd &#8212; DefDAP 0.92.3 documentation</title>
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     
@@ -26,8 +27,9 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.ebsd</a></li> 
       </ul>
     </div>  
 
@@ -271,7 +273,7 @@
         <span class="n">plotParams</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s1">&#39;plotColourBar&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
             <span class="s1">&#39;cmap:&#39;</span><span class="p">:</span> <span class="s1">&#39;grey&#39;</span><span class="p">,</span>
-            <span class="s1">&#39;cLabel&#39;</span><span class="p">:</span> <span class="s2">&quot;Band contrast&quot;</span>
+            <span class="s1">&#39;clabel&#39;</span><span class="p">:</span> <span class="s2">&quot;Band contrast&quot;</span>
         <span class="p">}</span>
         <span class="n">plotParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -437,7 +439,7 @@
         <span class="c1"># Set default plot parameters then update with any input</span>
         <span class="n">plotParams</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s1">&#39;plotColourBar&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="s1">&#39;cLabel&#39;</span><span class="p">:</span> <span class="s2">&quot;Kernel average misorientation (KAM) ($^\circ$)&quot;</span>
+            <span class="s1">&#39;clabel&#39;</span><span class="p">:</span> <span class="s2">&quot;Kernel average misorientation (KAM) ($^\circ$)&quot;</span>
         <span class="p">}</span>
         <span class="n">plotParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -587,7 +589,7 @@
         <span class="c1"># Set default plot parameters then update with any input</span>
         <span class="n">plotParams</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s1">&#39;plotColourBar&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="s1">&#39;cLabel&#39;</span><span class="p">:</span> <span class="s2">&quot;Geometrically necessary dislocation (GND) content&quot;</span>
+            <span class="s1">&#39;clabel&#39;</span><span class="p">:</span> <span class="s2">&quot;Geometrically necessary dislocation (GND) content&quot;</span>
         <span class="p">}</span>
         <span class="n">plotParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -833,7 +835,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Set default plot parameters then update with any input</span>
         <span class="n">plotParams</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s1">&#39;cLabel&#39;</span><span class="p">:</span> <span class="s2">&quot;Grain number&quot;</span>
+            <span class="s1">&#39;clabel&#39;</span><span class="p">:</span> <span class="s2">&quot;Grain number&quot;</span>
         <span class="p">}</span>
         <span class="n">plotParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -958,7 +960,7 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">misOri</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">misOriAxis</span><span class="p">[</span><span class="n">component</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
 
             <span class="n">misOri</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">misOri</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
-            <span class="n">cLabel</span> <span class="o">=</span> <span class="s2">&quot;Rotation around </span><span class="si">{:}</span><span class="s2"> axis ($^\circ$)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">clabel</span> <span class="o">=</span> <span class="s2">&quot;Rotation around </span><span class="si">{:}</span><span class="s2"> axis ($^\circ$)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                 <span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="s1">&#39;Y&#39;</span><span class="p">,</span> <span class="s1">&#39;Z&#39;</span><span class="p">][</span><span class="n">component</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -967,12 +969,12 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">misOri</span><span class="p">[</span><span class="n">coord</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coord</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">misOri</span>
 
             <span class="n">misOri</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">misOri</span><span class="p">)</span> <span class="o">*</span> <span class="mi">360</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
-            <span class="n">cLabel</span> <span class="o">=</span> <span class="s2">&quot;Grain reference orienation deviation (GROD) ($^\circ$)&quot;</span>
+            <span class="n">clabel</span> <span class="o">=</span> <span class="s2">&quot;Grain reference orienation deviation (GROD) ($^\circ$)&quot;</span>
 
         <span class="c1"># Set default plot parameters then update with any input</span>
         <span class="n">plotParams</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s1">&#39;plotColourBar&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="s1">&#39;cLabel&#39;</span><span class="p">:</span> <span class="n">cLabel</span>
+            <span class="s1">&#39;clabel&#39;</span><span class="p">:</span> <span class="n">clabel</span>
         <span class="p">}</span>
         <span class="n">plotParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -1061,7 +1063,7 @@
             <span class="s1">&#39;vmax&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
             <span class="s1">&#39;cmap&#39;</span><span class="p">:</span> <span class="s1">&#39;gray&#39;</span><span class="p">,</span>
             <span class="s1">&#39;plotColourBar&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="s1">&#39;cLabel&#39;</span><span class="p">:</span> <span class="s2">&quot;Schmid factor&quot;</span>
+            <span class="s1">&#39;clabel&#39;</span><span class="p">:</span> <span class="s2">&quot;Schmid factor&quot;</span>
         <span class="p">}</span>
         <span class="n">plotParams</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -1306,12 +1308,12 @@
             <span class="s1">&#39;plotColourBar&#39;</span><span class="p">:</span> <span class="kc">True</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="n">component</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">plotParams</span><span class="p">[</span><span class="s1">&#39;cLabel&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Grain reference orientation &quot;</span> \
+            <span class="n">plotParams</span><span class="p">[</span><span class="s1">&#39;clabel&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Grain reference orientation &quot;</span> \
                                    <span class="s2">&quot;deviation (GROD) ($^\circ$)&quot;</span>
             <span class="n">plotData</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">misOriList</span><span class="p">)</span>
 
         <span class="k">elif</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">component</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
-            <span class="n">plotParams</span><span class="p">[</span><span class="s1">&#39;cLabel&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Rotation around </span><span class="si">{:}</span><span class="s2"> ($^\circ$)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">plotParams</span><span class="p">[</span><span class="s1">&#39;clabel&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Rotation around </span><span class="si">{:}</span><span class="s2"> ($^\circ$)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                 <span class="p">[</span><span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="s1">&#39;Y&#39;</span><span class="p">,</span> <span class="s1">&#39;Z&#39;</span><span class="p">][</span><span class="n">component</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
             <span class="p">)</span>
             <span class="n">plotData</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">misOriAxisList</span><span class="p">)[:,</span> <span class="n">component</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -1637,6 +1639,7 @@
         <span class="k">return</span></div></div>
 </pre></div>
 
+            <div class="clearer"></div>
           </div>
         </div>
       </div>
@@ -1665,13 +1668,14 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.ebsd</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2020, Michael Atkinson.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+        &#169; Copyright 2020, Mechanics of Microstructures Group at The University of Manchester.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
     </div>
   </body>
 </html>

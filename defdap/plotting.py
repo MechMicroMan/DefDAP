@@ -1130,7 +1130,7 @@ class PolePlot(Plot):
             raise Exception("specify one colour for solid markers or list two for 'half and half'")
 
     def addColourBar(self, label, layer=0, **kwargs):
-        """Add colourbar to pole plot.
+        """Add a colour bar to the pole plot.
 
         Parameters
         ----------
@@ -1144,6 +1144,27 @@ class PolePlot(Plot):
         """
         img = self.imgLayers[layer]
         self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
+        
+    def addLegend(self, label='Grain area (μm$^2$)', number=6, layer=0, scaling=1, **kwargs):
+        """Add a marker size legend to the pole plot.
+
+        Parameters
+        ----------
+        label : str
+            Label to place next to legend.
+        number :
+            Number of markers to plot in legend.
+        layer : int
+            Layer number to add the colour bar to.
+        scaling : float
+            Scaling applied to the data.
+        kwargs
+            Other argument will be passed to :func:`matplotlib.pyplot.legend`.
+
+        """
+        img = self.imgLayers[layer]
+        self.legend = plt.legend(*img.legend_elements("sizes", num=number,
+                            func=lambda s : s / scaling), title=label, **kwargs)
 
     @staticmethod
     def _validateProjection(projectionIn, validateDefault=False):

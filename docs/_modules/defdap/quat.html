@@ -4,7 +4,8 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>defdap.quat &#8212; DefDAP 0.92 documentation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>defdap.quat &#8212; DefDAP 0.92.3 documentation</title>
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     
@@ -26,8 +27,9 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.quat</a></li> 
       </ul>
     </div>  
 
@@ -442,7 +444,7 @@
 
 <div class="viewcode-block" id="Quat.plotIPF"><a class="viewcode-back" href="../../defdap.html#defdap.quat.Quat.plotIPF">[docs]</a>    <span class="k">def</span> <span class="nf">plotIPF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">symGroup</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">plot</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fig</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">makeInteractive</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-                <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cLabel</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="n">plotColourBar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">clabel</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
                 <span class="n">markerColour</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">markerSize</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Plot IPF of orientation, with relation to specified sample direction.</span>
@@ -497,7 +499,7 @@
                        <span class="o">**</span><span class="n">plotParams</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">plotColourBar</span><span class="p">:</span>
-            <span class="n">plot</span><span class="o">.</span><span class="n">addColourBar</span><span class="p">(</span><span class="n">cLabel</span><span class="p">)</span>
+            <span class="n">plot</span><span class="o">.</span><span class="n">addColourBar</span><span class="p">(</span><span class="n">clabel</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">plot</span></div>
 
@@ -1109,6 +1111,7 @@
             <span class="k">return</span> <span class="p">[</span><span class="n">qsym</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span></div></div>
 </pre></div>
 
+            <div class="clearer"></div>
           </div>
         </div>
       </div>
@@ -1137,13 +1140,14 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">DefDAP 0.92.3 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">defdap.quat</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2020, Michael Atkinson.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.
+        &#169; Copyright 2020, Mechanics of Microstructures Group at The University of Manchester.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.1.
     </div>
   </body>
 </html>
