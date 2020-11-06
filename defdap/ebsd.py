@@ -230,7 +230,7 @@ class Map(base.Map):
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cmap:': 'grey',
+            'cmap': 'gray',
             'clabel': "Band contrast"
         }
         plotParams.update(kwargs)
