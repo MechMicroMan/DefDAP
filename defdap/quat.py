@@ -19,12 +19,13 @@ from defdap import plotting
 
 
 class Quat(object):
-    """Class used to define and perform operations on quaternions
+    """Class used to define and perform operations on quaternions. These
+    are interpreted in the passive sense.
 
     """
     __slots__ = ['quatCoef']
 
-    def __init__(self, *args):
+    def __init__(self, *args, allow_southern=False):
         """
         Construct a Quat object from 4 quat coefficients or an array of
         quat coefficients.
@@ -51,7 +52,7 @@ class Quat(object):
                             "quat coefficients")
 
         # move to northern hemisphere
-        if self.quatCoef[0] < 0:
+        if not allow_southern and self.quatCoef[0] < 0:
             self.quatCoef = self.quatCoef * -1
 
     @classmethod
@@ -86,7 +87,8 @@ class Quat(object):
 
     @classmethod
     def fromAxisAngle(cls, axis, angle):
-        """Create a quat object from an axis angle pair.
+        """Create a quat object from a rotation around an axis. This
+        creates a quaternion to represent the passive rotation (-ve axis).
 
         Parameters
         ----------
@@ -107,7 +109,7 @@ class Quat(object):
         # calculate quat coefficients
         quatCoef = np.zeros(4, dtype=float)
         quatCoef[0] = np.cos(angle / 2)
-        quatCoef[1:4] = np.sin(angle / 2) * axis
+        quatCoef[1:4] = -np.sin(angle / 2) * axis
 
         # call constructor
         return cls(quatCoef)
@@ -218,7 +220,7 @@ class Quat(object):
         Quat.plotIPF([self], direction, symGroup, **kwargs)
 
     # overload * operator for quaternion product and vector product
-    def __mul__(self, right):
+    def __mul__(self, right, allow_southern=False):
         if isinstance(right, type(self)):   # another quat
             newQuatCoef = np.zeros(4, dtype=float)
             newQuatCoef[0] = (
@@ -230,11 +232,9 @@ class Quat(object):
                     right.quatCoef[0] * self.quatCoef[1:4] +
                     np.cross(self.quatCoef[1:4], right.quatCoef[1:4])
             )
-            return Quat(newQuatCoef)
-        raise TypeError()
+            return Quat(newQuatCoef, allow_southern=allow_southern)
+        raise TypeError("{:} - {:}".format(type(self), type(right)))
 
-    # # overload % operator for dot product
-    # def __mod__(self, right):
     def dot(self, right):
         """ Calculate dot product between two quaternions.
 
@@ -328,7 +328,10 @@ class Quat(object):
         """
         if isinstance(vector, np.ndarray) and vector.shape == (3,):
             vectorQuat = Quat(0, vector[0], vector[1], vector[2])
-            vectorQuatTransformed = self * (vectorQuat * self.conjugate)
+            vectorQuatTransformed = self.__mul__(
+                vectorQuat.__mul__(self.conjugate, allow_southern=True),
+                allow_southern=True
+            )
             vectorTransformed = vectorQuatTransformed.quatCoef[1:4]
             return vectorTransformed
 
