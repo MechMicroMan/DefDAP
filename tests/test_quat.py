@@ -95,10 +95,10 @@ def testInitStrEul(ph1, phi, ph2):
 ## fromAxisAngle
 # Check quatCoef is correct for given axis and angle
 @pytest.mark.parametrize('axis, angle, expectedOutput', [
-    ([1, 0, 0], np.pi, [0, 1, 0, 0]),
-    ([1, 1, 0], -np.pi/2, [np.sin(np.pi/4), -0.5, -0.5, 0]),
-    ([1, -1, 0], -np.pi/2, [np.sin(np.pi/4), -0.5, 0.5, 0]),
-    ([1, -1, -1], -np.pi/2, [np.sin(np.pi/4), -0.4082483, 0.4082483, 0.4082483])
+    ([1, 0, 0], np.pi, [0, -1, 0, 0]),
+    ([1, 1, 0], -np.pi/2, [np.sin(np.pi/4), 0.5, 0.5, 0]),
+    ([1, -1, 0], -np.pi/2, [np.sin(np.pi/4), 0.5, -0.5, 0]),
+    ([1, -1, -1], -np.pi/2, [np.sin(np.pi/4), 0.4082483, -0.4082483, -0.4082483])
 ])
 def testFromAxisAngle(axis, angle, expectedOutput):
     returnedQuat = Quat.fromAxisAngle(axis, angle).quatCoef
@@ -376,7 +376,7 @@ class TestTransformVector:
     def test_calc(single_quat):
         result = single_quat.transformVector(np.array([1., 2., 3.]))
 
-        assert np.allclose(result, [-2.55189453, -0.5151495, -2.68746261])
+        assert np.allclose(result, [2.55189453, 0.5151495, 2.68746261])
 
     @staticmethod
     def test_bad_in_type(single_quat):

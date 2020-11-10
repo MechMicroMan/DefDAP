@@ -223,8 +223,10 @@ class Map(base.Map):
         self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
         self.phaseArray = self.phaseArray[::-1, ::-1]
         self.buildQuatArray()
-        
+
+        # Rotation from old coord system to new
         transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi)
+        transformQuat = transformQuat.conjugate
         for i in range(self.xDim):
             for j in range(self.yDim):
                 self.quatArray[j, i] = self.quatArray[j, i] * transformQuat
