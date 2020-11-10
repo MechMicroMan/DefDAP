@@ -629,15 +629,18 @@ class Map(base.Map):
 
         # image is returned cropped if a piecewise transform is being used
         boundaries = self.ebsdMap.boundaries
-        boundaries = self.warpToDicFrame(-boundaries.astype(float), cropImage=False)
+        boundaries = self.warpToDicFrame(-boundaries.astype(float),
+                                         cropImage=False)
         boundaries = boundaries > 0.1
 
         boundaries = mph.skeletonize(boundaries)
-        mph.remove_small_objects(boundaries, min_size=10, in_place=True, connectivity=2)
+        mph.remove_small_objects(boundaries, min_size=10, in_place=True,
+                                 connectivity=2)
 
         # crop image if it is a simple affine transform
         if type(self.ebsdTransform) is tf.AffineTransform:
-            # need to apply the translation of ebsd transform and remove 5% border
+            # need to apply the translation of ebsd transform and
+            # remove 5% border
             crop = np.copy(self.ebsdTransform.params[0:2, 2])
             crop += 0.05 * np.array(self.ebsdMap.boundaries.shape)
             # the crop is defined in EBSD coords so need to transform it
@@ -649,11 +652,6 @@ class Map(base.Map):
                                     crop[0]:crop[0] + self.xDim]
 
         return -boundaries.astype(int)
-
-    @property
-    def boundaries(self):
-        """Returns EBSD map grain boundaries warped to DIC frame."""
-        return self.warpBoundaries(self.ebsdMap.boundaries)
 
     def setPatternPath(self, filePath, windowSize):
         """Set the path to the image of the pattern.
