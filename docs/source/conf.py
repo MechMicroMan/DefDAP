@@ -22,11 +22,20 @@ project = 'DefDAP'
 copyright = '2020, Mechanics of Microstructures Group at The University of Manchester'
 author = 'Michael D. Atkinson, Rhys Thomas, João Quinta da Fonseca'
 
-# The short X.Y version
-version = '0.92'
-# The full version, including alpha/beta/rc tags
-release = '0.92.3'
 
+def get_version():
+    ver_path = '../../defdap/_version.py'
+    main_ns = {}
+    with open(ver_path) as ver_file:
+        exec(ver_file.read(), main_ns)
+
+    return main_ns['__version__']
+
+
+# The full version, including alpha/beta/rc tags
+release = get_version()
+# The short X.Y version
+version = '.'.join(release.split('.')[:2])
 
 # -- General configuration ---------------------------------------------------
 
@@ -43,7 +52,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-	'sphinx.ext.napoleon',
+    'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'sphinx_rtd_theme'
 ]
