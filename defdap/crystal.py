@@ -16,6 +16,217 @@
 import os
 import numpy as np
 
+from defdap.quat import Quat
+
+
+class Phase(object):
+    def __init__(self, name, crystalStructure, latticeParams,
+                 slipSystems=None):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of the phase
+        latticeParams : tuple
+            Lattice parameters in order (a,b,c,alpha,beta,gamma)
+        crystalStructure : defdap.crystal.CrystalStructure
+            Crystal structure of this phase
+        slipSystems : collection of defdap.crystal.SlipSystem
+            Slip systems available in the phase
+        """
+        self.name = name
+        self.crystalStructure = crystalStructure
+        self.latticeParams = latticeParams
+        self.slipSystems = slipSystems
+
+    def __str__(self):
+        text = "Phase: {:}\n  Crystal structure: {:}\n  Lattice params: " \
+               "({:.2f}, {:.2f}, {:.2f}, {:.0f}, {:.0f}, {:.0f})"
+        return text.format(self.name, self.crystalStructure.name,
+                           *self.latticeParams)
+
+    @property
+    def cOverA(self):
+        if self.crystalStructure is crystalStructures['hexagonal']:
+            return self.latticeParams[2] / self.latticeParams[0]
+        return None
+
+
+class CrystalStructure(object):
+    def __init__(self, name, symmetries, vertices, faces):
+        self.name = name
+        self.symmetries = symmetries
+        self.vertices = vertices
+        self.faces = faces
+
+    @staticmethod
+    def lMatrix(a, b, c, alpha, beta, gamma):
+        """ Construct L matrix based on Page 22 of
+        Randle and Engle - Introduction to texture analysis"""
+        lMatrix = np.zeros((3, 3))
+
+        cosAlpha = np.cos(alpha)
+        cosBeta = np.cos(beta)
+        cosGamma = np.cos(gamma)
+
+        sinGamma = np.sin(gamma)
+
+        lMatrix[0, 0] = a
+        lMatrix[0, 1] = b * cosGamma
+        lMatrix[0, 2] = c * cosBeta
+
+        lMatrix[1, 1] = b * sinGamma
+        lMatrix[1, 2] = c * (cosAlpha - cosBeta * cosGamma) / sinGamma
+
+        lMatrix[2, 2] = c * np.sqrt(
+            1 + 2 * cosAlpha * cosBeta * cosGamma -
+            cosAlpha**2 - cosBeta**2 - cosGamma**2
+        ) / sinGamma
+
+        # Swap 00 with 11 and 01 with 10 due to how OI orthonormalises
+        # From Brad Wynne
+        t1 = lMatrix[0, 0]
+        t2 = lMatrix[1, 0]
+
+        lMatrix[0, 0] = lMatrix[1, 1]
+        lMatrix[1, 0] = lMatrix[0, 1]
+
+        lMatrix[1, 1] = t1
+        lMatrix[0, 1] = t2
+
+        # Set small components to 0
+        lMatrix[np.abs(lMatrix) < 1e-10] = 0
+
+        return lMatrix
+
+    @staticmethod
+    def qMatrix(lMatrix):
+        """ Construct matrix of reciprocal lattice vectors to transform
+        plane normals See C. T. Young and J. L. Lytton, J. Appl. Phys.,
+        vol. 43, no. 4, pp. 1408–1417, 1972."""
+        a = lMatrix[:, 0]
+        b = lMatrix[:, 1]
+        c = lMatrix[:, 2]
+
+        volume = abs(np.dot(a, np.cross(b, c)))
+        aStar = np.cross(b, c) / volume
+        bStar = np.cross(c, a) / volume
+        cStar = np.cross(a, b) / volume
+
+        qMatrix = np.stack((aStar, bStar, cStar), axis=1)
+
+        return qMatrix
+
+
+overRoot2 = np.sqrt(2) / 2
+sqrt3over2 = np.sqrt(3) / 2
+# Use ideal ratio as only used for plotting unit cell
+cOverA = 1.633 / 2
+
+crystalStructures = {
+    "cubic": CrystalStructure(
+        "cubic",
+        [
+            # identity
+            Quat(1.0, 0.0, 0.0, 0.0),
+
+            # cubic tetrads(100)
+            Quat(overRoot2, overRoot2, 0.0, 0.0),
+            Quat(0.0, 1.0, 0.0, 0.0),
+            Quat(overRoot2, -overRoot2, 0.0, 0.0),
+            Quat(overRoot2, 0.0, overRoot2, 0.0),
+            Quat(0.0, 0.0, 1.0, 0.0),
+            Quat(overRoot2, 0.0, -overRoot2, 0.0),
+            Quat(overRoot2, 0.0, 0.0, overRoot2),
+            Quat(0.0, 0.0, 0.0, 1.0),
+            Quat(overRoot2, 0.0, 0.0, -overRoot2),
+
+            # cubic dyads (110)
+            Quat(0.0, overRoot2, overRoot2, 0.0),
+            Quat(0.0, -overRoot2, overRoot2, 0.0),
+            Quat(0.0, overRoot2, 0.0, overRoot2),
+            Quat(0.0, -overRoot2, 0.0, overRoot2),
+            Quat(0.0, 0.0, overRoot2, overRoot2),
+            Quat(0.0, 0.0, -overRoot2, overRoot2),
+
+            # cubic triads (111)
+            Quat(0.5, 0.5, 0.5, 0.5),
+            Quat(0.5, -0.5, -0.5, -0.5),
+            Quat(0.5, -0.5, 0.5, 0.5),
+            Quat(0.5, 0.5, -0.5, -0.5),
+            Quat(0.5, 0.5, -0.5, 0.5),
+            Quat(0.5, -0.5, 0.5, -0.5),
+            Quat(0.5, 0.5, 0.5, -0.5),
+            Quat(0.5, -0.5, -0.5, 0.5)
+        ],
+        np.array([
+            [-0.5, -0.5, -0.5],
+            [0.5, -0.5, -0.5],
+            [0.5, 0.5, -0.5],
+            [-0.5, 0.5, -0.5],
+            [-0.5, -0.5, 0.5],
+            [0.5, -0.5, 0.5],
+            [0.5, 0.5, 0.5],
+            [-0.5, 0.5, 0.5]
+        ]),
+        [
+            [0, 1, 2, 3],
+            [4, 5, 6, 7],
+            [0, 1, 5, 4],
+            [1, 2, 6, 5],
+            [2, 3, 7, 6],
+            [3, 0, 4, 7]
+        ]
+    ),
+    "hexagonal": CrystalStructure(
+        "hexagonal",
+        [
+            # identity
+            Quat(1.0, 0.0, 0.0, 0.0),
+
+            Quat(0.0, 1.0, 0.0, 0.0),
+            Quat(0.0, 0.0, 1.0, 0.0),
+            Quat(0.0, 0.0, 0.0, 1.0),
+
+            # hexagonal hexads
+            Quat(sqrt3over2, 0.0, 0.0, 0.5),
+            Quat(0.5, 0.0, 0.0, sqrt3over2),
+            Quat(0.5, 0.0, 0.0, -sqrt3over2),
+            Quat(sqrt3over2, 0.0, 0.0, -0.5),
+
+            # hexagonal diads
+            Quat(0.0, -0.5, -sqrt3over2, 0.0),
+            Quat(0.0, 0.5, -sqrt3over2, 0.0),
+            Quat(0.0, sqrt3over2, -0.5, 0.0),
+            Quat(0.0, -sqrt3over2, -0.5, 0.0)
+        ],
+        np.array([
+            [1, 0, -cOverA],
+            [0.5, sqrt3over2, -cOverA],
+            [-0.5, sqrt3over2, -cOverA],
+            [-1, 0, -cOverA],
+            [-0.5, -sqrt3over2, -cOverA],
+            [0.5, -sqrt3over2, -cOverA],
+            [1, 0, cOverA],
+            [0.5, sqrt3over2, cOverA],
+            [-0.5, sqrt3over2, cOverA],
+            [-1, 0, cOverA],
+            [-0.5, -sqrt3over2, cOverA],
+            [0.5, -sqrt3over2, cOverA]
+        ]),
+        [
+            [0, 1, 2, 3, 4, 5],
+            [6, 7, 8, 9, 10, 11],
+            [0, 6, 7, 1],
+            [1, 7, 8, 2],
+            [2, 8, 9, 3],
+            [3, 9, 10, 4],
+            [4, 10, 11, 5],
+            [5, 11, 6, 0]
+        ]
+    )
+}
+
 
 class SlipSystem(object):
     """Class used for defining and performing operations on a slip system.
@@ -37,7 +248,7 @@ class SlipSystem(object):
 
         """
         # Currently only for cubic
-        self.crystalSym = crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
+        self.crystalSym = crystalSym    # symmetry of material
 
         # Stored as Miller indicies (Miller-Bravais for hexagonal)
         self.slipPlaneMiller = slipPlane
@@ -45,7 +256,9 @@ class SlipSystem(object):
 
         # Stored as vectors in a cartesian basis
         if crystalSym == "cubic":
-            self.slipPlaneOrtho = slipPlane / np.sqrt(np.dot(slipPlane, slipPlane))
+            self.slipPlaneOrtho = slipPlane / np.sqrt(
+                np.dot(slipPlane, slipPlane)
+            )
             self.slipDirOrtho = slipDir / np.sqrt(np.dot(slipDir, slipDir))
         elif crystalSym == "hexagonal":
             if cOverA is None:
@@ -57,17 +270,23 @@ class SlipSystem(object):
             slipDirM = slipDir[[0, 1, 3]]
             slipDirM[[0, 1]] -= slipDir[2]
 
-            # Create L matrix. Transformation from crystal to orthonormal coords
-            lMatrix = SlipSystem.lMatrix(1, 1, cOverA, np.pi / 2, np.pi / 2, np.pi * 2 / 3)
+            # Transformation from crystal to orthonormal coords
+            lMatrix = CrystalStructure.lMatrix(
+                1, 1, cOverA, np.pi / 2, np.pi / 2, np.pi * 2 / 3
+            )
 
-            # Create Q matrix fro transforming planes
-            qMatrix = SlipSystem.qMatrix(lMatrix)
+            # Q matrix for transforming planes
+            qMatrix = CrystalStructure.qMatrix(lMatrix)
 
             # Transform into orthonormal basis and then normalise
             self.slipPlaneOrtho = np.matmul(qMatrix, slipPlaneM)
             self.slipDirOrtho = np.matmul(lMatrix, slipDirM)
-            self.slipPlaneOrtho /= np.sqrt(np.dot(self.slipPlaneOrtho, self.slipPlaneOrtho))
-            self.slipDirOrtho /= np.sqrt(np.dot(self.slipDirOrtho, self.slipDirOrtho))
+            self.slipPlaneOrtho /= np.sqrt(
+                np.dot(self.slipPlaneOrtho, self.slipPlaneOrtho)
+            )
+            self.slipDirOrtho /= np.sqrt(
+                np.dot(self.slipDirOrtho, self.slipDirOrtho)
+            )
         else:
             raise Exception("Only cubic and hexagonal currently supported.")
 
@@ -112,9 +331,9 @@ class SlipSystem(object):
         """
         slipPlane = self.slipPlaneMiller
         if self.crystalSym == "hexagonal":
-            return "({:d}{:d}{:d}{:d})".format(slipPlane[0], slipPlane[1], slipPlane[2], slipPlane[3])
+            return "({:d}{:d}{:d}{:d})".format(*slipPlane)
         else:
-            return "({:d}{:d}{:d})".format(slipPlane[0], slipPlane[1], slipPlane[2])
+            return "({:d}{:d}{:d})".format(*slipPlane)
 
     @property
     def slipDirLabel(self):
@@ -128,9 +347,9 @@ class SlipSystem(object):
         """
         slipDir = self.slipDirMiller
         if self.crystalSym == "hexagonal":
-            return "[{:d}{:d}{:d}{:d}]".format(slipDir[0], slipDir[1], slipDir[2], slipDir[3])
+            return "[{:d}{:d}{:d}{:d}]".format(*slipDir)
         else:
-            return "[{:d}{:d}{:d}]".format(slipDir[0], slipDir[1], slipDir[2])
+            return "[{:d}{:d}{:d}]".format(*slipDir)
 
     @staticmethod
     def loadSlipSystems(name, crystalSym, cOverA=None):
@@ -246,93 +465,3 @@ class SlipSystem(object):
         packageDir, _ = os.path.split(__file__)
         print("Slip system definition files are stored in directory:")
         print("{:}/slip_systems/".format(packageDir))
-
-    @staticmethod
-    def lMatrix(a, b, c, alpha, beta, gamma):
-        """Construct l matrix.
-
-        Parameters
-        ----------
-        a : float
-        b : float
-        c : float
-        alpha : float
-        beta : float
-        gamma : float
-
-        Returns
-        -------
-        numpy.ndarray
-            l matrix.
-
-        References
-        -------
-        based on Page 22 of
-        Randle and Engle - Introduction To Texture Analysis
-
-        """
-        lMatrix = np.zeros((3, 3))
-
-        cosAlpha = np.cos(alpha)
-        cosBeta = np.cos(beta)
-        cosGamma = np.cos(gamma)
-
-        sinGamma = np.sin(gamma)
-
-        lMatrix[0, 0] = a
-        lMatrix[0, 1] = b * cosGamma
-        lMatrix[0, 2] = c * cosBeta
-
-        lMatrix[1, 1] = b * sinGamma
-        lMatrix[1, 2] = c * (cosAlpha - cosBeta * cosGamma) / sinGamma
-
-        lMatrix[2, 2] = c * np.sqrt(1 + 2 * cosAlpha * cosBeta * cosGamma -
-                                    cosAlpha**2 - cosBeta**2 - cosGamma**2) / sinGamma
-
-        # Swap 00 with 11 and 01 with 10 due to how OI orthonormalises
-        # From Brad Wynne
-        t1 = lMatrix[0, 0]
-        t2 = lMatrix[1, 0]
-
-        lMatrix[0, 0] = lMatrix[1, 1]
-        lMatrix[1, 0] = lMatrix[0, 1]
-
-        lMatrix[1, 1] = t1
-        lMatrix[0, 1] = t2
-
-        # Set small components to 0
-        lMatrix[np.abs(lMatrix) < 1e-10] = 0
-
-        return lMatrix
-
-    @staticmethod
-    def qMatrix(lMatrix):
-        """Construct matrix of reciprocal lattice vectors to transform plane normals.
-
-        Parameters
-        ----------
-        lMatrix : numpy.ndarray
-            l matrix.
-
-        Returns
-        -------
-        numpy.ndarray
-            q matrix.
-
-        References
-        -------
-        C. T. Young and J. L. Lytton, J. Appl. Phys., vol. 43, no. 4, pp. 1408–1417, 1972.
-
-        """
-        a = lMatrix[:, 0]
-        b = lMatrix[:, 1]
-        c = lMatrix[:, 2]
-
-        volume = abs(np.dot(a, np.cross(b, c)))
-        aStar = np.cross(b, c) / volume
-        bStar = np.cross(c, a) / volume
-        cStar = np.cross(a, b) / volume
-
-        qMatrix = np.stack((aStar, bStar, cStar), axis=1)
-
-        return qMatrix

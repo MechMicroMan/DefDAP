@@ -499,7 +499,7 @@ class MapPlot(Plot):
 
         Parameters
         ----------
-        callingMap : Map
+        callingMap : base.Map
             DIC or EBSD map which called this plot.
         mapData : numpy.ndarray
             Data to be plotted.
@@ -843,7 +843,7 @@ class GrainPlot(Plot):
 
         Parameters
         ----------
-        callingGrain : Grain
+        callingGrain : base.Grain
             DIC or EBSD grain which called this plot.
         mapData :
             Data to be plotted.

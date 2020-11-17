@@ -1,6 +1,6 @@
 import pytest
 from pytest import approx
-from pytest_cases import cases_data, CaseData, CaseDataGetter, cases_generator, fixture_plus
+from pytest_cases import parametrize, parametrize_with_cases
 
 import numpy as np
 from defdap.quat import Quat
@@ -95,10 +95,10 @@ def testInitStrEul(ph1, phi, ph2):
 ## fromAxisAngle
 # Check quatCoef is correct for given axis and angle
 @pytest.mark.parametrize('axis, angle, expectedOutput', [
-    ([1, 0, 0], np.pi, [0, 1, 0, 0]),
-    ([1, 1, 0], -np.pi/2, [np.sin(np.pi/4), -0.5, -0.5, 0]),
-    ([1, -1, 0], -np.pi/2, [np.sin(np.pi/4), -0.5, 0.5, 0]),
-    ([1, -1, -1], -np.pi/2, [np.sin(np.pi/4), -0.4082483, 0.4082483, 0.4082483])
+    ([1, 0, 0], np.pi, [0, -1, 0, 0]),
+    ([1, 1, 0], -np.pi/2, [np.sin(np.pi/4), 0.5, 0.5, 0]),
+    ([1, -1, 0], -np.pi/2, [np.sin(np.pi/4), 0.5, -0.5, 0]),
+    ([1, -1, -1], -np.pi/2, [np.sin(np.pi/4), 0.4082483, -0.4082483, -0.4082483])
 ])
 def testFromAxisAngle(axis, angle, expectedOutput):
     returnedQuat = Quat.fromAxisAngle(axis, angle).quatCoef
@@ -376,7 +376,7 @@ class TestTransformVector:
     def test_calc(single_quat):
         result = single_quat.transformVector(np.array([1., 2., 3.]))
 
-        assert np.allclose(result, [-2.55189453, -0.5151495, -2.68746261])
+        assert np.allclose(result, [2.55189453, 0.5151495, 2.68746261])
 
     @staticmethod
     def test_bad_in_type(single_quat):
@@ -391,8 +391,8 @@ class TestMisOri:
 
     # ---- CASES ---- #
 
-    @cases_generator("case_cubic_return_{rtn_quat}", rtn_quat=[0, 1, 2, 'potato'])
-    def case_cubic(rtn_quat) -> CaseData:
+    @parametrize(rtn_quat=[0, 1, 2, 'potato'])
+    def case_cubic(rtn_quat):
 
         # TODO: Would be better to get quaternions from a fixture but
         #  not currently supported by pytest-cases
@@ -403,10 +403,10 @@ class TestMisOri:
         outs = (0.8887075008823285,
                 [0.96034831, 0.13871646, 0.19810764, -0.13871646])
 
-        return ins, outs, None
+        return ins, outs
 
-    @cases_generator("case_hexagonal_return_{rtn_quat}", rtn_quat=[0, 1, 2, 'potato'])
-    def case_hexagonal(rtn_quat) -> CaseData:
+    @parametrize(rtn_quat=[0, 1, 2, 'potato'])
+    def case_hexagonal(rtn_quat):
 
         ins = (Quat(0.86272992, -0.08583165, 0.01513444, -0.49809735),
                Quat(0.57922797, 0.51983679, -0.24240388, 0.57922797),
@@ -415,10 +415,10 @@ class TestMisOri:
         outs = (0.8011677034014963,
                 [0.57922797, -0.24240388, -0.51983679, -0.57922797])
 
-        return ins, outs, None
+        return ins, outs
 
-    @cases_generator("case_null_return_{rtn_quat}", rtn_quat=[0, 1, 2, 'potato'])
-    def case_null(rtn_quat) -> CaseData:
+    @parametrize(rtn_quat=[0, 1, 2, 'potato'])
+    def case_null(rtn_quat):
 
         ins = (Quat(0.86272992, -0.08583165, 0.01513444, -0.49809735),
                Quat(0.57922797, 0.51983679, -0.24240388, 0.57922797),
@@ -427,22 +427,20 @@ class TestMisOri:
         outs = (0.16291828692295218,
                 [0.57922797,  0.51983679, -0.24240388,  0.57922797])
 
-        return ins, outs, None
+        return ins, outs
 
     # ---- TESTS ---- #
 
     CASESS = [case_cubic, case_hexagonal, case_null]
 
     @staticmethod
-    @cases_data(cases=[case_cubic])
-    def test_return_type(case_data: CaseDataGetter):
-        i, expt_o, expt_e = case_data.get()
+    @parametrize_with_cases("ins, outs", cases=CASESS)
+    def test_return_type(ins, outs):
+        result = ins[0].misOri(*ins[1:])
 
-        result = i[0].misOri(*i[1:])
-
-        if i[3] == 1:
+        if ins[3] == 1:
             assert type(result) is Quat
-        elif i[3] == 2:
+        elif ins[3] == 2:
             assert type(result) is tuple
             assert len(result) == 2
             assert type(result[0]) is np.float64
@@ -451,19 +449,17 @@ class TestMisOri:
             assert type(result) is np.float64
 
     @staticmethod
-    @cases_data(cases=CASESS)
-    def test_calc(case_data: CaseDataGetter):
-        i, expt_o, expt_e = case_data.get()
+    @parametrize_with_cases("ins, outs", cases=CASESS)
+    def test_calc(ins, outs):
+        result = ins[0].misOri(*ins[1:])
 
-        result = i[0].misOri(*i[1:])
-
-        if i[3] == 1:
-            assert np.allclose(result.quatCoef, expt_o[1])
-        elif i[3] == 2:
-            assert result[0] == approx(expt_o[0])
-            assert np.allclose(result[1].quatCoef, expt_o[1])
+        if ins[3] == 1:
+            assert np.allclose(result.quatCoef, outs[1])
+        elif ins[3] == 2:
+            assert result[0] == approx(outs[0])
+            assert np.allclose(result[1].quatCoef, outs[1])
         else:
-            assert result == approx(expt_o[0])
+            assert result == approx(outs[0])
 
     @staticmethod
     def test_bad_in_type(single_quat):
@@ -496,7 +492,7 @@ class TestSymEqv:
 
     # ---- CASES ---- #
 
-    def case_cubic() -> CaseData:
+    def case_cubic():
         ins = ('cubic',)
         outs = (
             [[1.0, 0.0, 0.0, 0.0],
@@ -525,9 +521,9 @@ class TestSymEqv:
              [0.5, -0.5, -0.5, 0.5]],
         )
 
-        return ins, outs, None
+        return ins, outs
 
-    def case_hexagonal() -> CaseData:
+    def case_hexagonal():
         ins = ('hexagonal',)
         outs = (
             [[1.0, 0.0, 0.0, 0.0],
@@ -544,38 +540,34 @@ class TestSymEqv:
              [0.0, -0.8660254037844386, -0.5, 0.0]],
         )
 
-        return ins, outs, None
+        return ins, outs
 
-    def case_null() -> CaseData:
+    def case_null():
         ins = ('potato',)
         outs = ([[1.0, 0.0, 0.0, 0.0]],)
 
-        return ins, outs, None
+        return ins, outs
 
     # ---- TESTS ---- #
 
     CASESS = [case_cubic, case_hexagonal, case_null]
 
     @staticmethod
-    @cases_data(cases=CASESS)
-    def test_return_type(case_data: CaseDataGetter):
-        i, expt_o, expt_e = case_data.get()
-
-        syms = Quat.symEqv(*i)
+    @parametrize_with_cases("ins, outs", cases=CASESS)
+    def test_return_type(ins, outs):
+        syms = Quat.symEqv(*ins)
 
         assert type(syms) is list
-        assert len(syms) == len(expt_o[0])
+        assert len(syms) == len(outs[0])
         assert all([type(sym) is Quat for sym in syms])
 
     @staticmethod
-    @cases_data(cases=CASESS)
-    def test_calc(case_data: CaseDataGetter):
-        i, expt_o, expt_e = case_data.get()
-
-        syms = Quat.symEqv(*i)
+    @parametrize_with_cases("ins, outs", cases=CASESS)
+    def test_calc(ins, outs):
+        syms = Quat.symEqv(*ins)
 
         assert all([np.allclose(sym.quatCoef, row) for sym, row
-                    in zip(syms, expt_o[0])])
+                    in zip(syms, outs[0])])
 
 
 

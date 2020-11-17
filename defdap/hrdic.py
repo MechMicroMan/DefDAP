@@ -31,6 +31,7 @@ from defdap.quat import Quat
 from defdap.plotting import MapPlot, GrainPlot
 from defdap.inspector import GrainInspector
 from defdap.utils import reportProgress
+from scipy.ndimage import binary_dilation
 
 
 class Map(base.Map):
@@ -66,8 +67,6 @@ class Map(base.Map):
         Transform from EBSD to DIC coordinates.
     ebsdTransformInv : various
         Transform from DIC to EBSD coordinates.
-    currGrainId : int
-        ID of last selected grain.
     ebsdGrainIds : list
         EBSD grain IDs corresponding to DIC map grain IDs.
     patternImPath : str
@@ -136,7 +135,6 @@ class Map(base.Map):
         self.ebsdMap = None                 # EBSD map linked to DIC map
         self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
         self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
-        self.currGrainId = None             # ID of last selected grain
         self.ebsdGrainIds = None
         self.patternImPath = None           # Path to BSE image of map
         self.plotHomog = self.plotMaxShear  # Use max shear map for defining homologous points
@@ -339,13 +337,13 @@ class Map(base.Map):
             plist = []
             for p in percentiles:
                 if p == 'Min':
-                    plist.append(np.min(selmap))
+                    plist.append(np.nanmin(selmap))
                 elif p == 'Mean':
-                    plist.append(np.mean(selmap))
+                    plist.append(np.nanmean(selmap))
                 elif p == 'Max':
-                    plist.append(np.max(selmap))
+                    plist.append(np.nanmax(selmap))
                 else:
-                    plist.append(np.percentile(selmap, p))
+                    plist.append(np.nanpercentile(selmap, p))
             print("{0}\t\t".format(c), end="")
             for l in plist:
                 print("{0:.2f}\t".format(l), end='')
@@ -568,6 +566,58 @@ class Map(base.Map):
 
         # return map
         return warpedMap
+
+    def generateThresholdMask(self, threshold, dilation=0, preview=False):
+        """ Generate a mask, based on thresholding of effective shear strain values.
+
+        Parameters
+        ----------
+        threshold: float
+            Threshold effective shear strain value, above which pixels are masked.
+        dilation: int
+            Number of times to apply binary dilation.
+        preview: bool
+            If true, show the mask and masked effective shear strain map.
+        """
+        self.mask = self.eMaxShear > threshold
+
+        if dilation != 0:
+            self.mask = binary_dilation(self.mask, iterations=dilation)
+
+        numRemoved = np.sum(self.mask)
+        numTotal = self.xdim*self.ydim
+        numRemovedCrop = np.sum(self.crop(self.mask))
+        numTotalCrop = self.xDim * self.yDim
+
+        print('Filtering removes {0} \ {1} ({2:.3f} %) datapoints in map'.format(numRemoved, numTotal,
+                                                                       (numRemoved / numTotal)*100))
+        print('Filtering removes {0} \ {1} ({2:.3f} %) datapoints in cropped map'.format(numRemovedCrop, numTotalCrop,
+                                                                       (numRemovedCrop / numTotalCrop * 100)))
+
+        if preview == True:
+            plot1 = MapPlot.create(self, self.crop(self.mask), cmap='binary')
+            plot1.setTitle('Removed datapoints in black')
+            plot2 = MapPlot.create(self, self.crop(np.where(self.mask == True, np.nan, self.eMaxShear)),
+                                  plotColourBar='True', clabel="Effective shear strain")
+            plot2.setTitle('Effective shear strain preview')
+        print('Use applyThresholdMask function to apply this filtering to data')
+
+    def applyThresholdMask(self):
+        """ Apply mask to DIC data by setting masked values to nan.
+
+        """
+        self.eMaxShear = np.where(self.mask == True, np.nan, self.eMaxShear)
+
+        self.e11 = np.where(self.mask == True, np.nan, self.e11)
+        self.e12 = np.where(self.mask == True, np.nan, self.e12)
+        self.e22 = np.where(self.mask == True, np.nan, self.e22)
+
+        self.f11 = np.where(self.mask == True, np.nan, self.f11)
+        self.f12 = np.where(self.mask == True, np.nan, self.f12)
+        self.f22 = np.where(self.mask == True, np.nan, self.f22)
+
+        self.x_map = np.where(self.mask == True, np.nan, self.x_map)
+        self.y_map = np.where(self.mask == True, np.nan, self.y_map)
 
     @property
     def boundaries(self):
