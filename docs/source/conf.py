@@ -82,7 +82,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'modules/DefDAP.rst']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'modules/defdap.rst']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -127,6 +127,32 @@ html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'DefDAPdoc'
+
+
+# -- Generate API docs during sphinx-build (for readthedocs) ------------------
+
+# Determine if on RTD
+ON_RTD = (os.environ.get('READTHEDOCS') == 'True')
+
+def run_apidoc(_):
+
+    from sphinx.ext import apidoc
+
+    args = [
+            #'--force',                      # Force overwrite
+            '--seperate',                   # Put each module on seperate page
+            '--no-toc',                     # No table of contents
+            '/modules',                     # Module path
+            '-o',                           # Directory to output..
+            '../../defdap'                  # here
+            ]
+
+    # Invoke apidoc
+    apidoc.main(args)  
+
+def setup(app):
+    if ON_RTD:
+        app.connect('builder-inited', run_apidoc)
 
 
 # -- Options for LaTeX output ------------------------------------------------
