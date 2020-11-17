@@ -139,11 +139,12 @@ def run_apidoc(_):
     from sphinx.ext import apidoc
 
     api_args = [
+            '--force',
             '--separate',                   # Put each module on seperate page
             '--no-toc',                     # No table of contents
-            '../source/modules',            # Module path
+            '../../defdap',                 # Module path
             '-o',                           # Directory to output..
-            '../../defdap'                  # here
+            '../source/defdap'             # here
             ]
 
     # Invoke apidoc
