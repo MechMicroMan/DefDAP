@@ -139,10 +139,9 @@ def run_apidoc(_):
     from sphinx.ext import apidoc
 
     api_args = [
-            #'--force',                      # Force overwrite
             '--separate',                   # Put each module on seperate page
             '--no-toc',                     # No table of contents
-            '/modules',                     # Module path
+            '../source/modules',            # Module path
             '-o',                           # Directory to output..
             '../../defdap'                  # here
             ]
@@ -227,8 +226,8 @@ def setup(app):
 # -- Extension configuration -------------------------------------------------
 
 autodoc_member_order = 'bysource'
-intersphinx_mapping = {'python': ('https://docs.python.org/3.7', None),
-                       'numpy': ('https://numpy.ord/doc/stable/objects.inv', None),
+intersphinx_mapping = {'python': ('https://docs.python.org/3.7/', None),
+                       'numpy': ('https://numpy.org/doc/stable/', None),
                        'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
                        'matplotlib': ('https://matplotlib.org/', None),
                        'skimage': ('https://scikit-image.org/docs/dev/', None)}
