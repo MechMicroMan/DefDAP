@@ -20,7 +20,7 @@ help:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 buildapi:
-	sphinx-apidoc -fMeT ../defdap -o ./source/modules     
+	sphinx-apidoc -feMT ../defdap -o ./source/defdap     
 	@echo "Auto-generation of API documentation finished. " \
 	"The generated files are in 'modules/'"
 docs:
