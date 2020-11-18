@@ -19,7 +19,7 @@ If this software is used in the preparation of published work please cite:
 Licenses
 ==========
 
-This software is distributed under Apache License 2.0. For more details see the :ref:`License<License>` page.
+This software is distributed under Apache License 2.0. For more details see the :doc:`License<license>` page.
 
 Contents
 ==========

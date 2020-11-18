@@ -82,7 +82,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'modules/DefDAP.rst']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'defdap/defdap.rst']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -127,6 +127,32 @@ html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'DefDAPdoc'
+
+
+# -- Generate API docs during sphinx-build (for readthedocs) ------------------
+
+# Determine if on RTD
+ON_RTD = (os.environ.get('READTHEDOCS') == 'True')
+
+def run_apidoc(_):
+
+    from sphinx.ext import apidoc
+
+    api_args = [
+            '--force',
+            '--separate',                   # Put each module on seperate page
+            '--no-toc',                     # No table of contents
+            '../../defdap',                 # Module path
+            '-o',                           # Directory to output..
+            '../source/defdap'              # here
+            ]
+
+    # Invoke apidoc
+    apidoc.main(api_args)  
+
+def setup(app):
+    if ON_RTD:
+        app.connect('builder-inited', run_apidoc)
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -201,8 +227,8 @@ htmlhelp_basename = 'DefDAPdoc'
 # -- Extension configuration -------------------------------------------------
 
 autodoc_member_order = 'bysource'
-intersphinx_mapping = {'python': ('https://docs.python.org/3.7', None),
-                       'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+intersphinx_mapping = {'python': ('https://docs.python.org/3.7/', None),
+                       'numpy': ('https://numpy.org/doc/stable/', None),
                        'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
                        'matplotlib': ('https://matplotlib.org/', None),
                        'skimage': ('https://scikit-image.org/docs/dev/', None)}
