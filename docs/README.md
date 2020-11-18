@@ -15,16 +15,10 @@ Install Sphinx (http://www.sphinx-doc.org/en/master/) and the theme:
 Compiling documentation
 =========================
 
-Then, autogenerate the API documentation by running the following command from the docs folder:
+Once a commit is made to the master branch the documentation is automatically built to https://defdap.readthedocs.io/defdap, providing an online version of the documentation.
 
-`make buildapi`
+To manually build the documentation to your local machine, run the following command from the docs folder:
 
-To clean the build folder and start fresh:
+`make docs`
 
-`make clean`
-
-Then to recompile the html documentation, use the following command from the docs folder:
-
-`make html`
-
-TODO: Once a commit is made to the master branch the docs folder is mirrored to mechmicroman.github.io/defdap, providing an online version of the documentation.
+This will autogenerate the API documentation from docstrings, clean the build folder and recompile the html documentation to /build/html.
