@@ -165,6 +165,9 @@ class Map(base.Map):
 
         self.eulerAngleArray = dataDict['eulerAngle']
         self.bandContrastArray = dataDict['bandContrast']
+        self.bandSlopeArray = dataDict['bandSlope']
+        self.meanAngularDeviationArray = dataDict['meanAngularDeviation']
+
         self.phaseArray = dataDict['phase']
 
         # write final status
