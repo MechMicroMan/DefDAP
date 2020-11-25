@@ -23,6 +23,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from skimage import morphology as mph
 
+from defdap import defaults
 from defdap import quat
 # TODO: add plot parameter to add to current figure
 
@@ -753,7 +754,7 @@ class GrainPlot(Plot):
         # When plotting top half only, move all 'traces' to +ve y
         # and set the pivot to be in the tail instead of centre
         if topOnly:
-            pivot='tail'
+            pivot = 'tail'
             for idx, (x,y) in enumerate(zip(traces[0], traces[1])):
                 if x < 0 and y < 0:
                     traces[0][idx] *= -1
@@ -909,8 +910,6 @@ class PolePlot(Plot):
     """ Class for creating an inverse pole figure plot.
 
     """
-    defaultProjection = "stereographic"
-
     def __init__(self, plotType, crystalSym, projection=None,
                  fig=None, ax=None, axParams={}, makeInteractive=False,
                  **kwargs):
@@ -1135,7 +1134,7 @@ class PolePlot(Plot):
         """
         img = self.imgLayers[layer]
         self.legend = plt.legend(*img.legend_elements("sizes", num=number,
-                            func=lambda s : s / scaling), title=label, **kwargs)
+                            func=lambda s: s / scaling), title=label, **kwargs)
 
     @staticmethod
     def _validateProjection(projectionIn, validateDefault=False):
@@ -1143,7 +1142,7 @@ class PolePlot(Plot):
             defaultProjection = None
         else:
             defaultProjection = PolePlot._validateProjection(
-                PolePlot.defaultProjection, validateDefault=True
+                defaults['pole_projection'], validateDefault=True
             )
 
         if projectionIn is None:
@@ -1167,7 +1166,7 @@ class PolePlot(Plot):
             projection = defaultProjection
 
         if projection is None:
-            raise Exception("Problem with default projection.")
+            raise ValueError("Problem with default projection.")
 
         return projection
 

@@ -16,6 +16,7 @@
 import os
 import numpy as np
 
+from defdap import defaults
 from defdap.quat import Quat
 
 
@@ -60,7 +61,7 @@ class CrystalStructure(object):
         self.faces = faces
 
     @staticmethod
-    def lMatrix(a, b, c, alpha, beta, gamma):
+    def lMatrix(a, b, c, alpha, beta, gamma, convention=None):
         """ Construct L matrix based on Page 22 of
         Randle and Engle - Introduction to texture analysis"""
         lMatrix = np.zeros((3, 3))
@@ -83,16 +84,28 @@ class CrystalStructure(object):
             cosAlpha**2 - cosBeta**2 - cosGamma**2
         ) / sinGamma
 
-        # Swap 00 with 11 and 01 with 10 due to how OI orthonormalises
-        # From Brad Wynne
-        t1 = lMatrix[0, 0]
-        t2 = lMatrix[1, 0]
+        # OI/HKL convention - x // [10-10],     y // a2 [-12-10]
+        # TSL    convention - x // a1 [2-1-10], y // [01-10]
+        if convention is None:
+            convention = defaults['crystal_ortho_conv']
 
-        lMatrix[0, 0] = lMatrix[1, 1]
-        lMatrix[1, 0] = lMatrix[0, 1]
+        if convention.lower() in ['hkl', 'oi']:
+            # Swap 00 with 11 and 01 with 10 due to how OI orthonormalises
+            # From Brad Wynne
+            t1 = lMatrix[0, 0]
+            t2 = lMatrix[1, 0]
 
-        lMatrix[1, 1] = t1
-        lMatrix[0, 1] = t2
+            lMatrix[0, 0] = lMatrix[1, 1]
+            lMatrix[1, 0] = lMatrix[0, 1]
+
+            lMatrix[1, 1] = t1
+            lMatrix[0, 1] = t2
+
+        elif convention.lower() != 'tsl':
+            raise ValueError(
+                "Unknown convention '{:}' for orthonormalisation of crystal "
+                "structure, can be 'hkl' or 'tsl'".format(convention)
+            )
 
         # Set small components to 0
         lMatrix[np.abs(lMatrix) < 1e-10] = 0
