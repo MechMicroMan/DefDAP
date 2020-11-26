@@ -298,7 +298,7 @@ class Map(base.Map):
 
         return plot
 
-    def plotIPFMap(self, direction, **kwargs):
+    def plotIPFMap(self, direction, phases, **kwargs):
         """
         Plot a map with points coloured in IPF colouring,
         with respect to a given sample direction.
@@ -306,7 +306,9 @@ class Map(base.Map):
         Parameters
         ----------
         direction : np.array len 3
-            Sample directiom.
+            Sample direction.
+        phases : list
+            List of phase IDs for which to plot IPF map.
         kwargs
             Other arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
@@ -319,20 +321,36 @@ class Map(base.Map):
         plotParams = {}
         plotParams.update(kwargs)
 
-        # calculate IPF colours
-        IPFcolours = Quat.calcIPFcolours(
-            self.quatArray.flatten(),
-            direction,
-            self.crystalSym
-        )
+        plot = MapPlot.create(self, None, **plotParams)
 
-        # reshape back to map shape array
-        IPFcolours = np.reshape(IPFcolours.T, (self.yDim, self.xDim, 3))
+        if phases is None:
+            phases = range(len(self.phases))
 
-        # make non-indexed points NaN
-        IPFcolours[self.phaseArray == 0, :] = np.nan
+        names = [self.phases[phaseID].crystalStructure.name for phaseID in phases]
 
-        plot = MapPlot.create(self, IPFcolours, **plotParams)
+        for structureName in np.unique(names):
+
+            phaseSubset = [phaseID for idx, phaseID in enumerate(phases) if names[idx]==structureName]
+
+            # calculate IPF colours
+            IPFcolours = Quat.calcIPFcolours(
+                self.quatArray.flatten(),
+                direction,
+                structureName
+            )
+
+            # reshape back to map shape array
+            IPFcolours = np.reshape(IPFcolours.T, (self.yDim, self.xDim, 3))
+            
+            # Append alpha channel (all ones)
+            IPFcolours = np.dstack((IPFcolours, np.ones((self.yDim, self.xDim))))
+
+            # make non-indexed points and other phases NaN
+            hidePhases = np.isin(self.phaseArray-1, phaseSubset, invert=True)
+            hidePhases = np.repeat(hidePhases[:, :, np.newaxis], 4, axis=2)
+            IPFcolours = np.where(hidePhases==True, [np.nan, np.nan, np.nan, 0], IPFcolours)
+
+            plot.addMap(IPFcolours)
 
         return plot
 
