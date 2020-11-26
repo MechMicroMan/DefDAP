@@ -456,7 +456,7 @@ class Map(base.Map):
         ebsdMap : defdap.ebsd.Map
             EBSD map object to link.
         transformType : str, optional
-            affine, piecewiseAffine or polynomial.
+            affine, projective, piecewiseAffine or polynomial.
         order : int, optional
             Order of polynomial transform to apply.
 
