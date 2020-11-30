@@ -298,7 +298,7 @@ class Map(base.Map):
 
         return plot
 
-    def plotIPFMap(self, direction, phases, **kwargs):
+    def plotIPFMap(self, direction, phases = None, **kwargs):
         """
         Plot a map with points coloured in IPF colouring,
         with respect to a given sample direction.
@@ -307,8 +307,9 @@ class Map(base.Map):
         ----------
         direction : np.array len 3
             Sample direction.
-        phases : list
-            List of phase IDs for which to plot IPF map.
+        phases : list (optional)
+            List of phase IDs for which to plot IPF map. If not provided will 
+            plot the IPF map for the primary phase.
         kwargs
             Other arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
@@ -324,13 +325,17 @@ class Map(base.Map):
         plot = MapPlot.create(self, None, **plotParams)
 
         if phases is None:
-            phases = range(len(self.phases))
+            phases = [self.primaryPhaseID]
 
+        # Get crystal structure for each phase
         names = [self.phases[phaseID].crystalStructure.name for phaseID in phases]
 
         for structureName in np.unique(names):
 
             phaseSubset = [phaseID for idx, phaseID in enumerate(phases) if names[idx]==structureName]
+
+            print('Plotting {0} IPF for phases: '.format(structureName), end='')
+            print(phaseSubset)
 
             # calculate IPF colours
             IPFcolours = Quat.calcIPFcolours(
@@ -345,7 +350,7 @@ class Map(base.Map):
             # Append alpha channel (all ones)
             IPFcolours = np.dstack((IPFcolours, np.ones((self.yDim, self.xDim))))
 
-            # make non-indexed points and other phases NaN
+            # for all phases not currently plotted, make transparent
             hidePhases = np.isin(self.phaseArray-1, phaseSubset, invert=True)
             hidePhases = np.repeat(hidePhases[:, :, np.newaxis], 4, axis=2)
             IPFcolours = np.where(hidePhases==True, [np.nan, np.nan, np.nan, 0], IPFcolours)
