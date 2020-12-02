@@ -663,8 +663,6 @@ class Map(base.Map):
             the pattern are half the size of the dic data.
 
         """
-
-
         self.patternImPath = self.path + filePath
         self.patScale = windowSize
 
@@ -785,7 +783,7 @@ class Map(base.Map):
             # Make grain objects
             self.grainList = []
             for i, (dicGrainId, ebsdGrainId) in enumerate(zip(dicGrainIds, self.ebsdGrainIds)):
-                yield 1. - i / len(dicGrainIds)          # Report progress
+                yield i / len(dicGrainIds)          # Report progress
 
                 currentGrain = Grain(self)
                 coords = np.transpose(np.where(self.grains == dicGrainId))     # Find coordinates
