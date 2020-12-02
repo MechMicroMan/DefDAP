@@ -536,8 +536,9 @@ class Map(object):
 
         return grainAvData
 
-    def plotGrainDataMap(self, mapData=None, grainData=None,
-                         grainIds=-1, bg=0, **kwargs):
+    def plotGrainDataMap(
+        self, mapData=None, grainData=None, grainIds=-1, bg=0, **kwargs
+    ):
         """
         Plot a grain map with grains coloured by given data. The data
         can be provided as a list of values per grain or as a map which
@@ -607,8 +608,8 @@ class Map(object):
         return plot
 
     def plotGrainDataIPF(
-            self, direction, mapData=None, grainData=None,
-            grainIds=-1, **kwargs
+        self, direction, mapData=None, grainData=None, grainIds=-1,
+        **kwargs
     ):
         """
         Plot IPF of grain reference (average) orientations with

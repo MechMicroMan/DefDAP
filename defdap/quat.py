@@ -311,31 +311,36 @@ class Quat(object):
         return Quat(self[0], -self[1], -self[2], -self[3])
 
     def transformVector(self, vector):
-        """Transforms vector by the quaternion. For EBSD quaterions this
-        is a transformation from sample space to crystal space. Perform
-        on conjugate of quaternion for crystal to sample.
+        """
+        Transforms vector by the quaternion. For passive EBSD quaterions
+        this is a transformation from sample space to crystal space.
+        Perform on conjugate of quaternion for crystal to sample. For a
+        quaternion representing a passive rotation from CS1 to CS2 and a
+        fixed vector V defined in CS1, this gives the coordinates
+        of V in CS2.
 
         Parameters
         ----------
-        vector : array_like, shape 3
+        vector : numpy.ndarray of shape 3 or equivalent
             Vector to transform.
 
         Returns
         -------
-        np.ndarray, shape 3
+        numpy.ndarray of shape 3
             Transformed vector.
 
         """
-        if isinstance(vector, np.ndarray) and vector.shape == (3,):
-            vectorQuat = Quat(0, vector[0], vector[1], vector[2])
-            vectorQuatTransformed = self.__mul__(
-                vectorQuat.__mul__(self.conjugate, allow_southern=True),
-                allow_southern=True
-            )
-            vectorTransformed = vectorQuatTransformed.quatCoef[1:4]
-            return vectorTransformed
+        if not isinstance(vector, (np.ndarray, list, tuple)):
+            raise TypeError("Vector must be a tuple, list or numpy array.")
+        if np.array(vector).shape != (3,):
+            raise TypeError("Vector must be length 3.")
 
-        raise TypeError("Vector must be a size 3 numpy array.")
+        vectorQuat = Quat(0, *vector)
+        vectorQuatTransformed = self.__mul__(
+            vectorQuat.__mul__(self.conjugate, allow_southern=True),
+            allow_southern=True
+        )
+        return vectorQuatTransformed.quatCoef[1:4]
 
     def misOri(self, right, symGroup, returnQuat=0):
         """

@@ -972,7 +972,7 @@ class PolePlot(Plot):
                             padY=0.009, va='bottom', ha='center', fontsize=12)
 
         else:
-            raise NotImplementedError("Only works for cubic and hexagonal IPFs")
+            raise NotImplementedError("Only works for cubic and hexagonal.")
 
         self.ax.axis('equal')
         self.ax.axis('off')
@@ -1032,7 +1032,7 @@ class PolePlot(Plot):
         padY : int, optional
             Pad added to y coordinate.
         kwargs
-            Other arguments will be passed to :func:`matplotlib.axes.Axes.text`.
+            Other arguments are passed to :func:`matplotlib.axes.Axes.text`.
 
         """
         xp, yp = self.projection(*point)
@@ -1053,7 +1053,7 @@ class PolePlot(Plot):
         markerSize : float
             Size of marker.
         kwargs
-            Other arguments will be passed to :func:`matplotlib.axes.Axes.scatter`.
+            Other arguments are passed to :func:`matplotlib.axes.Axes.scatter`.
 
         Raises
         -------
@@ -1109,7 +1109,7 @@ class PolePlot(Plot):
         layer : int
             Layer number to add the colour bar to.
         kwargs
-            Other argument will be passed to :func:`matplotlib.pyplot.colorbar`.
+            Other argument are passed to :func:`matplotlib.pyplot.colorbar`.
 
         """
         img = self.imgLayers[layer]
@@ -1129,7 +1129,7 @@ class PolePlot(Plot):
         scaling : float
             Scaling applied to the data.
         kwargs
-            Other argument will be passed to :func:`matplotlib.pyplot.legend`.
+            Other argument are passed to :func:`matplotlib.pyplot.legend`.
 
         """
         img = self.imgLayers[layer]
@@ -1248,9 +1248,9 @@ class HistPlot(Plot):
         Parameters
         ----------
         plotType : str, {'log', 'None'}, optional
-            If 'log' is specified, logarithmic y scale will be used.
+            If 'log' is specified, logarithmic y scale is used.
         density :
-            If true, histogram will be normalised such that the integral sums to 1.
+            If true, histogram is normalised such that the integral sums to 1.
         fig : matplotlib.figure.Figure
             Matplotlib figure to plot on.
         ax : matplotlib.axes.Axes
@@ -1260,7 +1260,7 @@ class HistPlot(Plot):
         makeInteractive : bool
             If true, make the plot interactive.
         kwargs
-            Other arguments will be passed to :class:`defdap.plotting.Plot`
+            Other arguments are passed to :class:`defdap.plotting.Plot`
 
         """
         super(HistPlot, self).__init__(
@@ -1297,9 +1297,9 @@ class HistPlot(Plot):
         line : str, optional
             Marker or line type to be used.
         label : str, optional
-            Label to use for data (will be used for legend).
+            Label to use for data (used for legend).
         kwargs
-            Other arguments will be passed to :func:`numpy.histogram`
+            Other arguments are passed to :func:`numpy.histogram`
 
         """
 
@@ -1346,13 +1346,13 @@ class HistPlot(Plot):
         axParams :
             Passed to defdap.plotting.Plot as axParams.
         plot : defdap.plotting.HistPlot
-            Plot where histgram will be places. If none, placed on current active plot.
+            Plot where histgram is created. If none, a new plot is created.
         makeInteractive : bool, optional
             If true, make plot interactive.
         plotType : str, {'log', 'None'}, optional
-            If 'log' is specified, logarithmic y scale will be used.
+            If 'log' is specified, logarithmic y scale is used.
         density :
-            If true, histogram will be normalised such that the integral sums to 1.
+            If true, histogram is normalised such that the integral sums to 1.
         bins : int
             Number of bins to use for histogram.
         range : tuple or None, optional
@@ -1360,9 +1360,9 @@ class HistPlot(Plot):
         line : str, optional
             Marker or line type to be used.
         label : str, optional
-            Label to use for data (will be used for legend).
+            Label to use for data (is used for legend).
         kwargs
-            Other arguments will be passed to :func:`defdap.plotting.HistPlot.addHist`
+            Other arguments are passed to :func:`defdap.plotting.HistPlot.addHist`
 
         Returns
         -------
@@ -1398,7 +1398,7 @@ class CrystalPlot(Plot):
         makeInteractive : bool, optional
             If true, make plot interactive.
         kwargs
-            All other arguments are passed to :class:`defdap.plotting.Plot`.
+            Other arguments are passed to :class:`defdap.plotting.Plot`.
 
         """
         # Set default plot parameters then update with input
@@ -1433,7 +1433,7 @@ class CrystalPlot(Plot):
         verts : list
             List of vertices.
         kwargs
-            All other arguments are passed to :class:`matplotlib.collections.PolyCollection`.
+            Other arguments are passed to :class:`matplotlib.collections.PolyCollection`.
 
         """
         # Set default plot parameters then update with any input
