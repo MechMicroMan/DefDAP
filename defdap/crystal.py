@@ -460,11 +460,8 @@ class SlipSystem(object):
             ))
 
         # Group slip systems by slip plane
-        # groupedSlipSystems = SlipSystem.groupSlipSystems(slipSystems)
-        #
-        # return groupedSlipSystems, slipTraceColours
-
-        return slipSystems, slipTraceColours
+        groupedSlipSystems = SlipSystem.groupSlipSystems(slipSystems)
+        return groupedSlipSystems, slipTraceColours
 
     @staticmethod
     def groupSlipSystems(slipSystems, groupBy='plane'):
