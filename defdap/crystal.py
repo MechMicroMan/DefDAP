@@ -390,7 +390,7 @@ class SlipSystem(object):
         return ss_family
 
     @staticmethod
-    def loadSlipSystems(name, crystalSym, cOverA=None):
+    def loadSlipSystems(name, crystalSym, cOverA=None, groupBy='plane'):
         """
         Load in slip systems from file. 3 integers for slip plane
         normal and 3 for slip direction. Returns a list of list of slip
@@ -405,6 +405,9 @@ class SlipSystem(object):
             The crystal symmetry ("cubic" or "hexagonal").
         cOverA : float, optional
             C over a ratio for hexagonal crystals.
+        groupBy : str, optional
+            How to group the slip systems, either by slip plane ('plane')
+            or slip system family ('family') or don't group (None).
 
         Returns
         -------
@@ -459,12 +462,14 @@ class SlipSystem(object):
                 crystalSym, cOverA=cOverA
             ))
 
-        # Group slip systems by slip plane
-        groupedSlipSystems = SlipSystem.groupSlipSystems(slipSystems)
-        return groupedSlipSystems, slipTraceColours
+        # Group slip systems is required
+        if groupBy is not None:
+            slipSystems = SlipSystem.groupSlipSystems(slipSystems, groupBy)
+
+        return slipSystems, slipTraceColours
 
     @staticmethod
-    def groupSlipSystems(slipSystems, groupBy='plane'):
+    def groupSlipSystems(slipSystems, groupBy):
         """
         Groups slip systems by their slip plane.
 
