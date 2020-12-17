@@ -21,6 +21,8 @@ from matplotlib_scalebar.scalebar import ScaleBar
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import Axes3D
 
+from scipy.interpolate import griddata
+
 from skimage import morphology as mph
 
 from defdap import quat
@@ -966,9 +968,9 @@ class PolePlot(Plot):
 
             # label poles
             self.labelPoint([0, 0, 1], '0001',
-                            padY=-0.012, va='top', ha='center', fontsize=12)
+                            padY=-0.014, va='top', ha='center', fontsize=12)
             self.labelPoint([1, 0, 0], r'$2\bar{1}\bar{1}0$',
-                            padY=-0.012, va='top', ha='center', fontsize=12)
+                            padY=-0.014, va='top', ha='center', fontsize=12)
             self.labelPoint([np.sqrt(3), 1, 0], r'$10\bar{1}0$',
                             padY=0.009, va='bottom', ha='center', fontsize=12)
 
@@ -1100,6 +1102,141 @@ class PolePlot(Plot):
         else:
             raise Exception("specify one colour for solid markers or list two for 'half and half'")
 
+    def addSchmidContours(self, symGroup, slipSystems, loadVector, numOris=3000, **kwargs):
+        """Add Schmid factor contour lines onto IPF.
+
+        Parameters
+        ----------
+        symGroup : str
+            Crystal type (cubic, hexagonal).
+        slipSystems : list(defdap.crystal.SlipSystem)
+            List of slip systems to calculate the Schmid factor for.
+        loadVector : numpy.ndarray
+            Loading vector, i.e. [1, 0, 0]
+        numOris : int
+            Number of random orientations to sample
+        kwargs :
+            Other arguments will be passed to defdap.plotting.PolePlot.plotInterpolatedData
+
+        """
+        # Generate random sample of quaternions
+        quats = quat.Quat.makeRandomQuats(numOris=numOris)
+        numQuats = len(quats)
+        numSymEqv = len(quats[0].symEqv(symGroup))
+        numSlip = len(slipSystems)
+
+        # Make empty array shape: (numQuats * numSymEqv) x numSlip
+        cData = np.empty(numQuats * numSymEqv)
+        cData = np.repeat(cData[None, :], numSlip, axis=0)
+
+        # For each slip system, calculate Schmid factors
+        for slip, slipSystem in enumerate(slipSystems):
+
+            slipPlane = slipSystem.slipPlane
+            slipDir = slipSystem.slipDir
+
+            for i, sym in enumerate(quat.Quat.symEqv(symGroup)):
+                for j, q in enumerate(quats):
+                    loadVectorCrystal = (sym * q).transformVector(loadVector)
+
+                    cData[slip][i * numQuats + j] = abs(np.dot(loadVectorCrystal, slipPlane) *
+                                                        np.dot(loadVectorCrystal, slipDir))
+
+        # Get maximum Schmid factor for each orientation
+        cData = cData.max(axis=0)
+
+        self.plotInterpolatedData(cData=cData, quats=quats, symGroup=symGroup, numPoints=int(numQuats / 10), **kwargs)
+
+    def plotInterpolatedData(self, cData, quats, direction, symGroup, plotColourBar=False, colourBarLabel='',
+                             filled=False, numPoints=1000, vmin=0, vmax=0.5, numContours=11, **kwargs):
+        """Plot interpolation, where orientations have a given value.
+
+        Parameters
+        ----------
+        cData : numpy.ndarray
+            Data for each quaternion
+        quats : list(defdap.quat.Quat)
+            Quaternion for each data point.
+        direction : np.ndarray
+            Sample reference direction for IPF.
+        symGroup : str
+            Crystal type (cubic, hexagonal).
+        plotColourBar : bool
+            If true, plot colout bar.
+        colourBarLabel : str
+            Label for colour bar
+        filled : bool
+            If true, contours will be filled. If false, contour lines will be drawn.
+        numPoints : int
+            Number of points in the grid to interpolate to.
+        vmin : float
+            Minimum value for the colour scale.
+        vmax : float
+            Maximum value for the colour scale.
+        numContours : int
+            Number of contour lines.
+        kwargs
+            Other arguments will be passed to :func:`matplotlib.axes.Axes.contour`.
+
+        """
+        xStereo, yStereo, lamGridData, numPoints = quat.Quat.calculateInterpolation(cData, quats, direction,
+                                                                               symGroup, numPoints=numPoints)
+
+        # Fill white boxes in around the edges of the IPF
+        res = 100  # not part of interpolation, just for drawing lines
+        xBound, yBound = self.stereoProject(np.full(res, 1.), np.linspace(0., 1., res), np.full(res, 1.))
+        if symGroup == 'cubic':
+            xBound2, yBound2 = np.zeros((xBound.shape[0] + 3)), np.zeros((yBound.shape[0] + 3))
+            xBound2[:-3], yBound2[:-3] = xBound, yBound
+            xBound2[-3], yBound2[-3] = 1, 0.7
+            xBound2[-2], yBound2[-2] = 1.1, 0
+            xBound2[-1], yBound2[-1] = xBound2[0], yBound2[0]
+            xBound2, yBound2 = (-0.05, 0, xBound[-1], 0.5, -0.05, -0.2), (0, 0, yBound[-1], 0.5, 0.6, 0.7)
+        elif symGroup == 'hexagonal':
+            xBound2, yBound2 = (-0.2, 0, np.sqrt(3) / 2, 0.8, -0.8), (0, 0, 0.5, 0.8, 0.8)
+        self.addFill(xBound2, yBound2, c='w')
+        xBound3, yBound3 = (-0.05, 1.1, 1.1, -0.05), (0, 0, -0.05, -0.05)
+        self.addFill(xBound3, yBound3, c='w')
+        contours = np.linspace(vmin, vmax, numContours)
+
+        if filled == False:
+            CS = self.ax.contour(xStereo, yStereo, lamGridData, contours, colors='k',
+                                 vmin=vmin, vmax=vmax, alpha=0.8, zorder=1, **kwargs)
+            self.imgLayers.append(CS)
+
+            # Find good positions for the labels (roughly in centre of contours) and hide if small
+            manual_locations = []
+            for segs in CS.allsegs:
+                if len(segs) != 0:
+                    for seg in segs:
+                        if symGroup == 'hexagonal':
+                            if len(seg) > (120 / 1000) * numPoints:
+                                manual_locations.append([seg[int(len(seg) / 2)][0], seg[int(len(seg) / 2)][1]])
+                        if symGroup == 'cubic':
+                            if len(seg) > (80 / 1000) * numPoints:
+                                manual_locations.append([seg[int(len(seg) / 2)][0], seg[int(len(seg) / 2)][1]])
+
+            # Add the labels
+            cl = self.ax.clabel(CS, inline=0, manual=manual_locations, fontsize=8, fmt='%1.2f')
+            [txt.set_bbox(dict(facecolor='white', pad=1, ec='w', alpha=0.8, lw=None)) for txt in cl]
+
+        elif filled == True:
+            CS = self.ax.contourf(xStereo, yStereo, lamGridData, contours, vmin=vmin, vmax=vmax, **kwargs)
+            self.imgLayers.append(CS)
+
+        if plotColourBar == True:
+            self.addColourBar(layer=len(self.imgLayers)-1, label=colourBarLabel, ticks=contours)
+            if filled == False:
+                self.colourBar.outline.set_visible(False)
+
+        # Change extent of plot to only show fundamental region
+        if symGroup == 'cubic':
+            self.ax.set_xlim((-0.02, 0.45))
+            self.ax.set_ylim((-0.02, 0.4))
+        elif symGroup == 'hexagonal':
+            self.ax.set_xlim((-0.02, 1.1))
+            self.ax.set_ylim((-0.02, 0.5))
+
     def addColourBar(self, label, layer=0, **kwargs):
         """Add a colour bar to the pole plot.
 
@@ -1115,6 +1252,19 @@ class PolePlot(Plot):
         """
         img = self.imgLayers[layer]
         self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
+
+    def addFill(self, x, y, **kwargs):
+        """Add a filled polygon.
+
+        Parameters
+        ----------
+        x, y : list, list
+            List of x and y coordinates.
+        kwargs
+            Other argument will be passed to :func:`matplotlib.pyplot.fill`.
+
+        """
+        plt.fill(x, y, **kwargs)
         
     def addLegend(self, label='Grain area (μm$^2$)', number=6, layer=0, scaling=1, **kwargs):
         """Add a marker size legend to the pole plot.
@@ -1204,6 +1354,39 @@ class PolePlot(Plot):
 
         return xp, yp
 
+
+    @staticmethod
+    def resampleToGrid(cX, cY, cData, numPoints=100):
+        """Resample data to regular grid.
+
+        Parameters
+        ----------
+        cX, cY : numpy.ndarray
+            Coordinates of input data.
+        cData : numpy.ndarray
+            Input data.
+
+        Returns
+        -------
+        float, float
+            x coordinate, y coordinate
+
+        Raises
+        -------
+        Exception
+            If input array has incorrect length
+
+        """
+        L = np.sqrt(np.pi / 2)
+
+        # Use linear interpolation, but use nearest neighbour approximation outside convex hull
+        gX, gY = np.meshgrid(np.linspace(-L, L, numPoints), np.linspace(-L, L, numPoints))
+        resampled_linear = griddata((cX, cY), cData, (gX, gY), method='linear', fill_value=-1)
+        resampled_nearest = griddata((cX, cY), cData, (gX, gY), method='nearest')
+        resampled = np.where(resampled_linear==-1, resampled_nearest, resampled_linear)
+
+        return gX, gY, resampled
+
     @staticmethod
     def lambertProject(*args):
         """Lambert Projection of pole direction or pair of polar angles.
@@ -1236,6 +1419,114 @@ class PolePlot(Plot):
         yp = alphaComp * np.sin(beta)
 
         return xp, yp
+
+    @staticmethod
+    def modifiedLambertProject(x, y, z):
+        """Modified Lambert Projection, from point in the Northern hemisphere of the unit sphere to 
+        2D coordinate on square grid.
+
+        Parameters
+        ----------
+        x, y, z: list
+            Coordinates (direction cosines) of points in the Northern hemisphere of the unit sphere.
+            
+        Returns
+        ----------
+        xp, yp: list
+            2D coordinates on the square grid.
+        
+        References
+        ----------
+        Callahan, P., & De Graef, M. (2013). Dynamical Electron Backscatter Diffraction Patterns. 
+        Part I: Pattern Simulations. Microscopy and Microanalysis, 19(5), 1255-1265.
+
+        """
+        mod = np.sqrt(x**2 + y**2 + z**2)
+        x = x / mod
+        y = y / mod
+        z = z / mod
+
+        xEqZero = x == 0
+        yEqZero = y == 0
+        x[xEqZero] = 1e-6
+        y[yEqZero] = 1e-6
+            
+        xp = np.empty_like(x)
+        yp = np.empty_like(y)
+        
+        xGTEy = np.abs(x) >= np.abs(y)
+        xLTy = np.logical_not(xGTEy)
+        
+        zComp = np.sqrt(2 * (1 - z))
+        sgnX = (x >= 0).astype(int)
+        sgnX[sgnX == 0] = -1
+        sgnY = (y >= 0).astype(int)
+        sgnY[sgnY == 0] = -1
+        
+        rootPi = np.sqrt(np.pi)
+        
+        xp[xGTEy] = sgnX[xGTEy] * zComp[xGTEy] * rootPi / 2
+        yp[xGTEy] = sgnX[xGTEy] * zComp[xGTEy] * 2 * np.arctan(y[xGTEy] / x[xGTEy]) / rootPi
+        
+        xp[xLTy] = sgnY[xLTy] * zComp[xLTy] * 2 * np.arctan(x[xLTy] / y[xLTy]) / rootPi
+        yp[xLTy] = sgnY[xLTy] * zComp[xLTy] * rootPi / 2
+        
+        xp[xEqZero] = 0
+        yp[yEqZero] = 0
+        
+        return xp, yp
+
+    @staticmethod
+    def modifiedLambertProjectInverse(x, y):
+        """Inverse Modified Lambert Projection from point on square grid to point in the Northern 
+        hemisphere of the unit sphere to 
+        2D coordinate on square grid.
+
+        Parameters
+        ----------
+        x, y: list
+            2D coordinates on the square grid.
+        
+        Returns
+        ----------
+        xp, yp, zp: list
+            Coordinates (direction cosines) of points in the Northern hemisphere of the unit sphere.
+        
+        References
+        ----------
+        Callahan, P., & De Graef, M. (2013). Dynamical Electron Backscatter Diffraction Patterns. 
+        Part I: Pattern Simulations. Microscopy and Microanalysis, 19(5), 1255-1265. 
+
+        """
+        xEqZero = x == 0
+        yEqZero = y == 0
+        x[xEqZero] = 1e-6
+        y[yEqZero] = 1e-6
+        
+        xp = np.empty_like(x)
+        yp = np.empty_like(y)
+        zp = np.empty_like(y)
+        
+        xGTEy = np.abs(x) >= np.abs(y)
+        xLTy = np.logical_not(xGTEy)
+        
+        def c(p):
+            return 2 * p * np.sqrt(np.pi - p**2) / np.pi
+        
+        cx = c(x[xGTEy])
+        xp[xGTEy] = cx * np.cos(y[xGTEy] * np.pi / 4 / x[xGTEy])
+        yp[xGTEy] = cx * np.sin(y[xGTEy] * np.pi / 4 / x[xGTEy])
+        zp[xGTEy] = 1 - 2 * x[xGTEy]**2 / np.pi
+        
+        cy = c(y[xLTy])
+        xp[xLTy] = cy * np.sin(x[xLTy] * np.pi / 4 / y[xLTy])
+        yp[xLTy] = cy * np.cos(x[xLTy] * np.pi / 4 / y[xLTy])
+        zp[xLTy] = 1 - 2 * y[xLTy]**2 / np.pi
+        
+        xp[xEqZero] = 0
+        yp[yEqZero] = 0
+        
+        return xp, yp, zp
 
 
 class HistPlot(Plot):

@@ -539,6 +539,138 @@ class Quat(object):
 
 # Static methods
 
+
+    @staticmethod
+    def calculateInterpolation(cData, quats, direction, symGroup, numPoints=1000):
+        """
+        Takes quaternion and some related data and interpolates to regular grid in Lambert space,
+        then takes back to hemisphere and performs stereographic projection, ready for plotting on IPF.
+
+        Parameters
+        ----------
+        cData : numpy.ndarray
+            Data for each quaternion
+        quats : list(defdap.quat.Quat)
+            Quaternion for each data point.
+        direction : np.ndarray
+            Sample reference direction for IPF.
+        symGroup : str
+            Crystal type (cubic, hexagonal).
+        numPoints : int
+            Number of points in the grid to interpolate to.
+
+        Returns
+        -------
+        xStereo, yStereo, lamGridData : float, float, float
+            x coordinate, y coordinate, data
+
+        """
+        
+        # Transform the sample direction into the crystal frame for all orientations and their symmetries
+        # get array of symmetry operations. shape: (numSym, 4, numQuats)
+        quatCompsSym = Quat.calcSymEqvs(quats, symGroup)
+
+        # array to store crytal directions for all orientations and symmetries
+        directionCrystal = np.empty((3, quatCompsSym.shape[0], quatCompsSym.shape[2]))
+
+        # temp variables to use below
+        quatDotVec = (quatCompsSym[:, 1, :] * direction[0] +
+                      quatCompsSym[:, 2, :] * direction[1] +
+                      quatCompsSym[:, 3, :] * direction[2])
+        temp = (np.square(quatCompsSym[:, 0, :]) - np.square(quatCompsSym[:, 1, :]) -
+                np.square(quatCompsSym[:, 2, :]) - np.square(quatCompsSym[:, 3, :]))
+
+        # Transform the pole direction to crystal coords for all orientations and symmetries
+        # (quatCompsSym * vectorQuat) * quatCompsSym.conjugate
+        directionCrystal[0, :, :] = (2 * quatDotVec * quatCompsSym[:, 1, :] +
+                                     temp * direction[0] +
+                                     2 * quatCompsSym[:, 0, :] * (quatCompsSym[:, 2, :] * direction[2] -
+                                                                  quatCompsSym[:, 3, :] * direction[1]))
+        directionCrystal[1, :, :] = (2 * quatDotVec * quatCompsSym[:, 2, :] +
+                                     temp * direction[1] +
+                                     2 * quatCompsSym[:, 0, :] * (quatCompsSym[:, 3, :] * direction[0] -
+                                                                  quatCompsSym[:, 1, :] * direction[2]))
+        directionCrystal[2, :, :] = (2 * quatDotVec * quatCompsSym[:, 3, :] +
+                                     temp * direction[2] +
+                                     2 * quatCompsSym[:, 0, :] * (quatCompsSym[:, 1, :] * direction[1] -
+                                                                  quatCompsSym[:, 2, :] * direction[0]))
+
+        # normalise vectors
+        directionCrystal /= np.sqrt(np.einsum('ijk,ijk->jk', directionCrystal, directionCrystal))
+
+        # move all vectors into north hemisphere
+        directionCrystal[:, directionCrystal[2, :, :] < 0] *= -1
+
+        newShape = directionCrystal.shape[1] * directionCrystal.shape[2]
+        directionCrystal = directionCrystal.reshape((3, newShape))
+
+        # Apply the modified Lambert projection
+        dirCryLamX, dirCryLamY = plotting.PolePlot.modifiedLambertProject(directionCrystal[0], directionCrystal[1], directionCrystal[2])
+        
+        # numPoints is the number of points in the grid to interpolate to
+        # This for the entire orientation space so you'll end up with ~ numPoints^2 / 24 in a single cubic triangle
+        lamGridX, lamGridY, lamGridData = plotting.PolePlot.resampleToGrid(
+            dirCryLamX, dirCryLamY,
+            cData,
+            numPoints=numPoints
+        )
+        
+        # Project back to a Hemisphere
+        xGrid, yGrid, zGrid = plotting.PolePlot.modifiedLambertProjectInverse(lamGridX, lamGridY)
+
+        # Stereographically project the data and plot contours
+        xStereo, yStereo = plotting.PolePlot.stereoProject(xGrid, yGrid, zGrid)
+        
+        # Mask data to fundamental region - this makes the contour labels go in approximately the correct place
+        # and it's easier to determine a good manual position
+        masky=np.full_like(yStereo, False, dtype=bool)
+        masky[yStereo<-0.01] = True
+        masky[xStereo<-0.01] = True
+        if symGroup == 'cubic':
+            masky[(yStereo-0.01)/xStereo > 1] = True
+            masky[(yStereo)**2+xStereo**2+2*xStereo > 1.02] = True
+        elif symGroup == 'hexagonal':
+            masky[(yStereo-0.01)/xStereo > (1/np.sqrt(3))] = True
+        lamGridData = np.where(masky==True, np.nan, lamGridData)
+        xStereo = np.where(masky==True, np.nan, xStereo)
+        yStereo = np.where(masky==True, np.nan, yStereo)
+        
+        return xStereo, yStereo, lamGridData, numPoints
+
+    @staticmethod
+    def makeRandomQuats(numOris=10000):
+        """Make a list of random quaternions.
+        
+        Parameters
+        ----------
+        numOris: int
+            Number of quats to create.
+        maxMisOri: int
+            Maximum misorientation for pertubation.
+            
+        Returns
+        ----------
+        quats: list(quat) len numOris
+            Random quaternions.
+
+        """
+        quats = []
+
+        for i in range(numOris):
+           
+            r = np.random.rand(3)
+
+            A = np.sqrt(r[...,2])
+            B = np.sqrt(1.0-r[...,2])
+            q = np.stack([np.cos(2.0*np.pi*r[...,0])*A,
+                          np.sin(2.0*np.pi*r[...,1])*B,
+                          np.cos(2.0*np.pi*r[...,1])*B,
+                          np.sin(2.0*np.pi*r[...,0])*A],axis=-1)
+            
+            quats.append(Quat(q))
+            
+        return quats
+
     @staticmethod
     def createManyQuats(eulerArray):
         """Create a an array of quats from an array of Euler angles.
