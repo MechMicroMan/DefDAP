@@ -15,7 +15,9 @@
 
 import os
 import numpy as np
+from numpy.linalg import norm
 
+from defdap import defaults
 from defdap.quat import Quat
 
 
@@ -59,8 +61,9 @@ class CrystalStructure(object):
         self.vertices = vertices
         self.faces = faces
 
+    # TODO: Move these to the phase class where the lattice parameters can be accessed
     @staticmethod
-    def lMatrix(a, b, c, alpha, beta, gamma):
+    def lMatrix(a, b, c, alpha, beta, gamma, convention=None):
         """ Construct L matrix based on Page 22 of
         Randle and Engle - Introduction to texture analysis"""
         lMatrix = np.zeros((3, 3))
@@ -83,16 +86,28 @@ class CrystalStructure(object):
             cosAlpha**2 - cosBeta**2 - cosGamma**2
         ) / sinGamma
 
-        # Swap 00 with 11 and 01 with 10 due to how OI orthonormalises
-        # From Brad Wynne
-        t1 = lMatrix[0, 0]
-        t2 = lMatrix[1, 0]
+        # OI/HKL convention - x // [10-10],     y // a2 [-12-10]
+        # TSL    convention - x // a1 [2-1-10], y // [01-10]
+        if convention is None:
+            convention = defaults['crystal_ortho_conv']
 
-        lMatrix[0, 0] = lMatrix[1, 1]
-        lMatrix[1, 0] = lMatrix[0, 1]
+        if convention.lower() in ['hkl', 'oi']:
+            # Swap 00 with 11 and 01 with 10 due to how OI orthonormalises
+            # From Brad Wynne
+            t1 = lMatrix[0, 0]
+            t2 = lMatrix[1, 0]
 
-        lMatrix[1, 1] = t1
-        lMatrix[0, 1] = t2
+            lMatrix[0, 0] = lMatrix[1, 1]
+            lMatrix[1, 0] = lMatrix[0, 1]
+
+            lMatrix[1, 1] = t1
+            lMatrix[0, 1] = t2
+
+        elif convention.lower() != 'tsl':
+            raise ValueError(
+                "Unknown convention '{:}' for orthonormalisation of crystal "
+                "structure, can be 'hkl' or 'tsl'".format(convention)
+            )
 
         # Set small components to 0
         lMatrix[np.abs(lMatrix) < 1e-10] = 0
@@ -247,77 +262,56 @@ class SlipSystem(object):
             C over a ratio for hexagonal crystals.
 
         """
-        # Currently only for cubic
         self.crystalSym = crystalSym    # symmetry of material
 
-        # Stored as Miller indicies (Miller-Bravais for hexagonal)
-        self.slipPlaneMiller = slipPlane
-        self.slipDirMiller = slipDir
+        # Stored as Miller indices (Miller-Bravais for hexagonal)
+        self.planeIdc = tuple(slipPlane)
+        self.dirIdc = tuple(slipDir)
 
         # Stored as vectors in a cartesian basis
         if crystalSym == "cubic":
-            self.slipPlaneOrtho = slipPlane / np.sqrt(
-                np.dot(slipPlane, slipPlane)
-            )
-            self.slipDirOrtho = slipDir / np.sqrt(np.dot(slipDir, slipDir))
+            self.slipPlane = slipPlane / norm(slipPlane)
+            self.slipDir = slipDir / norm(slipDir)
+            self.cOverA = None
         elif crystalSym == "hexagonal":
             if cOverA is None:
                 raise Exception("No c over a ratio given")
             self.cOverA = cOverA
 
             # Convert plane and dir from Miller-Bravais to Miller
-            slipPlaneM = slipPlane[[0, 1, 3]]
-            slipDirM = slipDir[[0, 1, 3]]
-            slipDirM[[0, 1]] -= slipDir[2]
+            slipPlaneM = convertIdc('mb', plane=slipPlane)
+            slipDirM = convertIdc('mb', dir=slipDir)
 
             # Transformation from crystal to orthonormal coords
             lMatrix = CrystalStructure.lMatrix(
                 1, 1, cOverA, np.pi / 2, np.pi / 2, np.pi * 2 / 3
             )
-
             # Q matrix for transforming planes
             qMatrix = CrystalStructure.qMatrix(lMatrix)
 
             # Transform into orthonormal basis and then normalise
-            self.slipPlaneOrtho = np.matmul(qMatrix, slipPlaneM)
-            self.slipDirOrtho = np.matmul(lMatrix, slipDirM)
-            self.slipPlaneOrtho /= np.sqrt(
-                np.dot(self.slipPlaneOrtho, self.slipPlaneOrtho)
-            )
-            self.slipDirOrtho /= np.sqrt(
-                np.dot(self.slipDirOrtho, self.slipDirOrtho)
-            )
+            self.slipPlane = np.matmul(qMatrix, slipPlaneM)
+            self.slipPlane /= norm(self.slipPlane)
+            self.slipDir = np.matmul(lMatrix, slipDirM)
+            self.slipDir /= norm(self.slipDir)
         else:
             raise Exception("Only cubic and hexagonal currently supported.")
 
-    # overload ==. Two slip systems are equal if they have the same slip
-    # plane in miller
     def __eq__(self, right):
-        return np.all(self.slipPlaneMiller == right.slipPlaneMiller)
+        # or one divide the other should be a constant for each place.
+        return (posIdc(self.planeIdc) == posIdc(right.planeIdc) and
+                posIdc(self.dirIdc) == posIdc(right.dirIdc))
 
-    @property
-    def slipPlane(self):
-        """Return the slip plane as an array. For example [0, 0, 1].
+    def __hash__(self):
+        return hash(posIdc(self.planeIdc) + posIdc(self.dirIdc))
 
-        Returns
-        -------
-        numpy.ndarray
-            Slip plane.
+    def __str__(self):
+        return self.slipPlaneLabel + self.slipDirLabel
 
-        """
-        return self.slipPlaneOrtho
-
-    @property
-    def slipDir(self):
-        """Return the slip direction as an array. For example [0, 0, 1].
-
-        Returns
-        -------
-        numpy.ndarray
-            Slip direction.
-
-        """
-        return self.slipDirOrtho
+    def __repr__(self):
+        return "SlipSystem(slipPlane={}, slipDir={}, crystalSym={})".format(
+            self.slipPlaneLabel, self.slipDirLabel, self.crystalSym
+        )
 
     @property
     def slipPlaneLabel(self):
@@ -329,11 +323,7 @@ class SlipSystem(object):
             Slip plane label.
 
         """
-        slipPlane = self.slipPlaneMiller
-        if self.crystalSym == "hexagonal":
-            return "({:d}{:d}{:d}{:d})".format(*slipPlane)
-        else:
-            return "({:d}{:d}{:d})".format(*slipPlane)
+        return '(' + ''.join(map(strIdx, self.planeIdc)) + ')'
 
     @property
     def slipDirLabel(self):
@@ -345,14 +335,62 @@ class SlipSystem(object):
             Slip direction label.
 
         """
-        slipDir = self.slipDirMiller
-        if self.crystalSym == "hexagonal":
-            return "[{:d}{:d}{:d}{:d}]".format(*slipDir)
-        else:
-            return "[{:d}{:d}{:d}]".format(*slipDir)
+        return '[' + ''.join(map(strIdx, self.dirIdc)) + ']'
+
+    def generateFamily(self):
+        """Generate the family of slip systems which this system belongs to.
+
+        Returns
+        -------
+        list of SlipSystem
+            The family of slip systems.
+
+        """
+        #
+        symms = Quat.symEqv(self.crystalSym)
+
+        ss_family = set()  # will not preserve order
+
+        plane = self.planeIdc
+        dir = self.dirIdc
+
+        if self.crystalSym == 'hexagonal':
+            # Transformation from crystal to orthonormal coords
+            lMatrix = CrystalStructure.lMatrix(
+                1, 1, self.cOverA, np.pi / 2, np.pi / 2, np.pi * 2 / 3
+            )
+            # Q matrix for transforming planes
+            qMatrix = CrystalStructure.qMatrix(lMatrix)
+
+            # Transform into orthonormal basis
+            plane = np.matmul(qMatrix, convertIdc('mb', plane=plane))
+            dir = np.matmul(lMatrix, convertIdc('mb', dir=dir))
+
+        for i, symm in enumerate(symms):
+            symm = symm.conjugate
+
+            plane_symm = symm.transformVector(plane)
+            dir_symm = symm.transformVector(dir)
+
+            if self.crystalSym == 'hexagonal':
+                # qMatrix inverse is equal to lMatrix transposed and vice-versa
+                plane_symm = reduceIdc(convertIdc(
+                    'm', plane=safeIntCast(np.matmul(lMatrix.T, plane_symm))
+                ))
+                dir_symm = reduceIdc(convertIdc(
+                    'm', dir=safeIntCast(np.matmul(qMatrix.T, dir_symm))
+                ))
+
+            ss_family.add(SlipSystem(
+                posIdc(safeIntCast(plane_symm)),
+                posIdc(safeIntCast(dir_symm)),
+                self.crystalSym, cOverA=self.cOverA
+            ))
+
+        return ss_family
 
     @staticmethod
-    def loadSlipSystems(name, crystalSym, cOverA=None):
+    def loadSlipSystems(name, crystalSym, cOverA=None, groupBy='plane'):
         """
         Load in slip systems from file. 3 integers for slip plane
         normal and 3 for slip direction. Returns a list of list of slip
@@ -367,14 +405,17 @@ class SlipSystem(object):
             The crystal symmetry ("cubic" or "hexagonal").
         cOverA : float, optional
             C over a ratio for hexagonal crystals.
+        groupBy : str, optional
+            How to group the slip systems, either by slip plane ('plane')
+            or slip system family ('family') or don't group (None).
 
         Returns
         -------
-        list(list(SlipSystem))
+        list of list of SlipSystem
             A list of list of slip systems grouped slip plane.
 
         Raises
-        -------
+        ------
         IOError
             Raised if not 6/8 integers per line.
 
@@ -408,7 +449,8 @@ class SlipSystem(object):
         else:
             vectSize = 3
 
-        ssData = np.loadtxt(filepath, delimiter='\t', skiprows=2, dtype=int)
+        ssData = np.loadtxt(filepath, delimiter='\t', skiprows=2,
+                            dtype=np.int8)
         if ssData.shape[1] != 2 * vectSize:
             raise IOError("Slip system file not valid")
 
@@ -420,39 +462,56 @@ class SlipSystem(object):
                 crystalSym, cOverA=cOverA
             ))
 
-        # Group slip systems by slip plane
-        groupedSlipSystems = SlipSystem.groupSlipSystems(slipSystems)
+        # Group slip systems is required
+        if groupBy is not None:
+            slipSystems = SlipSystem.groupSlipSystems(slipSystems, groupBy)
 
-        return groupedSlipSystems, slipTraceColours
+        return slipSystems, slipTraceColours
 
     @staticmethod
-    def groupSlipSystems(slipSystems):
+    def groupSlipSystems(slipSystems, groupBy):
         """
         Groups slip systems by their slip plane.
 
         Parameters
         ----------
-        slipSystems : (list(SlipSystem))
+        slipSystems : list of SlipSystem
             A list of slip systems.
+        groupBy : str
+            How to group the slip systems, either by slip plane ('plane')
+            or slip system family ('family').
 
         Returns
-        ----------
-        list(list(SlipSystem))
-            A list of list of slip systems grouped slip plane.
+        -------
+        list of list of SlipSystem
+            A list of list of grouped slip systems.
 
         """
-        distSlipSystems = [slipSystems[0]]
-        groupedSlipSystems = [[slipSystems[0]]]
+        if groupBy.lower() == 'plane':
+            # Group by slip plane and keep slip plane order from file
+            groupedSlipSystems = [[slipSystems[0]]]
+            for ss in slipSystems[1:]:
+                for i, ssGroup in enumerate(groupedSlipSystems):
+                    if posIdc(ss.planeIdc) == posIdc(ssGroup[0].planeIdc):
+                        groupedSlipSystems[i].append(ss)
+                        break
+                else:
+                    groupedSlipSystems.append([ss])
 
-        for slipSystem in slipSystems[1:]:
+        elif groupBy.lower() == 'family':
+            groupedSlipSystems = []
+            ssFamilies = []
+            for ss in slipSystems:
+                for i, ssFamily in enumerate(ssFamilies):
+                    if ss in ssFamily:
+                        groupedSlipSystems[i].append(ss)
+                        break
+                else:
+                    groupedSlipSystems.append([ss])
+                    ssFamilies.append(ss.generateFamily())
 
-            for i, distSlipSystem in enumerate(distSlipSystems):
-                if slipSystem == distSlipSystem:
-                    groupedSlipSystems[i].append(slipSystem)
-                    break
-            else:
-                distSlipSystems.append(slipSystem)
-                groupedSlipSystems.append([slipSystem])
+        else:
+            raise ValueError("Slip systems can be grouped by plane or family")
 
         return groupedSlipSystems
 
@@ -465,3 +524,163 @@ class SlipSystem(object):
         packageDir, _ = os.path.split(__file__)
         print("Slip system definition files are stored in directory:")
         print("{:}/slip_systems/".format(packageDir))
+
+
+def convertIdc(inType, *, dir=None, plane=None):
+    """
+    Convert between Miller and Miller-Bravais indices.
+
+    Parameters
+    ----------
+    inType : str {'m', 'mb'}
+        Type of indices provided. If 'm' converts from Miller to
+        Miller-Bravais, opposite for 'mb'.
+    dir : tuple of int or equivalent, optional
+        Direction to convert. This OR `plane` must me provided.
+    plane : tuple of int or equivalent, optional
+        Plane to convert. This OR `direction` must me provided.
+
+    Returns
+    -------
+    tuple of int
+        The converted plane or direction.
+
+    """
+    if dir is None and plane is None:
+        raise ValueError("One of either `direction` or `plane` must be "
+                         "provided.")
+    if dir is not None and plane is not None:
+        raise ValueError("One of either `direction` or `plane` must be "
+                         "provided, not both.")
+
+    def checkLen(val, length):
+        if len(val) != length:
+            raise ValueError("Vector must have {} values.".format(length))
+
+    if inType.lower() == 'm':
+        if dir is None:
+            # plane M->MB
+            checkLen(plane, 3)
+            out = np.array(plane)[[0, 1, 0, 2]]
+            out[2] += plane[1]
+            out[2] *= -1
+
+        else:
+            # direction M->MB
+            checkLen(dir, 3)
+            u, v, w = dir
+            out = np.array([2*u-v, 2*v-u, -u-v, 3*w]) / 3
+            try:
+                # Attempt to cast to integers
+                out = safeIntCast(out)
+            except ValueError:
+                pass
+
+    elif inType.lower() == 'mb':
+        if dir is None:
+            # plane MB->M
+            checkLen(plane, 4)
+            out = np.array(plane)[[0, 1, 3]]
+
+        else:
+            # direction MB->M
+            checkLen(dir, 4)
+            out = np.array(dir)[[0, 1, 3]]
+            out[[0, 1]] -= dir[2]
+
+    else:
+        raise ValueError("`inType` must be either 'm' or 'mb'.")
+
+    return tuple(out)
+
+
+def posIdc(vec):
+    """
+    Return a consistent positive version of a set of indices.
+
+    Parameters
+    ----------
+    vec : tuple of int or equivalent
+        Indices to convert.
+
+    Returns
+    -------
+    tuple of int
+        Positive version of indices.
+
+    """
+    for idx in vec:
+        if idx == 0:
+            continue
+        if idx > 0:
+            return tuple(vec)
+        else:
+            return tuple(-np.array(vec))
+
+
+def reduceIdc(vec):
+    """
+    Reduce indices to lowest integers
+
+    Parameters
+    ----------
+    vec : tuple of int or equivalent
+        Indices to reduce.
+
+    Returns
+    -------
+    tuple of int
+        The reduced indices.
+
+    """
+    return tuple((np.array(vec) / np.gcd.reduce(vec)).astype(np.int8))
+
+
+def safeIntCast(vec, tol=1e-3):
+    """
+    Cast a tuple of floats to integers, raising an error if rounding is
+    over a tolerance.
+
+    Parameters
+    ----------
+    vec : tuple of float or equivalent
+        Vector to cast.
+    tol : float
+        Tolerance above which an error is raised.
+
+    Returns
+    -------
+    tuple of int
+
+    Raises
+    ------
+    ValueError
+        If the rounding is over the tolerance for any value.
+
+    """
+    vec = np.array(vec)
+    vec_rounded = vec.round()
+
+    if np.any(np.abs(vec - vec_rounded) > tol):
+        raise ValueError('Rounding too large', np.abs(vec - vec_rounded))
+
+    return tuple(vec_rounded.astype(np.int8))
+
+
+def strIdx(idx):
+    """
+    String representation of an index with overbars.
+
+    Parameters
+    ----------
+    idx : int
+
+    Returns
+    -------
+    str
+
+    """
+    if not isinstance(idx, (int, np.integer)):
+        raise ValueError("Index must be an integer.")
+
+    return str(idx) if idx >= 0 else str(-idx) + u'\u0305'

@@ -752,74 +752,111 @@ class Map(base.Map):
         return plot
 
     @reportProgress("finding grains")
-    def findGrains(self, minGrainSize=10):
+    def findGrains(self, algorithm='floodfill', minGrainSize=10):
         """Finds grains in the DIC map.
 
         Parameters
         ----------
+        algorithm : str {'warp', 'floodfill'}
+            Use floodfill or warp algorithm.
         minGrainSize : int
-            Minimum grain area in pixels.
-
+            Minimum grain area in pixels for floodfill algorithm.
         """
         # Check a EBSD map is linked
         self.checkEbsdLinked()
 
-        # Initialise the grain map
-        self.grains = np.copy(self.boundaries)
+        if algorithm == 'warp':
+            # Warp EBSD grain map to DIC frame
+            self.grains = self.warpToDicFrame(self.ebsdMap.grains, cropImage=True,
+                                              order=0, preserve_range=True)
 
-        self.grainList = []
+            # Find all unique values (these are the EBSD grain IDs in the DIC area, sorted)
+            self.ebsdGrainIds = np.array([int(i) for i in np.unique(self.grains) if i>0])
 
-        # List of points where no grain has been set yet
-        unknownPoints = np.where(self.grains == 0)
-        numPoints = unknownPoints[0].shape[0]
-        totalPoints = numPoints
-        # Start counter for grains
-        grainIndex = 1
+            # Make a new list of sequential IDs of same length as number of grains
+            dicGrainIds = np.arange(1, len(self.ebsdGrainIds)+1)
 
-        # Loop until all points (except boundaries) have been assigned
-        # to a grain or ignored
-        while numPoints > 0:
-            # report progress
-            yield 1. - numPoints / totalPoints
+            # Map the old EBSD IDs to the new DIC IDs (keep the same mapping for negative values)
+            negVals = np.array([i for i in np.unique(self.grains) if i<0])
+            old = np.concatenate((negVals, self.ebsdGrainIds))
+            new = np.concatenate((negVals, dicGrainIds))
+            index = np.digitize(self.grains.ravel(), old, right=True)
+            self.grains = new[index].reshape(self.grains.shape)
 
-            # Flood fill first unknown point and return grain object
-            currentGrain = self.floodFill(unknownPoints[1][0], unknownPoints[0][0], grainIndex)
+            # Make grain objects
+            self.grainList = []
+            for i, (dicGrainId, ebsdGrainId) in enumerate(zip(dicGrainIds, self.ebsdGrainIds)):
+                yield i / len(dicGrainIds)          # Report progress
 
-            grainSize = len(currentGrain)
-            if grainSize < minGrainSize:
-                # if grain size less than minimum, ignore grain and set
-                # values in grain map to -2
-                for coord in currentGrain.coordList:
-                    self.grains[coord[1], coord[0]] = -2
-            else:
-                # add grain and size to lists and increment grain label
+                currentGrain = Grain(self)
+                coords = np.transpose(np.where(self.grains == dicGrainId))     # Find coordinates
+                for coord in coords:
+                    currentGrain.addPoint((coord[1], coord[0]),
+                                          self.eMaxShear[coord[0] + self.cropDists[1, 0],
+                                                         coord[1] + self.cropDists[0, 0]])
+
+                currentGrain.ebsdGrainId = ebsdGrainId - 1
+                currentGrain.ebsdGrain = self.ebsdMap.grainList[ebsdGrainId - 1]
+                currentGrain.ebsdMap = self.ebsdMap
                 self.grainList.append(currentGrain)
-                grainIndex += 1
 
-            # update unknown points
+        if algorithm == 'floodfill':
+            # Initialise the grain map
+            self.grains = np.copy(self.boundaries)
+
+            self.grainList = []
+
+            # List of points where no grain has been set yet
             unknownPoints = np.where(self.grains == 0)
             numPoints = unknownPoints[0].shape[0]
+            totalPoints = numPoints
+            # Start counter for grains
+            grainIndex = 1
 
-        # Now link grains to those in ebsd Map
-        # Warp DIC grain map to EBSD frame
-        dicGrains = self.grains
-        warpedDicGrains = tf.warp(np.ascontiguousarray(dicGrains.astype(float)), self.ebsdTransformInv,
-                                  output_shape=(self.ebsdMap.yDim, self.ebsdMap.xDim), order=0).astype(int)
+            # Loop until all points (except boundaries) have been assigned
+            # to a grain or ignored
+            while numPoints > 0:
+                # report progress
+                yield 1. - numPoints / totalPoints
 
-        # Initialise list to store ID of corresponding grain in EBSD map.
-        # Also stored in grain objects
-        self.ebsdGrainIds = []
+                # Flood fill first unknown point and return grain object
+                currentGrain = self.floodFill(unknownPoints[1][0], unknownPoints[0][0], grainIndex)
 
-        for i in range(len(self.grainList)):
-            # Find grain by masking the native ebsd grain image with
-            # selected grain from the warped dic grain image. The modal
-            # value is the EBSD grain label.
-            modeId, _ = mode(self.ebsdMap.grains[warpedDicGrains == i + 1])
+                grainSize = len(currentGrain)
+                if grainSize < minGrainSize:
+                    # if grain size less than minimum, ignore grain and set
+                    # values in grain map to -2
+                    for coord in currentGrain.coordList:
+                        self.grains[coord[1], coord[0]] = -2
+                else:
+                    # add grain and size to lists and increment grain label
+                    self.grainList.append(currentGrain)
+                    grainIndex += 1
 
-            self.ebsdGrainIds.append(modeId[0] - 1)
-            self.grainList[i].ebsdGrainId = modeId[0] - 1
-            self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
-            self.grainList[i].ebsdMap = self.ebsdMap
+                # update unknown points
+                unknownPoints = np.where(self.grains == 0)
+                numPoints = unknownPoints[0].shape[0]
+
+            # Now link grains to those in ebsd Map
+            # Warp DIC grain map to EBSD frame
+            dicGrains = self.grains
+            warpedDicGrains = tf.warp(np.ascontiguousarray(dicGrains.astype(float)), self.ebsdTransformInv,
+                                      output_shape=(self.ebsdMap.yDim, self.ebsdMap.xDim), order=0).astype(int)
+
+            # Initialise list to store ID of corresponding grain in EBSD map.
+            # Also stored in grain objects
+            self.ebsdGrainIds = []
+
+            for i in range(len(self.grainList)):
+                # Find grain by masking the native ebsd grain image with
+                # selected grain from the warped dic grain image. The modal
+                # value is the EBSD grain label.
+                modeId, _ = mode(self.ebsdMap.grains[warpedDicGrains == i + 1])
+
+                self.ebsdGrainIds.append(modeId[0] - 1)
+                self.grainList[i].ebsdGrainId = modeId[0] - 1
+                self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
+                self.grainList[i].ebsdMap = self.ebsdMap
 
     def floodFill(self, x, y, grainIndex):
         """Flood fill algorithm that uses the combined x and y boundary array 
