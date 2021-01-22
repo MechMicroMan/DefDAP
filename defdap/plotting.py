@@ -309,7 +309,6 @@ class MapPlot(Plot):
             scale = self.callingMap.scale * 1e-6
         self.ax.add_artist(ScaleBar(scale))
 
-
     def addGrainBoundaries(self, kind="pixel", boundaries=None, colour=None, 
                            dilate=False, **kwargs):
         """Add grain boundaries to the plot.
@@ -317,7 +316,7 @@ class MapPlot(Plot):
         Parameters
         ----------
         kind : str, {"pixel", "line"}
-            Type of boundaries to plot, either an a boundary image or a
+            Type of boundaries to plot, either a boundary image or a
             collection of line segments.
         boundaries : various, optional
             Boundaries to plot, either a boundary image or a list of pairs

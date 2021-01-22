@@ -347,58 +347,56 @@ class Map(object):
         """Construct a list of neighbours
 
         """
+        # create network
+        nn = nx.Graph()
+        nn.add_nodes_from(self.grainList)
+
         yLocs, xLocs = np.nonzero(self.boundaries)
         totalPoints = len(xLocs)
-        neighboursList = []
 
         for iPoint, (x, y) in enumerate(zip(xLocs, yLocs)):
             # report progress
             yield iPoint / totalPoints
 
-            if (x == 0 or y == 0
-                    or x == self.grains.shape[1] - 1
-                    or y == self.grains.shape[0] - 1):
-                # exclude boundary pixel of map
+            if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
+                    y == self.grains.shape[0] - 1):
+                # exclude boundary pixels of map
                 continue
-            else:
-                # use 4 nearest neighbour points as potential neighbour grains
-                # (this maybe needs changing considering the position of
-                # boundary pixels relative to the actual edges)
-                # use sets as they do not allow duplicate elements
-                # minus 1 on all as the grain image starts labeling at 1
-                neighbours = {
-                    self.grains[y + 1, x] - 1,
-                    self.grains[y - 1, x] - 1,
-                    self.grains[y, x + 1] - 1,
-                    self.grains[y, x - 1] - 1
-                }
-                # neighbours = set(neighbours)
-                # remove boundary points (-2) and points in small
-                # grains (-3) (Normally -1 and -2)
-                neighbours.discard(-2)
-                neighbours.discard(-3)
 
-                nunNeig = len(neighbours)
+            # use 4 nearest neighbour points as potential neighbour grains
+            # (this maybe needs changing considering the position of
+            # boundary pixels relative to the actual edges)
+            # use sets as they do not allow duplicate elements
+            # minus 1 on all as the grain image starts labeling at 1
+            neighbours = {
+                self.grains[y + 1, x] - 1,
+                self.grains[y - 1, x] - 1,
+                self.grains[y, x + 1] - 1,
+                self.grains[y, x - 1] - 1
+            }
+            # neighbours = set(neighbours)
+            # remove boundary points (-2) and points in small
+            # grains (-3) (Normally -1 and -2)
+            neighbours.discard(-2)
+            neighbours.discard(-3)
 
-                if nunNeig == 1:
-                    continue
-                elif nunNeig == 2:
-                    neighboursSplit = [neighbours]
-                elif nunNeig > 2:
-                    neighbours = list(neighbours)
-                    neighboursSplit = []
-                    for i in range(nunNeig):
-                        for j in range(i + 1, nunNeig):
-                            neighboursSplit.append({neighbours[i], neighbours[j]})
+            neighbours = tuple(neighbours)
+            nunNeig = len(neighbours)
+            if nunNeig <= 1:
+                continue
+            for i in range(nunNeig):
+                for j in range(i + 1, nunNeig):
+                    # Add  to network
+                    grain = self[neighbours[i]]
+                    neiGrain = self[neighbours[j]]
+                    try:
+                        # look up boundary
+                        nn[grain][neiGrain]
+                    except KeyError:
+                        # neighbour relation doesn't exist so add it
+                        nn.add_edge(grain, neiGrain)
 
-                for trialNeig in neighboursSplit:
-                    if trialNeig not in neighboursList:
-                        neighboursList.append(trialNeig)
-
-        # create network
-        self.neighbourNetwork = nx.Graph()
-        self.neighbourNetwork.add_nodes_from(range(len(self)))
-        self.neighbourNetwork.add_edges_from(neighboursList)
+        self.neighbourNetwork = nn
 
     def displayNeighbours(self, **kwargs):
         return self.locateGrainID(
@@ -422,26 +420,31 @@ class Map(object):
             if grainId < 0:
                 return
             self.currGrainId = grainId
+            grain = self[grainId]
 
             # find first and second nearest neighbours
-            firstNeighbours = list(self.neighbourNetwork.neighbors(self.currGrainId))
-            highlightGrains = [self.currGrainId] + firstNeighbours
+            firstNeighbours = list(self.neighbourNetwork.neighbors(grain))
+            highlightGrains = [grain] + firstNeighbours
 
             secondNeighbours = []
             for firstNeighbour in firstNeighbours:
-                trialSecondNeighbours = list(self.neighbourNetwork.neighbors(firstNeighbour))
+                trialSecondNeighbours = list(
+                    self.neighbourNetwork.neighbors(firstNeighbour)
+                )
                 for secondNeighbour in trialSecondNeighbours:
                     if (secondNeighbour not in highlightGrains and
                             secondNeighbour not in secondNeighbours):
                         secondNeighbours.append(secondNeighbour)
             highlightGrains.extend(secondNeighbours)
 
+            highlightGrains = [grain.grainID for grain in highlightGrains]
             highlightColours = ['white']
             highlightColours.extend(['yellow'] * len(firstNeighbours))
             highlightColours.append('green')
 
             # update the grain highlights layer in the plot
-            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
+            plot.addGrainHighlights(highlightGrains,
+                                    grainColours=highlightColours)
 
     @property
     def proxigram(self):
