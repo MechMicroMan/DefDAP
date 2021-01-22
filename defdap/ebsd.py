@@ -109,6 +109,9 @@ class Map(base.Map):
         self.phaseArray = None
         self.phases = []
         self.boundaries = None
+        self.boundariesX = None
+        self.boundariesY = None
+        self.boundaryLines = None
         self.phaseBoundaries = None
         self.grains = None
         self.misOri = None
@@ -753,11 +756,9 @@ class Map(base.Map):
         # than set value
         self.boundariesX = misOriX > boundDef
         self.boundariesY = misOriY > boundDef
-        # self.misOriX = misOriX
-        # self.misOriY = misOriY
+
         self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
         self.boundaries = -self.boundaries.astype(int)
-
 
         boundaryPoints = np.where(self.boundariesX)
         boundaryLinesX = []
@@ -1144,7 +1145,6 @@ class Map(base.Map):
         if self.checkGrainsDetected(raiseExc=False):
             for grain in self:
                 grain.slipSystems = self.slipSystems
-
 
     def printSlipSystems(self):
         """Print a list of slip planes (with colours) and slip directions.
