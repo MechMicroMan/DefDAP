@@ -72,6 +72,8 @@ class EBSDDataLoader(object):
             Metadata for EBSD data, including dimensions and number of phases.
 
         """
+        commentChar = ';'
+
         fileName = "{}.cpr".format(fileName)
         filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
         if not filePath.is_file():
@@ -96,11 +98,14 @@ class EBSDDataLoader(object):
                 if not line:
                     # End of file
                     break
+                if line.strip() == '' or line.strip()[0] == commentChar:
+                    # Skip comment or empty line
+                    continue
 
                 groupName = groupPat.match(line.strip()).group(1)
                 groupDict = dict()
-                readUntilComment(cprFile, commentChar='[',
-                                 lineProcess=parseLine)
+                readUntilString(cprFile, '[', commentChar=commentChar,
+                                lineProcess=parseLine)
                 metadata[groupName] = groupDict
 
         # Create phase objects and move metadata to object metadata dict
@@ -467,33 +472,38 @@ class DICDataLoader(object):
         return loadedData
 
 
-def readUntilComment(file, commentChar='*', lineProcess=None):
-    """Read lines in a file until a line starting with the comment
-    character is encounted. The file position is returned before the
-    comment line when found.
+def readUntilString(file, termString, commentChar='*', lineProcess=None):
+    """Read lines in a file until a line starting with the `termString`
+    is encounted. The file position is returned before the line starting
+    with the `termString` when found. Comment and empty lines are ignored.
 
     Parameters
     ----------
     file : file
         An open python text file object.
+    termString : str
+        String to terminate reading.
     commentChar : str
-        Character at start of a comment line.
+        Character at start of a comment line to ignore.
     lineProcess : function
         Function to apply to each line when loaded.
 
     Returns
     -------
     list
-        List of lines loaded from file then processed
+        List of processed lines loaded from file.
 
     """
     lines = []
     while True:
         currPos = file.tell()  # save position in file
         line = file.readline()
-        if not line or line[0] == commentChar:
+        if not line or line.strip().startswith(termString):
             file.seek(currPos)  # return to before prev line
             break
+        if line.strip() == '' or line.strip()[0] == commentChar:
+            # Skip comment or empty line
+            continue
         if lineProcess is not None:
             line = lineProcess(line)
         lines.append(line)
