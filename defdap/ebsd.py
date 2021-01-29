@@ -19,6 +19,7 @@ from skimage import morphology as mph
 import networkx as nx
 
 import copy
+from warnings import warn
 
 from defdap.file_readers import EBSDDataLoader
 from defdap.quat import Quat
@@ -918,7 +919,8 @@ class Map(base.Map):
         self.grainList = []
 
         # List of points where no grain has be set yet
-        unknownPoints = np.where(self.grains == 0)
+        unknownPoints = np.where(np.logical_and(self.grains == 0,
+                                                self.phaseArray != 0))
         numPoints = unknownPoints[0].shape[0]
         totalPoints = numPoints
         # Start counter for grains
@@ -947,8 +949,24 @@ class Map(base.Map):
                 grainIndex += 1
 
             # update unknown points
-            unknownPoints = np.where(self.grains == 0)
+            unknownPoints = np.where(np.logical_and(self.grains == 0,
+                                                    self.phaseArray != 0))
             numPoints = unknownPoints[0].shape[0]
+
+        # Assign phase to each grain
+        for grain in self:
+            phaseVals = grain.grainData(self.phaseArray)
+            if np.max(phaseVals) != np.min(phaseVals):
+                warn(f"Grain {grain.grainID} could not be assigned a "
+                     f"phase, phase vals not constant.")
+                continue
+            phaseID = phaseVals[0] - 1
+            if not (0 <= phaseID < self.numPhases):
+                warn(f"Grain {grain.grainID} could not be assigned a "
+                     f"phase, invalid phase {phaseID}.")
+                continue
+            grain.phaseID = phaseID
+            grain.phase = self.phases[phaseID]
 
     def plotGrainMap(self, **kwargs):
         """Plot a map with grains coloured.
