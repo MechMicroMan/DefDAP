@@ -152,24 +152,17 @@ class Map(base.Map):
             Format of EBSD data file.
 
         """
-        if dataType is None:
-            dataType = "OxfordBinary"
+        dataLoader = EBSDDataLoader.getLoader(dataType)
+        dataLoader.load(fileName)
 
-        dataLoader = EBSDDataLoader()
-        if dataType == "OxfordBinary":
-            metadataDict = dataLoader.loadOxfordCPR(fileName)
-            dataDict = dataLoader.loadOxfordCRC(fileName)
-        elif dataType == "OxfordText":
-            metadataDict, dataDict = dataLoader.loadOxfordCTF(fileName)
-        else:
-            raise Exception("No loader found for this EBSD data.")
-
+        metadataDict = dataLoader.loadedMetadata
         self.xDim = metadataDict['xDim']
         self.yDim = metadataDict['yDim']
         self.stepSize = metadataDict['stepSize']
         self.numPhases = metadataDict['numPhases']
         self.phases = metadataDict['phases']
 
+        dataDict = dataLoader.loadedData
         self.eulerAngleArray = dataDict['eulerAngle']
         self.bandContrastArray = dataDict['bandContrast']
         self.phaseArray = dataDict['phase']

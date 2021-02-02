@@ -36,11 +36,25 @@ class EBSDDataLoader(object):
             'phases': []
         }
         self.loadedData = {
+            'phase': None,
             'eulerAngle': None,
-            'bandContrast': None,
-            'phase': None
+            'bandContrast': None
         }
         self.dataFormat = None
+
+    @staticmethod
+    def getLoader(dataType):
+        if dataType is None:
+            dataType = "OxfordBinary"
+
+        if dataType == "OxfordBinary":
+            return OxfordBinaryLoader()
+        elif dataType == "OxfordText":
+            return OxfordTextLoader()
+        elif dataType == "PythonDict":
+            return PythonDictLoader()
+        else:
+            raise ValueError(f"No loader for EBSD data of type {dataType}.")
 
     def checkMetadata(self):
         """
@@ -51,163 +65,29 @@ class EBSDDataLoader(object):
         if len(self.loadedMetadata['phases']) != self.loadedMetadata['numPhases']:
             raise ValueError("Number of phases mismatch.")
 
-    def checkData(self, binData):
-        return
+        for phase in self.loadedMetadata['phases']:
+            assert type(phase) is Phase
 
-    def loadOxfordCPR(self, fileName, fileDir=""):
-        """
-        Read an Oxford Instruments .cpr file, which is a metadata file
-        describing EBSD data.
+    def checkData(self):
+        mapShape = (self.loadedMetadata['yDim'], self.loadedMetadata['xDim'])
 
-        Parameters
-        ----------
-        fileName : str
-            File name.
-        fileDir : str
-            Path to file.
+        assert self.loadedData['phase'].shape == mapShape
+        assert self.loadedData['eulerAngle'].shape == (3,) + mapShape
+        assert self.loadedData['bandContrast'].shape == mapShape
 
-        Returns
-        -------
-        dict
-            Metadata for EBSD data, including dimensions and number of phases.
+    @staticmethod
+    def laueGroupLookup(laueGroup):
+        if laueGroup == 11:
+            return crystalStructures['cubic']
+        elif laueGroup == 9:
+            return crystalStructures['hexagonal']
 
-        """
-        commentChar = ';'
+        raise ValueError("Only cubic and hexagonal crystal structures "
+                         "are currently supported.")
 
-        fileName = "{}.cpr".format(fileName)
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        # CPR file is split into groups, load each group into a
-        # hierarchical dict
-
-        metadata = dict()
-        groupPat = re.compile("\[(.+)\]")
-
-        def parseLine(line):
-            try:
-                key, val = line.strip().split('=')
-                groupDict[key] = val
-            except ValueError:
-                pass
-
-        with open(str(filePath), 'r') as cprFile:
-            while True:
-                line = cprFile.readline()
-                if not line:
-                    # End of file
-                    break
-                if line.strip() == '' or line.strip()[0] == commentChar:
-                    # Skip comment or empty line
-                    continue
-
-                groupName = groupPat.match(line.strip()).group(1)
-                groupDict = dict()
-                readUntilString(cprFile, '[', commentChar=commentChar,
-                                lineProcess=parseLine)
-                metadata[groupName] = groupDict
-
-        # Create phase objects and move metadata to object metadata dict
-
-        self.loadedMetadata['xDim'] = int(metadata['Job']['xCells'])
-        self.loadedMetadata['yDim'] = int(metadata['Job']['yCells'])
-        self.loadedMetadata['stepSize'] = float(metadata['Job']['GridDistX'])
-        self.loadedMetadata['acquisitionRotation'] = Quat.fromEulerAngles(
-            float(metadata['Acquisition Surface']['Euler1']) * np.pi / 180.,
-            float(metadata['Acquisition Surface']['Euler2']) * np.pi / 180.,
-            float(metadata['Acquisition Surface']['Euler3']) * np.pi / 180.
-        )
-        self.loadedMetadata['numPhases'] = int(metadata['Phases']['Count'])
-
-        for i in range(self.loadedMetadata['numPhases']):
-            phaseMetadata = metadata['Phase{:}'.format(i+1)]
-            self.loadedMetadata['phases'].append(Phase(
-                phaseMetadata['StructureName'],
-                EBSDDataLoader.laueGroupLookup(int(phaseMetadata['LaueGroup'])),
-                (
-                    float(phaseMetadata['a']),
-                    float(phaseMetadata['b']),
-                    float(phaseMetadata['c']),
-                    float(phaseMetadata['alpha']),
-                    float(phaseMetadata['beta']),
-                    float(phaseMetadata['gamma'])
-                )
-            ))
-
-        self.checkMetadata()
-
-        # Construct binary data format from listed fields
-
-        dataFormat = [('phase', 'uint8')]
-        fieldLookup = {
-            3: ('ph1', 'float32'),
-            4: ('phi', 'float32'),
-            5: ('ph2', 'float32'),
-            6: ('MAD', 'float32'),  # Mean Angular Deviation
-            7: ('BC', 'uint8'),     # Band Contrast
-            8: ('BS', 'uint8'),     # Band Slope
-            10: ('numBands', 'uint8'),
-            11: ('AFI', 'uint8'),   # Advanced Fit index. legacy
-            12: ('IB6', 'float32')  # ?
-        }
-        try:
-            for i in range(int(metadata['Fields']['Count'])):
-                fieldID = int(metadata['Fields']['Field{:}'.format(i+1)])
-                dataFormat.append(fieldLookup[fieldID])
-        except KeyError:
-            raise TypeError("Unknown data in EBSD file.")
-
-        self.dataFormat = np.dtype(dataFormat)
-
-        return self.loadedMetadata
-
-    def loadOxfordCRC(self, fileName, fileDir=""):
-        """Read binary EBSD data from an Oxford Instruments .crc file
-
-        Parameters
-        ----------
-        fileName : str
-            File name.
-        fileDir : str
-            Path to file.
-
-        Returns
-        -------
-        dict
-            EBSD data including phase, MAD and euler angle arrays.
-
-        """
-        xDim = self.loadedMetadata['xDim']
-        yDim = self.loadedMetadata['yDim']
-
-        fileName = "{}.crc".format(fileName)
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
-
-        # laod binary data from file
-        binData = np.fromfile(str(filePath), self.dataFormat, count=-1)
-
-        self.checkData(binData)
-
-        self.loadedData['bandContrast'] = np.reshape(
-            binData['BC'], (yDim, xDim)
-        )
-        self.loadedData['phase'] = np.reshape(
-            binData['phase'], (yDim, xDim)
-        )
-        eulerAngles = np.reshape(
-            binData[['ph1', 'phi', 'ph2']], (yDim, xDim)
-        )
-        # flatten the structures so that the Euler angles are stored
-        # into a normal array
-        eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
-        self.loadedData['eulerAngle'] = eulerAngles
-
-        return self.loadedData
-
-    def loadOxfordCTF(self, fileName, fileDir=""):
+class OxfordTextLoader(EBSDDataLoader):
+    def load(self, fileName, fileDir=""):
         """ Read an Oxford Instruments .ctf file, which is a HKL single orientation file.
 
         Parameters
@@ -223,7 +103,6 @@ class EBSDDataLoader(object):
             EBSD metadata and EBSD data.
 
         """
-
         # open data file and read in metadata
         fileName = "{}.ctf".format(fileName)
         filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
@@ -310,8 +189,6 @@ class EBSDDataLoader(object):
             skiprows=numHeaderLines
         )
 
-        self.checkData(binData)
-
         self.loadedData['bandContrast'] = np.reshape(
             binData['BC'], (yDim, xDim)
         )
@@ -326,17 +203,194 @@ class EBSDDataLoader(object):
         eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
         self.loadedData['eulerAngle'] = eulerAngles * np.pi / 180.
 
-        return self.loadedMetadata, self.loadedData
+        self.checkData()
 
-    @staticmethod
-    def laueGroupLookup(laueGroup):
-        if laueGroup == 11:
-            return crystalStructures['cubic']
-        elif laueGroup == 9:
-            return crystalStructures['hexagonal']
 
-        raise ValueError("Only cubic and hexagonal crystal structures "
-                         "are currently supported.")
+class OxfordBinaryLoader(EBSDDataLoader):
+    def load(self, fileName, fileDir=""):
+        self.loadOxfordCPR(fileName, fileDir=fileDir)
+        self.loadOxfordCRC(fileName, fileDir=fileDir)
+
+    def loadOxfordCPR(self, fileName, fileDir=""):
+        """
+        Read an Oxford Instruments .cpr file, which is a metadata file
+        describing EBSD data.
+
+        Parameters
+        ----------
+        fileName : str
+            File name.
+        fileDir : str
+            Path to file.
+
+        Returns
+        -------
+        dict
+            Metadata for EBSD data, including dimensions and number of phases.
+
+        """
+        commentChar = ';'
+
+        fileName = "{}.cpr".format(fileName)
+        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
+        if not filePath.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(filePath))
+
+        # CPR file is split into groups, load each group into a
+        # hierarchical dict
+
+        metadata = dict()
+        groupPat = re.compile("\[(.+)\]")
+
+        def parseLine(line):
+            try:
+                key, val = line.strip().split('=')
+                groupDict[key] = val
+            except ValueError:
+                pass
+
+        with open(str(filePath), 'r') as cprFile:
+            while True:
+                line = cprFile.readline()
+                if not line:
+                    # End of file
+                    break
+                if line.strip() == '' or line.strip()[0] == commentChar:
+                    # Skip comment or empty line
+                    continue
+
+                groupName = groupPat.match(line.strip()).group(1)
+                groupDict = dict()
+                readUntilString(cprFile, '[', commentChar=commentChar,
+                                lineProcess=parseLine)
+                metadata[groupName] = groupDict
+
+        # Create phase objects and move metadata to object metadata dict
+
+        self.loadedMetadata['xDim'] = int(metadata['Job']['xCells'])
+        self.loadedMetadata['yDim'] = int(metadata['Job']['yCells'])
+        self.loadedMetadata['stepSize'] = float(metadata['Job']['GridDistX'])
+        self.loadedMetadata['acquisitionRotation'] = Quat.fromEulerAngles(
+            float(metadata['Acquisition Surface']['Euler1']) * np.pi / 180.,
+            float(metadata['Acquisition Surface']['Euler2']) * np.pi / 180.,
+            float(metadata['Acquisition Surface']['Euler3']) * np.pi / 180.
+        )
+        self.loadedMetadata['numPhases'] = int(metadata['Phases']['Count'])
+
+        for i in range(self.loadedMetadata['numPhases']):
+            phaseMetadata = metadata['Phase{:}'.format(i + 1)]
+            self.loadedMetadata['phases'].append(Phase(
+                phaseMetadata['StructureName'],
+                EBSDDataLoader.laueGroupLookup(
+                    int(phaseMetadata['LaueGroup'])),
+                (
+                    float(phaseMetadata['a']),
+                    float(phaseMetadata['b']),
+                    float(phaseMetadata['c']),
+                    float(phaseMetadata['alpha']),
+                    float(phaseMetadata['beta']),
+                    float(phaseMetadata['gamma'])
+                )
+            ))
+
+        self.checkMetadata()
+
+        # Construct binary data format from listed fields
+
+        dataFormat = [('phase', 'uint8')]
+        fieldLookup = {
+            3: ('ph1', 'float32'),
+            4: ('phi', 'float32'),
+            5: ('ph2', 'float32'),
+            6: ('MAD', 'float32'),  # Mean Angular Deviation
+            7: ('BC', 'uint8'),  # Band Contrast
+            8: ('BS', 'uint8'),  # Band Slope
+            10: ('numBands', 'uint8'),
+            11: ('AFI', 'uint8'),  # Advanced Fit index. legacy
+            12: ('IB6', 'float32')  # ?
+        }
+        try:
+            for i in range(int(metadata['Fields']['Count'])):
+                fieldID = int(metadata['Fields']['Field{:}'.format(i + 1)])
+                dataFormat.append(fieldLookup[fieldID])
+        except KeyError:
+            raise TypeError("Unknown data in EBSD file.")
+
+        self.dataFormat = np.dtype(dataFormat)
+
+    def loadOxfordCRC(self, fileName, fileDir=""):
+        """Read binary EBSD data from an Oxford Instruments .crc file
+
+        Parameters
+        ----------
+        fileName : str
+            File name.
+        fileDir : str
+            Path to file.
+
+        Returns
+        -------
+        dict
+            EBSD data including phase, MAD and euler angle arrays.
+
+        """
+        xDim = self.loadedMetadata['xDim']
+        yDim = self.loadedMetadata['yDim']
+
+        fileName = "{}.crc".format(fileName)
+        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
+        if not filePath.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(filePath))
+
+        # laod binary data from file
+        binData = np.fromfile(str(filePath), self.dataFormat, count=-1)
+
+        self.loadedData['bandContrast'] = np.reshape(
+            binData['BC'], (yDim, xDim)
+        )
+        self.loadedData['phase'] = np.reshape(
+            binData['phase'], (yDim, xDim)
+        )
+        eulerAngles = np.reshape(
+            binData[['ph1', 'phi', 'ph2']], (yDim, xDim)
+        )
+        # flatten the structures so that the Euler angles are stored
+        # into a normal array
+        eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
+        self.loadedData['eulerAngle'] = eulerAngles
+
+        self.checkData()
+
+
+class PythonDictLoader(EBSDDataLoader):
+    def load(self, dataDict):
+        """Construct EBSD data from a python dictionary.
+
+        Parameters
+        ----------
+        dataDict : dict
+            Dictionary with keys:
+                'stepSize'
+                'phases'
+                'phase'
+                'eulerAngle'
+                'bandContrast'
+
+        """
+        self.loadedMetadata['xDim'] = dataDict['phase'].shape[1]
+        self.loadedMetadata['yDim'] = dataDict['phase'].shape[0]
+        self.loadedMetadata['stepSize'] = dataDict['stepSize']
+        assert type(dataDict['phases']) is list
+        self.loadedMetadata['phases'] = dataDict['phases']
+        self.loadedMetadata['numPhases'] = len(dataDict['phases'])
+
+        self.checkMetadata()
+
+        self.loadedData['phase'] = dataDict['phase']
+        self.loadedData['eulerAngle'] = dataDict['eulerAngle']
+        self.loadedData['bandContrast'] = dataDict['bandContrast']
+
+        self.checkData()
 
 
 class DICDataLoader(object):
