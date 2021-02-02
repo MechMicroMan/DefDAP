@@ -699,8 +699,8 @@ class Map(base.Map):
             Critical misorientation.
 
         """
-        # TODO: should also use phase boundaries as grain boundaries
         # TODO: what happens with non-indexed points
+        # TODO: grain boundaries should be calculated per crystal structure
         syms = self.primaryPhase.crystalStructure.symmetries
         numSyms = len(syms)
 
@@ -757,6 +757,17 @@ class Map(base.Map):
         # than set value
         self.boundariesX = misOriX > boundDef
         self.boundariesY = misOriY > boundDef
+
+        # add in phase boundaries
+        phaseBoundariesX = np.not_equal(self.phaseArray,
+                                        np.roll(self.phaseArray, -1, axis=1))
+        phaseBoundariesX[:, -1] = False
+        self.boundariesX = np.logical_or(self.boundariesX, phaseBoundariesX)
+
+        phaseBoundariesY = np.not_equal(self.phaseArray,
+                                        np.roll(self.phaseArray, -1, axis=0))
+        phaseBoundariesY[-1, :] = False
+        self.boundariesY = np.logical_or(self.boundariesY, phaseBoundariesY)
 
         self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
         self.boundaries = -self.boundaries.astype(int)
@@ -914,7 +925,8 @@ class Map(base.Map):
         # TODO: grains need to be assigned a phase
         # Initialise the grain map
         # TODO: Look at grain map compared to boundary map
-        self.grains = np.copy(self.boundaries)
+        # self.grains = np.copy(self.boundaries)
+        self.grains = np.zeros_like(self.boundaries)
 
         self.grainList = []
 
