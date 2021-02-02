@@ -1320,13 +1320,11 @@ class Grain(base.Grain):
     # slip systems accessed from the phase
     def __init__(self, grainID, ebsdMap):
         # Call base class constructor
-        super(Grain, self).__init__()
+        super(Grain, self).__init__(grainID, ebsdMap)
 
         self.crystalSym = ebsdMap.crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
         self.slipSystems = ebsdMap.slipSystems
-        self.grainID = grainID
-        self.ebsdMap = ebsdMap                  # ebsd map this grain is a member of
-        self.ownerMap = ebsdMap
+        self.ebsdMap = self.ownerMap            # ebsd map this grain is a member of
         self.quatList = []                      # list of quats
         self.misOriList = None                  # list of misOri at each point in grain
         self.misOriAxisList = None              # list of misOri axes at each point in grain

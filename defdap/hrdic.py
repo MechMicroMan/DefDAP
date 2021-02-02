@@ -959,17 +959,15 @@ class Grain(base.Grain):
     """
     def __init__(self, grainID, dicMap):
         # Call base class constructor
-        super(Grain, self).__init__()
+        super(Grain, self).__init__(grainID, dicMap)
 
-        self.grainID = grainID
-        self.dicMap = dicMap        # DIC map this grain is a member of
-        self.ownerMap = dicMap
+        self.dicMap = self.ownerMap     # DIC map this grain is a member of
         self.maxShearList = []
         self.ebsdGrain = None
         self.ebsdMap = None
 
-        self.pointsList = []        # Lines drawn for STA
-        self.groupsList = []        # Unique angles drawn for STA
+        self.pointsList = []            # Lines drawn for STA
+        self.groupsList = []            # Unique angles drawn for STA
 
     @property
     def plotDefault(self):

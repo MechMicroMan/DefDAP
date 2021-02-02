@@ -713,13 +713,18 @@ class Grain(object):
     """
     Base class for a grain.
     """
-    def __init__(self):
+    def __init__(self, grainID, ownerMap):
         # list of coords stored as tuples (x, y). These are coords in a
         # cropped image if crop exists.
+        self.grainID = grainID
+        self.ownerMap = ownerMap
         self.coordList = []
 
     def __len__(self):
         return len(self.coordList)
+
+    def __str__(self):
+        return f"Grain(ID={self.grainID})"
 
     @property
     def extremeCoords(self):
