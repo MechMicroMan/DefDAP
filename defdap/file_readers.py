@@ -342,7 +342,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        # laod binary data from file
+        # load binary data from file
         binData = np.fromfile(str(filePath), self.dataFormat, count=-1)
 
         self.loadedData['bandContrast'] = np.reshape(

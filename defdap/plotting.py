@@ -1466,10 +1466,10 @@ class CrystalPlot(Plot):
         """
         # Set default plot parameters then update with any input
         plotParams = {
-            'alpha' : 0.6,
-            'facecolor' : '0.8',
-            'linewidths' : 3,
-            'edgecolor' : 'k'
+            'alpha': 0.6,
+            'facecolor': '0.8',
+            'linewidths': 3,
+            'edgecolor': 'k'
         }
         plotParams.update(kwargs)
 

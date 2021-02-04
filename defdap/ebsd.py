@@ -256,11 +256,13 @@ class Map(base.Map):
 
         return plot
 
-    def plotEulerMap(self, **kwargs):
+    def plotEulerMap(self, phases=None, **kwargs):
         """Plot an orientation map in Euler colouring
 
         Parameters
         ----------
+        phases : list of int
+            Which phases to plot for
         kwargs
             All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
 
@@ -272,30 +274,33 @@ class Map(base.Map):
         self.checkDataLoaded()
 
         # Set default plot parameters then update with any input
-        plotParams = {}
-        plotParams.update(kwargs)
+        plot_params = {}
+        plot_params.update(kwargs)
 
-        eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
-        # this is the normalisation - different foreach crystal symmetry!
-        if self.crystalSym == 'cubic':
-            norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]),
-                           (self.yDim, self.xDim))
-            norm = np.reshape(norm, (self.yDim, self.xDim, 3))
-        elif self.crystalSym == 'hexagonal':
-            norm = np.tile(np.array([np.pi, np.pi, np.pi / 3]),
-                           (self.yDim, self.xDim))
-            norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+        if phases is None:
+            phases = self.phases
+            phase_ids = range(len(phases))
         else:
-            Exception("Only hexagonal and cubic symGroup supported")
-        # make non-indexed points green
-        eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
-        eulerMap /= norm
+            phase_ids = phases
+            phases = [self.phases[i] for i in phase_ids]
 
-        plot = MapPlot.create(self, eulerMap, **plotParams)
+        map_colours = np.zeros(self.shape + (3,))
 
-        return plot
+        for phase, phase_id in zip(phases, phase_ids):
+            if phase.crystalStructure.name == 'cubic':
+                norm = np.array([2 * np.pi, np.pi / 2, np.pi / 2])
+            elif phase.crystalStructure.name == 'hexagonal':
+                norm = np.array([np.pi, np.pi, np.pi / 3])
+            else:
+                ValueError("Only hexagonal and cubic symGroup supported")
 
-    def plotIPFMap(self, direction, **kwargs):
+            # Apply normalisation for each phase
+            phase_mask = self.phaseArray == phase_id + 1
+            map_colours[phase_mask] = self.eulerAngleArray[:, phase_mask].T / norm
+
+        return MapPlot.create(self, map_colours, **plot_params)
+
+    def plotIPFMap(self, direction, phases=None, **kwargs):
         """
         Plot a map with points coloured in IPF colouring,
         with respect to a given sample direction.
@@ -304,6 +309,8 @@ class Map(base.Map):
         ----------
         direction : np.array len 3
             Sample directiom.
+        phases : list of int
+            Which phases to plot for
         kwargs
             Other arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
@@ -313,25 +320,28 @@ class Map(base.Map):
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {}
-        plotParams.update(kwargs)
+        plot_params = {}
+        plot_params.update(kwargs)
 
-        # calculate IPF colours
-        IPFcolours = Quat.calcIPFcolours(
-            self.quatArray.flatten(),
-            direction,
-            self.crystalSym
-        )
+        if phases is None:
+            phases = self.phases
+            phase_ids = range(len(phases))
+        else:
+            phase_ids = phases
+            phases = [self.phases[i] for i in phase_ids]
 
-        # reshape back to map shape array
-        IPFcolours = np.reshape(IPFcolours.T, (self.yDim, self.xDim, 3))
+        map_colours = np.zeros(self.shape + (3,))
 
-        # make non-indexed points NaN
-        IPFcolours[self.phaseArray == 0, :] = np.nan
+        for phase, phase_id in zip(phases, phase_ids):
+            # calculate IPF colours for phase
+            phase_mask = self.phaseArray == phase_id + 1
+            map_colours[phase_mask] = Quat.calcIPFcolours(
+                self.quatArray[phase_mask],
+                direction,
+                phase.crystalStructure.name
+            ).T
 
-        plot = MapPlot.create(self, IPFcolours, **plotParams)
-
-        return plot
+        return MapPlot.create(self, map_colours, **plot_params)
 
     def plotPhaseMap(self, **kwargs):
         """Plot a phase map.
