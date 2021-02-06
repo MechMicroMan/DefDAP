@@ -177,10 +177,7 @@ class Map(base.Map):
         # crop distances (default all zeros)
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
 
-    @property
-    def plotDefault(self):
-        # return self.plotMaxShear(plotGBs=True, *args, **kwargs)
-        return lambda *args, **kwargs: self.plotMaxShear(plotGBs=True, *args, **kwargs)
+        self.plotDefault = lambda *args, **kwargs: self.plotMaxShear(plotGBs=True, *args, **kwargs)
 
     @property
     def crystalSym(self):

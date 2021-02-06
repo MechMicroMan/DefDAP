@@ -131,14 +131,10 @@ class Map(base.Map):
 
         # Use euler map for defining homologous points
         self.plotHomog = self.plotEulerMap
+        self.plotDefault = self.plotEulerMap
         self.highlightAlpha = 1
 
         self.loadData(fileName, dataType=dataType)
-
-    @property
-    def plotDefault(self):
-        # return self.plotEulerMap(*args, **kwargs)
-        return lambda *args, **kwargs: self.plotEulerMap(*args, **kwargs)
 
     @reportProgress("loading EBSD data")
     def loadData(self, fileName, dataType=None):
