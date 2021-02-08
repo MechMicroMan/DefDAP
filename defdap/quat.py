@@ -523,7 +523,7 @@ class Quat(object):
                 quat = Quat.fromEulerAngles(*eulerAngles)
 
         elif symGroup == 'cubic':
-            szFac = 0.3
+            szFac = 0.25
 
         # Rotate the lattice cell points
         gg = quat.rotMatrix().T

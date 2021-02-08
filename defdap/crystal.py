@@ -22,7 +22,7 @@ from defdap.quat import Quat
 
 
 class Phase(object):
-    def __init__(self, name, crystalStructure, latticeParams,
+    def __init__(self, name, laueGroup, latticeParams,
                  slipSystems=None):
         """
         Parameters
@@ -37,9 +37,13 @@ class Phase(object):
             Slip systems available in the phase
         """
         self.name = name
-        self.crystalStructure = crystalStructure
+        self.laueGroup = laueGroup
         self.latticeParams = latticeParams
         self.slipSystems = slipSystems
+        self.crystalStructure = {
+            9: crystalStructures['hexagonal'],
+            11: crystalStructures['cubic'],
+        }[laueGroup]
 
     def __str__(self):
         text = "Phase: {:}\n  Crystal structure: {:}\n  Lattice params: " \

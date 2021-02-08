@@ -18,7 +18,7 @@ import pandas as pd
 import pathlib
 import re
 
-from defdap.crystal import Phase, crystalStructures
+from defdap.crystal import Phase
 from defdap.quat import Quat
 
 
@@ -75,16 +75,6 @@ class EBSDDataLoader(object):
         assert self.loadedData['eulerAngle'].shape == (3,) + mapShape
         assert self.loadedData['bandContrast'].shape == mapShape
 
-    @staticmethod
-    def laueGroupLookup(laueGroup):
-        if laueGroup == 11:
-            return crystalStructures['cubic']
-        elif laueGroup == 9:
-            return crystalStructures['hexagonal']
-
-        raise ValueError("Only cubic and hexagonal crystal structures "
-                         "are currently supported.")
-
 
 class OxfordTextLoader(EBSDDataLoader):
     def load(self, fileName, fileDir=""):
@@ -111,11 +101,14 @@ class OxfordTextLoader(EBSDDataLoader):
 
         def parsePhase():
             lineSplit = line.split('\t')
-            latticeParams = lineSplit[0].split(';') + lineSplit[1].split(';')
-            latticeParams = tuple(float(val) for val in latticeParams)
+            dims = lineSplit[0].split(';')
+            dims = tuple(round(float(s), 3) for s in dims)
+            angles = lineSplit[1].split(';')
+            angles = tuple(round(float(s), 3) * np.pi / 180 for s in angles)
+            latticeParams = dims + angles
             phase = Phase(
                 lineSplit[2],
-                EBSDDataLoader.laueGroupLookup(int(lineSplit[3])),
+                int(lineSplit[3]),
                 latticeParams
             )
             return phase
@@ -281,15 +274,14 @@ class OxfordBinaryLoader(EBSDDataLoader):
             phaseMetadata = metadata['Phase{:}'.format(i + 1)]
             self.loadedMetadata['phases'].append(Phase(
                 phaseMetadata['StructureName'],
-                EBSDDataLoader.laueGroupLookup(
-                    int(phaseMetadata['LaueGroup'])),
+                int(phaseMetadata['LaueGroup']),
                 (
-                    float(phaseMetadata['a']),
-                    float(phaseMetadata['b']),
-                    float(phaseMetadata['c']),
-                    float(phaseMetadata['alpha']),
-                    float(phaseMetadata['beta']),
-                    float(phaseMetadata['gamma'])
+                    round(float(phaseMetadata['a']), 3),
+                    round(float(phaseMetadata['b']), 3),
+                    round(float(phaseMetadata['c']), 3),
+                    round(float(phaseMetadata['alpha']), 3) * np.pi / 180,
+                    round(float(phaseMetadata['beta']), 3) * np.pi / 180,
+                    round(float(phaseMetadata['gamma']), 3) * np.pi / 180
                 )
             ))
 
