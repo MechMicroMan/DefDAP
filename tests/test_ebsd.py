@@ -31,16 +31,23 @@ def good_quat_array(good_map_with_quats):
     return good_map_with_quats.quatArray
 
 
+@pytest.fixture(scope="module")
+def good_phase_array(good_map_with_quats):
+    return good_map_with_quats.phaseArray
+
+
 class TestMapFindBoundaries:
-    # Depends on Quat.symEqv, self.crystalSym, self.yDim, self.xDim, self.quatArray
+    # Depends on Quat.symEqv, self.crystalSym, self.yDim, self.xDim,
+    # self.quatArray, self.phaseArray
     # Affects self.boundaries
 
     @staticmethod
     @pytest.fixture
-    def mock_map(good_quat_array):
+    def mock_map(good_quat_array, good_phase_array):
         # create stub object
         mock_map = Mock(spec=ebsd.Map)
         mock_map.quatArray = good_quat_array
+        mock_map.phaseArray = good_phase_array
         mock_map.yDim, mock_map.xDim = good_quat_array.shape
         mock_phase = Mock(spec=crystal.Phase)
         mock_phase.crystalStructure = crystal.crystalStructures['cubic']

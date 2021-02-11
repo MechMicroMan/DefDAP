@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 
 import defdap.file_readers
-from defdap.crystal import crystalStructures
+from defdap.crystal import crystalStructures, Phase
 
 DATA_DIR = "tests/data/"
 EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
@@ -13,41 +13,45 @@ class TestEBSDDataLoader:
 
     @staticmethod
     @pytest.fixture
-    def data_loader():
-        return defdap.file_readers.EBSDDataLoader()
+    def data_loader_oxford_binary():
+        return defdap.file_readers.OxfordBinaryLoader()
 
     @staticmethod
     @pytest.fixture
-    def metadata_loaded(data_loader):
-        data_loader.loadOxfordCPR(EXAMPLE_EBSD)
-        return data_loader
+    def metadata_loaded_oxford_binary(data_loader_oxford_binary):
+        data_loader_oxford_binary.loadOxfordCPR(EXAMPLE_EBSD)
+        return data_loader_oxford_binary
 
     @staticmethod
-    def test_init(data_loader):
-        assert isinstance(data_loader.loadedMetadata, dict)
-        assert isinstance(data_loader.loadedData, dict)
+    def test_init(data_loader_oxford_binary):
+        assert isinstance(data_loader_oxford_binary.loadedMetadata, dict)
+        assert isinstance(data_loader_oxford_binary.loadedData, dict)
 
     @staticmethod
-    def test_check_metadata_good(data_loader):
+    def test_check_metadata_good(data_loader_oxford_binary):
         """The check_metadata method should pass silently if phaseNames
         and numPhases match."""
-        data_loader.loadedMetadata["phases"] = ["1", "2", "3"]
-        data_loader.loadedMetadata["numPhases"] = 3
-        assert data_loader.checkMetadata() is None
+        data_loader_oxford_binary.loadedMetadata["phases"] = [
+            Phase("test", 9, ()),
+            Phase("tester", 11, ()),
+            Phase("testist", 11, ()),
+        ]
+        data_loader_oxford_binary.loadedMetadata["numPhases"] = 3
+        assert data_loader_oxford_binary.checkMetadata() is None
 
     @staticmethod
-    def test_check_metadata_bad(data_loader):
+    def test_check_metadata_bad(data_loader_oxford_binary):
         """The check_metadata method should fail if phaseNames and
         numPhases do not match."""
-        data_loader.loadedMetadata["phases"] = ["1", "2"]
-        data_loader.loadedMetadata["numPhases"] = 3
+        data_loader_oxford_binary.loadedMetadata["phases"] = ["1", "2"]
+        data_loader_oxford_binary.loadedMetadata["numPhases"] = 3
         with pytest.raises(ValueError):
-            data_loader.checkMetadata()
+            data_loader_oxford_binary.checkMetadata()
 
     @staticmethod
-    def test_load_oxford_cpr_good_file(data_loader):
-        data_loader.loadOxfordCPR(EXAMPLE_EBSD)
-        metadata = data_loader.loadedMetadata
+    def test_load_oxford_cpr_good_file(data_loader_oxford_binary):
+        data_loader_oxford_binary.loadOxfordCPR(EXAMPLE_EBSD)
+        metadata = data_loader_oxford_binary.loadedMetadata
         assert metadata["xDim"] == 359
         assert metadata["yDim"] == 243
         # Testing for floating point equality so use approx
@@ -61,35 +65,35 @@ class TestEBSDDataLoader:
         loaded_phase = metadata["phases"][0]
         assert loaded_phase.name == "Ni-superalloy"
         assert loaded_phase.latticeParams == \
-               pytest.approx((3.57, 3.57, 3.57, 90., 90., 90.))
+               pytest.approx((3.57, 3.57, 3.57, np.pi/2, np.pi/2, np.pi/2))
         assert loaded_phase.crystalStructure is crystalStructures['cubic']
 
     @staticmethod
-    def test_load_oxford_cpr_bad_file(data_loader):
+    def test_load_oxford_cpr_bad_file(data_loader_oxford_binary):
         with pytest.raises(FileNotFoundError):
-            data_loader.loadOxfordCPR("badger")
+            data_loader_oxford_binary.loadOxfordCPR("badger")
 
     @staticmethod
-    def test_load_oxford_crc_good_file(metadata_loaded):
-        metadata_loaded.loadOxfordCRC(EXAMPLE_EBSD)
-        x_dim = metadata_loaded.loadedMetadata["xDim"]
-        y_dim = metadata_loaded.loadedMetadata["yDim"]
-        assert isinstance(metadata_loaded.loadedData['bandContrast'], np.ndarray)
-        assert metadata_loaded.loadedData['bandContrast'].shape == (y_dim, x_dim)
-        assert isinstance(metadata_loaded.loadedData['bandContrast'][0, 0], np.uint8)
+    def test_load_oxford_crc_good_file(metadata_loaded_oxford_binary):
+        metadata_loaded_oxford_binary.loadOxfordCRC(EXAMPLE_EBSD)
+        x_dim = metadata_loaded_oxford_binary.loadedMetadata["xDim"]
+        y_dim = metadata_loaded_oxford_binary.loadedMetadata["yDim"]
+        assert isinstance(metadata_loaded_oxford_binary.loadedData['bandContrast'], np.ndarray)
+        assert metadata_loaded_oxford_binary.loadedData['bandContrast'].shape == (y_dim, x_dim)
+        assert isinstance(metadata_loaded_oxford_binary.loadedData['bandContrast'][0, 0], np.uint8)
 
-        assert isinstance(metadata_loaded.loadedData['phase'], np.ndarray)
-        assert metadata_loaded.loadedData['phase'].shape == (y_dim, x_dim)
-        assert isinstance(metadata_loaded.loadedData['phase'][0, 0], np.uint8)
+        assert isinstance(metadata_loaded_oxford_binary.loadedData['phase'], np.ndarray)
+        assert metadata_loaded_oxford_binary.loadedData['phase'].shape == (y_dim, x_dim)
+        assert isinstance(metadata_loaded_oxford_binary.loadedData['phase'][0, 0], np.uint8)
 
-        assert isinstance(metadata_loaded.loadedData['eulerAngle'], np.ndarray)
-        assert metadata_loaded.loadedData['eulerAngle'].shape == (3, y_dim, x_dim)
-        assert isinstance(metadata_loaded.loadedData['eulerAngle'][0, 0, 0], np.float64)
+        assert isinstance(metadata_loaded_oxford_binary.loadedData['eulerAngle'], np.ndarray)
+        assert metadata_loaded_oxford_binary.loadedData['eulerAngle'].shape == (3, y_dim, x_dim)
+        assert isinstance(metadata_loaded_oxford_binary.loadedData['eulerAngle'][0, 0, 0], np.float64)
 
     @staticmethod
-    def test_load_oxford_crc_bad(metadata_loaded):
+    def test_load_oxford_crc_bad(metadata_loaded_oxford_binary):
         with pytest.raises(FileNotFoundError):
-            metadata_loaded.loadOxfordCRC("badger")
+            metadata_loaded_oxford_binary.loadOxfordCRC("badger")
 
 
 class TestDICDataLoader:
