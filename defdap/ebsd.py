@@ -22,6 +22,7 @@ import copy
 from warnings import warn
 
 from defdap.file_readers import EBSDDataLoader
+from defdap.file_writers import EBSDDataWriter
 from defdap.quat import Quat
 from defdap.crystal import SlipSystem
 from defdap import base
@@ -166,6 +167,31 @@ class Map(base.Map):
         # write final status
         yield "Loaded EBSD data (dimensions: {:} x {:} pixels, step " \
               "size: {:} um)".format(self.xDim, self.yDim, self.stepSize)
+
+    def save(self, file_name, data_type=None, file_dir=""):
+        """Save EBSD map to file.
+
+        Parameters
+        ----------
+        file_name : str
+            Name of file to save to, it must not already exist.
+        data_type : str, {'OxfordText'}
+            Format of EBSD data file to save.
+        file_dir : str
+            Directory to save the file to.
+
+        """
+        data_writer = EBSDDataWriter.get_writer(data_type)
+
+        data_writer.metadata['shape'] = self.shape
+        data_writer.metadata['step_size'] = self.stepSize
+        data_writer.metadata['phases'] = self.phases
+
+        data_writer.data['phase'] = self.phaseArray
+        data_writer.data['quat'] = self.quatArray
+        data_writer.data['band_contrast'] = self.bandContrastArray
+
+        data_writer.write(file_name, file_dir=file_dir)
 
     @property
     def crystalSym(self):

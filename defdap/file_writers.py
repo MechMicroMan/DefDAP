@@ -106,4 +106,6 @@ class OxfordTextWriter(EBSDDataWriter):
             ):
                 error = 3 if phase == 0 else 0
                 ctf_file.write(
-                    f"{phase}\t{x:.3f}\t{y:.3f}\t10\t{error}\t{eulers[0]:.3f}\t{eulers[1]:.3f}\t{eulers[2]:.3f}\t0.0000\t{bc}\t0\n")
+                    f"{phase}\t{x:.3f}\t{y:.3f}\t10\t{error}\t{eulers[0]:.3f}"
+                    f"\t{eulers[1]:.3f}\t{eulers[2]:.3f}\t0.0000\t{bc}\t0\n"
+                )
