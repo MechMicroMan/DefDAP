@@ -141,6 +141,15 @@ def single_quat_not_unit() -> Quat:
     return Quat(1., 2., -3., 4.)
 
 
+@pytest.fixture
+def ori_quat_list_valid():
+    """A 1d array of sample quaternion representing the orientations."""
+    return np.array([
+        Quat(0.22484510, 0.45464871, -0.70807342, 0.49129550),
+        Quat(0.36520321, 0.25903472, -0.40342268, 0.79798357)
+    ])
+
+
 # Test conversions
 
 
@@ -486,6 +495,27 @@ class TestMisOriAxis:
     def test_bad_in_type(single_quat):
         with pytest.raises(TypeError):
             single_quat.misOriAxis(4)
+
+
+class TestExtractQuatComps:
+    """Test the method that returns a NumPy array from a list of Quats."""
+    @staticmethod
+    def test_return_type(ori_quat_list_valid):
+        quat_comps = Quat.extract_quat_comps(ori_quat_list_valid)
+
+        assert type(quat_comps) is np.ndarray
+        assert quat_comps.shape == (4, len(ori_quat_list_valid))
+
+    @staticmethod
+    def test_calc(ori_quat_list_valid):
+        quat_comps = Quat.extract_quat_comps(ori_quat_list_valid)
+
+        expected_comps = np.array([
+            [0.22484510, 0.45464871, -0.70807342, 0.49129550],
+            [0.36520321, 0.25903472, -0.40342268, 0.79798357]
+        ]).T
+
+        assert np.allclose(quat_comps, expected_comps)
 
 
 class TestSymEqv:
