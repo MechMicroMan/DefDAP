@@ -27,6 +27,7 @@ from defdap.quat import Quat
 from defdap.crystal import SlipSystem
 from defdap import base
 
+from defdap import defaults
 from defdap.plotting import MapPlot
 from defdap.utils import reportProgress
 
@@ -956,23 +957,22 @@ class Map(base.Map):
         self.grainList = []
 
         # List of points where no grain has be set yet
-        unknownPoints = np.where(np.logical_and(self.grains == 0,
-                                                self.phaseArray != 0))
-        numPoints = unknownPoints[0].shape[0]
-        totalPoints = numPoints
+        points_left = self.phaseArray != 0
+        totalPoints = points_left.sum()
+        found_point = 0
+        next_point = points_left.tobytes().find(b'\x01')
+
         # Start counter for grains
         grainIndex = 1
 
         # Loop until all points (except boundaries) have been assigned
         # to a grain or ignored
-        while numPoints > 0:
-            # report progress
-            yield 1. - numPoints / totalPoints
-
+        i = 0
+        while found_point >= 0:
             # Flood fill first unknown point and return grain object
-            currentGrain = self.floodFill(
-                unknownPoints[1][0], unknownPoints[0][0], grainIndex
-            )
+            idx = np.unravel_index(next_point, self.grains.shape)
+            currentGrain = self.floodFill(idx[1], idx[0], grainIndex,
+                                          points_left)
 
             grainSize = len(currentGrain)
             if grainSize < minGrainSize:
@@ -985,10 +985,15 @@ class Map(base.Map):
                 self.grainList.append(currentGrain)
                 grainIndex += 1
 
-            # update unknown points
-            unknownPoints = np.where(np.logical_and(self.grains == 0,
-                                                    self.phaseArray != 0))
-            numPoints = unknownPoints[0].shape[0]
+            points_left_sub = points_left.reshape(-1)[next_point + 1:]
+            found_point = points_left_sub.tobytes().find(b'\x01')
+            next_point += found_point + 1
+
+            i += 1
+            if i == defaults['find_grain_report_inc']:
+                # report progress
+                yield 1. - points_left_sub.sum() / totalPoints
+                i = 0
 
         # Assign phase to each grain
         for grain in self:
@@ -1004,6 +1009,8 @@ class Map(base.Map):
                 continue
             grain.phaseID = phaseID
             grain.phase = self.phases[phaseID]
+
+        yield 1.
 
     def plotGrainMap(self, **kwargs):
         """Plot a map with grains coloured.
@@ -1028,7 +1035,7 @@ class Map(base.Map):
 
         return plot
 
-    def floodFill(self, x, y, grainIndex):
+    def floodFill(self, x, y, grainIndex, points_left):
         """Flood fill algorithm that uses the x and y boundary arrays to
         fill a connected area around the seed point. The points are inserted
         into a grain object and the grain map array is updated.
@@ -1053,6 +1060,7 @@ class Map(base.Map):
         # add first point to the grain
         currentGrain.addPoint((x, y), self.quatArray[y, x])
         self.grains[y, x] = grainIndex
+        points_left[y, x] = False
         edge = [(x, y)]
 
         while edge:
@@ -1095,6 +1103,7 @@ class Map(base.Map):
                 if addPoint:
                     currentGrain.addPoint((s, t), self.quatArray[t, s])
                     self.grains[t, s] = grainIndex
+                    points_left[t, s] = False
                     edge.append((s, t))
 
         return currentGrain

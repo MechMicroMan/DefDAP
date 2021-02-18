@@ -7,4 +7,6 @@ defaults = {
     # Projection to use when plotting pole figures. 'stereographic' (equal
     # angle), 'lambert' (equal area) or arbitrary projection function
     'pole_projection': 'stereographic',
+    # Increments between find grains algorithm reporting progress
+    'find_grain_report_inc': 100,
 }
