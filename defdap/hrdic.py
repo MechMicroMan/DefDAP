@@ -488,6 +488,10 @@ class Map(base.Map):
             self.ebsdTransform = tf.AffineTransform()
             self.ebsdTransformInv = self.ebsdTransform.inverse
 
+        # Also transform the EBSD boundaryLines to DIC reference frame
+        boundaryLineList = np.array(self.ebsdMap.boundaryLines).reshape(-1,2)               #flatten to coord list
+        self.boundaryLines = TDirr[2].ebsdTransformInv(boundaryLineList).reshape(-1,2,2)    #reshape back to coord pairs
+
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(
             np.array(self.homogPoints),
