@@ -489,16 +489,16 @@ class Map(base.Map):
             self.ebsdTransform = tf.AffineTransform()
             self.ebsdTransformInv = self.ebsdTransform.inverse
 
-        # Also transform the EBSD boundaryLines to DIC reference frame
-        firstPointCoords = self.ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,0,:])
-        secondPointCoords = self.ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,1,:])
-        self.boundaryLines = np.dstack([firstPointCoords,secondPointCoords]).swapaxes(1,2)
-
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(
             np.array(self.homogPoints),
             np.array(self.ebsdMap.homogPoints)
         )
+
+        # Transform the EBSD boundaryLines to DIC reference frame
+        firstPointCoords = self.ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,0,:])
+        secondPointCoords = self.ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,1,:])
+        self.boundaryLines = np.dstack([firstPointCoords,secondPointCoords]).swapaxes(1,2)
 
     def checkEbsdLinked(self):
         """Check if an EBSD map has been linked.
