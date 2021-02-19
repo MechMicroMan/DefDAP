@@ -21,6 +21,7 @@ from skimage import transform as tf
 from skimage import morphology as mph
 
 from scipy.stats import mode
+from scipy.ndimage import binary_dilation
 
 import peakutils
 
@@ -28,10 +29,10 @@ from defdap.file_readers import DICDataLoader
 from defdap import base
 from defdap.quat import Quat
 
+from defdap import defaults
 from defdap.plotting import MapPlot, GrainPlot
 from defdap.inspector import GrainInspector
 from defdap.utils import reportProgress
-from scipy.ndimage import binary_dilation
 
 
 class Map(base.Map):
@@ -753,7 +754,7 @@ class Map(base.Map):
         return plot
 
     @reportProgress("finding grains")
-    def findGrains(self, algorithm='floodfill', minGrainSize=10):
+    def findGrains(self, algorithm=None, minGrainSize=10):
         """Finds grains in the DIC map.
 
         Parameters
@@ -765,6 +766,9 @@ class Map(base.Map):
         """
         # Check a EBSD map is linked
         self.checkEbsdLinked()
+
+        if algorithm is None:
+            algorithm = defaults['hrdic_grain_finding_method']
 
         if algorithm == 'warp':
             # Warp EBSD grain map to DIC frame
@@ -801,7 +805,7 @@ class Map(base.Map):
                 currentGrain.ebsdMap = self.ebsdMap
                 self.grainList.append(currentGrain)
 
-        if algorithm == 'floodfill':
+        elif algorithm == 'floodfill':
             # Initialise the grain map
             self.grains = np.copy(self.boundaries)
 
@@ -858,6 +862,9 @@ class Map(base.Map):
                 self.grainList[i].ebsdGrainId = modeId[0] - 1
                 self.grainList[i].ebsdGrain = self.ebsdMap.grainList[modeId[0] - 1]
                 self.grainList[i].ebsdMap = self.ebsdMap
+
+        else:
+            raise ValueError(f"Unknown grain finding algorithm '{algorithm}'.")
 
     def floodFill(self, x, y, grainIndex):
         """Flood fill algorithm that uses the combined x and y boundary array 

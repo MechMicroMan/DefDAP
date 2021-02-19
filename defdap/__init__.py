@@ -9,4 +9,6 @@ defaults = {
     'pole_projection': 'stereographic',
     # Frequency of find grains algorithm reporting progress
     'find_grain_report_freq': 100,
+    # How to find grain in a HRDIC map, either 'floodfill' or 'warp'
+    'hrdic_grain_finding_method': 'floodfill',
 }
