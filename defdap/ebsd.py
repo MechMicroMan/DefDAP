@@ -958,7 +958,7 @@ class Map(base.Map):
 
         # List of points where no grain has be set yet
         points_left = self.phaseArray != 0
-        totalPoints = points_left.sum()
+        total_points = points_left.sum()
         found_point = 0
         next_point = points_left.tobytes().find(b'\x01')
 
@@ -974,8 +974,7 @@ class Map(base.Map):
             currentGrain = self.floodFill(idx[1], idx[0], grainIndex,
                                           points_left)
 
-            grainSize = len(currentGrain)
-            if grainSize < minGrainSize:
+            if len(currentGrain) < minGrainSize:
                 # if grain size less than minimum, ignore grain and set
                 # values in grain map to -2
                 for coord in currentGrain.coordList:
@@ -985,14 +984,15 @@ class Map(base.Map):
                 self.grainList.append(currentGrain)
                 grainIndex += 1
 
+            # find next search point
             points_left_sub = points_left.reshape(-1)[next_point + 1:]
             found_point = points_left_sub.tobytes().find(b'\x01')
             next_point += found_point + 1
 
+            # report progress
             i += 1
             if i == defaults['find_grain_report_freq']:
-                # report progress
-                yield 1. - points_left_sub.sum() / totalPoints
+                yield 1. - points_left_sub.sum() / total_points
                 i = 0
 
         # Assign phase to each grain
@@ -1009,8 +1009,6 @@ class Map(base.Map):
                 continue
             grain.phaseID = phaseID
             grain.phase = self.phases[phaseID]
-
-        yield 1.
 
     def plotGrainMap(self, **kwargs):
         """Plot a map with grains coloured.
@@ -1048,6 +1046,8 @@ class Map(base.Map):
             Seed point y for flood fill
         grainIndex : int
             Value to fill in grain map
+        points_left : numpy.ndarray
+            Boolean map of the points that have not been assigned a grain yet
 
         Returns
         -------
