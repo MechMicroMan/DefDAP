@@ -490,8 +490,9 @@ class Map(base.Map):
             self.ebsdTransformInv = self.ebsdTransform.inverse
 
         # Also transform the EBSD boundaryLines to DIC reference frame
-        boundaryLineList = np.array(self.ebsdMap.boundaryLines).reshape(-1,2)               #flatten to coord list
-        self.boundaryLines = self.ebsdTransformInv(boundaryLineList).reshape(-1,2,2)    #reshape back to coord pairs
+        firstPointCoords = TDirr[2].ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,0,:])
+        secondPointCoords = TDirr[2].ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,1,:])
+        self.boundaryLines = np.dstack([firstPointCoords,secondPointCoords]).swapaxes(1,2)
 
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(
