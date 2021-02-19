@@ -990,7 +990,7 @@ class Map(base.Map):
             next_point += found_point + 1
 
             i += 1
-            if i == defaults['find_grain_report_inc']:
+            if i == defaults['find_grain_report_freq']:
                 # report progress
                 yield 1. - points_left_sub.sum() / totalPoints
                 i = 0
