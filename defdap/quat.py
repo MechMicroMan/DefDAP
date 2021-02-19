@@ -233,6 +233,7 @@ class Quat(object):
                     np.cross(self.quatCoef[1:4], right.quatCoef[1:4])
             )
             return Quat(newQuatCoef, allow_southern=allow_southern)
+
         raise TypeError("{:} - {:}".format(type(self), type(right)))
 
     def dot(self, right):
@@ -245,7 +246,7 @@ class Quat(object):
 
         Returns
         -------
-        defdap.quat.Quat
+        float
             Dot product.
 
         """
@@ -405,7 +406,6 @@ class Quat(object):
             Dq = right * self.conjugate
             Dq = Dq.quatCoef
             misOriAxis = 2 * Dq[1:4] * np.arccos(Dq[0]) / np.sqrt(1 - Dq[0]**2)
-
             return misOriAxis
         raise TypeError("Input must be a quaternion.")
 
@@ -523,7 +523,7 @@ class Quat(object):
                 quat = Quat.fromEulerAngles(*eulerAngles)
 
         elif symGroup == 'cubic':
-            szFac = 0.3
+            szFac = 0.25
 
         # Rotate the lattice cell points
         gg = quat.rotMatrix().T
@@ -579,6 +579,31 @@ class Quat(object):
         return quats
 
     @staticmethod
+    def extract_quat_comps(quats):
+        """Return a NumPy array of the provided quaternion components
+
+        Input quaternions may be given as a list of Quat objects or any iterable
+        whose items have 4 components which map to the quaternion.
+
+        Parameters
+        ----------
+        quats : numpy.ndarray(defdap.quat.Quat)
+            A list of Quat objects to return the components of
+
+        Returns
+        -------
+        np.ndarray
+            Array of quaternion components, shape (4, ..)
+
+        """
+        quats = np.array(quats)
+        quat_comps = np.empty((4,) + quats.shape)
+        for idx in np.ndindex(quats.shape):
+            quat_comps[(slice(None),) + idx] = quats[idx].quatCoef
+
+        return quat_comps
+
+    @staticmethod
     def calcSymEqvs(quats, symGroup, dtype=np.float):
         """Calculate all symmetrically equivalent quaternions of given quaternions.
 
@@ -601,7 +626,7 @@ class Quat(object):
         quatComps = np.empty((len(syms), 4, len(quats)), dtype=dtype)
 
         # store quat components in array
-        quatComps[0, :, :] = np.asarray([quat.quatCoef for quat in quats]).T
+        quatComps[0] = Quat.extract_quat_comps(quats)
 
         # calculate symmetrical equivalents
         for i, sym in enumerate(syms[1:], start=1):
@@ -753,8 +778,8 @@ class Quat(object):
         Stephen Cluff (BYU) - IPF_rgbcalc.m subroutine in OpenXY
         https://github.com/BYU-MicrostructureOfMaterials/OpenXY/blob/master/Code/PlotIPF.m
 
-        """
 
+        """
         numQuats = len(quats)
 
         alphaFund, betaFund = Quat.calcFundDirs(
@@ -850,7 +875,7 @@ class Quat(object):
         Returns
         -------
         float, float
-            inclination angle and azimuthal angle (around z axis from x in anticlockwise as per ISO).
+            inclination angle and azimuthal angle (around z axis from x in anticlockwise).
 
         """
         # convert direction to float array

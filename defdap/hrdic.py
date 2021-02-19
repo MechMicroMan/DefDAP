@@ -177,10 +177,7 @@ class Map(base.Map):
         # crop distances (default all zeros)
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
 
-    @property
-    def plotDefault(self):
-        # return self.plotMaxShear(plotGBs=True, *args, **kwargs)
-        return lambda *args, **kwargs: self.plotMaxShear(plotGBs=True, *args, **kwargs)
+        self.plotDefault = lambda *args, **kwargs: self.plotMaxShear(plotGBs=True, *args, **kwargs)
 
     @property
     def crystalSym(self):
@@ -628,14 +625,19 @@ class Map(base.Map):
         self.checkEbsdLinked()
 
         # image is returned cropped if a piecewise transform is being used
-        boundaries = self.warpToDicFrame(-self.ebsdMap.boundaries.astype(float), cropImage=False) > 0.1
+        boundaries = self.ebsdMap.boundaries
+        boundaries = self.warpToDicFrame(-boundaries.astype(float),
+                                         cropImage=False)
+        boundaries = boundaries > 0.1
 
         boundaries = mph.skeletonize(boundaries)
-        mph.remove_small_objects(boundaries, min_size=10, in_place=True, connectivity=2)
+        mph.remove_small_objects(boundaries, min_size=10, in_place=True,
+                                 connectivity=2)
 
         # crop image if it is a simple affine transform
         if type(self.ebsdTransform) is tf.AffineTransform:
-            # need to apply the translation of ebsd transform and remove 5% border
+            # need to apply the translation of ebsd transform and
+            # remove 5% border
             crop = np.copy(self.ebsdTransform.params[0:2, 2])
             crop += 0.05 * np.array(self.ebsdMap.boundaries.shape)
             # the crop is defined in EBSD coords so need to transform it
@@ -646,9 +648,7 @@ class Map(base.Map):
             boundaries = boundaries[crop[1]:crop[1] + self.yDim,
                                     crop[0]:crop[0] + self.xDim]
 
-        boundaries = -boundaries.astype(int)
-
-        return boundaries
+        return -boundaries.astype(int)
 
     def setPatternPath(self, filePath, windowSize):
         """Set the path to the image of the pattern.
@@ -856,69 +856,67 @@ class Map(base.Map):
                 self.grainList[i].ebsdMap = self.ebsdMap
 
     def floodFill(self, x, y, grainIndex):
-        """Flood fill algorithm.
+        """Flood fill algorithm that uses the combined x and y boundary array 
+        to fill a connected area around the seed point. The points are inserted
+        into a grain object and the grain map array is updated.
 
         Parameters
         ----------
         x : int
-            X coordinate.
+            Seed point x for flood fill
         y : int
-            Y coordinate.
+            Seed point y for flood fill
         grainIndex : int
-            Grain index to assign.
+            Value to fill in grain map
 
         Returns
         -------
-        defdap.hrdic.Grain
+        currentGrain : defdap.hrdic.Grain
+            New grain object with points added
 
         """
-        currentGrain = Grain(self)
+        # create new grain
+        currentGrain = Grain(grainIndex - 1, self)
 
-        currentGrain.addPoint((x, y), self.eMaxShear[y + self.cropDists[1, 0], x + self.cropDists[0, 0]])
-
-        edge = [(x, y)]
-        grain = [(x, y)]
-
+        # add first point to the grain
+        currentGrain.addPoint((x, y), self.eMaxShear[y + self.cropDists[1, 0],
+                                                     x + self.cropDists[0, 0]])
         self.grains[y, x] = grainIndex
+        edge = [(x, y)]
+
         while edge:
-            newedge = []
+            x, y = edge.pop(0)
 
-            for (x, y) in edge:
-                moves = np.array([(x + 1, y),
-                                  (x - 1, y),
-                                  (x, y + 1),
-                                  (x, y - 1)])
+            moves = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
+            # get rid of any that go out of the map area
+            if x <= 0:
+                moves.pop(1)
+            elif x >= self.xDim - 1:
+                moves.pop(0)
+            if y <= 0:
+                moves.pop(-1)
+            elif y >= self.yDim - 1:
+                moves.pop(-2)
 
-                movesIndexShift = 0
-                if x <= 0:
-                    moves = np.delete(moves, 1, 0)
-                    movesIndexShift = 1
-                elif x >= self.xDim - 1:
-                    moves = np.delete(moves, 0, 0)
-                    movesIndexShift = 1
+            for (s, t) in moves:
+                addPoint = False
 
-                if y <= 0:
-                    moves = np.delete(moves, 3 - movesIndexShift, 0)
-                elif y >= self.yDim - 1:
-                    moves = np.delete(moves, 2 - movesIndexShift, 0)
+                if self.grains[t, s] == 0:
+                    addPoint = True
+                    edge.append((s, t))
 
-                for (s, t) in moves:
-                    if self.grains[t, s] == 0:
-                        currentGrain.addPoint((s, t), self.eMaxShear[y + self.cropDists[1, 0],
-                                                                     x + self.cropDists[0, 0]])
-                        newedge.append((s, t))
-                        grain.append((s, t))
-                        self.grains[t, s] = grainIndex
-                    elif self.grains[t, s] == -1 and (s > x or t > y):
-                        currentGrain.addPoint((s, t), self.eMaxShear[y + self.cropDists[1, 0],
-                                                                     x + self.cropDists[0, 0]])
-                        grain.append((s, t))
-                        self.grains[t, s] = grainIndex
+                elif self.grains[t, s] == -1 and (s > x or t > y):
+                    addPoint = True
 
-            if newedge == []:
-                return currentGrain
-            else:
-                edge = newedge
+                if addPoint:
+                    currentGrain.addPoint(
+                        (s, t),
+                        self.eMaxShear[t + self.cropDists[1, 0],
+                                       s + self.cropDists[0, 0]]
+                    )
+                    self.grains[t, s] = grainIndex
+
+        return currentGrain
 
     def runGrainInspector(self, vmax=0.1):
         """Run the grain inspector interactive tool.
@@ -956,18 +954,17 @@ class Grain(base.Grain):
         lines drawn using defdap.inspector.GrainInspector.
 
     """
-    def __init__(self, dicMap):
+    def __init__(self, grainID, dicMap):
         # Call base class constructor
-        super(Grain, self).__init__()
+        super(Grain, self).__init__(grainID, dicMap)
 
-        self.dicMap = dicMap        # DIC map this grain is a member of
-        self.ownerMap = dicMap
+        self.dicMap = self.ownerMap     # DIC map this grain is a member of
         self.maxShearList = []
         self.ebsdGrain = None
         self.ebsdMap = None
 
-        self.pointsList = []        # Lines drawn for STA
-        self.groupsList = []        # Unique angles drawn for STA
+        self.pointsList = []            # Lines drawn for STA
+        self.groupsList = []            # Unique angles drawn for STA
 
     @property
     def plotDefault(self):

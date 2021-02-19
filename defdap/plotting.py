@@ -16,7 +16,9 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+
 from matplotlib.widgets import Button, TextBox
+from matplotlib.collections import LineCollection
 from matplotlib_scalebar.scalebar import ScaleBar
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import Axes3D
@@ -307,44 +309,71 @@ class MapPlot(Plot):
             scale = self.callingMap.scale * 1e-6
         self.ax.add_artist(ScaleBar(scale))
 
-    def addGrainBoundaries(self, colour=None, dilate=False):
+    def addGrainBoundaries(self, kind="pixel", boundaries=None, colour=None, 
+                           dilate=False, **kwargs):
         """Add grain boundaries to the plot.
 
         Parameters
         ----------
+        kind : str, {"pixel", "line"}
+            Type of boundaries to plot, either a boundary image or a
+            collection of line segments.
+        boundaries : various, optional
+            Boundaries to plot, either a boundary image or a list of pairs
+            of coordinates representing the start and end of each boundary 
+            segment. If not provided the boundaries are loaded from the 
+            calling map.
         colour : str
             Colour of grain boundaries.
         dilate : bool
-            If true, dilate the grain boundaries
+            If true, dilate the grain boundaries.
+        kind
 
         Returns
         -------
-        matplotlib.image.AxesImage
+        Various :
+            matplotlib.image.AxesImage if type is pixel
 
         """
         if colour is None:
             colour = "white"
 
-        boundariesImage = -self.callingMap.boundaries
+        if kind == "line":
+            boundaryLines = boundaries
+            if boundaryLines is None:
+                boundaryLines = self.callingMap.boundaryLines
 
-        if dilate:
-            boundariesImage = mph.binary_dilation(boundariesImage)
+            lc = LineCollection(boundaryLines,
+                                colors=mpl.colors.to_rgba(colour), **kwargs)
 
-        # create colourmap for boundaries going from transparent to
-        # opaque of the given colour
-        boundariesCmap = mpl.colors.LinearSegmentedColormap.from_list(
-            'my_cmap', ['white', colour], 256
-        )
-        boundariesCmap._init()
-        boundariesCmap._lut[:, -1] = np.linspace(0, 1, boundariesCmap.N + 3)
+            self.ax.add_collection(lc)
+            # ax.autoscale()
 
-        img = self.ax.imshow(boundariesImage, cmap=boundariesCmap,
-                             interpolation='None', vmin=0, vmax=1)
-        self.draw()
+            self.draw()
+        else:
+            boundariesImage = boundaries
+            if boundariesImage is None:
+                boundariesImage = self.callingMap.boundaries
+            boundariesImage = -boundariesImage
 
-        self.imgLayers.append(img)
+            if dilate:
+                boundariesImage = mph.binary_dilation(boundariesImage)
 
-        return img
+            # create colourmap for boundaries going from transparent to
+            # opaque of the given colour
+            boundariesCmap = mpl.colors.LinearSegmentedColormap.from_list(
+                'my_cmap', ['white', colour], 256
+            )
+            boundariesCmap._init()
+            boundariesCmap._lut[:, -1] = np.linspace(0, 1, boundariesCmap.N + 3)
+
+            img = self.ax.imshow(boundariesImage, cmap=boundariesCmap,
+                                 interpolation='None', vmin=0, vmax=1)
+            self.draw()
+
+            self.imgLayers.append(img)
+
+            return img
 
     def addGrainHighlights(self, grainIds, grainColours=None, alpha=None,
                            newLayer=False):
@@ -371,10 +400,7 @@ class MapPlot(Plot):
         if alpha is None:
             alpha = self.callingMap.highlightAlpha
 
-        xDim = self.callingMap.xDim
-        yDim = self.callingMap.yDim
-
-        outline = np.zeros((yDim, xDim), dtype=int)
+        outline = np.zeros(self.callingMap.shape, dtype=int)
         for i, grainId in enumerate(grainIds, start=1):
             if i > len(grainColours):
                 i = len(grainColours)
@@ -561,7 +587,9 @@ class MapPlot(Plot):
             plot.addColourBar(clabel)
 
         if plotGBs:
-            plot.addGrainBoundaries(colour=boundaryColour, dilate=dilateBoundaries)
+            plot.addGrainBoundaries(
+                colour=boundaryColour, dilate=dilateBoundaries, kind=plotGBs
+            )
 
         if highlightGrains is not None:
             plot.addGrainHighlights(
@@ -1438,10 +1466,10 @@ class CrystalPlot(Plot):
         """
         # Set default plot parameters then update with any input
         plotParams = {
-            'alpha' : 0.6,
-            'facecolor' : '0.8',
-            'linewidths' : 3,
-            'edgecolor' : 'k'
+            'alpha': 0.6,
+            'facecolor': '0.8',
+            'linewidths': 3,
+            'edgecolor': 'k'
         }
         plotParams.update(kwargs)
 
