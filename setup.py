@@ -51,7 +51,7 @@ setup(
     ],
     packages=find_packages(exclude=['tests']),
     package_data={'defdap': ['slip_systems/*.txt']},
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     install_requires=[
         'scipy',
         'numpy',
