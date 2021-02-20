@@ -19,12 +19,13 @@ from defdap import plotting
 
 
 class Quat(object):
-    """Class used to define and perform operations on quaternions
+    """Class used to define and perform operations on quaternions. These
+    are interpreted in the passive sense.
 
     """
     __slots__ = ['quatCoef']
 
-    def __init__(self, *args):
+    def __init__(self, *args, allow_southern=False):
         """
         Construct a Quat object from 4 quat coefficients or an array of
         quat coefficients.
@@ -51,7 +52,7 @@ class Quat(object):
                             "quat coefficients")
 
         # move to northern hemisphere
-        if self.quatCoef[0] < 0:
+        if not allow_southern and self.quatCoef[0] < 0:
             self.quatCoef = self.quatCoef * -1
 
     @classmethod
@@ -86,7 +87,8 @@ class Quat(object):
 
     @classmethod
     def fromAxisAngle(cls, axis, angle):
-        """Create a quat object from an axis angle pair.
+        """Create a quat object from a rotation around an axis. This
+        creates a quaternion to represent the passive rotation (-ve axis).
 
         Parameters
         ----------
@@ -107,7 +109,7 @@ class Quat(object):
         # calculate quat coefficients
         quatCoef = np.zeros(4, dtype=float)
         quatCoef[0] = np.cos(angle / 2)
-        quatCoef[1:4] = np.sin(angle / 2) * axis
+        quatCoef[1:4] = -np.sin(angle / 2) * axis
 
         # call constructor
         return cls(quatCoef)
@@ -218,7 +220,7 @@ class Quat(object):
         Quat.plotIPF([self], direction, symGroup, **kwargs)
 
     # overload * operator for quaternion product and vector product
-    def __mul__(self, right):
+    def __mul__(self, right, allow_southern=False):
         if isinstance(right, type(self)):   # another quat
             newQuatCoef = np.zeros(4, dtype=float)
             newQuatCoef[0] = (
@@ -230,11 +232,10 @@ class Quat(object):
                     right.quatCoef[0] * self.quatCoef[1:4] +
                     np.cross(self.quatCoef[1:4], right.quatCoef[1:4])
             )
-            return Quat(newQuatCoef)
-        raise TypeError()
+            return Quat(newQuatCoef, allow_southern=allow_southern)
 
-    # # overload % operator for dot product
-    # def __mod__(self, right):
+        raise TypeError("{:} - {:}".format(type(self), type(right)))
+
     def dot(self, right):
         """ Calculate dot product between two quaternions.
 
@@ -245,7 +246,7 @@ class Quat(object):
 
         Returns
         -------
-        defdap.quat.Quat
+        float
             Dot product.
 
         """
@@ -311,28 +312,36 @@ class Quat(object):
         return Quat(self[0], -self[1], -self[2], -self[3])
 
     def transformVector(self, vector):
-        """Transforms vector by the quaternion. For EBSD quaterions this
-        is a transformation from sample space to crystal space. Perform
-        on conjugate of quaternion for crystal to sample.
+        """
+        Transforms vector by the quaternion. For passive EBSD quaterions
+        this is a transformation from sample space to crystal space.
+        Perform on conjugate of quaternion for crystal to sample. For a
+        quaternion representing a passive rotation from CS1 to CS2 and a
+        fixed vector V defined in CS1, this gives the coordinates
+        of V in CS2.
 
         Parameters
         ----------
-        vector : array_like, shape 3
+        vector : numpy.ndarray of shape 3 or equivalent
             Vector to transform.
 
         Returns
         -------
-        np.ndarray, shape 3
+        numpy.ndarray of shape 3
             Transformed vector.
 
         """
-        if isinstance(vector, np.ndarray) and vector.shape == (3,):
-            vectorQuat = Quat(0, vector[0], vector[1], vector[2])
-            vectorQuatTransformed = self * (vectorQuat * self.conjugate)
-            vectorTransformed = vectorQuatTransformed.quatCoef[1:4]
-            return vectorTransformed
+        if not isinstance(vector, (np.ndarray, list, tuple)):
+            raise TypeError("Vector must be a tuple, list or numpy array.")
+        if np.array(vector).shape != (3,):
+            raise TypeError("Vector must be length 3.")
 
-        raise TypeError("Vector must be a size 3 numpy array.")
+        vectorQuat = Quat(0, *vector)
+        vectorQuatTransformed = self.__mul__(
+            vectorQuat.__mul__(self.conjugate, allow_southern=True),
+            allow_southern=True
+        )
+        return vectorQuatTransformed.quatCoef[1:4]
 
     def misOri(self, right, symGroup, returnQuat=0):
         """
@@ -397,7 +406,6 @@ class Quat(object):
             Dq = right * self.conjugate
             Dq = Dq.quatCoef
             misOriAxis = 2 * Dq[1:4] * np.arccos(Dq[0]) / np.sqrt(1 - Dq[0]**2)
-
             return misOriAxis
         raise TypeError("Input must be a quaternion.")
 
@@ -462,7 +470,7 @@ class Quat(object):
 
         return plot
 
-    def plotUnitCell(self, symGroup, cOverA=None, OI=True,
+    def plotUnitCell(self, symGroup, OI=True,
                      plot=None, fig=None, ax=None, makeInteractive=False,
                      **kwargs):
         """Plots a unit cell.
@@ -471,8 +479,6 @@ class Quat(object):
         ----------
         symGroup : str
             Crystal type, hexagonal or cubic.
-        cOverA : float
-            C over a ratio for hexagonal.
         OI : bool
             True if using oxford instruments system.
         plot : defdap.plotting.CrystalPlot
@@ -493,43 +499,23 @@ class Quat(object):
         plotParams = {}
         plotParams.update(kwargs)
 
-        if symGroup is None:
-            raise ValueError("symGroup must be specified")
+        # TODO: most of this should be moved to either the crystal or
+        #  plotting module
+        # Dirty fix to stop circular dependency
+        from defdap.crystal import crystalStructures
+
+        try:
+            crystalStructure = crystalStructures[symGroup]
+        except KeyError:
+            raise ValueError("Invalid crystal type, only cubic or "
+                             "hexagonal available.")
+        vert = crystalStructure.vertices
+        faces = crystalStructure.faces
 
         quat = self
 
         if symGroup == 'hexagonal':
-            if cOverA is None:
-                raise ValueError("cOverA must be specified for hcp")
-
             szFac = 0.2
-            sqrt3over2 = np.sqrt(3) / 2
-            cOverA /= 2
-            vert = np.array([
-                [1, 0, -cOverA],
-                [0.5, sqrt3over2, -cOverA],
-                [-0.5, sqrt3over2, -cOverA],
-                [-1, 0, -cOverA],
-                [-0.5, -sqrt3over2, -cOverA],
-                [0.5, -sqrt3over2, -cOverA],
-                [1, 0, cOverA],
-                [0.5, sqrt3over2, cOverA],
-                [-0.5, sqrt3over2, cOverA],
-                [-1, 0, cOverA],
-                [-0.5, -sqrt3over2, cOverA],
-                [0.5, -sqrt3over2, cOverA]
-            ])
-            faces = [
-                [0, 1, 2, 3, 4, 5],
-                [6, 7, 8, 9, 10, 11],
-                [0, 6, 7, 1],
-                [1, 7, 8, 2],
-                [2, 8, 9, 3],
-                [3, 9, 10, 4],
-                [4, 10, 11, 5],
-                [5, 11, 6, 0]
-            ]
-
             if OI:
                 # Add 30 degrees to phi2 for OI
                 eulerAngles = quat.eulerAngles()
@@ -537,27 +523,7 @@ class Quat(object):
                 quat = Quat.fromEulerAngles(*eulerAngles)
 
         elif symGroup == 'cubic':
-            szFac = 0.3
-            vert = np.array([
-                [-0.5, -0.5, -0.5],
-                [0.5, -0.5, -0.5],
-                [0.5, 0.5, -0.5],
-                [-0.5, 0.5, -0.5],
-                [-0.5, -0.5, 0.5],
-                [0.5, -0.5, 0.5],
-                [0.5, 0.5, 0.5],
-                [-0.5, 0.5, 0.5]
-            ])
-            faces = [
-                [0, 1, 2, 3],
-                [4, 5, 6, 7],
-                [0, 1, 5, 4],
-                [1, 2, 6, 5],
-                [2, 3, 7, 6],
-                [3, 0, 4, 7]
-            ]
-        else:
-            raise ValueError("Only cubic and hexagonal supported")
+            szFac = 0.25
 
         # Rotate the lattice cell points
         gg = quat.rotMatrix().T
@@ -613,6 +579,31 @@ class Quat(object):
         return quats
 
     @staticmethod
+    def extract_quat_comps(quats):
+        """Return a NumPy array of the provided quaternion components
+
+        Input quaternions may be given as a list of Quat objects or any iterable
+        whose items have 4 components which map to the quaternion.
+
+        Parameters
+        ----------
+        quats : numpy.ndarray(defdap.quat.Quat)
+            A list of Quat objects to return the components of
+
+        Returns
+        -------
+        np.ndarray
+            Array of quaternion components, shape (4, ..)
+
+        """
+        quats = np.array(quats)
+        quat_comps = np.empty((4,) + quats.shape)
+        for idx in np.ndindex(quats.shape):
+            quat_comps[(slice(None),) + idx] = quats[idx].quatCoef
+
+        return quat_comps
+
+    @staticmethod
     def calcSymEqvs(quats, symGroup, dtype=np.float):
         """Calculate all symmetrically equivalent quaternions of given quaternions.
 
@@ -635,7 +626,7 @@ class Quat(object):
         quatComps = np.empty((len(syms), 4, len(quats)), dtype=dtype)
 
         # store quat components in array
-        quatComps[0, :, :] = np.asarray([quat.quatCoef for quat in quats]).T
+        quatComps[0] = Quat.extract_quat_comps(quats)
 
         # calculate symmetrical equivalents
         for i, sym in enumerate(syms[1:], start=1):
@@ -787,8 +778,8 @@ class Quat(object):
         Stephen Cluff (BYU) - IPF_rgbcalc.m subroutine in OpenXY
         https://github.com/BYU-MicrostructureOfMaterials/OpenXY/blob/master/Code/PlotIPF.m
 
-        """
 
+        """
         numQuats = len(quats)
 
         alphaFund, betaFund = Quat.calcFundDirs(
@@ -884,7 +875,7 @@ class Quat(object):
         Returns
         -------
         float, float
-            inclination angle and azimuthal angle (around z axis from x in anticlockwise as per ISO).
+            inclination angle and azimuthal angle (around z axis from x in anticlockwise).
 
         """
         # convert direction to float array
@@ -992,6 +983,7 @@ class Quat(object):
     @staticmethod
     def symEqv(symGroup):
         """Returns all symmetric equivalents for a given crystal type.
+        LEGACY: move to use symmetries defined in crystal structures
 
         Parameters
         ----------
@@ -1000,71 +992,14 @@ class Quat(object):
 
         Returns
         -------
-        list(defdap.quat.Quat), shape (numQuats x 4)
+        list of defdap.quat.Quat
             Symmetrically equivalent quats.
 
         """
-        overRoot2 = np.sqrt(2) / 2
-        sqrt3over2 = np.sqrt(3) / 2
-
-        # from Pete Bate's fspl_orir.f90 code
-        # checked for consistency with mtex
-        qsym = [
-            # identity - this should always be returned as the first symmetry
-            Quat(1.0, 0.0, 0.0, 0.0),
-
-            # cubic tetrads(100)
-            Quat(overRoot2, overRoot2, 0.0, 0.0),
-            Quat(0.0, 1.0, 0.0, 0.0),
-            Quat(overRoot2, -overRoot2, 0.0, 0.0),
-
-            Quat(overRoot2, 0.0, overRoot2, 0.0),
-            Quat(0.0, 0.0, 1.0, 0.0),
-            Quat(overRoot2, 0.0, -overRoot2, 0.0),
-
-            Quat(overRoot2, 0.0, 0.0, overRoot2),
-            Quat(0.0, 0.0, 0.0, 1.0),
-            Quat(overRoot2, 0.0, 0.0, -overRoot2),
-
-            # cubic dyads (110)
-            Quat(0.0, overRoot2, overRoot2, 0.0),
-            Quat(0.0, -overRoot2, overRoot2, 0.0),
-
-            Quat(0.0, overRoot2, 0.0, overRoot2),
-            Quat(0.0, -overRoot2, 0.0, overRoot2),
-
-            Quat(0.0, 0.0, overRoot2, overRoot2),
-            Quat(0.0, 0.0, -overRoot2, overRoot2),
-
-            # cubic triads (111)
-            Quat(0.5, 0.5, 0.5, 0.5),
-            Quat(0.5, -0.5, -0.5, -0.5),
-
-            Quat(0.5, -0.5, 0.5, 0.5),
-            Quat(0.5, 0.5, -0.5, -0.5),
-
-            Quat(0.5, 0.5, -0.5, 0.5),
-            Quat(0.5, -0.5, 0.5, -0.5),
-
-            Quat(0.5, 0.5, 0.5, -0.5),
-            Quat(0.5, -0.5, -0.5, 0.5),
-
-            # hexagonal hexads
-            Quat(sqrt3over2, 0.0, 0.0, 0.5),
-            Quat(0.5, 0.0, 0.0, sqrt3over2),
-            Quat(0.5, 0.0, 0.0, -sqrt3over2),
-            Quat(sqrt3over2, 0.0, 0.0, -0.5),
-
-            # hexagonal diads
-            Quat(0.0, -0.5, -sqrt3over2, 0.0),
-            Quat(0.0, 0.5, -sqrt3over2, 0.0),
-            Quat(0.0, sqrt3over2, -0.5, 0.0),
-            Quat(0.0, -sqrt3over2, -0.5, 0.0)
-        ]
-
-        if symGroup == 'cubic':
-            return qsym[0:24]
-        elif symGroup == 'hexagonal':
-            return [qsym[0], qsym[2], qsym[5], qsym[8]] + qsym[-8:32]
-        else:
-            return [qsym[0]]
+        # Dirty fix to stop circular dependency
+        from defdap.crystal import crystalStructures
+        try:
+            return crystalStructures[symGroup].symmetries
+        except KeyError:
+            # return just identity if unknown structure
+            return [Quat(1.0, 0.0, 0.0, 0.0)]

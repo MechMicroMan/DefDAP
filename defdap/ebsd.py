@@ -16,16 +16,19 @@
 import numpy as np
 from matplotlib.widgets import Button
 from skimage import morphology as mph
+import networkx as nx
 
 import copy
-import warnings
+from warnings import warn
 
 from defdap.file_readers import EBSDDataLoader
+from defdap.file_writers import EBSDDataWriter
 from defdap.quat import Quat
 from defdap.crystal import SlipSystem
 from defdap import base
 
-from defdap.plotting import MapPlot, GrainPlot
+from defdap import defaults
+from defdap.plotting import MapPlot
 from defdap.utils import reportProgress
 
 
@@ -36,8 +39,6 @@ class Map(base.Map):
 
     Attributes
     ----------
-    crystalSym : str
-        Symmetry of material e.g. "cubic", "hexagonal".
     xDim : int
         Size of map in x direction.
     yDim : int
@@ -45,42 +46,37 @@ class Map(base.Map):
     stepSize : float
         Step size in micron.
     eulerAngleArray : numpy.ndarray
-        Euler angles for eaxh point of the map.
+        Euler angles for eaxh point of the map. Shape (3, yDim, xDim).
     bandContrastArray : numpy.ndarray
-        Band contrast for each point of map.
-    quatArray : numpy.ndarray(defdap.quat.Quat)
-        Quaterions for each point of map.
+        Band contrast for each point of map. Shape (yDim, xDim).
+    quatArray : numpy.ndarray of defdap.quat.Quat
+        Quaterions for each point of map. Shape (yDim, xDim).
     numPhases : int
         Number of phases.
     phaseArray : numpy.ndarray
-        Map of phase ids.
-    phaseNames : list(str)
-        List of phase names.
+        Map of phase ids. 1-based, 0 is non-indexed points
+    phases : list of defdap.crystal.Phase
+        List of phases.
     boundaries : numpy.ndarray
         Map of boundaries. -1 for a boundary, 0 otherwise.
     phaseBoundaries : numpy.ndarray
         Map of phase boundaries. -1 for boundary, 0 otherwise.
-    cacheEulerMap
     grains : numpy.ndarray
         Map of grains. Grain numbers start at 1 here but everywhere else
         grainID starts at 0. Regions that are smaller than the minimum
-        grain size are given value -2.
-    grainList : list(defdap.ebsd.Grain)
-        List of grains.
+        grain size are given value -2. Remnant boundary points are -1.
     misOri : numpy.ndarray
         Map of misorientation.
-    misOriAxis : list(numpy.ndarray)
+    misOriAxis : list of numpy.ndarray
         Map of misorientation axis components.
     kam : numpy.ndarray
         Map of KAM.
     averageSchmidFactor : numpy.ndarray
         Map of average Schmid factor.
-    slipSystems : list(list(defdap.crystal.slipSystem))
+    slipSystems : list of list of defdap.crystal.SlipSystem
         Slip systems grouped by slip plane.
     slipTraceColours list(str)
         Colours used when plotting slip traces.
-    currGrainId : int
-        ID of last selected grain.
     origin : tuple(int)
         Map origin (y, x). Used by linker class where origin is a
         homologue point of the maps.
@@ -91,7 +87,7 @@ class Map(base.Map):
 
     """
 
-    def __init__(self, fileName, crystalSym, cOverA=None, dataType=None):
+    def __init__(self, fileName, dataType=None):
         """
         Initialise class and load EBSD data.
 
@@ -99,8 +95,6 @@ class Map(base.Map):
         ----------
         fileName : str
             Path to EBSD file, including name, excluding extension.
-        crystalSym : str, {'cubic', 'hexagonal'}
-            Crystal structure.
         dataType : str, {'OxfordBinary', 'OxfordText'}
             Format of EBSD data file.
 
@@ -108,8 +102,6 @@ class Map(base.Map):
         # Call base class constructor
         super(Map, self).__init__()
 
-        self.crystalSym = None
-        self.cOverA = None
         self.xDim = None
         self.yDim = None
         self.stepSize = None
@@ -118,80 +110,125 @@ class Map(base.Map):
         self.quatArray = None
         self.numPhases = None
         self.phaseArray = None
-        self.phaseNames = []
+        self.phases = []
         self.boundaries = None
+        self.boundariesX = None
+        self.boundariesY = None
+        self.boundaryLines = None
         self.phaseBoundaries = None
-        self.cacheEulerMap = None
         self.grains = None
         self.misOri = None
         self.misOriAxis = None
         self.kam = None
         self.averageSchmidFactor = None
-        self.slipSystems = None
-        self.slipTraceColours = None
-        self.currGrainId = None
         self.origin = (0, 0)
         self.GND = None
         self.Nye = None
+        self.slipSystems = None
+        self.slipTraceColours = None
+
+        # Phase used for the maps crystal structure and cOverA. So old
+        # functions still work for the 'main' phase in the map. 0-based
+        self.primaryPhaseID = 0
 
         # Use euler map for defining homologous points
         self.plotHomog = self.plotEulerMap
+        self.plotDefault = self.plotEulerMap
         self.highlightAlpha = 1
 
-        self.loadData(fileName, crystalSym, cOverA, dataType=dataType)
-
-    @property
-    def plotDefault(self):
-        # return self.plotEulerMap(*args, **kwargs)
-        return lambda *args, **kwargs: self.plotEulerMap(*args, **kwargs)
+        self.loadData(fileName, dataType=dataType)
 
     @reportProgress("loading EBSD data")
-    def loadData(self, fileName, crystalSym, cOverA, dataType=None):
+    def loadData(self, fileName, dataType=None):
         """Load in EBSD data from file.
 
         Parameters
         ----------
         fileName : str
             Path to EBSD file, including name, excluding extension.
-        crystalSym : str, {'cubic', 'hexagonal'}
-            Crystal structure.
         dataType : str, {'OxfordBinary', 'OxfordText'}
             Format of EBSD data file.
 
         """
-        if dataType is None:
-            dataType = "OxfordBinary"
+        dataLoader = EBSDDataLoader.getLoader(dataType)
+        dataLoader.load(fileName)
 
-        dataLoader = EBSDDataLoader()
-        if dataType == "OxfordBinary":
-            metadataDict = dataLoader.loadOxfordCPR(fileName)
-            dataDict = dataLoader.loadOxfordCRC(fileName)
-        elif dataType == "OxfordText":
-            metadataDict, dataDict = dataLoader.loadOxfordCTF(fileName)
-        else:
-            raise Exception("No loader found for this EBSD data.")
-
+        metadataDict = dataLoader.loadedMetadata
         self.xDim = metadataDict['xDim']
         self.yDim = metadataDict['yDim']
         self.stepSize = metadataDict['stepSize']
         self.numPhases = metadataDict['numPhases']
-        self.phaseNames = metadataDict['phaseNames']
+        self.phases = metadataDict['phases']
 
+        dataDict = dataLoader.loadedData
         self.eulerAngleArray = dataDict['eulerAngle']
         self.bandContrastArray = dataDict['bandContrast']
         self.phaseArray = dataDict['phase']
 
-        self.crystalSym = crystalSym
-        
-        if self.crystalSym == 'hexagonal':
-            if cOverA is None:
-                warnings.warn("No c/a ratio given. Using ideal ratio 1.633")
-                cOverA = 1.633
-            self.cOverA = cOverA
-
         # write final status
         yield "Loaded EBSD data (dimensions: {:} x {:} pixels, step " \
               "size: {:} um)".format(self.xDim, self.yDim, self.stepSize)
+
+    def save(self, file_name, data_type=None, file_dir=""):
+        """Save EBSD map to file.
+
+        Parameters
+        ----------
+        file_name : str
+            Name of file to save to, it must not already exist.
+        data_type : str, {'OxfordText'}
+            Format of EBSD data file to save.
+        file_dir : str
+            Directory to save the file to.
+
+        """
+        data_writer = EBSDDataWriter.get_writer(data_type)
+
+        data_writer.metadata['shape'] = self.shape
+        data_writer.metadata['step_size'] = self.stepSize
+        data_writer.metadata['phases'] = self.phases
+
+        data_writer.data['phase'] = self.phaseArray
+        data_writer.data['quat'] = self.quatArray
+        data_writer.data['band_contrast'] = self.bandContrastArray
+
+        data_writer.write(file_name, file_dir=file_dir)
+
+    @property
+    def crystalSym(self):
+        """Crystal symmetry of the primary phase.
+
+        Returns
+        -------
+        str
+            Crystal symmetry
+
+        """
+        return self.primaryPhase.crystalStructure.name
+
+    @property
+    def cOverA(self):
+        """C over A ratio of the primary phase
+
+        Returns
+        -------
+        float or None
+            C over A ratio if hexagonal crystal structure otherwise None
+
+        """
+        return self.primaryPhase.cOverA
+
+    @property
+    def primaryPhase(self):
+        """Primary phase of the EBSD map.
+
+        Returns
+        -------
+        defdap.crystal.Phase
+            Primary phase
+
+        """
+        return self.phases[self.primaryPhaseID]
 
     @property
     def scale(self):
@@ -206,8 +243,10 @@ class Map(base.Map):
         self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
         self.phaseArray = self.phaseArray[::-1, ::-1]
         self.buildQuatArray()
-        
+
+        # Rotation from old coord system to new
         transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi)
+        transformQuat = transformQuat.conjugate
         for i in range(self.xDim):
             for j in range(self.yDim):
                 self.quatArray[j, i] = self.quatArray[j, i] * transformQuat
@@ -231,7 +270,7 @@ class Map(base.Map):
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'cmap:': 'grey',
+            'cmap': 'gray',
             'clabel': "Band contrast"
         }
         plotParams.update(kwargs)
@@ -240,11 +279,13 @@ class Map(base.Map):
 
         return plot
 
-    def plotEulerMap(self, **kwargs):
+    def plotEulerMap(self, phases=None, **kwargs):
         """Plot an orientation map in Euler colouring
 
         Parameters
         ----------
+        phases : list of int
+            Which phases to plot for
         kwargs
             All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
 
@@ -256,30 +297,33 @@ class Map(base.Map):
         self.checkDataLoaded()
 
         # Set default plot parameters then update with any input
-        plotParams = {}
-        plotParams.update(kwargs)
+        plot_params = {}
+        plot_params.update(kwargs)
 
-        eulerMap = np.transpose(self.eulerAngleArray, axes=(1, 2, 0))
-        # this is the normalisation - different foreach crystal symmetry!
-        if self.crystalSym == 'cubic':
-            norm = np.tile(np.array([2 * np.pi, np.pi / 2, np.pi / 2]),
-                           (self.yDim, self.xDim))
-            norm = np.reshape(norm, (self.yDim, self.xDim, 3))
-        elif self.crystalSym == 'hexagonal':
-            norm = np.tile(np.array([np.pi, np.pi, np.pi / 3]),
-                           (self.yDim, self.xDim))
-            norm = np.reshape(norm, (self.yDim, self.xDim, 3))
+        if phases is None:
+            phases = self.phases
+            phase_ids = range(len(phases))
         else:
-            Exception("Only hexagonal and cubic symGroup supported")
-        # make non-indexed points green
-        eulerMap = np.where(eulerMap != [0., 0., 0.], eulerMap, [0., 1., 0.])
-        eulerMap /= norm
+            phase_ids = phases
+            phases = [self.phases[i] for i in phase_ids]
 
-        plot = MapPlot.create(self, eulerMap, **plotParams)
+        map_colours = np.zeros(self.shape + (3,))
 
-        return plot
+        for phase, phase_id in zip(phases, phase_ids):
+            if phase.crystalStructure.name == 'cubic':
+                norm = np.array([2 * np.pi, np.pi / 2, np.pi / 2])
+            elif phase.crystalStructure.name == 'hexagonal':
+                norm = np.array([np.pi, np.pi, np.pi / 3])
+            else:
+                ValueError("Only hexagonal and cubic symGroup supported")
 
-    def plotIPFMap(self, direction, **kwargs):
+            # Apply normalisation for each phase
+            phase_mask = self.phaseArray == phase_id + 1
+            map_colours[phase_mask] = self.eulerAngleArray[:, phase_mask].T / norm
+
+        return MapPlot.create(self, map_colours, **plot_params)
+
+    def plotIPFMap(self, direction, phases=None, **kwargs):
         """
         Plot a map with points coloured in IPF colouring,
         with respect to a given sample direction.
@@ -288,8 +332,10 @@ class Map(base.Map):
         ----------
         direction : np.array len 3
             Sample directiom.
+        phases : list of int
+            Which phases to plot for
         kwargs
-            All other arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+            Other arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
         Returns
         -------
@@ -297,25 +343,28 @@ class Map(base.Map):
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {}
-        plotParams.update(kwargs)
+        plot_params = {}
+        plot_params.update(kwargs)
 
-        # calculate IPF colours
-        IPFcolours = Quat.calcIPFcolours(
-            self.quatArray.flatten(),
-            direction,
-            self.crystalSym
-        )
-        
-        # Make non-indexed points NaN
-        IPFcolours=np.where(np.tile(self.phaseArray.flatten()==0, (3,1)), np.nan, IPFcolours)
+        if phases is None:
+            phases = self.phases
+            phase_ids = range(len(phases))
+        else:
+            phase_ids = phases
+            phases = [self.phases[i] for i in phase_ids]
 
-        # reshape back to map shape array
-        IPFcolours = np.reshape(IPFcolours.T, (self.yDim, self.xDim, 3))
+        map_colours = np.zeros(self.shape + (3,))
 
-        plot = MapPlot.create(self, IPFcolours, **plotParams)
+        for phase, phase_id in zip(phases, phase_ids):
+            # calculate IPF colours for phase
+            phase_mask = self.phaseArray == phase_id + 1
+            map_colours[phase_mask] = Quat.calcIPFcolours(
+                self.quatArray[phase_mask],
+                direction,
+                phase.crystalStructure.name
+            ).T
 
-        return plot
+        return MapPlot.create(self, map_colours, **plot_params)
 
     def plotPhaseMap(self, **kwargs):
         """Plot a phase map.
@@ -323,7 +372,7 @@ class Map(base.Map):
         Parameters
         ----------
         kwargs
-            All arguments are passed to :func:`defdap.plotting.PolePlot.addPoints`.
+            All arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
         Returns
         -------
@@ -332,7 +381,7 @@ class Map(base.Map):
         """
         # Set default plot parameters then update with any input
         plotParams = {
-            'vmin': -1,
+            'vmin': 0,
             'vmax': self.numPhases
         }
         plotParams.update(kwargs)
@@ -340,10 +389,9 @@ class Map(base.Map):
         plot = MapPlot.create(self, self.phaseArray, **plotParams)
 
         # add a legend to the plot
-        phaseIDs = [-1] + list(range(1, self.numPhases + 1))
-        phaseNames = ["Non-indexed"] + self.phaseNames
-        plot.addLegend(phaseIDs, phaseNames,
-                       loc=2, borderaxespad=0.)
+        phaseIDs = list(range(0, self.numPhases + 1))
+        phaseNames = ["Non-indexed"] + [phase.name for phase in self.phases]
+        plot.addLegend(phaseIDs, phaseNames, loc=2, borderaxespad=0.)
 
         return plot
 
@@ -414,11 +462,12 @@ class Map(base.Map):
     def calcNye(self):
         """
         Calculates Nye tensor and related GND density for the EBSD map.
-        Stores result in self.Nye and self.GND.
+        Stores result in self.Nye and self.GND. Uses the crystal
+        symmetry of the primary phase.
 
         """
         self.buildQuatArray()
-        syms = Quat.symEqv(self.crystalSym)
+        syms = self.primaryPhase.crystalStructure.symmetries
         numSyms = len(syms)
 
         # array to store quat components of initial and symmetric equivalents
@@ -584,6 +633,88 @@ class Map(base.Map):
 
         yield 1.
 
+    def filterData(self, misOriTol=5):
+        # Kuwahara filter
+        print("8 quadrants")
+        misOriTol *= np.pi / 180
+        misOriTol = np.cos(misOriTol / 2)
+
+        # store quat components in array
+        quatComps = np.empty((4,) + self.shape)
+        for idx in np.ndindex(self.shape):
+            quatComps[(slice(None),) + idx] = self.quatArray[idx].quatCoef
+
+        # misorientation in each quadrant surrounding a point
+        misOris = np.zeros((8,) + self.shape)
+
+        for i in range(2, self.shape[0] - 2):
+            for j in range(2, self.shape[1] - 2):
+
+                refQuat = quatComps[:, i, j]
+                quadrants = [
+                    quatComps[:, i - 2:i + 1, j - 2:j + 1],   # UL
+                    quatComps[:, i - 2:i + 1, j - 1:j + 2],   # UC
+                    quatComps[:, i - 2:i + 1, j:j + 3],       # UR
+                    quatComps[:, i - 1:i + 2, j:j + 3],       # MR
+                    quatComps[:, i:i + 3, j:j + 3],           # LR
+                    quatComps[:, i:i + 3, j - 1:j + 2],       # LC
+                    quatComps[:, i:i + 3, j - 2:j + 1],       # LL
+                    quatComps[:, i - 1:i + 2, j - 2:j + 1]    # ML
+                ]
+
+                for k, quats in enumerate(quadrants):
+                    misOrisQuad = np.abs(
+                        np.einsum("ijk,i->jk", quats, refQuat)
+                    )
+                    misOrisQuad = misOrisQuad[misOrisQuad > misOriTol]
+                    misOris[k, i, j] = misOrisQuad.mean()
+
+        minMisOriQuadrant = np.argmax(misOris, axis=0)
+        # minMisOris = np.max(misOris, axis=0)
+        # minMisOris[minMisOris > 1.] = 1.
+        # minMisOris = 2 * np.arccos(minMisOris)
+
+        quatCompsNew = np.copy(quatComps)
+
+        for i in range(2, self.shape[0] - 2):
+            for j in range(2, self.shape[1] - 2):
+                # if minMisOris[i, j] < misOriTol:
+                #     continue
+
+                refQuat = quatComps[:, i, j]
+                quadrants = [
+                    quatComps[:, i - 2:i + 1, j - 2:j + 1],   # UL
+                    quatComps[:, i - 2:i + 1, j - 1:j + 2],   # UC
+                    quatComps[:, i - 2:i + 1, j:j + 3],       # UR
+                    quatComps[:, i - 1:i + 2, j:j + 3],       # MR
+                    quatComps[:, i:i + 3, j:j + 3],           # LR
+                    quatComps[:, i:i + 3, j - 1:j + 2],       # LC
+                    quatComps[:, i:i + 3, j - 2:j + 1],       # LL
+                    quatComps[:, i - 1:i + 2, j - 2:j + 1]    # ML
+                ]
+                quats = quadrants[minMisOriQuadrant[i, j]]
+
+                misOrisQuad = np.abs(
+                    np.einsum("ijk,i->jk", quats, refQuat)
+                )
+                quats = quats[:, misOrisQuad > misOriTol]
+
+                avOri = np.einsum("ij->i", quats)
+                # avOri /= np.sqrt(np.dot(avOri, avOri))
+
+                quatCompsNew[:, i, j] = avOri
+
+        quatCompsNew /= np.sqrt(np.einsum("ijk,ijk->jk", quatCompsNew, quatCompsNew))
+
+        quatArrayNew = np.empty(self.shape, dtype=Quat)
+
+        for idx in np.ndindex(self.shape):
+            quatArrayNew[idx] = Quat(quatCompsNew[(slice(None),) + idx])
+
+        self.quatArray = quatArrayNew
+
+        return quats
+
     @reportProgress("finding grain boundaries")
     def findBoundaries(self, boundDef=10):
         """Find grain boundaries
@@ -594,7 +725,9 @@ class Map(base.Map):
             Critical misorientation.
 
         """
-        syms = Quat.symEqv(self.crystalSym)
+        # TODO: what happens with non-indexed points
+        # TODO: grain boundaries should be calculated per crystal structure
+        syms = self.primaryPhase.crystalStructure.symmetries
         numSyms = len(syms)
 
         # array to store quat components of initial and symmetric equivalents
@@ -618,41 +751,113 @@ class Map(base.Map):
             quatComps[i, 3] = (quatComps[0, 0] * sym[3] + quatComps[0, 3] * sym[0] -
                                quatComps[0, 1] * sym[2] + quatComps[0, 2] * sym[1])
 
-            # swap into positve hemisphere if required
+            # swap into positive hemisphere if required
             quatComps[i, :, quatComps[i, 0] < 0] *= -1
 
-        # Arrays to store neigbour misorientation in positive x and y direction
-        misOrix = np.zeros((numSyms, self.yDim, self.xDim))
-        misOriy = np.zeros((numSyms, self.yDim, self.xDim))
+        # Arrays to store neighbour misorientation in positive x and y
+        # directions
+        misOriX = np.ones((numSyms, self.yDim, self.xDim))
+        misOriY = np.ones((numSyms, self.yDim, self.xDim))
 
         # loop over symmetries calculating misorientation to initial
         for i in range(numSyms):
             for j in range(self.xDim - 1):
-                misOrix[i, :, j] = abs(np.einsum("ij,ij->j", quatComps[0, :, :, j], quatComps[i, :, :, j + 1]))
+                misOriX[i, :, j] = abs(
+                    np.einsum("ij,ij->j", quatComps[0, :, :, j], quatComps[i, :, :, j + 1]))
 
             for j in range(self.yDim - 1):
-                misOriy[i, j, :] = abs(np.einsum("ij,ij->j", quatComps[0, :, j, :], quatComps[i, :, j + 1, :]))
+                misOriY[i, j, :] = abs(np.einsum("ij,ij->j", quatComps[0, :, j, :], quatComps[i, :, j + 1, :]))
 
-        misOrix[misOrix > 1] = 1
-        misOriy[misOriy > 1] = 1
+        misOriX[misOriX > 1] = 1
+        misOriY[misOriY > 1] = 1
 
         # find min misorientation (max here as misorientaion is cos of this)
-        misOrix = np.max(misOrix, axis=0)
-        misOriy = np.max(misOriy, axis=0)
+        misOriX = np.max(misOriX, axis=0)
+        misOriY = np.max(misOriY, axis=0)
 
         # convert to misorientation in degrees
-        misOrix = 360 * np.arccos(misOrix) / np.pi
-        misOriy = 360 * np.arccos(misOriy) / np.pi
+        misOriX = 2 * np.arccos(misOriX) * 180 / np.pi
+        misOriY = 2 * np.arccos(misOriY) * 180 / np.pi
 
-        # set boundary locations where misOrix or misOriy are greater than set value
-        self.boundaries = np.zeros((self.yDim, self.xDim), dtype=int)
+        # set boundary locations where misOriX or misOriY are greater
+        # than set value
+        self.boundariesX = misOriX > boundDef
+        self.boundariesY = misOriY > boundDef
 
-        for i in range(self.xDim):
-            for j in range(self.yDim):
-                if (misOrix[j, i] > boundDef) or (misOriy[j, i] > boundDef):
-                    self.boundaries[j, i] = -1
+        # add in phase boundaries
+        phaseBoundariesX = np.not_equal(self.phaseArray,
+                                        np.roll(self.phaseArray, -1, axis=1))
+        phaseBoundariesX[:, -1] = False
+        self.boundariesX = np.logical_or(self.boundariesX, phaseBoundariesX)
+
+        phaseBoundariesY = np.not_equal(self.phaseArray,
+                                        np.roll(self.phaseArray, -1, axis=0))
+        phaseBoundariesY[-1, :] = False
+        self.boundariesY = np.logical_or(self.boundariesY, phaseBoundariesY)
+
+        self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
+        self.boundaries = -self.boundaries.astype(int)
+
+        boundaryPoints = np.where(self.boundariesX)
+        boundaryLinesX = []
+        for i, j in zip(*boundaryPoints):
+            boundaryLinesX.append(((j + 0.5, i - 0.5), (j + 0.5, i + 0.5)))
+
+        boundaryPoints = np.where(self.boundariesY)
+        boundaryLinesY = []
+        for i, j in zip(*boundaryPoints):
+            boundaryLinesY.append(((j - 0.5, i + 0.5), (j + 0.5, i + 0.5)))
+
+        self.boundaryLines = boundaryLinesX + boundaryLinesY
 
         yield 1.
+
+    @reportProgress("constructing neighbour network")
+    def buildNeighbourNetwork(self):
+        # create network
+        nn = nx.Graph()
+        nn.add_nodes_from(self.grainList)
+
+        for i, boundaries in enumerate((self.boundariesX, self.boundariesY)):
+            yLocs, xLocs = np.nonzero(boundaries)
+            totalPoints = len(xLocs)
+
+            for iPoint, (x, y) in enumerate(zip(xLocs, yLocs)):
+                # report progress, assumes roughly equal number of x and
+                # y boundary points
+                yield 0.5 * (i + iPoint / totalPoints)
+
+                if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
+                        y == self.grains.shape[0] - 1):
+                    # exclude boundary pixels of map
+                    continue
+
+                grainID = self.grains[y, x] - 1
+                neiGrainID = self.grains[y + i, x - i + 1] - 1
+
+                if neiGrainID == grainID:
+                    # ignore if neighbour is same as grain
+                    continue
+                if neiGrainID < 0 or grainID < 0:
+                    # ignore if not a grain (boundary points -1 and
+                    # points in small grains -2)
+                    continue
+
+                grain = self[grainID]
+                neiGrain = self[neiGrainID]
+
+                try:
+                    # look up boundary segment if it exists
+                    bSeg = nn[grain][neiGrain]['boundary']
+                except KeyError:
+                    # neighbour relation doesn't exist so add it
+                    bSeg = BoundarySegment(self, grain, neiGrain)
+                    nn.add_edge(grain, neiGrain, boundary=bSeg)
+
+                # add the boundary point
+                bSeg.addBoundaryPoint((x, y), i, grain)
+
+        self.neighbourNetwork = nn
 
     @reportProgress("finding phase boundaries")
     def findPhaseBoundaries(self, treatNonIndexedAs=None):
@@ -669,8 +874,8 @@ class Map(base.Map):
         phaseArrayShifted[:-1, :-1] = self.phaseArray[1:, 1:]
 
         if treatNonIndexedAs:
-            self.phaseArray[self.phaseArray == -1] = treatNonIndexedAs
-            phaseArrayShifted[phaseArrayShifted == -1] = treatNonIndexedAs
+            self.phaseArray[self.phaseArray == 0] = treatNonIndexedAs
+            phaseArrayShifted[phaseArrayShifted == 0] = treatNonIndexedAs
 
         # where shifted array not equal to starting array, set to -1
         self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
@@ -697,7 +902,7 @@ class Map(base.Map):
         plotParams = {
             'vmax': 1,
             'plotColourBar': True,
-            'cmap': 'grey'
+            'cmap': 'gray'
         }
         plotParams.update(kwargs)
 
@@ -743,41 +948,67 @@ class Map(base.Map):
             Minimum grain area in pixels.
 
         """
+        # TODO: grains need to be assigned a phase
         # Initialise the grain map
-        self.grains = np.copy(self.boundaries)
+        # TODO: Look at grain map compared to boundary map
+        # self.grains = np.copy(self.boundaries)
+        self.grains = np.zeros_like(self.boundaries)
 
         self.grainList = []
 
         # List of points where no grain has be set yet
-        unknownPoints = np.where(self.grains == 0)
-        numPoints = unknownPoints[0].shape[0]
-        totalPoints = numPoints
+        points_left = self.phaseArray != 0
+        total_points = points_left.sum()
+        found_point = 0
+        next_point = points_left.tobytes().find(b'\x01')
+
         # Start counter for grains
         grainIndex = 1
 
         # Loop until all points (except boundaries) have been assigned
         # to a grain or ignored
-        while numPoints > 0:
-            # report progress
-            yield 1. - numPoints / totalPoints
-
+        i = 0
+        while found_point >= 0:
             # Flood fill first unknown point and return grain object
-            currentGrain = self.floodFill(unknownPoints[1][0], unknownPoints[0][0], grainIndex)
+            idx = np.unravel_index(next_point, self.grains.shape)
+            currentGrain = self.floodFill(idx[1], idx[0], grainIndex,
+                                          points_left)
 
-            grainSize = len(currentGrain)
-            if grainSize < minGrainSize:
+            if len(currentGrain) < minGrainSize:
                 # if grain size less than minimum, ignore grain and set
                 # values in grain map to -2
                 for coord in currentGrain.coordList:
                     self.grains[coord[1], coord[0]] = -2
             else:
-                # add grain and size to lists and increment grain label
+                # add grain to list and increment grain index
                 self.grainList.append(currentGrain)
                 grainIndex += 1
 
-            # update unknown points
-            unknownPoints = np.where(self.grains == 0)
-            numPoints = unknownPoints[0].shape[0]
+            # find next search point
+            points_left_sub = points_left.reshape(-1)[next_point + 1:]
+            found_point = points_left_sub.tobytes().find(b'\x01')
+            next_point += found_point + 1
+
+            # report progress
+            i += 1
+            if i == defaults['find_grain_report_freq']:
+                yield 1. - points_left_sub.sum() / total_points
+                i = 0
+
+        # Assign phase to each grain
+        for grain in self:
+            phaseVals = grain.grainData(self.phaseArray)
+            if np.max(phaseVals) != np.min(phaseVals):
+                warn(f"Grain {grain.grainID} could not be assigned a "
+                     f"phase, phase vals not constant.")
+                continue
+            phaseID = phaseVals[0] - 1
+            if not (0 <= phaseID < self.numPhases):
+                warn(f"Grain {grain.grainID} could not be assigned a "
+                     f"phase, invalid phase {phaseID}.")
+                continue
+            grain.phaseID = phaseID
+            grain.phase = self.phases[phaseID]
 
     def plotGrainMap(self, **kwargs):
         """Plot a map with grains coloured.
@@ -802,61 +1033,80 @@ class Map(base.Map):
 
         return plot
 
-    def floodFill(self, x, y, grainIndex):
-        """Flood filling algorithm.
+    def floodFill(self, x, y, grainIndex, points_left):
+        """Flood fill algorithm that uses the x and y boundary arrays to
+        fill a connected area around the seed point. The points are inserted
+        into a grain object and the grain map array is updated.
 
         Parameters
         ----------
         x : int
-            x coordinate in pixels.
+            Seed point x for flood fill
         y : int
-            y coordinate in pixels.
+            Seed point y for flood fill
         grainIndex : int
-            Grain ID.
+            Value to fill in grain map
+        points_left : numpy.ndarray
+            Boolean map of the points that have not been assigned a grain yet
 
+        Returns
+        -------
+        currentGrain : defdap.ebsd.Grain
+            New grain object with points added
         """
-        currentGrain = Grain(self)
+        # create new grain
+        currentGrain = Grain(grainIndex - 1, self)
 
+        # add first point to the grain
         currentGrain.addPoint((x, y), self.quatArray[y, x])
-
-        edge = [(x, y)]
-        grain = [(x, y)]
-
         self.grains[y, x] = grainIndex
+        points_left[y, x] = False
+        edge = [(x, y)]
+
         while edge:
-            newedge = []
+            x, y = edge.pop(0)
 
-            for (x, y) in edge:
-                moves = np.array([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
+            moves = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
+            # get rid of any that go out of the map area
+            if x <= 0:
+                moves.pop(1)
+            elif x >= self.xDim - 1:
+                moves.pop(0)
+            if y <= 0:
+                moves.pop(-1)
+            elif y >= self.yDim - 1:
+                moves.pop(-2)
 
-                movesIndexShift = 0
-                if x <= 0:
-                    moves = np.delete(moves, 1, 0)
-                    movesIndexShift = 1
-                elif x >= self.xDim - 1:
-                    moves = np.delete(moves, 0, 0)
-                    movesIndexShift = 1
+            for (s, t) in moves:
+                if self.grains[t, s] > 0:
+                    continue
 
-                if y <= 0:
-                    moves = np.delete(moves, 3 - movesIndexShift, 0)
-                elif y >= self.yDim - 1:
-                    moves = np.delete(moves, 2 - movesIndexShift, 0)
+                addPoint = False
 
-                for (s, t) in moves:
-                    if self.grains[t, s] == 0:
-                        currentGrain.addPoint((s, t), self.quatArray[t, s])
-                        newedge.append((s, t))
-                        grain.append((s, t))
-                        self.grains[t, s] = grainIndex
-                    elif self.grains[t, s] == -1 and (s > x or t > y):
-                        currentGrain.addPoint((s, t), self.quatArray[t, s])
-                        grain.append((s, t))
-                        self.grains[t, s] = grainIndex
+                if t == y:
+                    # moving horizontally
+                    if s > x:
+                        # moving right
+                        addPoint = not self.boundariesX[y, x]
+                    else:
+                        # moving left
+                        addPoint = not self.boundariesX[t, s]
+                else:
+                    # moving vertically
+                    if t > y:
+                        # moving down
+                        addPoint = not self.boundariesY[y, x]
+                    else:
+                        # moving up
+                        addPoint = not self.boundariesY[t, s]
 
-            if newedge == []:
-                return currentGrain
-            else:
-                edge = newedge
+                if addPoint:
+                    currentGrain.addPoint((s, t), self.quatArray[t, s])
+                    self.grains[t, s] = grainIndex
+                    points_left[t, s] = False
+                    edge.append((s, t))
+
+        return currentGrain
 
     @reportProgress("calculating grain mean orientations")
     def calcGrainAvOris(self):
@@ -951,18 +1201,20 @@ class Map(base.Map):
             stored in the defdap install dir or path to a file.
 
         """
+        # TODO: should be loaded into the phases of the map
         self.slipSystems, self.slipTraceColours = SlipSystem.loadSlipSystems(
             name, self.crystalSym, cOverA=self.cOverA
         )
 
-        if self.grainList is not None:
-            for grain in self.grainList:
+        if self.checkGrainsDetected(raiseExc=False):
+            for grain in self:
                 grain.slipSystems = self.slipSystems
 
     def printSlipSystems(self):
         """Print a list of slip planes (with colours) and slip directions.
 
         """
+        # TODO: this should be moved to static method of the SlipSystem class
         for i, (ssGroup, colour) in enumerate(zip(self.slipSystems,
                                                   self.slipTraceColours)):
             print('Plane {0}: {1}\tColour: {2}'.format(
@@ -1098,14 +1350,15 @@ class Grain(base.Grain):
 
     """
 
-    def __init__(self, ebsdMap):
+    # TODO: each grain should be assigned a phase and slip systems
+    # slip systems accessed from the phase
+    def __init__(self, grainID, ebsdMap):
         # Call base class constructor
-        super(Grain, self).__init__()
+        super(Grain, self).__init__(grainID, ebsdMap)
 
         self.crystalSym = ebsdMap.crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
         self.slipSystems = ebsdMap.slipSystems
-        self.ebsdMap = ebsdMap                  # ebsd map this grain is a member of
-        self.ownerMap = ebsdMap
+        self.ebsdMap = self.ownerMap            # ebsd map this grain is a member of
         self.quatList = []                      # list of quats
         self.misOriList = None                  # list of misOri at each point in grain
         self.misOriAxisList = None              # list of misOri axes at each point in grain
@@ -1242,8 +1495,9 @@ class Grain(base.Grain):
             All other arguments are passed to :func:`defdap.quat.Quat.plotUnitCell`.
 
         """
+        # TODO: Update to use phase
         Quat.plotUnitCell(self.refOri, fig=fig, ax=ax,
-                          symGroup=self.crystalSym, cOverA=self.ebsdMap.cOverA, **kwargs)
+                          symGroup=self.crystalSym, **kwargs)
 
     def plotMisOri(self, component=0, **kwargs):
         """Plot misorientation map for a given grain.
@@ -1285,42 +1539,6 @@ class Grain(base.Grain):
         plot = self.plotGrainData(grainData=plotData, **plotParams)
 
         return plot
-
-    # def plotMisOriMulti(self, vmin=None, vmax=None, vRange=(None, None, None),
-        # cmap=("viridis", "bwr")):
-        #
-        # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-        #
-        # # TODO: Update plot grain misori method
-        #
-        # # subplots
-        # grainMisOri = np.full((4, ymax - y0 + 1, xmax - x0 + 1), np.nan, dtype=float)
-        #
-        # for coord, misOri, misOriAxis in zip(self.coordList,
-        #                                      np.arccos(self.misOriList) * 360 / np.pi,
-        #                                      np.array(self.misOriAxisList) * 180 / np.pi):
-        #     grainMisOri[0, coord[1] - y0, coord[0] - x0] = misOri
-        #     grainMisOri[1:4, coord[1] - y0, coord[0] - x0] = misOriAxis
-        #
-        # f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-        #
-        # img = ax1.imshow(grainMisOri[0], interpolation='none', cmap=cmap[0], vmin=vmin, vmax=vmax)
-        # plt.colorbar(img, ax=ax1, label="Grain misorientation ($^\circ$)")
-        # vmin = None if vRange[0] is None else -vRange[0]
-        # img = ax2.imshow(grainMisOri[1], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[0])
-        # plt.colorbar(img, ax=ax2, label="x rotation ($^\circ$)")
-        # vmin = None if vRange[0] is None else -vRange[1]
-        # img = ax3.imshow(grainMisOri[2], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[1])
-        # plt.colorbar(img, ax=ax3, label="y rotation ($^\circ$)")
-        # vmin = None if vRange[0] is None else -vRange[2]
-        # img = ax4.imshow(grainMisOri[3], interpolation='none', cmap=cmap[1], vmin=vmin, vmax=vRange[2])
-        # plt.colorbar(img, ax=ax4, label="z rotation ($^\circ$)")
-        #
-        # for ax in (ax1, ax2, ax3, ax4):
-        #     ax.set_xticks([])
-        #     ax.set_yticks([])
-        #
-        # return
 
     # define load axis as unit vector
     def calcAverageSchmidFactors(self, loadVector, slipSystems=None):
@@ -1441,6 +1659,101 @@ class Grain(base.Grain):
             # Append to list
             self.slipTraceAngles.append(traceAngle)
             self.slipTraceInclinations.append(inclination)
+
+
+class BoundarySegment(object):
+    def __init__(self, ebsdMap, grain1, grain2):
+        self.ebsdMap = ebsdMap
+
+        self.grain1 = grain1
+        self.grain2 = grain2
+
+        # list of boundary points (x, y) for horizontal (X) and
+        # vertical (Y) boundaries
+        self.boundaryPointsX = []
+        self.boundaryPointsY = []
+        # Boolean value for each point above, True if boundary point is
+        # in grain1 and False if in grain2
+        self.boundaryPointOwnersX = []
+        self.boundaryPointOwnersY = []
+
+    def __eq__(self, right):
+        if type(self) is not type(right):
+            raise NotImplementedError()
+
+        return ((self.grain1 is right.grain1 and
+                self.grain2 is right.grain2) or
+                (self.grain1 is right.grain2 and
+                 self.grain2 is right.grain1))
+
+    def __len__(self):
+        return len(self.boundaryPointsX) + len(self.boundaryPointsY)
+
+    def addBoundaryPoint(self, point, kind, ownerGrain):
+        if kind == 0:
+            self.boundaryPointsX.append(point)
+            self.boundaryPointOwnersX.append(ownerGrain is self.grain1)
+        elif kind == 1:
+            self.boundaryPointsY.append(point)
+            self.boundaryPointOwnersY.append(ownerGrain is self.grain1)
+        else:
+            raise ValueError("Boundary point kind is 0 for x and 1 for y")
+
+    def boundaryPointPairs(self, kind):
+        """Return pairs of points either side of the boundary. The first
+        point is always in grain1
+        """
+        if kind == 0:
+            boundaryPoints = self.boundaryPointsX
+            boundaryPointOwners = self.boundaryPointOwnersX
+            delta = (1, 0)
+        else:
+            boundaryPoints = self.boundaryPointsY
+            boundaryPointOwners = self.boundaryPointOwnersY
+            delta = (0, 1)
+
+        boundaryPointPairs = []
+        for point, owner in zip(boundaryPoints, boundaryPointOwners):
+            otherPoint = (point[0] + delta[0], point[1] + delta[1])
+            if owner:
+                boundaryPointPairs.append((point, otherPoint))
+            else:
+                boundaryPointPairs.append((otherPoint, point))
+
+        return boundaryPointPairs
+
+    @property
+    def boundaryPointPairsX(self):
+        """Return pairs of points either side of the boundary. The first
+        point is always in grain1
+        """
+        return self.boundaryPointPairs(0)
+
+    @property
+    def boundaryPointPairsY(self):
+        """Return pairs of points either side of the boundary. The first
+        point is always in grain1
+        """
+        return self.boundaryPointPairs(1)
+
+    def misorientation(self):
+        misOri, minSymm = self.grain1.refOri.misOri(
+            self.grain2.refOri, self.ebsdMap.crystalSym, returnQuat=2
+        )
+        misOri = 2 * np.arccos(misOri)
+        misOriAxis = self.grain1.refOri.misOriAxis(minSymm)
+
+        # should this be a unit vector already?
+        misOriAxis /= np.sqrt(np.dot(misOriAxis, misOriAxis))
+
+        return misOri, misOriAxis
+
+        # compVector = np.array([1., 1., 1.])
+        # deviation = np.arccos(
+        #     np.dot(misOriAxis, np.array([1., 1., 1.])) /
+        #     (np.sqrt(np.dot(misOriAxis, misOriAxis) * np.dot(compVector,
+        #                                                      compVector))))
+        # print(deviation * 180 / np.pi)
 
 
 class Linker(object):

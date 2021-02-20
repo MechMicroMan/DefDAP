@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import numpy as np
 import defdap.ebsd as ebsd
+import defdap.crystal as crystal
 
 
 DATA_DIR = "tests/data/"
@@ -13,7 +14,7 @@ EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
 
 @pytest.fixture(scope="module")
 def good_map():
-    ebsd_map = ebsd.Map(EXAMPLE_EBSD, "cubic")
+    ebsd_map = ebsd.Map(EXAMPLE_EBSD)
 
     return ebsd_map
 
@@ -30,18 +31,27 @@ def good_quat_array(good_map_with_quats):
     return good_map_with_quats.quatArray
 
 
+@pytest.fixture(scope="module")
+def good_phase_array(good_map_with_quats):
+    return good_map_with_quats.phaseArray
+
+
 class TestMapFindBoundaries:
-    # Depends on Quat.symEqv, self.crystalSym, self.yDim, self.xDim, self.quatArray
+    # Depends on Quat.symEqv, self.crystalSym, self.yDim, self.xDim,
+    # self.quatArray, self.phaseArray
     # Affects self.boundaries
 
     @staticmethod
     @pytest.fixture
-    def mock_map(good_quat_array):
+    def mock_map(good_quat_array, good_phase_array):
         # create stub object
         mock_map = Mock(spec=ebsd.Map)
         mock_map.quatArray = good_quat_array
+        mock_map.phaseArray = good_phase_array
         mock_map.yDim, mock_map.xDim = good_quat_array.shape
-        mock_map.crystalSym = "cubic"
+        mock_phase = Mock(spec=crystal.Phase)
+        mock_phase.crystalStructure = crystal.crystalStructures['cubic']
+        mock_map.primaryPhase = mock_phase
 
         return mock_map
 

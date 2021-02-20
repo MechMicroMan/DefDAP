@@ -2,16 +2,25 @@ from setuptools import setup, find_packages
 
 
 def get_long_description():
-    readme_file = 'README.md'
-    with open(readme_file, encoding='utf-8') as handle:
-        contents = handle.read()
+    readme_path = 'README.md'
+    with open(readme_path, encoding='utf-8') as readme_file:
+        contents = readme_file.read()
 
     return contents
 
 
+def get_version():
+    ver_path = 'defdap/_version.py'
+    main_ns = {}
+    with open(ver_path) as ver_file:
+        exec(ver_file.read(), main_ns)
+
+    return main_ns['__version__']
+
+
 setup(
     name='DefDAP',
-    version='0.92.3',
+    version=get_version(),
     author='Michael D. Atkinson, Rhys Thomas, João Quinta da Fonseca',
     author_email='michael.atkinson@manchester.ac.uk',
     description='A python library for correlating EBSD and HRDIC data.',
@@ -32,10 +41,10 @@ setup(
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Framework :: IPython',
         'Framework :: Jupyter',
         'Framework :: Matplotlib'
@@ -57,7 +66,8 @@ setup(
         'jupyter'
     ],
     extras_require={
-        'testing': ['pytest', 'coverage', 'pytest-cov', 'pytest_cases']
+        'testing': ['pytest', 'coverage', 'pytest-cov', 'pytest_cases'],
+        'docs': ['sphinx==3.2.1', 'sphinx_rtd_theme==0.5.0']
     }
 
 )

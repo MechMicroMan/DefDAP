@@ -25,10 +25,23 @@ from defdap.utils import reportProgress
 
 class Map(object):
     """
-    Base class for a map.
+    Base class for a map. Contains common functionality for all maps.
+
+    Attributes
+    ----------
+
+    grainList : list of defdap.base.Grain
+        List of grains.
+    currGrainId : int
+        ID of last selected grain.
+
     """
     def __init__(self):
+        self.xDim = None
+        self.yDim = None
+
         self.grainList = None
+        self.currGrainId = None  # ID of last selected grain
         self.homogPoints = []
 
         self.proxigramArr = None
@@ -50,13 +63,19 @@ class Map(object):
     def shape(self):
         return self.yDim, self.xDim
 
-    def checkGrainsDetected(self):
+    def checkGrainsDetected(self, raiseExc=True):
         """Check if grains have been detected.
+
+        Parameters
+        ----------
+        raiseExc : bool
+            If True then an expception is raised if grains have not been
+            detected.
 
         Returns
         -------
         bool:
-            True if grains detected.
+            True if grains detected, False otherwise.
 
         Raises
         -------
@@ -68,7 +87,10 @@ class Map(object):
         if (self.grainList is None or
                 type(self.grainList) is not list or
                 len(self.grainList) < 1):
-            raise Exception("No grains detected.")
+            if raiseExc:
+                raise Exception("No grains detected.")
+            else:
+                return False
         return True
 
     def plotGrainNumbers(self, dilateBoundaries=False, ax=None, **kwargs):
@@ -320,60 +342,66 @@ class Map(object):
 
             self.homogPoints[homogID] = newPoint
 
+    @reportProgress("constructing neighbour network")
     def buildNeighbourNetwork(self):
         """Construct a list of neighbours
 
         """
-        yLocs, xLocs = np.nonzero(self.boundaries)
-        neighboursList = []
+        # create network
+        nn = nx.Graph()
+        nn.add_nodes_from(self.grainList)
 
-        for y, x in zip(yLocs, xLocs):
+        yLocs, xLocs = np.nonzero(self.boundaries)
+        totalPoints = len(xLocs)
+
+        for iPoint, (x, y) in enumerate(zip(xLocs, yLocs)):
+            # report progress
+            yield iPoint / totalPoints
+
             if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
                     y == self.grains.shape[0] - 1):
-                # exclude boundary pixel of map
+                # exclude boundary pixels of map
                 continue
-            else:
-                # use 4 nearest neighbour points as potential neighbour grains
-                # (this maybe needs changing considering the position of
-                # boundary pixels relative to the actual edges)
-                # use sets as they do not allow duplicate elements
-                # minus 1 on all as the grain image starts labeling at 1
-                neighbours = {
-                    self.grains[y + 1, x] - 1,
-                    self.grains[y - 1, x] - 1,
-                    self.grains[y, x + 1] - 1,
-                    self.grains[y, x - 1] - 1
-                }
-                # neighbours = set(neighbours)
-                # remove boundary points (-2) and points in small
-                # grains (-3) (Normally -1 and -2)
-                neighbours.discard(-2)
-                neighbours.discard(-3)
 
-                nunNeig = len(neighbours)
+            # use 4 nearest neighbour points as potential neighbour grains
+            # (this maybe needs changing considering the position of
+            # boundary pixels relative to the actual edges)
+            # use sets as they do not allow duplicate elements
+            # minus 1 on all as the grain image starts labeling at 1
+            neighbours = {
+                self.grains[y + 1, x] - 1,
+                self.grains[y - 1, x] - 1,
+                self.grains[y, x + 1] - 1,
+                self.grains[y, x - 1] - 1
+            }
+            # neighbours = set(neighbours)
+            # remove boundary points (-2) and points in small
+            # grains (-3) (Normally -1 and -2)
+            neighbours.discard(-2)
+            neighbours.discard(-3)
 
-                if nunNeig == 1:
-                    continue
-                elif nunNeig == 2:
-                    neighboursSplit = [neighbours]
-                elif nunNeig > 2:
-                    neighbours = list(neighbours)
-                    neighboursSplit = []
-                    for i in range(nunNeig):
-                        for j in range(i + 1, nunNeig):
-                            neighboursSplit.append({neighbours[i], neighbours[j]})
+            neighbours = tuple(neighbours)
+            nunNeig = len(neighbours)
+            if nunNeig <= 1:
+                continue
+            for i in range(nunNeig):
+                for j in range(i + 1, nunNeig):
+                    # Add  to network
+                    grain = self[neighbours[i]]
+                    neiGrain = self[neighbours[j]]
+                    try:
+                        # look up boundary
+                        nn[grain][neiGrain]
+                    except KeyError:
+                        # neighbour relation doesn't exist so add it
+                        nn.add_edge(grain, neiGrain)
 
-                for trialNeig in neighboursSplit:
-                    if trialNeig not in neighboursList:
-                        neighboursList.append(trialNeig)
+        self.neighbourNetwork = nn
 
-        # create network
-        self.neighbourNetwork = nx.Graph()
-        self.neighbourNetwork.add_nodes_from(range(len(self)))
-        self.neighbourNetwork.add_edges_from(neighboursList)
-
-    def displayNeighbours(self):
-        self.locateGrainID(clickEvent=self.clickGrainNeighbours)
+    def displayNeighbours(self, **kwargs):
+        return self.locateGrainID(
+            clickEvent=self.clickGrainNeighbours, **kwargs
+        )
 
     def clickGrainNeighbours(self, event, plot):
         """Event handler to capture clicking and show neighbours of selected grain.
@@ -392,26 +420,31 @@ class Map(object):
             if grainId < 0:
                 return
             self.currGrainId = grainId
+            grain = self[grainId]
 
             # find first and second nearest neighbours
-            firstNeighbours = list(self.neighbourNetwork.neighbors(self.currGrainId))
-            highlightGrains = [self.currGrainId] + firstNeighbours
+            firstNeighbours = list(self.neighbourNetwork.neighbors(grain))
+            highlightGrains = [grain] + firstNeighbours
 
             secondNeighbours = []
             for firstNeighbour in firstNeighbours:
-                trialSecondNeighbours = list(self.neighbourNetwork.neighbors(firstNeighbour))
+                trialSecondNeighbours = list(
+                    self.neighbourNetwork.neighbors(firstNeighbour)
+                )
                 for secondNeighbour in trialSecondNeighbours:
                     if (secondNeighbour not in highlightGrains and
                             secondNeighbour not in secondNeighbours):
                         secondNeighbours.append(secondNeighbour)
             highlightGrains.extend(secondNeighbours)
 
+            highlightGrains = [grain.grainID for grain in highlightGrains]
             highlightColours = ['white']
             highlightColours.extend(['yellow'] * len(firstNeighbours))
             highlightColours.append('green')
 
             # update the grain highlights layer in the plot
-            plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
+            plot.addGrainHighlights(highlightGrains,
+                                    grainColours=highlightColours)
 
     @property
     def proxigram(self):
@@ -526,32 +559,80 @@ class Map(object):
 
         return grainAvData
 
-    def plotGrainDataMap(self, mapData=None, grainData=None,
-                         grainIds=-1, bg=0, **kwargs):
+    def grainDataToMapData(self, grainData, grainIds=-1, bg=0):
+        """Create a map array with each grain filled with the given
+        values.
+
+        Parameters
+        ----------
+        grainData : list or np.ndarray
+            Grain values. This can be a single value per grain or RGB
+            values.
+        grainIds : list of int or int, optional
+            IDs of grains to plot for. Use -1 for all grains in the map.
+        bg : int or real, optional
+            Value to fill the background with.
+
+        Returns
+        -------
+        grainMap: np.ndarray
+            Array filled with grain data values
+
         """
-        Plot a grain map with grains coloured by given data. The data
+        # Check that grains have been detected in the map
+        self.checkGrainsDetected()
+
+        if type(grainIds) is int:
+            if grainIds == -1:
+                grainIds = range(len(self))
+            else:
+                grainIds = [grainIds]
+
+        grainData = np.array(grainData)
+        if grainData.shape[0] != len(grainIds):
+            raise ValueError("The length of supplied grain data does not"
+                             "match the number of grains.")
+        if len(grainData.shape) == 1:
+            mapShape = [self.yDim, self.xDim]
+        elif len(grainData.shape) == 2 and grainData.shape[1] == 3:
+            mapShape = [self.yDim, self.xDim, 3]
+        else:
+            raise ValueError("The grain data supplied must be either a"
+                             "single value or RGB values per grain.")
+
+        grainMap = np.full(mapShape, bg, dtype=grainData.dtype)
+        for grainId, grainValue in zip(grainIds, grainData):
+            for coord in self[grainId].coordList:
+                grainMap[coord[1], coord[0]] = grainValue
+
+        return grainMap
+
+    def plotGrainDataMap(
+        self, mapData=None, grainData=None, grainIds=-1, bg=0, **kwargs
+    ):
+        """Plot a grain map with grains coloured by given data. The data
         can be provided as a list of values per grain or as a map which
         a grain average will be applied.
 
         Parameters
         ----------
-        mapData : numpy.ndarray, optional
-            Array of map data. This must be cropped! You must supply either
-            mapData or grainData.
-        grainData : list or numpy.array, optional
+        mapData : np.array, optional
+            Array of map data. This must be cropped! Either mapData or 
+            grainData must be supplied.
+        grainData : list or np.array, optional
             Grain values. This an be a single value per grain or RGB
             values. You must supply either mapData or grainData.
-        grainIds : list(int) or int, optional
+        grainIds: list of int or int, optional
             IDs of grains to plot for. Use -1 for all grains in the map.
-        bg : int or real, optional
+        bg: int or real, optional
             Value to fill the background with.
-        kwargs :
-            Other parameters are passed to defdap.plotting.MapPlot.create.
+        kwargs:
+            Other parameters are passed to defdap.plotting.MapPlot.create
 
         Returns
         -------
-        plot : defdap.plotting.MapPlot
-            Plot object created.
+        plot: defdap.plotting.MapPlot
+            Plot object created
 
         """
         # Set default plot parameters then update with any input
@@ -565,40 +646,16 @@ class Map(object):
             else:
                 grainData = self.calcGrainAv(mapData, grainIds=grainIds)
 
-        # Check that grains have been detected in the map
-        self.checkGrainsDetected()
-
-        if type(grainIds) is int:
-            if grainIds == -1:
-                grainIds = range(len(self))
-            else:
-                grainIds = [grainIds]
-
-        grainData = np.array(grainData)
-        if grainData.shape[0] != len(grainIds):
-            raise Exception("The length of supplied grain data does not"
-                            "match the number of grains.")
-        if len(grainData.shape) == 1:
-            mapShape = [self.yDim, self.xDim]
-        elif len(grainData.shape) == 2 and grainData.shape[1] == 3:
-            mapShape = [self.yDim, self.xDim, 3]
-        else:
-            raise Exception("The grain data supplied must be either a"
-                            "single value or RGB values per grain.")
-
-        grainMap = np.full(mapShape, bg, dtype=grainData.dtype)
-        for grainId, grainValue in zip(grainIds, grainData):
-            grain = self.grainList[grainId]
-            for coord in grain.coordList:
-                grainMap[coord[1], coord[0]] = grainValue
+        grainMap = self.grainDataToMapData(grainData, grainIds=grainIds,
+                                           bg=bg)
 
         plot = MapPlot.create(self, grainMap, **plotParams)
 
         return plot
 
     def plotGrainDataIPF(
-            self, direction, mapData=None, grainData=None,
-            grainIds=-1, **kwargs
+        self, direction, mapData=None, grainData=None, grainIds=-1,
+        **kwargs
     ):
         """
         Plot IPF of grain reference (average) orientations with
@@ -656,13 +713,18 @@ class Grain(object):
     """
     Base class for a grain.
     """
-    def __init__(self):
+    def __init__(self, grainID, ownerMap):
         # list of coords stored as tuples (x, y). These are coords in a
         # cropped image if crop exists.
+        self.grainID = grainID
+        self.ownerMap = ownerMap
         self.coordList = []
 
     def __len__(self):
         return len(self.coordList)
+
+    def __str__(self):
+        return f"Grain(ID={self.grainID})"
 
     @property
     def extremeCoords(self):

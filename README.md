@@ -5,9 +5,12 @@
 <h4 align="center">A python library for correlating EBSD and HRDIC data.</h4>
 
 <p align="center">
-  <img alt="Release" src="https://img.shields.io/github/v/release/MechMicroMan/DefDAP?include_prereleases">
-  <img alt="Python 3.7" src="https://img.shields.io/badge/python-3.7-red">
+  <img alt="PyPI" src="https://img.shields.io/pypi/v/defdap">
+  <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/defdap">
   <img alt="License" src="https://img.shields.io/github/license/MechMicroMan/DefDAP">
+  <a href="https://defdap.readthedocs.io/en/latest/?badge=latest">
+    <img src="https://readthedocs.org/projects/defdap/badge/?version=latest" alt='Documentation Status' />
+  </a>
   <a href="https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb">
     <img alt="Binder" src="https://mybinder.org/badge_logo.svg">
   </a>
@@ -32,7 +35,7 @@
 
 - If you use conda as your package manager (https://www.anaconda.com/), the prerequisite packages that are available from anaconda can be installed using the command `conda install scipy numpy matplotlib scikit-image scikit-learn pandas networkx jupyter ipython` (Anaconda3-2020.02 has been tested)
 
-- For more information, see the [documentation](http://mechmicroman.github.io/DefDAP/installation.html)
+- For more information, see the [documentation](https://defdap.readthedocs.io/en/latest/installation.html)
 
 ## How to use
 
@@ -45,12 +48,12 @@
 
 ## Documentation
 
-- For more help, see the online [documentation](http://mechmicroman.github.io/DefDAP) or browse in the /docs directory.
+- For more help, see the online [documentation](https://defdap.readthedocs.io/).
 
 ## Contributing
 
-- For information about contributing see the [guidelines](http://mechmicroman.github.io/DefDAP/contributing.html)
-- Any new functions or changes to arguments should be documented. Details on how to regenerate html documentation is given [here](/docs/README.md).
+- For information about contributing see the [guidelines](https://defdap.readthedocs.io/en/latest/contributing.html)
+- Any new functions or changes to arguments should be documented.
 
 ## Credits
 

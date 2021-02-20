@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import functools
+from datetime import datetime
+
 
 def reportProgress(message=""):
     """Decorator for reporting progress of given function
@@ -21,7 +23,8 @@ def reportProgress(message=""):
     Parameters
     ----------
     message : str
-        Message to display (prefixed by 'Starting ', progress percentage and then 'Finished '
+        Message to display (prefixed by 'Starting ', progress percentage
+        and then 'Finished '
 
     References
     ----------
@@ -32,12 +35,13 @@ def reportProgress(message=""):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            messageStart = "\rStarting " + message + ".."
+            messageStart = f"\rStarting {message}.."
             print(messageStart, end="")
             # The yield statements in the function produces a generator
             generator = func(*args, **kwargs)
             progPrev = 0.
             printFinal = True
+            ts = datetime.now()
             try:
                 while True:
                     prog = next(generator)
@@ -47,15 +51,15 @@ def reportProgress(message=""):
                         continue
                     # only report each percent
                     if prog - progPrev > 0.01:
-                        messageProg = messageStart + \
-                                      " {:} % ".format(int(prog*100))
+                        messageProg = f"{messageStart} {prog*100:.0f} %"
                         print(messageProg, end="")
                         progPrev = prog
                         printFinal = True
 
             except StopIteration as e:
                 if printFinal:
-                    messageEnd = "\rFinished " + message + "           "
+                    te = str(datetime.now() - ts).split('.')[0]
+                    messageEnd = f"\rFinished {message} ({te}) "
                     print(messageEnd)
                 # When generator finished pass the return value out
                 return e.value
