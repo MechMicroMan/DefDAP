@@ -310,7 +310,7 @@ class MapPlot(Plot):
         self.ax.add_artist(ScaleBar(scale))
 
     def addGrainBoundaries(self, kind="pixel", boundaries=None, colour=None, 
-                           dilate=False, **kwargs):
+                           dilate=False, draw=True, **kwargs):
         """Add grain boundaries to the plot.
 
         Parameters
@@ -349,7 +349,8 @@ class MapPlot(Plot):
             self.ax.add_collection(lc)
             # ax.autoscale()
 
-            self.draw()
+            if draw:
+                self.draw()
         else:
             boundariesImage = boundaries
             if boundariesImage is None:
@@ -369,7 +370,8 @@ class MapPlot(Plot):
 
             img = self.ax.imshow(boundariesImage, cmap=boundariesCmap,
                                  interpolation='None', vmin=0, vmax=1)
-            self.draw()
+            if draw:
+                self.draw()
 
             self.imgLayers.append(img)
 
