@@ -570,19 +570,41 @@ class Map(base.Map):
         # return map
         return warpedMap
 
-    def generateThresholdMask(self, threshold, dilation=0, preview=False):
-        """ Generate a mask, based on thresholding of effective shear strain values.
+    def generateThresholdMask(self, mask, dilation=0, preview=True):
+        """ 
+        Generate a dilated mask, based on a boolean array and previews the appication of
+        this mask to the max shear map.
 
         Parameters
         ----------
-        threshold: float
-            Threshold effective shear strain value, above which pixels are masked.
-        dilation: int
-            Number of times to apply binary dilation.
+        mask: numpy.array(bool)
+            A boolean array where points to be removed are True
+        dilation: int, optional
+            Number of pixels to dilate the mask by. Useful to remove anomalous points 
+            around masked values. No dilation applied if not specified.
         preview: bool
-            If true, show the mask and masked effective shear strain map.
+            If true, show the mask and preview the masked effective shear strain map.
+
+        Examples
+        ----------
+        To remove data points in dicMap where eMaxShear is above 0.8, use:
+
+        >>> mask = dicMap.eMaxShear > 0.8
+
+        To remove data points in dicMap where e11 is above 1 or less than -1, use:        
+        
+        >>> mask = (dicMap.e11 > 1) | (dicMap.e11 < -1)
+
+        To remove data points in dicMap where corrVal is less than 0.4, use:
+
+        >>> mask = dicMap.corrVal < 0.4
+
+        Note: correlation value data needs to be loaded seperately from the DIC map, 
+        see :func:`defdap.hrdic.loadCorrValData`
+
         """
-        self.mask = self.eMaxShear > threshold
+        self.mask = mask
+
 
         if dilation != 0:
             self.mask = binary_dilation(self.mask, iterations=dilation)
@@ -592,21 +614,23 @@ class Map(base.Map):
         numRemovedCrop = np.sum(self.crop(self.mask))
         numTotalCrop = self.xDim * self.yDim
 
-        print('Filtering removes {0} \ {1} ({2:.3f} %) datapoints in map'.format(numRemoved, numTotal,
-                                                                       (numRemoved / numTotal)*100))
-        print('Filtering removes {0} \ {1} ({2:.3f} %) datapoints in cropped map'.format(numRemovedCrop, numTotalCrop,
-                                                                       (numRemovedCrop / numTotalCrop * 100)))
+        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
+                    .format(numRemoved, numTotal,(numRemoved / numTotal)*100))
+        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
+                    .format(numRemovedCrop, numTotalCrop,(numRemovedCrop / numTotalCrop * 100)))
 
         if preview == True:
             plot1 = MapPlot.create(self, self.crop(self.mask), cmap='binary')
             plot1.setTitle('Removed datapoints in black')
-            plot2 = MapPlot.create(self, self.crop(np.where(self.mask == True, np.nan, self.eMaxShear)),
-                                  plotColourBar='True', clabel="Effective shear strain")
+            plot2 = MapPlot.create(self, 
+                                  self.crop(np.where(self.mask == True, np.nan, self.eMaxShear)),
+                                  plotColourBar='True', 
+                                  clabel="Effective shear strain")
             plot2.setTitle('Effective shear strain preview')
         print('Use applyThresholdMask function to apply this filtering to data')
 
     def applyThresholdMask(self):
-        """ Apply mask to DIC data by setting masked values to nan.
+        """ Apply mask to all DIC map data by setting masked values to nan.
 
         """
         self.eMaxShear = np.where(self.mask == True, np.nan, self.eMaxShear)
