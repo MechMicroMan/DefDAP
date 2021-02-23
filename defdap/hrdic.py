@@ -789,18 +789,20 @@ class Map(base.Map):
             index = np.digitize(self.grains.ravel(), old, right=True)
             self.grains = new[index].reshape(self.grains.shape)
 
-            # Make grain objects
             self.grainList = []
             for i, (dicGrainId, ebsdGrainId) in enumerate(zip(dicGrainIds, self.ebsdGrainIds)):
                 yield i / len(dicGrainIds)          # Report progress
 
-                currentGrain = Grain(self)
-                coords = np.transpose(np.where(self.grains == dicGrainId))     # Find coordinates
-                for coord in coords:
-                    currentGrain.addPoint((coord[1], coord[0]),
-                                          self.eMaxShear[coord[0] + self.cropDists[1, 0],
-                                                         coord[1] + self.cropDists[0, 0]])
+                # Make grain object
+                currentGrain = Grain(grainID=dicGrainId, dicMap=self)
 
+                # Find (x,y) coordinates and corresponding max shears of grain
+                coords = np.argwhere(self.grains == dicGrainId)       # (y,x)
+                currentGrain.coordList = np.flip(coords, axis=1)      # (x,y)
+                currentGrain.maxShearList = self.eMaxShear[coords[:,0]+ self.cropDists[1, 0], 
+                                                           coords[:,1]+ self.cropDists[0, 0]]
+
+                # Assign EBSD grain ID to DIC grain and increment grain list
                 currentGrain.ebsdGrainId = ebsdGrainId - 1
                 currentGrain.ebsdGrain = self.ebsdMap.grainList[ebsdGrainId - 1]
                 currentGrain.ebsdMap = self.ebsdMap
