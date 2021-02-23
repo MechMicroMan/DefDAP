@@ -92,7 +92,7 @@ class Quat(object):
 
         Parameters
         ----------
-        axis : np.ndarray
+        axis : numpy.ndarray
             Axis that the rotation is applied around.
         angle : float
             Magnitude of rotation in radians.
@@ -119,7 +119,7 @@ class Quat(object):
 
         Returns
         -------
-        eulers : np.ndarray, shape 3
+        eulers : numpy.ndarray, shape 3
             Bunge euler angles (in radians).
 
         References
@@ -176,7 +176,7 @@ class Quat(object):
 
         Returns
         -------
-        rotMatrix : np.ndarray, shape (3, 3)
+        rotMatrix : numpy.ndarray, shape (3, 3)
             Rotation matrix.
 
         References
@@ -322,12 +322,12 @@ class Quat(object):
 
         Parameters
         ----------
-        vector : numpy.ndarray of shape 3 or equivalent
+        vector : numpy.ndarray, shape 3 or equivalent
             Vector to transform.
 
         Returns
         -------
-        numpy.ndarray of shape 3
+        numpy.ndarray, shape 3
             Transformed vector.
 
         """
@@ -364,7 +364,7 @@ class Quat(object):
         float
             Minimum misorientation.
         defdap.quat.Quat
-            Symmetric equivalent orientation with minimum  misorientation.
+            Symmetric equivalent orientation with minimum misorientation.
 
         """
         if isinstance(right, type(self)):
@@ -418,7 +418,7 @@ class Quat(object):
 
         Parameters
         ----------
-        direction : np.ndarray
+        direction : numpy.ndarray
             Sample reference direction for IPF.
         symGroup : str
             Crystal type (cubic, hexagonal).
@@ -620,7 +620,7 @@ class Quat(object):
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Array of quaternion components, shape (4, ..)
 
         """
@@ -646,7 +646,7 @@ class Quat(object):
 
         Returns
         -------
-        quatComps: np.ndarray, shape: (numSym x 4 x numQuats)
+        quatComps: numpy.ndarray, shape: (numSym x 4 x numQuats)
             Array containing all symmetrically equivalent quaternion components of input quaternions.
 
         """
@@ -685,7 +685,7 @@ class Quat(object):
         ----------
         quatComps : numpy.ndarray
             Array containing all symmetrically equivalent quaternion components of given quaternions
-            (shape: numSym x 4 x numQuats), can be calculated with Quat.calcSymEqvs.
+            (shape: numSym x 4 x numQuats), can be calculated with :func:`Quat.calcSymEqvs`.
 
         Returns
         -------
@@ -722,7 +722,7 @@ class Quat(object):
         ----------
         quatComps : numpy.ndarray
             Array containing all symmetrically equivalent quaternion components of given quaternions
-            (shape: numSym x 4 x numQuats), can be calculated from quats with Quat.calcSymEqvs.
+            (shape: numSym x 4 x numQuats), can be calculated from quats with :func:`Quat.calcSymEqvs` .
         refOri : defdap.quat.Quat
             Reference orientation.
 

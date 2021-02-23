@@ -565,7 +565,7 @@ class Map(object):
 
         Parameters
         ----------
-        grainData : list or np.ndarray
+        grainData : list or numpy.ndarray
             Grain values. This can be a single value per grain or RGB
             values.
         grainIds : list of int or int, optional
@@ -575,7 +575,7 @@ class Map(object):
 
         Returns
         -------
-        grainMap: np.ndarray
+        grainMap: numpy.ndarray
             Array filled with grain data values
 
         """
@@ -616,7 +616,7 @@ class Map(object):
 
         Parameters
         ----------
-        mapData : np.array, optional
+        mapData : numpy.ndarray, optional
             Array of map data. This must be cropped! Either mapData or 
             grainData must be supplied.
         grainData : list or np.array, optional
@@ -627,7 +627,7 @@ class Map(object):
         bg: int or real, optional
             Value to fill the background with.
         kwargs:
-            Other parameters are passed to defdap.plotting.MapPlot.create
+            Other parameters are passed to :func:`defdap.plotting.MapPlot.create`
 
         Returns
         -------
@@ -791,7 +791,7 @@ class Grain(object):
         Returns
         -------
         numpy.ndarray
-            Bounding box for grain with np.nan outside the grain and given number within.
+            Bounding box for grain with :obj:`~numpy.nan` outside the grain and given number within.
 
         """
         x0, y0, xmax, ymax = self.extremeCoords
@@ -814,7 +814,7 @@ class Grain(object):
         plotScaleBar : bool
             plots the scale bar on the grain if true.
         kwargs : dict
-            keyword arguments to pass to plotting.GrainPlot.addMap.
+            keyword arguments to pass to :func:`defdap.plotting.GrainPlot.addMap`.
 
         Returns
         -------
