@@ -30,7 +30,7 @@ setup(
     keywords='defdap, EBSD, HRDIC, deformation, crystal, correlative analysis',
     project_urls={
         'GitHub': 'https://github.com/MechMicroMan/DefDAP',
-        'Documentation': 'http://mechmicroman.github.io/DefDAP'
+        'Documentation': 'https://defdap.readthedocs.io/en/latest'
     },
     classifiers=[
         'Intended Audience :: Science/Research',
