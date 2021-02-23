@@ -579,6 +579,34 @@ class Quat(object):
         return quats
 
     @staticmethod
+    def multiplyManyQuats(quats, right):
+        """ Multiply all quats in a list of quats, by a single quat.
+
+        Parameters
+        ----------
+        quats: list(defdap.quat.Quat)
+            List of quats to be operated on.
+        right: defdap.quat.Quat
+            Single quaternion to multiply with the list of quats.
+
+        Returns
+        -------
+        list(defdap.quat.Quat)
+
+        """
+        quatArray = np.array([q.quatCoef for q in quats])
+
+        tempArray = np.zeros((len(quatArray),4), dtype=float)
+        tempArray[...,0] = ((quatArray[...,0] * right.quatCoef[0]) -
+                             np.dot(quatArray[...,1:4], right.quatCoef[1:4]))
+
+        tempArray[...,1:4] = ((quatArray[...,0,None] * right.quatCoef[None,1:4]) +
+                              (right.quatCoef[0] * quatArray[...,1:4]) +
+                              np.cross(quatArray[...,1:4], right.quatCoef[1:4]))
+
+        return [Quat(coefs) for coefs in tempArray]
+
+    @staticmethod
     def extract_quat_comps(quats):
         """Return a NumPy array of the provided quaternion components
 

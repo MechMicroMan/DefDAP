@@ -234,25 +234,24 @@ class Map(base.Map):
     def scale(self):
         return self.stepSize
 
-    @reportProgress("transforming EBSD data")
-    def transformData(self):
+    @reportProgress("rotating EBSD data")
+    def rotateData(self):
         """Rotate map by 180 degrees and transform quats accordingly.
 
         """
         self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
         self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
         self.phaseArray = self.phaseArray[::-1, ::-1]
-        self.buildQuatArray()
+        self.buildQuatArray(force=True)     # Force rebuild quat array
 
         # Rotation from old coord system to new
-        transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi)
-        transformQuat = transformQuat.conjugate
-        for i in range(self.xDim):
-            for j in range(self.yDim):
-                self.quatArray[j, i] = self.quatArray[j, i] * transformQuat
+        transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi).conjugate
 
-            # report progress
-            yield i / self.xDim
+        # Perform vectorised multiplication
+        quats = Quat.multiplyManyQuats(self.quatArray.flatten(), transformQuat)
+        self.quatArray = np.array(quats).reshape(self.yDim, self.xDim)
+
+        yield 1.
 
     def plotBandContrastMap(self, **kwargs):
         """Plot band contrast map
@@ -376,7 +375,7 @@ class Map(base.Map):
 
         Returns
         -------
-        defdap.plotting.MapPlot.
+        defdap.plotting.MapPlot
 
         """
         # Set default plot parameters then update with any input
@@ -621,14 +620,21 @@ class Map(base.Map):
         return True
 
     @reportProgress("building quaternion array")
-    def buildQuatArray(self):
+    def buildQuatArray(self, force = False):
         """Build quaternion array
 
+        Parameters
+        ----------
+        force, optional
+            If true, re-build quaternion array
         """
         self.checkDataLoaded()
 
-        if self.quatArray is None:
-            # create the array of quat objects
+        if force == False:
+            if self.quatArray is None:
+                # create the array of quat objects
+                self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
+        if force == True:
             self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
 
         yield 1.
