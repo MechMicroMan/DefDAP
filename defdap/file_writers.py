@@ -35,7 +35,7 @@ class EBSDDataWriter(object):
         self.data_format = None
 
     @staticmethod
-    def get_writer(datatype):
+    def get_writer(datatype: str):
         if datatype is None:
             datatype = "OxfordText"
 
@@ -46,7 +46,20 @@ class EBSDDataWriter(object):
 
 
 class OxfordTextWriter(EBSDDataWriter):
-    def write(self, file_name, file_dir=""):
+    def write(self, 
+        file_name: str, 
+        file_dir: str = ""):
+        """ Write an Oxford Instruments .ctf file, which is a HKL single orientation file.
+
+        Parameters
+        ----------
+        fileName
+            File name.
+        file_dir
+            Path to file.
+
+        """
+
         # check output file
         file_name = "{}.ctf".format(file_name)
         file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)

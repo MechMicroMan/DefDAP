@@ -15,11 +15,15 @@
 
 import numpy as np
 
+from typing import List
+
 from sklearn.cluster import MeanShift
 from scipy.stats import linregress
+from scipy.stats._stats_mstats_common import LinregressResult
 import pandas as pd
 
 from defdap.plotting import Plot, GrainPlot, LineSlice
+from defdap import hrdic
 
 
 class GrainInspector:
@@ -28,7 +32,9 @@ class GrainInspector:
     and relative displacement ratio analysis.
 
     """
-    def __init__(self, currMap, vmax=0.1):
+    def __init__(self, 
+        currMap: 'hrdic.Map', 
+        vmax: float = 0.1):
         # Initialise some values
         self.grainID = 0
         self.currMap = currMap
@@ -74,12 +80,14 @@ class GrainInspector:
         # Draw the stuff that will need to be redrawn often in a seperate function
         self.redraw()
 
-    def gotoGrain(self, event, plot):
+    def gotoGrain(self, 
+        event: int, 
+        plot):
         """ Go to a specified grain ID.
 
         Parameters
         ----------
-        event: int
+        event
             Grain ID to go to.
 
         """
@@ -90,12 +98,14 @@ class GrainInspector:
         self.currEBSDGrain = self.currDICGrain.ebsdGrain
         self.redraw()
 
-    def saveLine(self, event, plot):
+    def saveLine(self, 
+        event: np.ndarray,
+        plot):
         """  Save the start point, end point and angle of drawn line into the grain.
 
         Parameters
         ----------
-        event: numpy.ndarray
+        event
             Start x, start y, end x, end y point of line passed from drawn line.
 
         """
@@ -149,7 +159,9 @@ class GrainInspector:
             group[2] = activePlanes
             group[3] = deviation
             
-    def clearAllLines(self, event, plot):
+    def clearAllLines(self, 
+        event, 
+        plot):
         """ Clear all lines in a given grain.
 
         """
@@ -158,12 +170,14 @@ class GrainInspector:
         self.currDICGrain.groupsList = []
         self.redraw()
 
-    def removeLine(self, event, plot):
+    def removeLine(self, 
+        event: int, 
+        plot):
         """  Remove single line [runs after submitting a text box].
 
         Parameters
         ----------
-        event: int
+        event
             Line ID to remove.
 
         """
@@ -235,12 +249,14 @@ class GrainInspector:
         self.groupsInfoAx.axis('off')
         self.plot.addText(self.groupsInfoAx, 0, 1, groupsTxt, va='top', fontsize=10)
 
-    def runRDRGroup(self, event, plot):
+    def runRDRGroup(self, 
+        event: int, 
+        plot):
         """  Run RDR on a specified group, upon submitting a text box.
 
         Parameters
         ----------
-        event: int
+        event
             Group ID specified from text box.
 
         """
@@ -249,7 +265,9 @@ class GrainInspector:
             self.calcRDR(grain = self.currDICGrain, group=int(event))
             self.RDRGroupBox.set_val('')
         
-    def batchRunSTA(self, event, plot):
+    def batchRunSTA(self, 
+        event, 
+        plot):
         """  Run slip trace analysis on all grains which hve slip trace lines drawn.
 
         """
@@ -269,18 +287,22 @@ class GrainInspector:
                                                     group[0], group[1], group[2], np.round(group[3],3), group[4])
                     print(text)
 
-    def calcRDR(self, grain, group, showPlot=True, length=2.5):
+    def calcRDR(self, 
+        grain: int, 
+        group: int, 
+        showPlot: bool = True, 
+        length: float = 2.5):
         """ Calculates the relative displacement ratio for a given grain and group.
 
         Parameters
         ----------
-        grain: int
+        grain
             DIC grain ID to run RDR on.
-        group: int
+        group
             group ID to run RDR on.
-        showPlot: bool
+        showPlot
             if True, show plot window.
-        length: int
+        length
             length of perpendicular lines used for RDR.
 
         """
@@ -350,26 +372,34 @@ class GrainInspector:
 
         if showPlot: self.plotRDR(grain, group, ulist, vlist, allxlist, allylist, linRegResults)
 
-    def plotRDR(self, grain, group, ulist, vlist, allxlist, allylist, linRegResults):
+    def plotRDR(self, 
+        grain: int, 
+        group: int, 
+        ulist: List[float], 
+        vlist: List[float], 
+        allxlist: List[float], 
+        allylist: List[float], 
+        linRegResults: 'LinregressResult'):
         """
         Plot RDR figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered.
         
         Parameters
         ----------
-        grain: int
+        grain
             DIC grain to plot.
-        group: int
+        group
             Group ID to plot.
-        ulist: list
+        ulist
             List of ucentered values.
-        vlist: list
+        vlist
             List of vcentered values.
-        allxlist: list
+        allxlist
             List of all x values.
-        allylist: list
+        allylist
             List of all y values.
-        linRegResults: numpy.ndarray, {slope, intercept, rvalue, pvalue, stderr}
-            Results from linear regression of ucentered vs vcentered.
+        linRegResults
+            Results from linear regression of ucentered vs vcentered 
+            {slope, intercept, rvalue, pvalue, stderr}.
 
         """
 

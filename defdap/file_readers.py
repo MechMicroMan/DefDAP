@@ -18,6 +18,8 @@ import pandas as pd
 import pathlib
 import re
 
+from typing import TextIO, Tuple
+
 from defdap.crystal import Phase
 from defdap.quat import Quat
 
@@ -43,7 +45,7 @@ class EBSDDataLoader(object):
         self.dataFormat = None
 
     @staticmethod
-    def getLoader(dataType):
+    def getLoader(dataType: str):
         if dataType is None:
             dataType = "OxfordBinary"
 
@@ -77,14 +79,17 @@ class EBSDDataLoader(object):
 
 
 class OxfordTextLoader(EBSDDataLoader):
-    def load(self, fileName, fileDir=""):
+    def load(self, 
+        fileName: str, 
+        fileDir: str = ""
+        ) -> Tuple[dict, dict]:
         """ Read an Oxford Instruments .ctf file, which is a HKL single orientation file.
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
 
         Returns
@@ -198,28 +203,47 @@ class OxfordTextLoader(EBSDDataLoader):
 
         self.checkData()
 
+        return self.loadedMetadata, self.loadedData
+
 
 class OxfordBinaryLoader(EBSDDataLoader):
-    def load(self, fileName, fileDir=""):
+    def load(self, 
+        fileName: str, 
+        fileDir: str = ""
+        ) -> Tuple[dict, dict]:
+        """ Read Oxford Instruments .cpr/.crc file pair.
+
+        Parameters
+        ----------
+        fileName
+            File name.
+        fileDir
+            Path to file.
+
+        Returns
+        -------
+        dict, dict
+            EBSD metadata and EBSD data.
+
+        """
         self.loadOxfordCPR(fileName, fileDir=fileDir)
         self.loadOxfordCRC(fileName, fileDir=fileDir)
 
-    def loadOxfordCPR(self, fileName, fileDir=""):
+        return self.loadedMetadata, self.loadedData
+
+    def loadOxfordCPR(self, 
+        fileName: str, 
+        fileDir: str = ""):
         """
         Read an Oxford Instruments .cpr file, which is a metadata file
         describing EBSD data.
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
-
-        Returns
-        -------
-        dict
-            Metadata for EBSD data, including dimensions and number of phases.
 
         """
         commentChar = ';'
@@ -310,20 +334,17 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
         self.dataFormat = np.dtype(dataFormat)
 
-    def loadOxfordCRC(self, fileName, fileDir=""):
+    def loadOxfordCRC(self, 
+        fileName: str, 
+        fileDir: str = ""):
         """Read binary EBSD data from an Oxford Instruments .crc file
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
-
-        Returns
-        -------
-        dict
-            EBSD data including phase, MAD and euler angle arrays.
 
         """
         xDim = self.loadedMetadata['xDim']
@@ -353,14 +374,14 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
         self.checkData()
 
-
 class PythonDictLoader(EBSDDataLoader):
-    def load(self, dataDict):
+    def load(self, 
+        dataDict: dict):
         """Construct EBSD data from a python dictionary.
 
         Parameters
         ----------
-        dataDict : dict
+        dataDict
             Dictionary with keys:
                 'stepSize'
                 'phases'
@@ -425,14 +446,17 @@ class DICDataLoader(object):
         assert xdim == self.loadedMetadata['xDim'], "Dimensions of data and header do not match"
         assert ydim == self.loadedMetadata['yDim'], "Dimensions of data and header do not match"
 
-    def loadDavisMetadata(self, fileName, fileDir=""):
+    def loadDavisMetadata(self, 
+        fileName: str, 
+        fileDir: str = ""
+        ) -> dict:
         """ Load DaVis metadata from Davis .txt file.
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
 
         Returns
@@ -462,15 +486,18 @@ class DICDataLoader(object):
 
         return self.loadedMetadata
 
-    def loadDavisData(self, fileName, fileDir=""):
+    def loadDavisData(self, 
+        fileName: str, 
+        fileDir: str = ""
+        ) -> dict:
         """ Load displacement data from Davis .txt file containing x and y coordinates
         and x and y displacements for each coordinate.
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
 
         Returns
@@ -495,15 +522,23 @@ class DICDataLoader(object):
 
         return self.loadedData
         
-    def loadDavisImageData(self, fileName, fileDir=""):
+    def loadDavisImageData(self, 
+        fileName: str, 
+        fileDir: str = ""
+        ) -> np.ndarray:
         """ A .txt file from DaVis containing a 2D image
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
+
+        Returns
+        -------
+        np.ndarray
+            Array of data.
 
         """
         filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
@@ -518,20 +553,24 @@ class DICDataLoader(object):
         return loadedData
 
 
-def readUntilString(file, termString, commentChar='*', lineProcess=None):
+def readUntilString(file: TextIO, 
+    termString: str, 
+    commentChar: str = '*', 
+    lineProcess: str = None
+    ) -> list:
     """Read lines in a file until a line starting with the `termString`
     is encounted. The file position is returned before the line starting
     with the `termString` when found. Comment and empty lines are ignored.
 
     Parameters
     ----------
-    file : file
+    file
         An open python text file object.
-    termString : str
+    termString
         String to terminate reading.
-    commentChar : str
+    commentChar
         Character at start of a comment line to ignore.
-    lineProcess : function
+    lineProcess
         Function to apply to each line when loaded.
 
     Returns

@@ -17,12 +17,12 @@ import functools
 from datetime import datetime
 
 
-def reportProgress(message=""):
+def reportProgress(message: str = ""):
     """Decorator for reporting progress of given function
 
     Parameters
     ----------
-    message : str
+    message
         Message to display (prefixed by 'Starting ', progress percentage
         and then 'Finished '
 
