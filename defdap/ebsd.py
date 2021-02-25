@@ -1375,6 +1375,12 @@ class Grain(base.Grain):
         self.slipTraceAngles = None             # list of slip trace angles
         self.slipTraceInclinations = None
 
+    @property
+    def plotDefault(self):
+        return lambda *args, **kwargs: self.plotUnitCell(
+            *args, **kwargs
+        )
+
     def addPoint(self, coord, quat):
         """Append a coordinate and a quat to a grain.
 
@@ -1488,7 +1494,7 @@ class Grain(base.Grain):
         return Quat.plotIPF(self.quatList, direction, self.crystalSym,
                             **plotParams)
                             
-    def plotUnitCell(self, fig=None, ax=None, **kwargs):
+    def plotUnitCell(self, fig=None, ax=None, plot=None, **kwargs):
         """Plot an unit cell of the average grain orientation.
 
         Parameters
@@ -1497,13 +1503,17 @@ class Grain(base.Grain):
             Matplotlib figure to plot on
         ax : matplotlib.figure.Figure
             Matplotlib figure to plot on
+        plot : defdap.plotting.PolePlot
+            defdap plot to plot the figure to.
         kwargs
             All other arguments are passed to :func:`defdap.quat.Quat.plotUnitCell`.
 
         """
         crystalStructure = self.ebsdMap.phases[self.phaseID].crystalStructure
-        Quat.plotUnitCell(self.refOri, fig=fig, ax=ax,
+        plot = Quat.plotUnitCell(self.refOri, fig=fig, ax=ax, plot=plot,
                           crystalStructure=crystalStructure, **kwargs)
+
+        return plot
 
     def plotMisOri(self, component=0, **kwargs):
         """Plot misorientation map for a given grain.

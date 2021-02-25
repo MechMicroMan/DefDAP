@@ -573,6 +573,13 @@ class Quat(object):
             plot = plotting.CrystalPlot(
                 ax=ax, fig=fig, makeInteractive=makeInteractive
             )
+
+        plot.ax.set_xlim3d(-0.15, 0.15)
+        plot.ax.set_ylim3d(-0.15, 0.15)
+        plot.ax.set_zlim3d(-0.15, 0.15)
+        plot.ax.view_init(azim=270, elev=90)
+        plot.ax._axis3don = False
+
         plot.addVerts(planes, **plotParams)
 
         return plot

@@ -168,7 +168,6 @@ class Map(object):
             # update the grain highlights layer in the plot
             plot.addGrainHighlights([self.currGrainId], alpha=self.highlightAlpha)
 
-            # TODO: Check display selected works for ebsd map
             if displaySelected:
                 currGrain = self[self.currGrainId]
                 if self.grainPlot is None or not self.grainPlot.exists:
@@ -177,6 +176,7 @@ class Map(object):
                     self.grainPlot.clear()
                     self.grainPlot.callingGrain = currGrain
                     currGrain.plotDefault(plot=self.grainPlot)
+                    self.grainPlot.draw()
 
     def setHomogPoint(self, binSize=1, points=None, **kwargs):
         """

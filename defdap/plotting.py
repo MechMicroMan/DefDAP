@@ -1448,13 +1448,6 @@ class CrystalPlot(Plot):
             **figParams
         )
 
-        # Set plotting parameters
-        self.ax.set_xlim3d(-0.15, 0.15)
-        self.ax.set_ylim3d(-0.15, 0.15)
-        self.ax.set_zlim3d(-0.15, 0.15)
-        self.ax.view_init(azim=270, elev=90)
-        self.ax._axis3don = False
-
     def addVerts(self, verts, **kwargs):
         """Plots planes, defined by the vertices provided.
 
