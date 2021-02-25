@@ -515,7 +515,7 @@ class Quat(object):
         quat = self
 
         if symGroup == 'hexagonal':
-            szFac = 0.2
+            szFac = 0.18
             if OI:
                 # Add 30 degrees to phi2 for OI
                 eulerAngles = quat.eulerAngles()
