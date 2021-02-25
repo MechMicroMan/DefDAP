@@ -17,7 +17,6 @@ import numpy as np
 
 from typing import List
 
-from sklearn.cluster import MeanShift
 from scipy.stats import linregress
 from scipy.stats._stats_mstats_common import LinregressResult
 import pandas as pd
@@ -114,7 +113,7 @@ class GrainInspector:
                                               self.drawnLine.points[2]-self.drawnLine.points[0]))
         if lineAngle > 180: lineAngle -= 180
         elif lineAngle < 0: lineAngle += 180
-        #lineAngle += self.currMap.ebsdTransform.rotation*-180/np.pi
+        #lineAngle -= np.rad2deg(self.currMap.ebsdTransform.rotation)
             
         # Save drawn line to the DIC grain
         self.currDICGrain.pointsList.append([self.drawnLine.points, lineAngle, -1])
@@ -126,27 +125,32 @@ class GrainInspector:
     def groupLines(self):
         """
         Group the lines drawn in the current grain item using a mean shift algorithm,
-        save the average angle and detect the active slip planes.
+        save the average angle and then detect the active slip planes.
+
+        pointsList: 0 = points, 1 = angle, 2 = group
+        groupsList: 0 = id, 1 = angle, 2 = active planes, 3 = angular deviation
 
         """
-        angles = [x[1] for x in self.currDICGrain.pointsList]
-        # For single line, don't group
-        if len(angles) == 1:
-            self.currDICGrain.pointsList[0][2]=0
-            self.currDICGrain.groupsList = [[0, angles[0], 0, 0, 0]]
-        else:
-            # Run clustering algorithm for >1 line
-            ms = MeanShift(bandwidth=10).fit(np.matrix([range(len(angles)), angles]).transpose())
-            
-            # Add group ID for each line to the points list
-            for i, label in enumerate(ms.labels_):
-                self.currDICGrain.pointsList[i][2] = label
-            
-            # Make array of groups with mean angle
-            self.currDICGrain.groupsList = []
-            for i in range(np.max(ms.labels_+1)):
-                self.currDICGrain.groupsList.append([i, ms.cluster_centers_[i][1], 0, 0, 0])
-                
+
+        for i, line in enumerate(self.currDICGrain.pointsList):
+            angle = line[1]
+            if i == 0:       
+                line[2]=0       # Make group 0 for first detected angle
+                self.currDICGrain.groupsList = [[0, angle, 0, 0, 0]]
+                nextGroup=1
+            else:       # If there is more that one angle
+                if np.any(np.abs(np.array([x[1] for x in self.currDICGrain.groupsList])-angle)<10):
+                    # If within +- 5 degrees of exisitng group, set that as the group
+                    group =  np.argmin(np.abs(np.array([x[1] for x in self.currDICGrain.groupsList])-angle))
+                    self.currDICGrain.pointsList[i][2]=group
+                    newAv = np.average([x[1] for x in self.currDICGrain.pointsList if x[2]==group])
+                    self.currDICGrain.groupsList[group][1] = newAv
+                else:
+                    # Make new group and set
+                    self.currDICGrain.groupsList.append([nextGroup, angle, 0, 0, 0])
+                    line[2]=nextGroup
+                    nextGroup += 1
+      
         # Detect active slip systems in each group
         for group in self.currDICGrain.groupsList:
             activePlanes = []

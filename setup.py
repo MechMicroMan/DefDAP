@@ -57,7 +57,6 @@ setup(
         'numpy',
         'matplotlib>=3.0.0',
         'scikit-image',
-        'scikit-learn',
         'pandas',
         'peakutils',
         'matplotlib_scalebar',
