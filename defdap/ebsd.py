@@ -1501,9 +1501,9 @@ class Grain(base.Grain):
             All other arguments are passed to :func:`defdap.quat.Quat.plotUnitCell`.
 
         """
-        # TODO: Update to use phase
+        crystalStructure = self.ebsdMap.phases[self.phaseID].crystalStructure
         Quat.plotUnitCell(self.refOri, fig=fig, ax=ax,
-                          symGroup=self.crystalSym, **kwargs)
+                          crystalStructure=crystalStructure, **kwargs)
 
     def plotMisOri(self, component=0, **kwargs):
         """Plot misorientation map for a given grain.

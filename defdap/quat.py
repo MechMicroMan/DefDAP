@@ -470,25 +470,23 @@ class Quat(object):
 
         return plot
 
-    def plotUnitCell(self, symGroup, OI=True,
+    def plotUnitCell(self, crystalStructure, OI=True,
                      plot=None, fig=None, ax=None, makeInteractive=False,
                      **kwargs):
         """Plots a unit cell.
 
         Parameters
         ----------
-        symGroup : str
-            Crystal type, hexagonal or cubic.
+        crystalStructure : defdap.crystal.crystalStructure
+            Crystal structure.
         OI : bool
             True if using oxford instruments system.
         plot : defdap.plotting.CrystalPlot
             Plot object to plot to.
         fig : matplotlib.figure.Figure
-            Figure to plot on, if not provided the current
-            active axis is used.
+            Figure to plot on, if not provided the current active axis is used.
         ax : matplotlib.axes.Axes
-            Axis to plot on, if not provided the current
-            active axis is used.
+            Axis to plot on, if not provided the current active axis is used.
         makeInteractive : bool
             True to make the plot interactive.
         kwargs
@@ -499,34 +497,24 @@ class Quat(object):
         plotParams = {}
         plotParams.update(kwargs)
 
-        # TODO: most of this should be moved to either the crystal or
-        #  plotting module
-        # Dirty fix to stop circular dependency
-        from defdap.crystal import crystalStructures
+        # TODO: most of this should be moved to either the crystal or plotting module
 
-        try:
-            crystalStructure = crystalStructures[symGroup]
-        except KeyError:
-            raise ValueError("Invalid crystal type, only cubic or "
-                             "hexagonal available.")
         vert = crystalStructure.vertices
         faces = crystalStructure.faces
 
-        quat = self
-
-        if symGroup == 'hexagonal':
+        if crystalStructure.name == 'hexagonal':
             szFac = 0.18
             if OI:
                 # Add 30 degrees to phi2 for OI
-                eulerAngles = quat.eulerAngles()
+                eulerAngles = self.eulerAngles()
                 eulerAngles[2] += np.pi / 6
                 quat = Quat.fromEulerAngles(*eulerAngles)
 
-        elif symGroup == 'cubic':
+        elif crystalStructure.name == 'cubic':
             szFac = 0.25
 
         # Rotate the lattice cell points
-        gg = quat.rotMatrix().T
+        gg = self.rotMatrix().T
         pts = np.matmul(gg, vert.T).T * szFac
 
         # Plot unit cell
