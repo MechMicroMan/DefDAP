@@ -806,8 +806,8 @@ class Map(base.Map):
             # Make a new list of sequential IDs of same length as number of grains
             dicGrainIds = np.arange(1, len(self.ebsdGrainIds)+1)
 
-            # Map the old EBSD IDs to the new DIC IDs (keep the same mapping for negative values)
-            negVals = np.array([i for i in np.unique(self.grains) if i<0])
+            # Map the EBSD IDs to the DIC IDs (keep the same mapping for values <= 0)
+            negVals = np.array([i for i in np.unique(self.grains) if i<=0])
             old = np.concatenate((negVals, self.ebsdGrainIds))
             new = np.concatenate((negVals, dicGrainIds))
             index = np.digitize(self.grains.ravel(), old, right=True)
