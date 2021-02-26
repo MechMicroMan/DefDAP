@@ -120,7 +120,7 @@ class Plot(object):
 
         self.btnStore.append(btn)
 
-    def addTextBox(self, label, submitHandler, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
+    def addTextBox(self, label, submitHandler=None, changeHandler=None, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
         """Add a text box to the plot.
 
         Parameters
@@ -142,7 +142,10 @@ class Plot(object):
         self.checkInteractive()
         txtBoxAx = self.fig.add_axes(loc)
         txtBox = TextBox(txtBoxAx, label, **kwargs)
-        txtBox.on_submit(lambda e: submitHandler(e, self))
+        if submitHandler != None:
+            txtBox.on_submit(lambda e: submitHandler(e, self))
+        if changeHandler != None:    
+            txtBox.on_text_change(lambda e: changeHandler(e, self))
 
         self.txtBoxStore.append(txtBox)
 
