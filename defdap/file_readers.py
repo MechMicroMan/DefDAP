@@ -169,7 +169,7 @@ class OxfordTextLoader(EBSDDataLoader):
             'BS': ('BS', 'uint8'),      # Band Slope
         }
 
-        keepColNames = ('phase', 'ph1', 'phi', 'ph2', 'BC')
+        keepColNames = ('phase', 'ph1', 'phi', 'ph2', 'BC', 'BS', 'MAD')
         dataFormat = []
         loadCols = []
         try:
@@ -189,6 +189,12 @@ class OxfordTextLoader(EBSDDataLoader):
 
         self.loadedData['bandContrast'] = np.reshape(
             binData['BC'], (yDim, xDim)
+        )
+        self.loadedData['bandSlope'] = np.reshape(
+            binData['BS'], (yDim, xDim)
+        )
+        self.loadedData['meanAngularDeviation'] = np.reshape(
+            binData['MAD'], (yDim, xDim)
         )
         self.loadedData['phase'] = np.reshape(
             binData['phase'], (yDim, xDim)
@@ -360,6 +366,12 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
         self.loadedData['bandContrast'] = np.reshape(
             binData['BC'], (yDim, xDim)
+        )
+        self.loadedData['bandSlope'] = np.reshape(
+            binData['BS'], (yDim, xDim)
+        )
+        self.loadedData['meanAngularDeviation'] = np.reshape(
+            binData['MAD'], (yDim, xDim)
         )
         self.loadedData['phase'] = np.reshape(
             binData['phase'], (yDim, xDim)
