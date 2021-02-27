@@ -10,15 +10,16 @@ function[] = nCorrToDavis(dicdata, outputFileName)
 sz = size(dicdata.data_dic.displacements.plot_u_dic);
 x_len = sz(2);
 y_len = sz(1);
-subset_size = dicdata.data_dic.dispinfo.radius;
+
+# subset size
+subset_size = dicdata.data_dic.dispinfo.radius * 2;
  
-% distance between datapoints
-% this is the subset spacing, plus 1
-subset_spacing = dicdata.data_dic.dispinfo.spacing + 1;
+% subset spacing
+subset_spacing = dicdata.data_dic.dispinfo.spacing;
  
 %Make header string
 header = ['#nCorr 1.2 2D-vector ', ...
-    int2str(subset_spacing), ...
+    int2str(subset_size), ...
     ' ', ...
     int2str(y_len), ...
     ' ', ...
