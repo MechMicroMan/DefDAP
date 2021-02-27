@@ -11,7 +11,7 @@ sz = size(dicdata.data_dic.displacements.plot_u_dic);
 x_len = sz(2);
 y_len = sz(1);
 
-# subset size
+% subset size
 subset_size = dicdata.data_dic.dispinfo.radius * 2;
  
 % subset spacing
