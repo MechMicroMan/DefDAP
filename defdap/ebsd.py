@@ -115,6 +115,9 @@ class Map(base.Map):
         self.boundariesX = None
         self.boundariesY = None
         self.boundaryLines = None
+        self.phaseBoundariesX = None
+        self.phaseBoundariesY = None
+        self.phaseBoundaryLines = None
         self.phaseBoundaries = None
         self.grains = None
         self.misOri = None
@@ -787,25 +790,28 @@ class Map(base.Map):
         misOriX = 2 * np.arccos(misOriX) * 180 / np.pi
         misOriY = 2 * np.arccos(misOriY) * 180 / np.pi
 
-        # set boundary locations where misOriX or misOriY are greater
+        # GRAIN boundary POINTS where misOriX or misOriY are greater
         # than set value
         self.boundariesX = misOriX > boundDef
         self.boundariesY = misOriY > boundDef
 
-        # add in phase boundaries
-        phaseBoundariesX = np.not_equal(self.phaseArray,
+        # PHASE boundary POINTS
+        self.phaseBoundariesX = np.not_equal(self.phaseArray,
                                         np.roll(self.phaseArray, -1, axis=1))
-        phaseBoundariesX[:, -1] = False
-        self.boundariesX = np.logical_or(self.boundariesX, phaseBoundariesX)
-
-        phaseBoundariesY = np.not_equal(self.phaseArray,
+        self.phaseBoundariesX[:, -1] = False
+        self.phaseBoundariesY = np.not_equal(self.phaseArray,
                                         np.roll(self.phaseArray, -1, axis=0))
-        phaseBoundariesY[-1, :] = False
-        self.boundariesY = np.logical_or(self.boundariesY, phaseBoundariesY)
+        self.phaseBoundariesY[-1, :] = False
+        self.phaseBoundaries = np.logical_or(self.phaseBoundariesX, self.phaseBoundariesY)
+        self.phaseBoundaries = -self.phaseBoundaries.astype(int)
 
+        # add PHASE boundary POINTS to GRAIN boundary POINTS
+        self.boundariesX = np.logical_or(self.boundariesX, self.phaseBoundariesX)
+        self.boundariesY = np.logical_or(self.boundariesY, self.phaseBoundariesY)
         self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
         self.boundaries = -self.boundaries.astype(int)
 
+        # generate GRAIN boundary LINES
         boundaryPoints = np.where(self.boundariesX)
         boundaryLinesX = []
         for i, j in zip(*boundaryPoints):
@@ -817,6 +823,19 @@ class Map(base.Map):
             boundaryLinesY.append(((j - 0.5, i + 0.5), (j + 0.5, i + 0.5)))
 
         self.boundaryLines = boundaryLinesX + boundaryLinesY
+
+        # generate PHASE boundary LINES
+        boundaryPoints = np.where(self.phaseBoundariesX)
+        phaseBoundaryLinesX = []
+        for i, j in zip(*boundaryPoints):
+            phaseBoundaryLinesX.append(((j + 0.5, i - 0.5), (j + 0.5, i + 0.5)))
+
+        boundaryPoints = np.where(self.phaseBoundariesY)
+        phaseBoundaryLinesY = []
+        for i, j in zip(*boundaryPoints):
+            phaseBoundaryLinesY.append(((j - 0.5, i + 0.5), (j + 0.5, i + 0.5)))
+
+        self.phaseBoundaryLines = phaseBoundaryLinesX + phaseBoundaryLinesY
 
         yield 1.
 
@@ -868,28 +887,6 @@ class Map(base.Map):
         self.neighbourNetwork = nn
 
     @reportProgress("finding phase boundaries")
-    def findPhaseBoundaries(self, treatNonIndexedAs=None):
-        """Finds boundaries in the phase map.
-
-        Parameters
-        ----------
-        treatNonIndexedAs : int
-            Value to assign to non-indexed points, defaults to -1.
-
-        """
-        # make new array shifted by one to left and up
-        phaseArrayShifted = np.full((self.yDim, self.xDim), -3)
-        phaseArrayShifted[:-1, :-1] = self.phaseArray[1:, 1:]
-
-        if treatNonIndexedAs:
-            self.phaseArray[self.phaseArray == 0] = treatNonIndexedAs
-            phaseArrayShifted[phaseArrayShifted == 0] = treatNonIndexedAs
-
-        # where shifted array not equal to starting array, set to -1
-        self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
-        self.phaseBoundaries = np.where(np.not_equal(self.phaseArray, phaseArrayShifted), -1, 0)
-
-        yield 1.
 
     def plotPhaseBoundaryMap(self, dilate=False, **kwargs):
         """Plot phase boundary map.

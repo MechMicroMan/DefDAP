@@ -499,6 +499,9 @@ class Map(base.Map):
         firstPointCoords = self.ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,0,:])
         secondPointCoords = self.ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,1,:])
         self.boundaryLines = np.dstack([firstPointCoords,secondPointCoords]).swapaxes(1,2)
+        firstPointCoords = np.round(self.ebsdTransformInv(np.array(self.ebsdMap.phaseBoundaryLines)[:, 0, :])+0.5)-0.5
+        secondPointCoords = np.round(self.ebsdTransformInv(np.array(self.ebsdMap.phaseBoundaryLines)[:, 1, :])+0.5)-0.5
+        self.phaseBoundaryLines = np.dstack([firstPointCoords, secondPointCoords]).swapaxes(1, 2)
 
     def checkEbsdLinked(self):
         """Check if an EBSD map has been linked.
