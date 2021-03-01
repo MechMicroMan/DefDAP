@@ -496,12 +496,14 @@ class Map(base.Map):
         )
 
         # Transform the EBSD boundaryLines to DIC reference frame
-        firstPointCoords = self.ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,0,:])
-        secondPointCoords = self.ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,1,:])
-        self.boundaryLines = np.dstack([firstPointCoords,secondPointCoords]).swapaxes(1,2)
-        firstPointCoords = np.round(self.ebsdTransformInv(np.array(self.ebsdMap.phaseBoundaryLines)[:, 0, :])+0.5)-0.5
-        secondPointCoords = np.round(self.ebsdTransformInv(np.array(self.ebsdMap.phaseBoundaryLines)[:, 1, :])+0.5)-0.5
-        self.phaseBoundaryLines = np.dstack([firstPointCoords, secondPointCoords]).swapaxes(1, 2)
+        boundaryLineList = np.array(self.ebsdMap.boundaryLines).reshape(-1, 2)       # Flatten to coord list
+        boundaryLines = self.ebsdTransformInv(boundaryLineList).reshape(-1, 2, 2)    # Transform & reshape back
+        self.boundaryLines = np.round(boundaryLines - 0.5) + 0.5                         # Round to nearest
+
+        # Transform the EBSD phaseBoundaryLines to DIC reference frame
+        phaseBoundaryLineList = np.array(self.ebsdMap.phaseBoundaryLines).reshape(-1, 2)     # Flatten to coord list
+        phaseBoundaryLines = self.ebsdTransformInv(phaseBoundaryLineList).reshape(-1, 2, 2)  # Transform & reshape back
+        self.phaseBoundaryLines = np.round(phaseBoundaryLines - 0.5) + 0.5                   # Round to nearest
 
     def checkEbsdLinked(self):
         """Check if an EBSD map has been linked.
