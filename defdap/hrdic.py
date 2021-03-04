@@ -977,16 +977,20 @@ class Map(base.Map):
 
         return currentGrain
 
-    def runGrainInspector(self, vmax=0.1):
+    def runGrainInspector(self, vmax=0.1, corrAngle=None):
         """Run the grain inspector interactive tool.
 
         Parameters
         ----------
         vmax : float
             Maximum value of the colour map.
+        corrAngle: float
+            Correction angle in degrees to subtract from measured angles to account
+            for small rotation between DIC and EBSD frames. Approximately the rotation
+            component of affine transform.
 
         """
-        GrainInspector(currMap=self, vmax=vmax)
+        GrainInspector(currMap=self, vmax=vmax, corrAngle=corrAngle)
 
 
 class Grain(base.Grain):

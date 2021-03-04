@@ -35,7 +35,8 @@ class GrainInspector:
     """
     def __init__(self, 
         currMap: 'hrdic.Map', 
-        vmax: float = 0.1):
+        vmax: float = 0.1,
+        corrAngle = None):
         # Initialise some values
         self.grainID = 0
         self.currMap = currMap
@@ -47,6 +48,9 @@ class GrainInspector:
         
         # Draw the figure
         self.draw()
+
+        if corrAngle is not None:
+            self.corrAngle = corrAngle
 
     def draw(self):
         """ Draw the main window, buttons, text boxes and axes.
@@ -134,7 +138,8 @@ class GrainInspector:
                                               self.drawnLine.points[2]-self.drawnLine.points[0]))
         if lineAngle > 180: lineAngle -= 180
         elif lineAngle < 0: lineAngle += 180
-        #lineAngle -= np.rad2deg(self.currMap.ebsdTransform.rotation)
+        if self.corrAngle is not None:
+            lineAngle -= self.corrAngle
 
         # Two decimal places
         self.drawnLine.points = [float("{:.2f}".format(point)) for point in self.drawnLine.points]
@@ -179,11 +184,10 @@ class GrainInspector:
                         # If within +- 5 degrees of exisitng group, set that as the group
                         group =  np.argmin(np.abs(np.array([x[1] for x in grain.groupsList])-angle))
                         grain.pointsList[i][2]=group
-                        newAv = np.average([x[1] for x in grain.pointsList if x[2]==group])
+                        newAv = float('{0:.2f}'.format(np.average([x[1] for x in grain.pointsList if x[2]==group])))
                         grain.groupsList[group][1] = newAv
                     else:
                         # Make new group and set
-                        grain.groupsList.append([nextGroup, angle, 0, 0, 0])
                         grain.groupsList.append([nextGroup, angle, 0, 0, 0])
                         line[2]=nextGroup
                         nextGroup += 1
@@ -196,7 +200,7 @@ class GrainInspector:
                 for idx, theoreticalAngle in enumerate(np.rad2deg(grain.ebsdGrain.slipTraceAngles)):
                     if theoreticalAngle-5 < experimentalAngle < theoreticalAngle+5:
                         activePlanes.append(idx)
-                        deviation.append(experimentalAngle-theoreticalAngle)
+                        deviation.append(float('{0:.2f}'.format(experimentalAngle-theoreticalAngle)))
                 group[2] = activePlanes
                 group[3] = deviation
             
@@ -257,7 +261,7 @@ class GrainInspector:
         # Write grain info text
         self.grainInfoAx.clear()
         self.grainInfoAx.axis('off')
-        grainInfoText = 'Grain ID: {0} / {1}\n'.format(self.grainID, len(self.currMap.grainList))
+        grainInfoText = 'Grain ID: {0} / {1}\n'.format(self.grainID, len(self.currMap.grainList)-1)
         grainInfoText += 'Min: {0:.1f} %     Mean:{1:.1f} %     Max: {2:.1f} %'.format(
             np.min(self.currDICGrain.maxShearList)*100,
             np.mean(self.currDICGrain.maxShearList)*100,
@@ -603,8 +607,6 @@ class GrainInspector:
                 if ('Groups') in line:
                     numGroups = int(line.split(' ')[0])
                     indexlist.append([startIndex, grainID, numLines, numGroups])
-
-        print(indexlist)
 
         # Write data from file into grain
         for startIndex, grainID, numLines, numGroups in indexlist:
