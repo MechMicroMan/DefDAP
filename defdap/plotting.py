@@ -22,6 +22,7 @@ from matplotlib.collections import LineCollection
 from matplotlib_scalebar.scalebar import ScaleBar
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.ticker import FuncFormatter
 
 from skimage import morphology as mph
 
@@ -1274,14 +1275,16 @@ class HistPlot(Plot):
     """ Class for creating a histogram.
 
     """
-    def __init__(self, plotType="linear", density=True, fig=None,
+    def __init__(self, plotType = "scatter", axesType="linear", density=True, fig=None,
                  ax=None, axParams={}, makeInteractive=False, **kwargs):
         """Initialise a histogram plot
 
         Parameters
         ----------
-        plotType : str, {'log', 'None'}, optional
-            If 'log' is specified, logarithmic y scale is used.
+        plotType: str, {'scatter', 'bar', 'step'}
+            Type of plot to use
+        axesType : str, {'linear', 'logx', 'logy', 'loglog', 'None'}, optional
+            If 'log' is specified, logarithmic scale is used.
         density :
             If true, histogram is normalised such that the integral sums to 1.
         fig : matplotlib.figure.Figure
@@ -1301,21 +1304,32 @@ class HistPlot(Plot):
             **kwargs
         )
 
-        plotType = plotType.lower()
-        if plotType in ["linear", "log"]:
-            self.plotType = plotType
+        axesType = axesType.lower()
+        if axesType in ["linear", "logy", "logx", "loglog"]:
+            self.axesType = axesType
         else:
             raise ValueError("plotType must be linear or log.")
+
+        if plotType in ['scatter', 'bar', 'step']:
+            self.plotType = plotType
+        else:
+            raise ValueError("plotType must be scatter, bar or step.")
 
         self.density = bool(density)
 
         # set y-axis label
         yLabel = "Normalised frequency" if self.density else "Frequency"
-        if self.plotType == "log":
-            yLabel = "ln({})".format(yLabel)
         self.ax.set_ylabel(yLabel)
 
-    def addHist(self, histData, bins=10, range=None, line='o',
+        # set axes to linear or log as appropriate and set to be numbers as opposed to scientific notation
+        if self.axesType == 'logx' or self.axesType == 'loglog':
+            self.ax.set_xscale("log")
+            self.ax.xaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.5g}'.format(y)))
+        if self.axesType == 'logy' or self.axesType == 'loglog':
+            self.ax.set_yscale("log")
+            self.ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.5g}'.format(y)))
+
+    def addHist(self, histData, bins=100, range=None, line='o',
                 label=None, **kwargs):
         """Add a histogram to the current plot
 
@@ -1336,15 +1350,25 @@ class HistPlot(Plot):
 
         """
 
-        hist = np.histogram(histData.flatten(), bins=bins, range=range,
-                            density=self.density)
+        # Generate the x bins with appropriate spaceing for linear or log
+        if self.axesType == 'logx' or self.axesType == 'loglog':
+            binList = np.logspace(np.log10(range[0]), np.log10(range[1]), bins)
+        else:
+            binList = np.linspace(range[0], range[1], bins)
 
-        yVals = hist[0]
-        if self.plotType == "log":
-            yVals = np.log(yVals)
-        xVals = 0.5 * (hist[1][1:] + hist[1][:-1])
 
-        self.ax.plot(xVals, yVals, line, label=label, **kwargs)
+        if self.plotType == 'scatter':
+            # Generate the histogram data and plot as a scatter plot
+            hist = np.histogram(histData.flatten(), bins=binList, density=self.density)
+            yVals = hist[0]
+            xVals = 0.5 * (hist[1][1:] + hist[1][:-1])
+
+            self.ax.plot(xVals, yVals, line, label=label, **kwargs)
+
+        else:
+            # Plot as a matplotlib histogram
+            self.ax.hist(histData.flatten(),bins=binList, histtype=self.plotType,
+                         density=self.density, label=label, **kwargs)
 
     def addLegend(self, **kwargs):
         """Add legend to histogram.
@@ -1361,7 +1385,7 @@ class HistPlot(Plot):
     def create(
         cls, histData, fig=None, figParams={}, ax=None, axParams={},
         plot=None, makeInteractive=False,
-        plotType="linear", density=True, bins=10, range=None,
+        plotType = "scatter", axesType="linear", density=True, bins=10, range=None,
         line='o', label=None, **kwargs
     ):
         """Create a histogram plot.
@@ -1382,8 +1406,10 @@ class HistPlot(Plot):
             Plot where histgram is created. If none, a new plot is created.
         makeInteractive : bool, optional
             If true, make plot interactive.
-        plotType : str, {'log', 'None'}, optional
-            If 'log' is specified, logarithmic y scale is used.
+        plotType: str, {'scatter', 'bar', 'barfilled', 'step'}
+            Type of plot to use
+        axesType : str, {'linear', 'logx', 'logy', 'loglog', 'None'}, optional
+            If 'log' is specified, logarithmic scale is used.
         density :
             If true, histogram is normalised such that the integral sums to 1.
         bins : int
@@ -1403,7 +1429,7 @@ class HistPlot(Plot):
 
         """
         if plot is None:
-            plot = cls(plotType=plotType, density=density, fig=fig, ax=ax,
+            plot = cls(axesType=axesType, plotType=plotType, density=density, fig=fig, ax=ax,
                        axParams=axParams, makeInteractive=makeInteractive,
                        **figParams)
         plot.addHist(histData, bins=bins, range=range, line=line,
