@@ -49,6 +49,8 @@ class Plot(object):
             self.btnStore = []
             self.txtStore = []
             self.txtBoxStore = []
+            self.p1=[];self.p2=[];
+
         else:
             self.fig = fig
             # TODO: flag for new figure
@@ -237,6 +239,26 @@ class Plot(object):
 
         """
         self.fig.canvas.set_window_title(txt)
+
+    def lineSlice(self, event, plot):
+        """ Catch click and drag then draw an arrow.
+
+        Examples
+        ----------
+        To use, add a click and release event handler to your plot, pointing to this function:
+
+        >>> plot.addEventHandler('button_press_event',lambda e, p: lineSlice(e, p))
+        >>> plot.addEventHandler('button_release_event', lambda e, p: lineSlice(e, p))
+
+        """
+
+        if event.inaxes is self.ax:
+            if event.name == 'button_press_event':
+                self.p1 = (event.xdata, event.ydata)  # save 1st point
+            elif event.name == 'button_release_event':
+                self.p2 = (event.xdata, event.ydata)  # save 2nd point
+                self.addArrow(startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
+                self.fig.canvas.draw_idle()
 
     @property
     def exists(self):
@@ -650,34 +672,6 @@ class MapPlot(Plot):
             plot.addScaleBar(scale=scale)
 
         return plot
-
-
-class LineSlice:
-    """ Class to catch click and drag and return start and end positions.
-
-    """
-    def __init__(self, fig, ax, action):
-        self.p1=[0,0]
-        self.p2=[0,0]
-        self.ax = ax
-        self.cidclick = plt.connect('button_press_event', self)
-        self.cidrelease = plt.connect('button_release_event', self)
-        self.action = action
-        self.fig=fig
-
-    def __call__(self, event):
-        if event.name == 'button_press_event':
-            self.p1 = (event.xdata, event.ydata)    # save 1st point
-        elif event.name == 'button_release_event':
-            self.p2 = (event.xdata, event.ydata)    # save 2nd point
-
-            self.action(startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
-            self.fig.canvas.draw()
-
-            self.points = (self.p1[0], self.p1[1], self.p2[0], self.p2[1])
-
-            return self.p1[0], self.p1[1], self.p2[0], self.p2[1]
-
 
 class GrainPlot(Plot):
     """ Class for creating a map for a grain.

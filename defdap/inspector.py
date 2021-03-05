@@ -23,7 +23,7 @@ from scipy.stats import linregress
 from scipy.stats._stats_mstats_common import LinregressResult
 import pandas as pd
 
-from defdap.plotting import Plot, GrainPlot, LineSlice
+from defdap.plotting import Plot, GrainPlot
 from defdap import hrdic
 
 
@@ -123,9 +123,6 @@ class GrainInspector:
         plot):
         """  Save the start point, end point and angle of drawn line into the grain.
 
-        pointsList: 
-            List of drawn lines: [(x0,y0, x1, y1), angle, group]
-
         Parameters
         ----------
         event
@@ -134,19 +131,19 @@ class GrainInspector:
         """
 
         # Get angle of lines
-        lineAngle = 90-np.rad2deg(np.arctan2(self.drawnLine.points[3]-self.drawnLine.points[1], 
-                                              self.drawnLine.points[2]-self.drawnLine.points[0]))
+        lineAngle = 90-np.rad2deg(np.arctan2(self.grainPlot.p2[1]-self.grainPlot.p1[1],
+                                              self.grainPlot.p2[0]-self.grainPlot.p1[0]))
         if lineAngle > 180: lineAngle -= 180
         elif lineAngle < 0: lineAngle += 180
         if self.corrAngle is not None:
             lineAngle -= self.corrAngle
 
         # Two decimal places
-        self.drawnLine.points = [float("{:.2f}".format(point)) for point in self.drawnLine.points]
+        points = [float("{:.2f}".format(point)) for point in self.grainPlot.p1+self.grainPlot.p2]
         lineAngle = float("{:.2f}".format(lineAngle))
 
         # Save drawn line to the DIC grain
-        self.currDICGrain.pointsList.append([self.drawnLine.points, lineAngle, -1])
+        self.currDICGrain.pointsList.append([points, lineAngle, -1])
         
         # Group lines and redraw
         self.groupLines()
@@ -269,7 +266,8 @@ class GrainInspector:
         self.plot.addText(self.grainInfoAx, 0, 1, grainInfoText,  va='top', ha='left', fontsize=10)
         
         # Detect lines
-        self.drawnLine = LineSlice(ax=self.maxShearAx, fig=self.plot.fig, action=self.grainPlot.addArrow)
+        self.plot.addEventHandler('button_press_event',lambda e, p: self.grainPlot.lineSlice(e, p))
+        self.plot.addEventHandler('button_release_event', lambda e, p: self.grainPlot.lineSlice(e, p))
 
         # Write lines text and draw lines
         linesTxt = 'List of lines\n\nLineID  x0     y0     x1     y1     Angle  Group\n'
