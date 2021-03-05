@@ -58,6 +58,7 @@ class Plot(object):
             else:
                 self.ax = ax
         self.colourBar = None
+        self.arrow = None
 
         if title is not None:
             self.setTitle(title)
@@ -172,6 +173,48 @@ class Plot(object):
         """
         txt = ax.text(x, y, txt, **kwargs)
         self.txtStore.append(txt)
+
+    def addArrow(self, startEnd, persistent=False, clearPrev=True, label=None):
+        """Add arrow to grain plot.
+
+        Parameters
+        ----------
+        startEnd: 4-tuple
+            Starting (x, y), Ending (x, y).
+        persistent :
+            If persistent, do not clear arrow with clearPrev.
+        clearPrev :
+            Clear all non-persistent arrows.
+        label
+            Label to place near arrow.
+
+        """
+
+        arrowParams = {
+            'xy': startEnd[0:2],        # Arrow start coordinates
+            'xycoords': 'data',
+            'xytext': startEnd[2:4],    # Arrow end coordinates
+            'textcoords': 'data',
+            'arrowprops': dict(arrowstyle="<-", connectionstyle="arc3",
+                               color='red', alpha=0.7, linewidth=2,
+                               shrinkA=0, shrinkB=0)
+        }
+
+        # If persisent, add the arrow onto the plot directly
+        if persistent:
+            self.ax.annotate("", **arrowParams)
+
+        # If not persistent, save a reference so that it can be removed later
+        if not persistent:
+            if clearPrev and (self.arrow is not None): self.arrow.remove()
+            if None not in startEnd:
+                self.arrow = self.ax.annotate("", **arrowParams)
+
+        # Add a label if specified
+        if label is not None:
+            self.ax.annotate(label, xy=startEnd[2:4], xycoords='data',
+                             xytext=(15, 15), textcoords='offset pixels',
+                             c='red', fontsize=14, fontweight='bold')
 
     def setSize(self, size):
         """Set size of plot.
@@ -677,62 +720,12 @@ class GrainPlot(Plot):
         img = self.ax.imshow(mapData, vmin=vmin, vmax=vmax,
                              interpolation='None', cmap=cmap, **kwargs)
         self.draw()
-        self.arrow = None
 
         self.imgLayers.append(img)
 
         return img
 
-    def addArrow(self, startEnd, persistent=False, clearPrev=True, label=None):
-        """Add arrow to grain plot.
 
-        Parameters
-        ----------
-        startEnd: 4-tuple
-            Starting (x, y), Ending (x, y).
-        persistent :
-            If persistent, do not clear arrow with clearPrev.
-        clearPrev :
-            Clear all non-persistent arrows.
-        label
-            Label to place near arrow.
-
-        """
-
-        x0 = startEnd[0]
-        y0 = startEnd[1]
-        x1 = startEnd[2]
-        y1 = startEnd[3]
-
-        if persistent:
-            self.ax.annotate(
-                "", xy=(x0, y0), xycoords='data', xytext=(x1, y1),
-                textcoords='data', arrowprops=dict(
-                    arrowstyle="<-", connectionstyle="arc3",
-                    color='red', alpha=0.7, linewidth=2
-                )
-            )
-
-        if not persistent:
-            if clearPrev:
-                if self.arrow is not None:
-                    self.arrow.remove()
-
-            if None in (x0, y0, x1, y1):
-                pass
-            else:
-                self.arrow = self.ax.annotate(
-                    "", xy=(x0, y0), xycoords='data', xytext=(x1, y1),
-                    textcoords='data', arrowprops=dict(
-                        arrowstyle="<-", connectionstyle="arc3",
-                        color='red',alpha=0.7,linewidth=2
-                    )
-                )
-
-        if label is not None:
-            self.ax.annotate(label, xy=(x1, y1), xycoords='data',
-                             xytext=(15, 15), textcoords='offset pixels',
-                             c='red', fontsize=12)
 
     def addColourBar(self, label, layer=0, **kwargs):
         """Add colour bar to grain plot.
