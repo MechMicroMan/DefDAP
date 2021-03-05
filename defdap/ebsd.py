@@ -1169,6 +1169,9 @@ class Map(base.Map):
         self.misOri = np.ones([self.yDim, self.xDim])
 
         if component in [1, 2, 3]:
+            # Calculate misorientation axis if not calculated
+            if np.any([grain.misOriAxisList is None for grain in self.grainList]):
+                self.calcGrainMisOri(calcAxis = True)
             for grain in self.grainList:
                 for coord, misOriAxis in zip(grain.coordList, np.array(grain.misOriAxisList)):
                     self.misOri[coord[1], coord[0]] = misOriAxis[component - 1]
@@ -1178,6 +1181,9 @@ class Map(base.Map):
                 ['X', 'Y', 'Z'][component-1]
             )
         else:
+            # Calculate misorientation if not calculated
+            if np.any([grain.misOriList is None for grain in self.grainList]):
+                self.calcGrainMisOri(calcAxis = False)
             for grain in self.grainList:
                 for coord, misOri in zip(grain.coordList, grain.misOriList):
                     self.misOri[coord[1], coord[0]] = misOri
@@ -1536,21 +1542,22 @@ class Grain(base.Grain):
             'plotColourBar': True
         }
         if component == 0:
+            if self.misOriList is None: self.buildMisOriList()
             plotParams['clabel'] = "Grain reference orientation " \
                                    "deviation (GROD) ($^\circ$)"
-            plotData = 2 * np.arccos(self.misOriList)
+            plotData = np.rad2deg(2 * np.arccos(self.misOriList))
 
         elif 0 < component < 4:
+            if self.misOriAxisList is None: self.buildMisOriList(calcAxis=True)
             plotParams['clabel'] = "Rotation around {:} ($^\circ$)".format(
                 ['X', 'Y', 'Z'][component-1]
             )
-            plotData = np.array(self.misOriAxisList)[:, component-1]
+            plotData = np.rad2deg(np.array(self.misOriAxisList)[:, component-1])
 
         else:
             raise ValueError("Component must between 0 and 3")
         plotParams.update(kwargs)
 
-        plotData *= 180 / np.pi
         plot = self.plotGrainData(grainData=plotData, **plotParams)
 
         return plot
