@@ -147,7 +147,7 @@ class GrainInspector:
         
         # Group lines and redraw
         self.groupLines()
-        self.redraw()
+        self.redrawLine()
         
     def groupLines(self,
                    grain: 'defdap.hrdic.Grain'=None):
@@ -229,27 +229,14 @@ class GrainInspector:
         self.redraw()
 
     def redraw(self):
-        """
-        Draw items which need to be redrawn often (i.e. when changing grain ID).
+        """Draw items which need to be redrawn when changing grain ID.
 
         """
 
         # Plot max shear for grain
         self.maxShearAx.clear()
-        grainPlot = self.currMap[self.grainID].plotMaxShear(
-            fig=self.plot.fig,ax=self.maxShearAx, vmax=self.vmax, plotColourBar=False, plotScaleBar=True)
-
-        # Draw slip traces
-        self.slipTraceAx.clear()
-        self.slipTraceAx.set_aspect('equal', 'box')
-        slipPlot = GrainPlot(fig=self.plot.fig, callingGrain=self.currMap[self.grainID], ax=self.slipTraceAx)
-        traces = slipPlot.addSlipTraces(topOnly=True)
-        self.slipTraceAx.axis('off')
-        
-        # Draw slip bands
-        bands = [elem[1] for elem in self.currDICGrain.groupsList]
-        if self.currDICGrain.groupsList != None:
-            slipPlot.addSlipBands(topOnly=True, angles=list(np.deg2rad(bands)))
+        self.grainPlot = self.currMap[self.grainID].plotMaxShear(
+            fig=self.plot.fig, ax=self.maxShearAx, vmax=self.vmax, plotColourBar=False, plotScaleBar=True)
         
         # Draw unit cell
         self.unitCellAx.clear()
@@ -269,31 +256,50 @@ class GrainInspector:
         self.plot.addEventHandler('button_press_event',lambda e, p: self.grainPlot.lineSlice(e, p))
         self.plot.addEventHandler('button_release_event', lambda e, p: self.grainPlot.lineSlice(e, p))
 
+        self.redrawLine()
+
+    def redrawLine(self):
+        """
+        Draw items which need to be redrawn when adding a line.
+
+        """
         # Write lines text and draw lines
         linesTxt = 'List of lines\n\nLineID  x0     y0     x1     y1     Angle  Group\n'
 
         if self.currDICGrain.pointsList != []:
             for idx, points in enumerate(self.currDICGrain.pointsList):
                 linesTxt += '{0}          {1:.1f}   {2:.1f}    {3:.1f}   {4:.1f}   {5:.1f}   {6}\n'.format(idx,
-                                    points[0][0], points[0][1], points[0][2], points[0][3], points[1], points[2])
+                         points[0][0],points[0][1],points[0][2],points[0][3],points[1],points[2])
                 self.grainPlot.addArrow(startEnd=points[0], clearPrev=False, persistent=True, label=idx)
-        
+
         self.lineInfoAx.clear()
         self.lineInfoAx.axis('off')
         self.plot.addText(self.lineInfoAx, 0, 1, linesTxt, va='top', fontsize=10)
-        
+
         # Write groups info text
         groupsTxt = 'List of groups\n\nGroupID    Angle      System      Dev     RDR\n'
         if self.currDICGrain.groupsList != []:
             for idx, group in enumerate(self.currDICGrain.groupsList):
                 groupsTxt += '{0}                {1:.1f}      {2}      {3}      {4:.2f}\n'.format(
-                    idx, group[1], group[2], np.round(group[3],3), group[4])
+                    idx, group[1], group[2], np.round(group[3], 3), group[4])
 
         self.groupsInfoAx.clear()
         self.groupsInfoAx.axis('off')
         self.plot.addText(self.groupsInfoAx, 0, 1, groupsTxt, va='top', fontsize=10)
 
-    def runRDRGroup(self, 
+        # Draw slip traces
+        self.slipTraceAx.clear()
+        self.slipTraceAx.set_aspect('equal', 'box')
+        slipPlot = GrainPlot(fig=self.plot.fig, callingGrain=self.currMap[self.grainID], ax=self.slipTraceAx)
+        traces = slipPlot.addSlipTraces(topOnly=True)
+        self.slipTraceAx.axis('off')
+
+        # Draw slip bands
+        bands = [elem[1] for elem in self.currDICGrain.groupsList]
+        if self.currDICGrain.groupsList != None:
+            slipPlot.addSlipBands(topOnly=True, angles=list(np.deg2rad(bands)))
+
+    def runRDRGroup(self,
         event: int, 
         plot):
         """  Run RDR on a specified group, upon submitting a text box.
