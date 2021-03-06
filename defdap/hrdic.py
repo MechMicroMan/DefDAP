@@ -175,6 +175,12 @@ class Map(base.Map):
         # max shear component
         self.eMaxShear = np.sqrt(((self.e11 - self.e22) / 2.)**2 + self.e12**2)
 
+        # Dictionary references to all map types
+        self.component = {'f11': self.f11, 'f12': self.f12, 'f21': self.f21, 'f22': self.f22,
+                         'e11': self.e11, 'e12': self.e12, 'e22': self.e22,
+                         'eMaxShear': self.eMaxShear,
+                         'x_map': self.x_map, 'y_map': self.y_map}
+
         # crop distances (default all zeros)
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
 
@@ -296,57 +302,37 @@ class Map(base.Map):
 
         Parameters
         ----------
-        percentiles : list
-            list of percentiles to print (number, Min, Mean or Max).
+        percentiles : list(float)
+            list of percentiles to print i.e. 0, 50, 99.
         components : list(str)
-            list of map components to print i.e. f11, mss.
+            list of map components to print i.e. e11, f11, eMaxShear, x_map.
 
         """
 
+        # Check that components are valid
+        if set(components).issubset(self.component) is False:
+            strFormat = ('{}, ') * (len(self.component) - 1) + ('{}')
+            raise Exception("Components must be: " + strFormat.format(*self.component))
+
         # Print map info
-        print('\033[1m', end='')    # START BOLD
+        print('\033[1m', end=''),  # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} "
               "x {3} pixels, number of points: {4})\n".format(
             self.retrieveName(), self.xDim, self.yDim,
             self.binning, self.xDim * self.yDim
         ))
 
-        # Print table header
-        print("Component\t".format(), end="")
-        for x in percentiles:
-            if x == 'Min' or x == 'Mean' or x == 'Max':
-                print("{0}\t".format(x), end='')
-            else:
-                print("P{0}\t".format(x), end='')
-        print('\033[0m', end='')    # END BOLD
-        print()
+        # Print header
+        strFormat = ('{:10} ') + (len(percentiles)) * '{:12}'
+        print(strFormat.format(*(['Component'] + percentiles)))
+        print('\033[0m', end='')  # END BOLD
 
         # Print table
+        strFormat = ('{:10} ') + (len(percentiles)) * '{:12.4f}'
         for c in components:
-            selmap = []
-            if c == 'mss':
-                selmap = self.crop(self.eMaxShear) * 100
-            if c == 'e11':
-                selmap = self.crop(self.e11) * 100
-            if c == 'e12':
-                selmap = self.crop(self.e12) * 100
-            if c == 'e22':
-                selmap = self.crop(self.e22) * 100
-            plist = []
-            for p in percentiles:
-                if p == 'Min':
-                    plist.append(np.nanmin(selmap))
-                elif p == 'Mean':
-                    plist.append(np.nanmean(selmap))
-                elif p == 'Max':
-                    plist.append(np.nanmax(selmap))
-                else:
-                    plist.append(np.nanpercentile(selmap, p))
-            print("{0}\t\t".format(c), end="")
-            for l in plist:
-                print("{0:.2f}\t".format(l), end='')
-            print()
-        print()
+            # Get the values and print in table
+            per = [np.nanpercentile(self.crop(self.component[c]), p) for p in percentiles]
+            print(strFormat.format(*([c] + per)))
 
     def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
         """Set a crop for the DIC map.
@@ -735,28 +721,54 @@ class Map(base.Map):
 
         return plot
 
-    def plotMaxShear(self, **kwargs):
-        """Plot a map of maximum shear strain.
+    def plotMap(self, component, **kwargs):
+        """Plot a map from the DIC data.
 
         Parameters
         ----------
+        component
+            Map component to plot i.e. e11, f11, eMaxShear.
         kwargs
             All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
 
         Returns
         -------
         defdap.plotting.MapPlot
-            Plot containing BSE image of map.
+            Plot containing map.
 
         """
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'clabel': "Effective shear strain"
+            'clabel': component
         }
         plotParams.update(kwargs)
 
-        plot = MapPlot.create(self, self.crop(self.eMaxShear), **plotParams)
+        plot = MapPlot.create(self, self.crop(self.component[component]), **plotParams)
+
+        return plot
+
+    def plotMaxShear(self, **kwargs):
+        """Plot a map of maximum shear strain.
+
+        Parameters
+        ----------
+        kwargs
+            All arguments are passed to :func:`defdap.hrdic.plotMap`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+            Plot containing map.
+
+        """
+
+        params = {
+            'clabel': 'Effective Shear Strain'
+        }
+        params.update(kwargs)
+
+        plot = self.plotMap('eMaxShear', **params)
 
         return plot
 
