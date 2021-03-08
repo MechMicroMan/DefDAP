@@ -35,7 +35,7 @@ class Plot(object):
     """ Class used for creating and manipulating plots.
 
     """
-    def __init__(self, ax, axParams={}, fig=None, makeInteractive=False,
+    def __init__(self, ax=None, axParams={}, fig=None, makeInteractive=False,
                  title=None, **kwargs):
         self.interactive = makeInteractive
         if makeInteractive:
@@ -240,8 +240,17 @@ class Plot(object):
         """
         self.fig.canvas.set_window_title(txt)
 
-    def lineSlice(self, event, plot):
+    def lineSlice(self, event, plot, action=None):
         """ Catch click and drag then draw an arrow.
+
+        Parameters
+        ----------
+        event :
+            Click event.
+        plot : defdap.plotting.Plot
+            Plot to capture clicks from.
+        action
+            Further action to perform.
 
         Examples
         ----------
@@ -259,6 +268,9 @@ class Plot(object):
                 self.p2 = (event.xdata, event.ydata)  # save 2nd point
                 self.addArrow(startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
                 self.fig.canvas.draw_idle()
+
+                if action is not None:
+                    action(plot=self, startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
 
     @property
     def exists(self):
