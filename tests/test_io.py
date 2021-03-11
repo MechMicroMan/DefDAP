@@ -29,23 +29,24 @@ class TestEBSDDataLoader:
 
     @staticmethod
     def test_check_metadata_good(data_loader_oxford_binary):
-        """The check_metadata method should pass silently if phaseNames
-        and numPhases match."""
+        """The check_metadata method should pass silently if each phase
+        is of `Phase` type."""
         data_loader_oxford_binary.loadedMetadata["phases"] = [
             Phase("test", 9, ()),
             Phase("tester", 11, ()),
             Phase("testist", 11, ()),
         ]
-        data_loader_oxford_binary.loadedMetadata["numPhases"] = 3
         assert data_loader_oxford_binary.checkMetadata() is None
 
     @staticmethod
     def test_check_metadata_bad(data_loader_oxford_binary):
-        """The check_metadata method should fail if phaseNames and
-        numPhases do not match."""
-        data_loader_oxford_binary.loadedMetadata["phases"] = ["1", "2"]
-        data_loader_oxford_binary.loadedMetadata["numPhases"] = 3
-        with pytest.raises(ValueError):
+        """The check_metadata method should fail if a phase is is not of
+        `Phase` type."""
+        data_loader_oxford_binary.loadedMetadata["phases"] = [
+            Phase("test", 9, ()),
+            "2"
+        ]
+        with pytest.raises(AssertionError):
             data_loader_oxford_binary.checkMetadata()
 
     @staticmethod
@@ -59,7 +60,6 @@ class TestEBSDDataLoader:
         assert metadata["acquisitionRotation"].quatCoef == \
                pytest.approx((1., 0., 0., 0.))
 
-        assert metadata["numPhases"] == 1
         assert type(metadata["phases"]) is list
         assert len(metadata["phases"]) == 1
         loaded_phase = metadata["phases"][0]
