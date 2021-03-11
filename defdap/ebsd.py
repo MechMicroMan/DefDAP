@@ -730,7 +730,7 @@ class Map(base.Map):
 
     @reportProgress("finding grain boundaries")
     def findBoundaries(self, boundDef=10):
-        """Find grain boundaries
+        """Find grain and phase boundaries
 
         Parameters
         ----------
@@ -798,13 +798,16 @@ class Map(base.Map):
         self.boundariesY = misOriY > boundDef
 
         # PHASE boundary POINTS
-        self.phaseBoundariesX = np.not_equal(self.phaseArray,
-                                        np.roll(self.phaseArray, -1, axis=1))
+        self.phaseBoundariesX = np.not_equal(
+            self.phaseArray, np.roll(self.phaseArray, -1, axis=1))
         self.phaseBoundariesX[:, -1] = False
-        self.phaseBoundariesY = np.not_equal(self.phaseArray,
-                                        np.roll(self.phaseArray, -1, axis=0))
+
+        self.phaseBoundariesY = np.not_equal(
+            self.phaseArray, np.roll(self.phaseArray, -1, axis=0))
         self.phaseBoundariesY[-1, :] = False
-        self.phaseBoundaries = np.logical_or(self.phaseBoundariesX, self.phaseBoundariesY)
+
+        self.phaseBoundaries = np.logical_or(
+            self.phaseBoundariesX, self.phaseBoundariesY)
         self.phaseBoundaries = -self.phaseBoundaries.astype(int)
 
         # add PHASE boundary POINTS to GRAIN boundary POINTS
@@ -813,33 +816,47 @@ class Map(base.Map):
         self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
         self.boundaries = -self.boundaries.astype(int)
 
-        # generate GRAIN boundary LINES
-        boundaryPoints = np.where(self.boundariesX)
-        boundaryLinesX = []
-        for i, j in zip(*boundaryPoints):
-            boundaryLinesX.append(((j + 0.5, i - 0.5), (j + 0.5, i + 0.5)))
-
-        boundaryPoints = np.where(self.boundariesY)
-        boundaryLinesY = []
-        for i, j in zip(*boundaryPoints):
-            boundaryLinesY.append(((j - 0.5, i + 0.5), (j + 0.5, i + 0.5)))
-
-        self.boundaryLines = boundaryLinesX + boundaryLinesY
-
-        # generate PHASE boundary LINES
-        boundaryPoints = np.where(self.phaseBoundariesX)
-        phaseBoundaryLinesX = []
-        for i, j in zip(*boundaryPoints):
-            phaseBoundaryLinesX.append(((j + 0.5, i - 0.5), (j + 0.5, i + 0.5)))
-
-        boundaryPoints = np.where(self.phaseBoundariesY)
-        phaseBoundaryLinesY = []
-        for i, j in zip(*boundaryPoints):
-            phaseBoundaryLinesY.append(((j - 0.5, i + 0.5), (j + 0.5, i + 0.5)))
-
-        self.phaseBoundaryLines = phaseBoundaryLinesX + phaseBoundaryLinesY
+        _, _, self.boundaryLines = Map.create_boundary_lines(
+            boundaries_x=self.boundariesX,
+            boundaries_y=self.boundariesY
+        )
+        _, _, self.phaseBoundaryLines = Map.create_boundary_lines(
+            boundaries_x=self.phaseBoundariesX,
+            boundaries_y=self.phaseBoundariesY
+        )
 
         yield 1.
+
+    @staticmethod
+    def create_boundary_lines(*, boundaries_x=None, boundaries_y=None):
+        boundary_data = {}
+        if boundaries_x is not None:
+            boundary_data['x'] = boundaries_x
+        if boundaries_y is not None:
+            boundary_data['y'] = boundaries_y
+        if not boundary_data:
+            raise ValueError("No boundaries provided.")
+
+        deltas = {
+            'x': (0.5, -0.5, 0.5, 0.5),
+            'y': (-0.5, 0.5, 0.5, 0.5)
+        }
+        all_lines = []
+        for mode, boundaries in boundary_data.items():
+            points = np.where(boundaries)
+            lines = []
+            for i, j in zip(*points):
+                lines.append((
+                    (j + deltas[mode][0], i + deltas[mode][1]),
+                    (j + deltas[mode][2], i + deltas[mode][3])
+                ))
+            all_lines.append(lines)
+
+        if len(all_lines) == 2:
+            all_lines.append(all_lines[0] + all_lines[1])
+            return tuple(all_lines)
+        else:
+            return all_lines[0]
 
     @reportProgress("constructing neighbour network")
     def buildNeighbourNetwork(self):
