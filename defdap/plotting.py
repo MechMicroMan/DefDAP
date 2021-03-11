@@ -1,4 +1,4 @@
-# Copyright 2020 Mechanics of Microstructures Group
+# Copyright 2021 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,7 @@ from matplotlib.collections import LineCollection
 from matplotlib_scalebar.scalebar import ScaleBar
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.ticker import FuncFormatter
 
 from skimage import morphology as mph
 
@@ -34,7 +35,7 @@ class Plot(object):
     """ Class used for creating and manipulating plots.
 
     """
-    def __init__(self, ax, axParams={}, fig=None, makeInteractive=False,
+    def __init__(self, ax=None, axParams={}, fig=None, makeInteractive=False,
                  title=None, **kwargs):
         self.interactive = makeInteractive
         if makeInteractive:
@@ -48,6 +49,8 @@ class Plot(object):
             self.btnStore = []
             self.txtStore = []
             self.txtBoxStore = []
+            self.p1=[];self.p2=[];
+
         else:
             self.fig = fig
             # TODO: flag for new figure
@@ -57,6 +60,7 @@ class Plot(object):
             else:
                 self.ax = ax
         self.colourBar = None
+        self.arrow = None
 
         if title is not None:
             self.setTitle(title)
@@ -120,7 +124,7 @@ class Plot(object):
 
         self.btnStore.append(btn)
 
-    def addTextBox(self, label, submitHandler, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
+    def addTextBox(self, label, submitHandler=None, changeHandler=None, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
         """Add a text box to the plot.
 
         Parameters
@@ -142,7 +146,10 @@ class Plot(object):
         self.checkInteractive()
         txtBoxAx = self.fig.add_axes(loc)
         txtBox = TextBox(txtBoxAx, label, **kwargs)
-        txtBox.on_submit(lambda e: submitHandler(e, self))
+        if submitHandler != None:
+            txtBox.on_submit(lambda e: submitHandler(e, self))
+        if changeHandler != None:    
+            txtBox.on_text_change(lambda e: changeHandler(e, self))
 
         self.txtBoxStore.append(txtBox)
 
@@ -169,6 +176,48 @@ class Plot(object):
         txt = ax.text(x, y, txt, **kwargs)
         self.txtStore.append(txt)
 
+    def addArrow(self, startEnd, persistent=False, clearPrev=True, label=None):
+        """Add arrow to grain plot.
+
+        Parameters
+        ----------
+        startEnd: 4-tuple
+            Starting (x, y), Ending (x, y).
+        persistent :
+            If persistent, do not clear arrow with clearPrev.
+        clearPrev :
+            Clear all non-persistent arrows.
+        label
+            Label to place near arrow.
+
+        """
+
+        arrowParams = {
+            'xy': startEnd[0:2],        # Arrow start coordinates
+            'xycoords': 'data',
+            'xytext': startEnd[2:4],    # Arrow end coordinates
+            'textcoords': 'data',
+            'arrowprops': dict(arrowstyle="<-", connectionstyle="arc3",
+                               color='red', alpha=0.7, linewidth=2,
+                               shrinkA=0, shrinkB=0)
+        }
+
+        # If persisent, add the arrow onto the plot directly
+        if persistent:
+            self.ax.annotate("", **arrowParams)
+
+        # If not persistent, save a reference so that it can be removed later
+        if not persistent:
+            if clearPrev and (self.arrow is not None): self.arrow.remove()
+            if None not in startEnd:
+                self.arrow = self.ax.annotate("", **arrowParams)
+
+        # Add a label if specified
+        if label is not None:
+            self.ax.annotate(label, xy=startEnd[2:4], xycoords='data',
+                             xytext=(15, 15), textcoords='offset pixels',
+                             c='red', fontsize=14, fontweight='bold')
+
     def setSize(self, size):
         """Set size of plot.
 
@@ -190,6 +239,38 @@ class Plot(object):
 
         """
         self.fig.canvas.set_window_title(txt)
+
+    def lineSlice(self, event, plot, action=None):
+        """ Catch click and drag then draw an arrow.
+
+        Parameters
+        ----------
+        event :
+            Click event.
+        plot : defdap.plotting.Plot
+            Plot to capture clicks from.
+        action
+            Further action to perform.
+
+        Examples
+        ----------
+        To use, add a click and release event handler to your plot, pointing to this function:
+
+        >>> plot.addEventHandler('button_press_event',lambda e, p: lineSlice(e, p))
+        >>> plot.addEventHandler('button_release_event', lambda e, p: lineSlice(e, p))
+
+        """
+
+        if event.inaxes is self.ax:
+            if event.name == 'button_press_event':
+                self.p1 = (event.xdata, event.ydata)  # save 1st point
+            elif event.name == 'button_release_event':
+                self.p2 = (event.xdata, event.ydata)  # save 2nd point
+                self.addArrow(startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
+                self.fig.canvas.draw_idle()
+
+                if action is not None:
+                    action(plot=self, startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
 
     @property
     def exists(self):
@@ -310,7 +391,7 @@ class MapPlot(Plot):
         self.ax.add_artist(ScaleBar(scale))
 
     def addGrainBoundaries(self, kind="pixel", boundaries=None, colour=None, 
-                           dilate=False, **kwargs):
+                           dilate=False, draw=True, **kwargs):
         """Add grain boundaries to the plot.
 
         Parameters
@@ -349,7 +430,8 @@ class MapPlot(Plot):
             self.ax.add_collection(lc)
             # ax.autoscale()
 
-            self.draw()
+            if draw:
+                self.draw()
         else:
             boundariesImage = boundaries
             if boundariesImage is None:
@@ -369,7 +451,8 @@ class MapPlot(Plot):
 
             img = self.ax.imshow(boundariesImage, cmap=boundariesCmap,
                                  interpolation='None', vmin=0, vmax=1)
-            self.draw()
+            if draw:
+                self.draw()
 
             self.imgLayers.append(img)
 
@@ -602,34 +685,6 @@ class MapPlot(Plot):
 
         return plot
 
-
-class LineSlice:
-    """ Class to catch click and drag and return start and end positions.
-
-    """
-    def __init__(self, fig, ax, action):
-        self.p1=[0,0]
-        self.p2=[0,0]
-        self.ax = ax
-        self.cidclick = plt.connect('button_press_event', self)
-        self.cidrelease = plt.connect('button_release_event', self)
-        self.action = action
-        self.fig=fig
-
-    def __call__(self, event):
-        if event.name == 'button_press_event':
-            self.p1 = (event.xdata, event.ydata)    # save 1st point
-        elif event.name == 'button_release_event':
-            self.p2 = (event.xdata, event.ydata)    # save 2nd point
-
-            self.action(startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
-            self.fig.canvas.draw()
-
-            self.points = (self.p1[0], self.p1[1], self.p2[0], self.p2[1])
-
-            return self.p1[0], self.p1[1], self.p2[0], self.p2[1]
-
-
 class GrainPlot(Plot):
     """ Class for creating a map for a grain.
 
@@ -671,62 +726,12 @@ class GrainPlot(Plot):
         img = self.ax.imshow(mapData, vmin=vmin, vmax=vmax,
                              interpolation='None', cmap=cmap, **kwargs)
         self.draw()
-        self.arrow = None
 
         self.imgLayers.append(img)
 
         return img
 
-    def addArrow(self, startEnd, persistent=False, clearPrev=True, label=None):
-        """Add arrow to grain plot.
 
-        Parameters
-        ----------
-        startEnd: 4-tuple
-            Starting (x, y), Ending (x, y).
-        persistent :
-            If persistent, do not clear arrow with clearPrev.
-        clearPrev :
-            Clear all non-persistent arrows.
-        label
-            Label to place near arrow.
-
-        """
-
-        x0 = startEnd[0]
-        y0 = startEnd[1]
-        x1 = startEnd[2]
-        y1 = startEnd[3]
-
-        if persistent:
-            self.ax.annotate(
-                "", xy=(x0, y0), xycoords='data', xytext=(x1, y1),
-                textcoords='data', arrowprops=dict(
-                    arrowstyle="<-", connectionstyle="arc3",
-                    color='red', alpha=0.7, linewidth=2
-                )
-            )
-
-        if not persistent:
-            if clearPrev:
-                if self.arrow is not None:
-                    self.arrow.remove()
-
-            if None in (x0, y0, x1, y1):
-                pass
-            else:
-                self.arrow = self.ax.annotate(
-                    "", xy=(x0, y0), xycoords='data', xytext=(x1, y1),
-                    textcoords='data', arrowprops=dict(
-                        arrowstyle="<-", connectionstyle="arc3",
-                        color='red',alpha=0.7,linewidth=2
-                    )
-                )
-
-        if label is not None:
-            self.ax.annotate(label, xy=(x1, y1), xycoords='data',
-                             xytext=(15, 15), textcoords='offset pixels',
-                             c='red', fontsize=12)
 
     def addColourBar(self, label, layer=0, **kwargs):
         """Add colour bar to grain plot.
@@ -1269,14 +1274,16 @@ class HistPlot(Plot):
     """ Class for creating a histogram.
 
     """
-    def __init__(self, plotType="linear", density=True, fig=None,
+    def __init__(self, plotType = "scatter", axesType="linear", density=True, fig=None,
                  ax=None, axParams={}, makeInteractive=False, **kwargs):
         """Initialise a histogram plot
 
         Parameters
         ----------
-        plotType : str, {'log', 'None'}, optional
-            If 'log' is specified, logarithmic y scale is used.
+        plotType: str, {'scatter', 'bar', 'step'}
+            Type of plot to use
+        axesType : str, {'linear', 'logx', 'logy', 'loglog', 'None'}, optional
+            If 'log' is specified, logarithmic scale is used.
         density :
             If true, histogram is normalised such that the integral sums to 1.
         fig : matplotlib.figure.Figure
@@ -1296,21 +1303,32 @@ class HistPlot(Plot):
             **kwargs
         )
 
-        plotType = plotType.lower()
-        if plotType in ["linear", "log"]:
-            self.plotType = plotType
+        axesType = axesType.lower()
+        if axesType in ["linear", "logy", "logx", "loglog"]:
+            self.axesType = axesType
         else:
             raise ValueError("plotType must be linear or log.")
+
+        if plotType in ['scatter', 'bar', 'step']:
+            self.plotType = plotType
+        else:
+            raise ValueError("plotType must be scatter, bar or step.")
 
         self.density = bool(density)
 
         # set y-axis label
         yLabel = "Normalised frequency" if self.density else "Frequency"
-        if self.plotType == "log":
-            yLabel = "ln({})".format(yLabel)
         self.ax.set_ylabel(yLabel)
 
-    def addHist(self, histData, bins=10, range=None, line='o',
+        # set axes to linear or log as appropriate and set to be numbers as opposed to scientific notation
+        if self.axesType == 'logx' or self.axesType == 'loglog':
+            self.ax.set_xscale("log")
+            self.ax.xaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.5g}'.format(y)))
+        if self.axesType == 'logy' or self.axesType == 'loglog':
+            self.ax.set_yscale("log")
+            self.ax.yaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.5g}'.format(y)))
+
+    def addHist(self, histData, bins=100, range=None, line='o',
                 label=None, **kwargs):
         """Add a histogram to the current plot
 
@@ -1331,15 +1349,25 @@ class HistPlot(Plot):
 
         """
 
-        hist = np.histogram(histData.flatten(), bins=bins, range=range,
-                            density=self.density)
+        # Generate the x bins with appropriate spaceing for linear or log
+        if self.axesType == 'logx' or self.axesType == 'loglog':
+            binList = np.logspace(np.log10(range[0]), np.log10(range[1]), bins)
+        else:
+            binList = np.linspace(range[0], range[1], bins)
 
-        yVals = hist[0]
-        if self.plotType == "log":
-            yVals = np.log(yVals)
-        xVals = 0.5 * (hist[1][1:] + hist[1][:-1])
 
-        self.ax.plot(xVals, yVals, line, label=label, **kwargs)
+        if self.plotType == 'scatter':
+            # Generate the histogram data and plot as a scatter plot
+            hist = np.histogram(histData.flatten(), bins=binList, density=self.density)
+            yVals = hist[0]
+            xVals = 0.5 * (hist[1][1:] + hist[1][:-1])
+
+            self.ax.plot(xVals, yVals, line, label=label, **kwargs)
+
+        else:
+            # Plot as a matplotlib histogram
+            self.ax.hist(histData.flatten(),bins=binList, histtype=self.plotType,
+                         density=self.density, label=label, **kwargs)
 
     def addLegend(self, **kwargs):
         """Add legend to histogram.
@@ -1356,7 +1384,7 @@ class HistPlot(Plot):
     def create(
         cls, histData, fig=None, figParams={}, ax=None, axParams={},
         plot=None, makeInteractive=False,
-        plotType="linear", density=True, bins=10, range=None,
+        plotType = "scatter", axesType="linear", density=True, bins=10, range=None,
         line='o', label=None, **kwargs
     ):
         """Create a histogram plot.
@@ -1377,8 +1405,10 @@ class HistPlot(Plot):
             Plot where histgram is created. If none, a new plot is created.
         makeInteractive : bool, optional
             If true, make plot interactive.
-        plotType : str, {'log', 'None'}, optional
-            If 'log' is specified, logarithmic y scale is used.
+        plotType: str, {'scatter', 'bar', 'barfilled', 'step'}
+            Type of plot to use
+        axesType : str, {'linear', 'logx', 'logy', 'loglog', 'None'}, optional
+            If 'log' is specified, logarithmic scale is used.
         density :
             If true, histogram is normalised such that the integral sums to 1.
         bins : int
@@ -1398,7 +1428,7 @@ class HistPlot(Plot):
 
         """
         if plot is None:
-            plot = cls(plotType=plotType, density=density, fig=fig, ax=ax,
+            plot = cls(axesType=axesType, plotType=plotType, density=density, fig=fig, ax=ax,
                        axParams=axParams, makeInteractive=makeInteractive,
                        **figParams)
         plot.addHist(histData, bins=bins, range=range, line=line,
@@ -1445,13 +1475,6 @@ class CrystalPlot(Plot):
             ax, axParams=axParams, fig=fig, makeInteractive=makeInteractive,
             **figParams
         )
-
-        # Set plotting parameters
-        self.ax.set_xlim3d(-0.15, 0.15)
-        self.ax.set_ylim3d(-0.15, 0.15)
-        self.ax.set_zlim3d(-0.15, 0.15)
-        self.ax.view_init(azim=270, elev=90)
-        self.ax._axis3don = False
 
     def addVerts(self, verts, **kwargs):
         """Plots planes, defined by the vertices provided.

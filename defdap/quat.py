@@ -1,4 +1,4 @@
-# Copyright 2020 Mechanics of Microstructures Group
+# Copyright 2021 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@ import numpy as np
 
 from defdap import plotting
 
+from typing import Union, Tuple, List
 
 class Quat(object):
     """Class used to define and perform operations on quaternions. These
@@ -25,7 +26,9 @@ class Quat(object):
     """
     __slots__ = ['quatCoef']
 
-    def __init__(self, *args, allow_southern=False):
+    def __init__(self,
+                 *args: Union[Tuple, list, np.ndarray],
+                 allow_southern: bool=False):
         """
         Construct a Quat object from 4 quat coefficients or an array of
         quat coefficients.
@@ -34,6 +37,8 @@ class Quat(object):
         ----------
         *args
             Variable length argument list.
+        allow_southern
+            if False, move quat to northern hemisphere.
 
         """
         # construct with array of quat coefficients
@@ -56,16 +61,20 @@ class Quat(object):
             self.quatCoef = self.quatCoef * -1
 
     @classmethod
-    def fromEulerAngles(cls, ph1, phi, ph2):
+    def fromEulerAngles(cls,
+                        ph1: float,
+                        phi: float,
+                        ph2: float
+                        ) -> 'Quat':
         """Create a quat object from 3 Bunge euler angles.
 
         Parameters
         ----------
-        ph1 : float
+        ph1
             First Euler angle, rotation around Z in radians.
-        phi : float
+        phi
             Second Euler angle, rotation around new X in radians.
-        ph2 : float
+        ph2
             Third Euler angle, rotation around new Z in radians.
 
         Returns
@@ -86,15 +95,18 @@ class Quat(object):
         return cls(quatCoef)
 
     @classmethod
-    def fromAxisAngle(cls, axis, angle):
+    def fromAxisAngle(cls,
+                      axis: np.ndarray,
+                      angle: float
+                      ) -> 'Quat':
         """Create a quat object from a rotation around an axis. This
         creates a quaternion to represent the passive rotation (-ve axis).
 
         Parameters
         ----------
-        axis : np.ndarray
+        axis
             Axis that the rotation is applied around.
-        angle : float
+        angle
             Magnitude of rotation in radians.
 
         Returns
@@ -114,12 +126,13 @@ class Quat(object):
         # call constructor
         return cls(quatCoef)
 
-    def eulerAngles(self):
+    def eulerAngles(self
+                    ) -> np.ndarray:
         """Calculate the Euler angle representation for this rotation.
 
         Returns
         -------
-        eulers : np.ndarray, shape 3
+        eulers : numpy.ndarray, shape 3
             Bunge euler angles (in radians).
 
         References
@@ -171,12 +184,13 @@ class Quat(object):
 
         return eulers
 
-    def rotMatrix(self):
+    def rotMatrix(self
+                  ) -> np.ndarray:
         """Calculate the rotation matrix representation for this rotation.
 
         Returns
         -------
-        rotMatrix : np.ndarray, shape (3, 3)
+        rotMatrix : numpy.ndarray, shape (3, 3)
             Rotation matrix.
 
         References
@@ -216,11 +230,16 @@ class Quat(object):
     def __str__(self):
         return self.__repr__()
 
-    def _plotIPF(self, direction, symGroup, **kwargs):
+    def _plotIPF(self,
+                 direction: np.ndarray,
+                 symGroup: str,
+                 **kwargs):
         Quat.plotIPF([self], direction, symGroup, **kwargs)
 
     # overload * operator for quaternion product and vector product
-    def __mul__(self, right, allow_southern=False):
+    def __mul__(self,
+                right: 'Quat',
+                allow_southern: bool = False):
         if isinstance(right, type(self)):   # another quat
             newQuatCoef = np.zeros(4, dtype=float)
             newQuatCoef[0] = (
@@ -236,12 +255,14 @@ class Quat(object):
 
         raise TypeError("{:} - {:}".format(type(self), type(right)))
 
-    def dot(self, right):
+    def dot(self,
+            right: 'Quat'
+            ) -> float:
         """ Calculate dot product between two quaternions.
 
         Parameters
         ----------
-        right : defdap.quat.Quat
+        right
             Right hand quaternion.
 
         Returns
@@ -255,27 +276,33 @@ class Quat(object):
         raise TypeError()
 
     # overload + operator
-    def __add__(self, right):
+    def __add__(self,
+                right: 'Quat'):
         if isinstance(right, type(self)):
             return Quat(self.quatCoef + right.quatCoef)
         raise TypeError()
 
     # overload += operator
-    def __iadd__(self, right):
+    def __iadd__(self,
+                 right: 'Quat'):
         if isinstance(right, type(self)):
             self.quatCoef += right.quatCoef
             return self
         raise TypeError()
 
     # allow array like setting/getting of components
-    def __getitem__(self, key):
+    def __getitem__(self,
+                    key: int):
         return self.quatCoef[key]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self,
+                    key: int,
+                    value: float):
         self.quatCoef[key] = value
         return
 
-    def norm(self):
+    def norm(self
+             ) -> float:
         """Calculate the norm of the quaternion.
 
         Returns
@@ -286,7 +313,8 @@ class Quat(object):
         """
         return np.sqrt(np.dot(self.quatCoef[0:4], self.quatCoef[0:4]))
 
-    def normalise(self):
+    def normalise(self
+                  ) -> 'Quat':
         """ Normalise the quaternion (turn it into an unit quaternion).
 
         Returns
@@ -300,7 +328,8 @@ class Quat(object):
 
     # also the inverse if this is a unit quaternion
     @property
-    def conjugate(self):
+    def conjugate(self
+                  ) -> 'Quat':
         """Calculate the conjugate of the quaternion.
 
         Returns
@@ -311,7 +340,9 @@ class Quat(object):
         """
         return Quat(self[0], -self[1], -self[2], -self[3])
 
-    def transformVector(self, vector):
+    def transformVector(self,
+                        vector: Union[Tuple, List, np.ndarray]
+                        ) -> np.ndarray:
         """
         Transforms vector by the quaternion. For passive EBSD quaterions
         this is a transformation from sample space to crystal space.
@@ -322,12 +353,12 @@ class Quat(object):
 
         Parameters
         ----------
-        vector : numpy.ndarray of shape 3 or equivalent
+        vector : numpy.ndarray, shape 3 or equivalent
             Vector to transform.
 
         Returns
         -------
-        numpy.ndarray of shape 3
+        numpy.ndarray, shape 3
             Transformed vector.
 
         """
@@ -343,7 +374,11 @@ class Quat(object):
         )
         return vectorQuatTransformed.quatCoef[1:4]
 
-    def misOri(self, right, symGroup, returnQuat=0):
+    def misOri(self,
+               right: 'Quat',
+               symGroup: str,
+               returnQuat: int = 0
+               ) -> Tuple[float, 'Quat']:
         """
         Calculate misorientation angle between 2 orientations taking
         into account the symmetries of the crystal structure.
@@ -351,11 +386,11 @@ class Quat(object):
 
         Parameters
         ----------
-        right : defdap.quat.Quat
+        right
             Orientation to find misorientation to.
-        symGroup : str
+        symGroup
             Crystal type (cubic, hexagonal).
-        returnQuat : int
+        returnQuat
             What to return: 0 for minimum misorientation, 1 for
             symmetric equivalent with minimum misorientation, 2 for both.
 
@@ -364,7 +399,7 @@ class Quat(object):
         float
             Minimum misorientation.
         defdap.quat.Quat
-            Symmetric equivalent orientation with minimum  misorientation.
+            Symmetric equivalent orientation with minimum misorientation.
 
         """
         if isinstance(right, type(self)):
@@ -386,7 +421,9 @@ class Quat(object):
                 return minMisOri
         raise TypeError("Input must be a quaternion.")
 
-    def misOriAxis(self, right):
+    def misOriAxis(self,
+                   right: 'Quat'
+                   ) -> np.ndarray:
         """
         Calculate misorientation axis between 2 orientations. This
         does not consider symmetries of the crystal structure.
@@ -409,38 +446,46 @@ class Quat(object):
             return misOriAxis
         raise TypeError("Input must be a quaternion.")
 
-    def plotIPF(self, direction, symGroup, projection=None,
-                plot=None, fig=None, ax=None, makeInteractive=False,
-                plotColourBar=False, clabel="",
-                markerColour=None, markerSize=40, **kwargs):
+    def plotIPF(self,
+                direction: np.ndarray,
+                symGroup: str,
+                projection:  str = None,
+                plot: 'plotting.Plot' = None,
+                fig: 'matplotlib.figure.Figure' = None,
+                ax: 'matplotlib.axes.Axes' = None,
+                makeInteractive: bool = False,
+                markerColour: Union[List[str], str] = None,
+                markerSize: float = 40,
+                **kwargs
+                ) -> 'plotting.PolePlot':
         """
         Plot IPF of orientation, with relation to specified sample direction.
 
         Parameters
         ----------
-        direction : np.ndarray
+        direction
             Sample reference direction for IPF.
-        symGroup : str
+        symGroup
             Crystal type (cubic, hexagonal).
-        projection : str
+        projection
              Projection to use. Either string (stereographic or lambert)
              or a function.
-        plot : defdap.plotting.Plot
+        plot
             Defdap plot to plot on.
-        fig : matplotlib.figure.Figure
+        fig
             Figure to plot on, if not provided the current
             active axis is used.
-        ax : matplotlib.axes.Axes
+        ax
             Axis to plot on, if not provided the current
             active axis is used.
-        makeInteractive : bool
+        makeInteractive
             If true, make the plot interactive.
-        markerColour : str
+        markerColour: str or list of str
             Colour of markers (only used for half and half colouring,
-            otherwise us argument c).
-        markerSize : int
+            otherwise use argument c).
+        markerSize
             Size of markers (only used for half and half colouring,
-            otherwise us argument s).
+            otherwise use argument s).
         kwargs
             All other arguments are passed to :func:`defdap.plotting.PolePlot.addPoints`.
 
@@ -465,31 +510,31 @@ class Quat(object):
                        markerColour=markerColour, markerSize=markerSize,
                        **plotParams)
 
-        if plotColourBar:
-            plot.addColourBar(clabel)
-
         return plot
 
-    def plotUnitCell(self, symGroup, OI=True,
-                     plot=None, fig=None, ax=None, makeInteractive=False,
+    def plotUnitCell(self,
+                     crystalStructure: 'defdap.crystal.CrystalStructure',
+                     OI: bool = True,
+                     plot: 'plotting.CrystalPlot' = None,
+                     fig: 'matplotlib.figure.Figure' = None,
+                     ax: 'matplotlib.axes.Axes' = None,
+                     makeInteractive: bool = False,
                      **kwargs):
         """Plots a unit cell.
 
         Parameters
         ----------
-        symGroup : str
-            Crystal type, hexagonal or cubic.
-        OI : bool
+        crystalStructure
+            Crystal structure.
+        OI
             True if using oxford instruments system.
-        plot : defdap.plotting.CrystalPlot
+        plot
             Plot object to plot to.
-        fig : matplotlib.figure.Figure
-            Figure to plot on, if not provided the current
-            active axis is used.
-        ax : matplotlib.axes.Axes
-            Axis to plot on, if not provided the current
-            active axis is used.
-        makeInteractive : bool
+        fig
+            Figure to plot on, if not provided the current active axis is used.
+        ax
+            Axis to plot on, if not provided the current active axis is used.
+        makeInteractive
             True to make the plot interactive.
         kwargs
             All other arguments are passed to :func:`defdap.plotting.CrystalPlot.addVerts`.
@@ -499,34 +544,24 @@ class Quat(object):
         plotParams = {}
         plotParams.update(kwargs)
 
-        # TODO: most of this should be moved to either the crystal or
-        #  plotting module
-        # Dirty fix to stop circular dependency
-        from defdap.crystal import crystalStructures
+        # TODO: most of this should be moved to either the crystal or plotting module
 
-        try:
-            crystalStructure = crystalStructures[symGroup]
-        except KeyError:
-            raise ValueError("Invalid crystal type, only cubic or "
-                             "hexagonal available.")
         vert = crystalStructure.vertices
         faces = crystalStructure.faces
 
-        quat = self
-
-        if symGroup == 'hexagonal':
-            szFac = 0.2
+        if crystalStructure.name == 'hexagonal':
+            szFac = 0.18
             if OI:
                 # Add 30 degrees to phi2 for OI
-                eulerAngles = quat.eulerAngles()
+                eulerAngles = self.eulerAngles()
                 eulerAngles[2] += np.pi / 6
                 quat = Quat.fromEulerAngles(*eulerAngles)
 
-        elif symGroup == 'cubic':
+        elif crystalStructure.name == 'cubic':
             szFac = 0.25
 
         # Rotate the lattice cell points
-        gg = quat.rotMatrix().T
+        gg = self.rotMatrix().T
         pts = np.matmul(gg, vert.T).T * szFac
 
         # Plot unit cell
@@ -538,6 +573,13 @@ class Quat(object):
             plot = plotting.CrystalPlot(
                 ax=ax, fig=fig, makeInteractive=makeInteractive
             )
+
+        plot.ax.set_xlim3d(-0.15, 0.15)
+        plot.ax.set_ylim3d(-0.15, 0.15)
+        plot.ax.set_zlim3d(-0.15, 0.15)
+        plot.ax.view_init(azim=270, elev=90)
+        plot.ax._axis3don = False
+
         plot.addVerts(planes, **plotParams)
 
         return plot
@@ -545,12 +587,13 @@ class Quat(object):
 # Static methods
 
     @staticmethod
-    def createManyQuats(eulerArray):
+    def createManyQuats(eulerArray: np.ndarray
+                        ) -> np.ndarray:
         """Create a an array of quats from an array of Euler angles.
 
         Parameters
         ----------
-        eulerArray : numpy.ndarray
+        eulerArray
             Array of Bunge Euler angles of shape 3 x n x ... x m.
 
         Returns
@@ -579,7 +622,37 @@ class Quat(object):
         return quats
 
     @staticmethod
-    def extract_quat_comps(quats):
+    def multiplyManyQuats(quats: List['Quat'],
+                          right: 'Quat'
+                          ) -> List['Quat']:
+        """ Multiply all quats in a list of quats, by a single quat.
+
+        Parameters
+        ----------
+        quats
+            List of quats to be operated on.
+        right
+            Single quaternion to multiply with the list of quats.
+
+        Returns
+        -------
+        list(defdap.quat.Quat)
+
+        """
+        quatArray = np.array([q.quatCoef for q in quats])
+
+        tempArray = np.zeros((len(quatArray),4), dtype=float)
+        tempArray[...,0] = ((quatArray[...,0] * right.quatCoef[0]) -
+                             np.dot(quatArray[...,1:4], right.quatCoef[1:4]))
+
+        tempArray[...,1:4] = ((quatArray[...,0,None] * right.quatCoef[None,1:4]) +
+                              (right.quatCoef[0] * quatArray[...,1:4]) +
+                              np.cross(quatArray[...,1:4], right.quatCoef[1:4]))
+
+        return [Quat(coefs) for coefs in tempArray]
+
+    @staticmethod
+    def extract_quat_comps(quats: np.ndarray):
         """Return a NumPy array of the provided quaternion components
 
         Input quaternions may be given as a list of Quat objects or any iterable
@@ -592,7 +665,7 @@ class Quat(object):
 
         Returns
         -------
-        np.ndarray
+        numpy.ndarray
             Array of quaternion components, shape (4, ..)
 
         """
@@ -604,21 +677,24 @@ class Quat(object):
         return quat_comps
 
     @staticmethod
-    def calcSymEqvs(quats, symGroup, dtype=np.float):
+    def calcSymEqvs(quats: np.ndarray,
+                    symGroup: str,
+                    dtype: type=np.float
+                    ) -> np.ndarray:
         """Calculate all symmetrically equivalent quaternions of given quaternions.
 
         Parameters
         ----------
         quats : numpy.ndarray(defdap.quat.Quat)
             Array of quat objects.
-        symGroup : str
+        symGroup
             Crystal type (cubic, hexagonal).
-        dtype : numpy.dtype
+        dtype
             Data type used for calculation, defaults to np.float.
 
         Returns
         -------
-        quatComps: np.ndarray, shape: (numSym x 4 x numQuats)
+        quatComps: numpy.ndarray, shape: (numSym x 4 x numQuats)
             Array containing all symmetrically equivalent quaternion components of input quaternions.
 
         """
@@ -650,14 +726,15 @@ class Quat(object):
         return quatComps
 
     @staticmethod
-    def calcAverageOri(quatComps):
+    def calcAverageOri(quatComps: np.ndarray
+                       ) -> 'Quat':
         """Calculate the average orientation of given quats.
 
         Parameters
         ----------
         quatComps : numpy.ndarray
             Array containing all symmetrically equivalent quaternion components of given quaternions
-            (shape: numSym x 4 x numQuats), can be calculated with Quat.calcSymEqvs.
+            (shape: numSym x 4 x numQuats), can be calculated with :func:`Quat.calcSymEqvs`.
 
         Returns
         -------
@@ -687,15 +764,17 @@ class Quat(object):
         return avOri
 
     @staticmethod
-    def calcMisOri(quatComps, refOri):
+    def calcMisOri(quatComps: np.ndarray,
+                   refOri: 'Quat'
+                   ) -> Tuple[np.ndarray, 'Quat']:
         """Calculate the misorientation between the quaternions and a reference quaternion.
 
         Parameters
         ----------
-        quatComps : numpy.ndarray
+        quatComps
             Array containing all symmetrically equivalent quaternion components of given quaternions
-            (shape: numSym x 4 x numQuats), can be calculated from quats with Quat.calcSymEqvs.
-        refOri : defdap.quat.Quat
+            (shape: numSym x 4 x numQuats), can be calculated from quats with :func:`Quat.calcSymEqvs` .
+        refOri
             Reference orientation.
 
         Returns
@@ -723,7 +802,9 @@ class Quat(object):
         return minMisOris, minQuatComps
 
     @staticmethod
-    def polarAngles(x, y, z):      # spherical coordinates as per Wikipedia
+    def polarAngles(x: np.ndarray,
+                    y: np.ndarray,
+                    z: np.ndarray):      # spherical coordinates as per Wikipedia
         """Convert Cartesian coordinates to polar coordinates, for an unit vector.
 
         Parameters
@@ -752,7 +833,11 @@ class Quat(object):
         return alpha, beta
 
     @staticmethod
-    def calcIPFcolours(quats, direction, symGroup, dtype=np.float32):
+    def calcIPFcolours(quats: np.ndarray,
+                       direction: np.ndarray,
+                       symGroup: str,
+                       dtype: type=np.float32
+                       ) -> np.ndarray:
         """
         Calculate the RGB colours, based on the location of the given quats
         on the fundamental region of the IPF for the sample direction specified.
@@ -761,11 +846,11 @@ class Quat(object):
         ----------
         quats : numpy.ndarray(defdap.quat.Quat)
             Array of quat objects.
-        direction : numpy.ndarray
+        direction
             Direction in sample space.
-        symGroup : str
+        symGroup
             Crystal type (cubic, hexagonal).
-        dtype: numpy.dtype
+        dtype
             Data type to use for calculation.
 
         Returns
@@ -856,20 +941,23 @@ class Quat(object):
         return rgb
 
     @staticmethod
-    def calcFundDirs(quats, direction, symGroup, dtype=np.float):
+    def calcFundDirs(quats: np.ndarray,
+                     direction: np.ndarray,
+                     symGroup: str,
+                     dtype: type = np.float):
         """
         Transform the sample direction to crystal coords based on the quats
         and find the ones in the fundamental sector of the IPF.
 
         Parameters
         ----------
-        quats : array_like(defdap.quat.Quat)
+        quats: array_like(defdap.quat.Quat)
             Array of quat objects.
-        direction: numpy.ndarray
+        direction
             Direction in sample space.
-        symGroup : str
+        symGroup
             Crystal type (cubic, hexagonal).
-        dtype: numpy.dtype
+        dtype
             Data type to use for calculation.
 
         Returns
@@ -981,7 +1069,8 @@ class Quat(object):
         return alphaFund, betaFund
 
     @staticmethod
-    def symEqv(symGroup):
+    def symEqv(symGroup: str
+               ) -> List['Quat']:
         """Returns all symmetric equivalents for a given crystal type.
         LEGACY: move to use symmetries defined in crystal structures
 

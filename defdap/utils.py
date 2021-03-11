@@ -1,4 +1,4 @@
-# Copyright 2020 Mechanics of Microstructures Group
+# Copyright 2021 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,12 @@ import functools
 from datetime import datetime
 
 
-def reportProgress(message=""):
+def reportProgress(message: str = ""):
     """Decorator for reporting progress of given function
 
     Parameters
     ----------
-    message : str
+    message
         Message to display (prefixed by 'Starting ', progress percentage
         and then 'Finished '
 

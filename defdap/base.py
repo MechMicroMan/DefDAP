@@ -1,4 +1,4 @@
-# Copyright 2020 Mechanics of Microstructures Group
+# Copyright 2021 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,9 @@ import networkx as nx
 
 from defdap.quat import Quat
 from defdap import plotting
-from defdap.plotting import MapPlot, GrainPlot
+from defdap.plotting import Plot, MapPlot, GrainPlot
+
+from skimage.measure import profile_line
 
 from defdap.utils import reportProgress
 
@@ -48,6 +50,7 @@ class Map(object):
         self.neighbourNetwork = None
 
         self.grainPlot = None
+        self.profilePlot = None
 
     def __len__(self):
         return len(self.grainList)
@@ -168,7 +171,6 @@ class Map(object):
             # update the grain highlights layer in the plot
             plot.addGrainHighlights([self.currGrainId], alpha=self.highlightAlpha)
 
-            # TODO: Check display selected works for ebsd map
             if displaySelected:
                 currGrain = self[self.currGrainId]
                 if self.grainPlot is None or not self.grainPlot.exists:
@@ -177,6 +179,51 @@ class Map(object):
                     self.grainPlot.clear()
                     self.grainPlot.callingGrain = currGrain
                     currGrain.plotDefault(plot=self.grainPlot)
+                    self.grainPlot.draw()
+
+    def drawLineProfile(self, **kwargs):
+        """Interactive plot for drawing a line profile of data.
+
+        """
+        plot = self.plotDefault(makeInteractive=True, **kwargs)
+
+        plot.addEventHandler('button_press_event', plot.lineSlice)
+        plot.addEventHandler('button_release_event', lambda e, p: plot.lineSlice(e, p,
+                                                action=self.calcLineProfile))
+
+        return plot
+
+    def calcLineProfile(self, plot, startEnd, **kwargs):
+        """Calculate and plot the line profile.
+
+        Parameters
+        ----------
+        plot : defdap.plotting.Plot
+            Plot to calculate the line profile for.
+        startEnd : array_like
+            Selected points (x0, y0, x1, y1).
+
+        """
+
+        x0, y0 = startEnd[0:2]
+        x1, y1 = startEnd[2:4]
+        profile_length = np.sqrt((y1 - y0) ** 2 + (x1 - x0) ** 2)
+
+        # Extract the values along the line
+        zi = profile_line(plot.imgLayers[0].get_array(),
+                          (startEnd[1], startEnd[0]), (startEnd[3], startEnd[2]),
+                          mode='nearest', **kwargs)
+        xi = np.linspace(0, profile_length, len(zi))
+
+        if self.profilePlot is None or not self.profilePlot.exists:
+            self.profilePlot = Plot(makeInteractive=True)
+        else:
+            self.profilePlot.clear()
+
+        self.profilePlot.ax.plot(xi, zi, **kwargs)
+        self.profilePlot.ax.set_xlabel('Distance (pixels)')
+        self.profilePlot.ax.set_ylabel('Intensity')
+        self.profilePlot.draw()
 
     def setHomogPoint(self, binSize=1, points=None, **kwargs):
         """
@@ -565,7 +612,7 @@ class Map(object):
 
         Parameters
         ----------
-        grainData : list or np.ndarray
+        grainData : list or numpy.ndarray
             Grain values. This can be a single value per grain or RGB
             values.
         grainIds : list of int or int, optional
@@ -575,7 +622,7 @@ class Map(object):
 
         Returns
         -------
-        grainMap: np.ndarray
+        grainMap: numpy.ndarray
             Array filled with grain data values
 
         """
@@ -616,7 +663,7 @@ class Map(object):
 
         Parameters
         ----------
-        mapData : np.array, optional
+        mapData : numpy.ndarray, optional
             Array of map data. This must be cropped! Either mapData or 
             grainData must be supplied.
         grainData : list or np.array, optional
@@ -627,7 +674,7 @@ class Map(object):
         bg: int or real, optional
             Value to fill the background with.
         kwargs:
-            Other parameters are passed to defdap.plotting.MapPlot.create
+            Other parameters are passed to :func:`defdap.plotting.MapPlot.create`
 
         Returns
         -------
@@ -791,7 +838,7 @@ class Grain(object):
         Returns
         -------
         numpy.ndarray
-            Bounding box for grain with np.nan outside the grain and given number within.
+            Bounding box for grain with :obj:`~numpy.nan` outside the grain and given number within.
 
         """
         x0, y0, xmax, ymax = self.extremeCoords
@@ -814,7 +861,7 @@ class Grain(object):
         plotScaleBar : bool
             plots the scale bar on the grain if true.
         kwargs : dict
-            keyword arguments to pass to plotting.GrainPlot.addMap.
+            keyword arguments to pass to :func:`defdap.plotting.GrainPlot.addMap`.
 
         Returns
         -------

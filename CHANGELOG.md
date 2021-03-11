@@ -3,6 +3,14 @@
 ## Current
 
 ### Added
+
+### Changed
+
+### Fixed 
+
+## 0.93.0 (20-02-2020)
+
+### Added
 - Add EBSD file writing to CTF format.
 - Add cretation of EBSD maps from runtime data.
 - Add method to generate all slip systems in a family from a single system.

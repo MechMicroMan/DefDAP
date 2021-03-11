@@ -1,4 +1,4 @@
-# Copyright 2020 Mechanics of Microstructures Group
+# Copyright 2021 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,8 @@ import pandas as pd
 import pathlib
 import re
 
+from typing import TextIO, Dict, List, Callable, Any, Type, Optional
+
 from defdap.crystal import Phase
 from defdap.quat import Quat
 
@@ -26,13 +28,12 @@ class EBSDDataLoader(object):
     """Class containing methods for loading and checking EBSD data
 
     """
-    def __init__(self):
+    def __init__(self) -> None:
         self.loadedMetadata = {
             'xDim': 0,
             'yDim': 0,
             'stepSize': 0.,
             'acquisitionRotation': Quat(1.0, 0.0, 0.0, 0.0),
-            'numPhases': 0,
             'phases': []
         }
         self.loadedData = {
@@ -43,7 +44,7 @@ class EBSDDataLoader(object):
         self.dataFormat = None
 
     @staticmethod
-    def getLoader(dataType):
+    def getLoader(dataType: str) -> 'Type[EBSDDataLoader]':
         if dataType is None:
             dataType = "OxfordBinary"
 
@@ -56,19 +57,16 @@ class EBSDDataLoader(object):
         else:
             raise ValueError(f"No loader for EBSD data of type {dataType}.")
 
-    def checkMetadata(self):
+    def checkMetadata(self) -> None:
         """
         Checks that the number of phases from metadata matches
         the amount of phases loaded.
 
         """
-        if len(self.loadedMetadata['phases']) != self.loadedMetadata['numPhases']:
-            raise ValueError("Number of phases mismatch.")
-
         for phase in self.loadedMetadata['phases']:
             assert type(phase) is Phase
 
-    def checkData(self):
+    def checkData(self) -> None:
         mapShape = (self.loadedMetadata['yDim'], self.loadedMetadata['xDim'])
 
         assert self.loadedData['phase'].shape == mapShape
@@ -77,14 +75,19 @@ class EBSDDataLoader(object):
 
 
 class OxfordTextLoader(EBSDDataLoader):
-    def load(self, fileName, fileDir=""):
-        """ Read an Oxford Instruments .ctf file, which is a HKL single orientation file.
+    def load(
+        self,
+        fileName: str,
+        fileDir: str = ""
+    ) -> None:
+        """ Read an Oxford Instruments .ctf file, which is a HKL single
+        orientation file.
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
 
         Returns
@@ -99,7 +102,7 @@ class OxfordTextLoader(EBSDDataLoader):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        def parsePhase():
+        def parsePhase() -> Phase:
             lineSplit = line.split('\t')
             dims = lineSplit[0].split(';')
             dims = tuple(round(float(s), 3) for s in dims)
@@ -133,7 +136,6 @@ class OxfordTextLoader(EBSDDataLoader):
                     acqEulers[2] = float(line.split()[-1])
                 elif 'Phases' in line:
                     numPhases = int(line.split()[-1])
-                    self.loadedMetadata['numPhases'] = numPhases
                     for j in range(numPhases):
                         line = next(ctfFile)
                         self.loadedMetadata['phases'].append(parsePhase())
@@ -164,7 +166,7 @@ class OxfordTextLoader(EBSDDataLoader):
             'BS': ('BS', 'uint8'),      # Band Slope
         }
 
-        keepColNames = ('phase', 'ph1', 'phi', 'ph2', 'BC')
+        keepColNames = ('phase', 'ph1', 'phi', 'ph2', 'BC', 'BS', 'MAD')
         dataFormat = []
         loadCols = []
         try:
@@ -185,6 +187,12 @@ class OxfordTextLoader(EBSDDataLoader):
         self.loadedData['bandContrast'] = np.reshape(
             binData['BC'], (yDim, xDim)
         )
+        self.loadedData['bandSlope'] = np.reshape(
+            binData['BS'], (yDim, xDim)
+        )
+        self.loadedData['meanAngularDeviation'] = np.reshape(
+            binData['MAD'], (yDim, xDim)
+        )
         self.loadedData['phase'] = np.reshape(
             binData['phase'], (yDim, xDim)
         )
@@ -200,26 +208,40 @@ class OxfordTextLoader(EBSDDataLoader):
 
 
 class OxfordBinaryLoader(EBSDDataLoader):
-    def load(self, fileName, fileDir=""):
+    def load(
+        self,
+        fileName: str,
+        fileDir: str = ""
+    ) -> None:
+        """Read Oxford Instruments .cpr/.crc file pair.
+
+        Parameters
+        ----------
+        fileName
+            File name.
+        fileDir
+            Path to file.
+
+        Returns
+        -------
+        dict, dict
+            EBSD metadata and EBSD data.
+
+        """
         self.loadOxfordCPR(fileName, fileDir=fileDir)
         self.loadOxfordCRC(fileName, fileDir=fileDir)
 
-    def loadOxfordCPR(self, fileName, fileDir=""):
+    def loadOxfordCPR(self, fileName: str, fileDir: str = "") -> None:
         """
         Read an Oxford Instruments .cpr file, which is a metadata file
         describing EBSD data.
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
-
-        Returns
-        -------
-        dict
-            Metadata for EBSD data, including dimensions and number of phases.
 
         """
         commentChar = ';'
@@ -235,7 +257,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
         metadata = dict()
         groupPat = re.compile("\[(.+)\]")
 
-        def parseLine(line):
+        def parseLine(line: str) -> None:
             try:
                 key, val = line.strip().split('=')
                 groupDict[key] = val
@@ -268,9 +290,9 @@ class OxfordBinaryLoader(EBSDDataLoader):
             float(metadata['Acquisition Surface']['Euler2']) * np.pi / 180.,
             float(metadata['Acquisition Surface']['Euler3']) * np.pi / 180.
         )
-        self.loadedMetadata['numPhases'] = int(metadata['Phases']['Count'])
+        numPhases = int(metadata['Phases']['Count'])
 
-        for i in range(self.loadedMetadata['numPhases']):
+        for i in range(numPhases):
             phaseMetadata = metadata['Phase{:}'.format(i + 1)]
             self.loadedMetadata['phases'].append(Phase(
                 phaseMetadata['StructureName'],
@@ -310,20 +332,15 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
         self.dataFormat = np.dtype(dataFormat)
 
-    def loadOxfordCRC(self, fileName, fileDir=""):
+    def loadOxfordCRC(self, fileName: str, fileDir: str = "") -> None:
         """Read binary EBSD data from an Oxford Instruments .crc file
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
-
-        Returns
-        -------
-        dict
-            EBSD data including phase, MAD and euler angle arrays.
 
         """
         xDim = self.loadedMetadata['xDim']
@@ -340,6 +357,12 @@ class OxfordBinaryLoader(EBSDDataLoader):
         self.loadedData['bandContrast'] = np.reshape(
             binData['BC'], (yDim, xDim)
         )
+        self.loadedData['bandSlope'] = np.reshape(
+            binData['BS'], (yDim, xDim)
+        )
+        self.loadedData['meanAngularDeviation'] = np.reshape(
+            binData['MAD'], (yDim, xDim)
+        )
         self.loadedData['phase'] = np.reshape(
             binData['phase'], (yDim, xDim)
         )
@@ -355,12 +378,12 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
 
 class PythonDictLoader(EBSDDataLoader):
-    def load(self, dataDict):
+    def load(self, dataDict: Dict[str, Any]) -> None:
         """Construct EBSD data from a python dictionary.
 
         Parameters
         ----------
-        dataDict : dict
+        dataDict
             Dictionary with keys:
                 'stepSize'
                 'phases'
@@ -374,7 +397,6 @@ class PythonDictLoader(EBSDDataLoader):
         self.loadedMetadata['stepSize'] = dataDict['stepSize']
         assert type(dataDict['phases']) is list
         self.loadedMetadata['phases'] = dataDict['phases']
-        self.loadedMetadata['numPhases'] = len(dataDict['phases'])
 
         self.checkMetadata()
 
@@ -389,7 +411,7 @@ class DICDataLoader(object):
     """Class containing methods for loading and checking HRDIC data
 
     """
-    def __init__(self):
+    def __init__(self) -> None:
         self.loadedMetadata = {
             'format': "",
             'version': "",
@@ -404,10 +426,10 @@ class DICDataLoader(object):
             'yd': None
         }
 
-    def checkMetadata(self):
+    def checkMetadata(self) -> None:
         return
 
-    def checkData(self):
+    def checkData(self) -> None:
         """ Calculate size of map from loaded data and check it matches
         values from metadata.
 
@@ -425,14 +447,18 @@ class DICDataLoader(object):
         assert xdim == self.loadedMetadata['xDim'], "Dimensions of data and header do not match"
         assert ydim == self.loadedMetadata['yDim'], "Dimensions of data and header do not match"
 
-    def loadDavisMetadata(self, fileName, fileDir=""):
+    def loadDavisMetadata(
+        self,
+        fileName: str,
+        fileDir: str = ""
+    ) -> Dict[str, Any]:
         """ Load DaVis metadata from Davis .txt file.
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
 
         Returns
@@ -462,15 +488,19 @@ class DICDataLoader(object):
 
         return self.loadedMetadata
 
-    def loadDavisData(self, fileName, fileDir=""):
-        """ Load displacement data from Davis .txt file containing x and y coordinates
-        and x and y displacements for each coordinate.
+    def loadDavisData(
+        self,
+        fileName: str,
+        fileDir: str = ""
+    ) -> Dict[str, Any]:
+        """Load displacement data from Davis .txt file containing x and
+        y coordinates and x and y displacements for each coordinate.
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
 
         Returns
@@ -494,16 +524,25 @@ class DICDataLoader(object):
         self.checkData()
 
         return self.loadedData
-        
-    def loadDavisImageData(self, fileName, fileDir=""):
+
+    @staticmethod
+    def loadDavisImageData(
+        fileName: str,
+        fileDir: str = ""
+    ) -> np.ndarray:
         """ A .txt file from DaVis containing a 2D image
 
         Parameters
         ----------
-        fileName : str
+        fileName
             File name.
-        fileDir : str
+        fileDir
             Path to file.
+
+        Returns
+        -------
+        np.ndarray
+            Array of data.
 
         """
         filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
@@ -512,26 +551,31 @@ class DICDataLoader(object):
 
         data = pd.read_table(str(filePath), delimiter='\t', skiprows=1, header=None)
        
-       # x and y coordinates
+        # x and y coordinates
         loadedData = np.array(data)
 
         return loadedData
 
 
-def readUntilString(file, termString, commentChar='*', lineProcess=None):
+def readUntilString(
+    file: TextIO,
+    termString: str,
+    commentChar: str = '*',
+    lineProcess: Optional[Callable[[str], Any]] = None
+) -> List[Any]:
     """Read lines in a file until a line starting with the `termString`
     is encounted. The file position is returned before the line starting
     with the `termString` when found. Comment and empty lines are ignored.
 
     Parameters
     ----------
-    file : file
+    file
         An open python text file object.
-    termString : str
+    termString
         String to terminate reading.
-    commentChar : str
+    commentChar
         Character at start of a comment line to ignore.
-    lineProcess : function
+    lineProcess
         Function to apply to each line when loaded.
 
     Returns

@@ -30,7 +30,7 @@ setup(
     keywords='defdap, EBSD, HRDIC, deformation, crystal, correlative analysis',
     project_urls={
         'GitHub': 'https://github.com/MechMicroMan/DefDAP',
-        'Documentation': 'http://mechmicroman.github.io/DefDAP'
+        'Documentation': 'https://defdap.readthedocs.io/en/latest'
     },
     classifiers=[
         'Intended Audience :: Science/Research',
@@ -51,13 +51,12 @@ setup(
     ],
     packages=find_packages(exclude=['tests']),
     package_data={'defdap': ['slip_systems/*.txt']},
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     install_requires=[
         'scipy',
         'numpy',
         'matplotlib>=3.0.0',
         'scikit-image',
-        'scikit-learn',
         'pandas',
         'peakutils',
         'matplotlib_scalebar',

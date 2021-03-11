@@ -1,4 +1,4 @@
-# Copyright 2020 Mechanics of Microstructures Group
+# Copyright 2021 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -108,13 +108,15 @@ class Map(base.Map):
         self.eulerAngleArray = None
         self.bandContrastArray = None
         self.quatArray = None
-        self.numPhases = None
         self.phaseArray = None
         self.phases = []
         self.boundaries = None
         self.boundariesX = None
         self.boundariesY = None
         self.boundaryLines = None
+        self.phaseBoundariesX = None
+        self.phaseBoundariesY = None
+        self.phaseBoundaryLines = None
         self.phaseBoundaries = None
         self.grains = None
         self.misOri = None
@@ -157,12 +159,13 @@ class Map(base.Map):
         self.xDim = metadataDict['xDim']
         self.yDim = metadataDict['yDim']
         self.stepSize = metadataDict['stepSize']
-        self.numPhases = metadataDict['numPhases']
         self.phases = metadataDict['phases']
 
         dataDict = dataLoader.loadedData
         self.eulerAngleArray = dataDict['eulerAngle']
         self.bandContrastArray = dataDict['bandContrast']
+        self.bandSlopeArray = dataDict['bandSlope']
+        self.meanAngularDeviationArray = dataDict['meanAngularDeviation']
         self.phaseArray = dataDict['phase']
 
         # write final status
@@ -219,6 +222,10 @@ class Map(base.Map):
         return self.primaryPhase.cOverA
 
     @property
+    def numPhases(self):
+        return len(self.phases) or None
+
+    @property
     def primaryPhase(self):
         """Primary phase of the EBSD map.
 
@@ -234,25 +241,24 @@ class Map(base.Map):
     def scale(self):
         return self.stepSize
 
-    @reportProgress("transforming EBSD data")
-    def transformData(self):
+    @reportProgress("rotating EBSD data")
+    def rotateData(self):
         """Rotate map by 180 degrees and transform quats accordingly.
 
         """
         self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
         self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
         self.phaseArray = self.phaseArray[::-1, ::-1]
-        self.buildQuatArray()
+        self.buildQuatArray(force=True)     # Force rebuild quat array
 
         # Rotation from old coord system to new
-        transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi)
-        transformQuat = transformQuat.conjugate
-        for i in range(self.xDim):
-            for j in range(self.yDim):
-                self.quatArray[j, i] = self.quatArray[j, i] * transformQuat
+        transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi).conjugate
 
-            # report progress
-            yield i / self.xDim
+        # Perform vectorised multiplication
+        quats = Quat.multiplyManyQuats(self.quatArray.flatten(), transformQuat)
+        self.quatArray = np.array(quats).reshape(self.yDim, self.xDim)
+
+        yield 1.
 
     def plotBandContrastMap(self, **kwargs):
         """Plot band contrast map
@@ -376,7 +382,7 @@ class Map(base.Map):
 
         Returns
         -------
-        defdap.plotting.MapPlot.
+        defdap.plotting.MapPlot
 
         """
         # Set default plot parameters then update with any input
@@ -621,14 +627,21 @@ class Map(base.Map):
         return True
 
     @reportProgress("building quaternion array")
-    def buildQuatArray(self):
+    def buildQuatArray(self, force = False):
         """Build quaternion array
 
+        Parameters
+        ----------
+        force, optional
+            If true, re-build quaternion array
         """
         self.checkDataLoaded()
 
-        if self.quatArray is None:
-            # create the array of quat objects
+        if force == False:
+            if self.quatArray is None:
+                # create the array of quat objects
+                self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
+        if force == True:
             self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
 
         yield 1.
@@ -717,7 +730,7 @@ class Map(base.Map):
 
     @reportProgress("finding grain boundaries")
     def findBoundaries(self, boundDef=10):
-        """Find grain boundaries
+        """Find grain and phase boundaries
 
         Parameters
         ----------
@@ -779,38 +792,71 @@ class Map(base.Map):
         misOriX = 2 * np.arccos(misOriX) * 180 / np.pi
         misOriY = 2 * np.arccos(misOriY) * 180 / np.pi
 
-        # set boundary locations where misOriX or misOriY are greater
+        # GRAIN boundary POINTS where misOriX or misOriY are greater
         # than set value
         self.boundariesX = misOriX > boundDef
         self.boundariesY = misOriY > boundDef
 
-        # add in phase boundaries
-        phaseBoundariesX = np.not_equal(self.phaseArray,
-                                        np.roll(self.phaseArray, -1, axis=1))
-        phaseBoundariesX[:, -1] = False
-        self.boundariesX = np.logical_or(self.boundariesX, phaseBoundariesX)
+        # PHASE boundary POINTS
+        self.phaseBoundariesX = np.not_equal(
+            self.phaseArray, np.roll(self.phaseArray, -1, axis=1))
+        self.phaseBoundariesX[:, -1] = False
 
-        phaseBoundariesY = np.not_equal(self.phaseArray,
-                                        np.roll(self.phaseArray, -1, axis=0))
-        phaseBoundariesY[-1, :] = False
-        self.boundariesY = np.logical_or(self.boundariesY, phaseBoundariesY)
+        self.phaseBoundariesY = np.not_equal(
+            self.phaseArray, np.roll(self.phaseArray, -1, axis=0))
+        self.phaseBoundariesY[-1, :] = False
 
+        self.phaseBoundaries = np.logical_or(
+            self.phaseBoundariesX, self.phaseBoundariesY)
+        self.phaseBoundaries = -self.phaseBoundaries.astype(int)
+
+        # add PHASE boundary POINTS to GRAIN boundary POINTS
+        self.boundariesX = np.logical_or(self.boundariesX, self.phaseBoundariesX)
+        self.boundariesY = np.logical_or(self.boundariesY, self.phaseBoundariesY)
         self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
         self.boundaries = -self.boundaries.astype(int)
 
-        boundaryPoints = np.where(self.boundariesX)
-        boundaryLinesX = []
-        for i, j in zip(*boundaryPoints):
-            boundaryLinesX.append(((j + 0.5, i - 0.5), (j + 0.5, i + 0.5)))
-
-        boundaryPoints = np.where(self.boundariesY)
-        boundaryLinesY = []
-        for i, j in zip(*boundaryPoints):
-            boundaryLinesY.append(((j - 0.5, i + 0.5), (j + 0.5, i + 0.5)))
-
-        self.boundaryLines = boundaryLinesX + boundaryLinesY
+        _, _, self.boundaryLines = Map.create_boundary_lines(
+            boundaries_x=self.boundariesX,
+            boundaries_y=self.boundariesY
+        )
+        _, _, self.phaseBoundaryLines = Map.create_boundary_lines(
+            boundaries_x=self.phaseBoundariesX,
+            boundaries_y=self.phaseBoundariesY
+        )
 
         yield 1.
+
+    @staticmethod
+    def create_boundary_lines(*, boundaries_x=None, boundaries_y=None):
+        boundary_data = {}
+        if boundaries_x is not None:
+            boundary_data['x'] = boundaries_x
+        if boundaries_y is not None:
+            boundary_data['y'] = boundaries_y
+        if not boundary_data:
+            raise ValueError("No boundaries provided.")
+
+        deltas = {
+            'x': (0.5, -0.5, 0.5, 0.5),
+            'y': (-0.5, 0.5, 0.5, 0.5)
+        }
+        all_lines = []
+        for mode, boundaries in boundary_data.items():
+            points = np.where(boundaries)
+            lines = []
+            for i, j in zip(*points):
+                lines.append((
+                    (j + deltas[mode][0], i + deltas[mode][1]),
+                    (j + deltas[mode][2], i + deltas[mode][3])
+                ))
+            all_lines.append(lines)
+
+        if len(all_lines) == 2:
+            all_lines.append(all_lines[0] + all_lines[1])
+            return tuple(all_lines)
+        else:
+            return all_lines[0]
 
     @reportProgress("constructing neighbour network")
     def buildNeighbourNetwork(self):
@@ -860,28 +906,6 @@ class Map(base.Map):
         self.neighbourNetwork = nn
 
     @reportProgress("finding phase boundaries")
-    def findPhaseBoundaries(self, treatNonIndexedAs=None):
-        """Finds boundaries in the phase map.
-
-        Parameters
-        ----------
-        treatNonIndexedAs : int
-            Value to assign to non-indexed points, defaults to -1.
-
-        """
-        # make new array shifted by one to left and up
-        phaseArrayShifted = np.full((self.yDim, self.xDim), -3)
-        phaseArrayShifted[:-1, :-1] = self.phaseArray[1:, 1:]
-
-        if treatNonIndexedAs:
-            self.phaseArray[self.phaseArray == 0] = treatNonIndexedAs
-            phaseArrayShifted[phaseArrayShifted == 0] = treatNonIndexedAs
-
-        # where shifted array not equal to starting array, set to -1
-        self.phaseBoundaries = np.zeros((self.yDim, self.xDim))
-        self.phaseBoundaries = np.where(np.not_equal(self.phaseArray, phaseArrayShifted), -1, 0)
-
-        yield 1.
 
     def plotPhaseBoundaryMap(self, dilate=False, **kwargs):
         """Plot phase boundary map.
@@ -1164,6 +1188,9 @@ class Map(base.Map):
         self.misOri = np.ones([self.yDim, self.xDim])
 
         if component in [1, 2, 3]:
+            # Calculate misorientation axis if not calculated
+            if np.any([grain.misOriAxisList is None for grain in self.grainList]):
+                self.calcGrainMisOri(calcAxis = True)
             for grain in self.grainList:
                 for coord, misOriAxis in zip(grain.coordList, np.array(grain.misOriAxisList)):
                     self.misOri[coord[1], coord[0]] = misOriAxis[component - 1]
@@ -1173,6 +1200,9 @@ class Map(base.Map):
                 ['X', 'Y', 'Z'][component-1]
             )
         else:
+            # Calculate misorientation if not calculated
+            if np.any([grain.misOriList is None for grain in self.grainList]):
+                self.calcGrainMisOri(calcAxis = False)
             for grain in self.grainList:
                 for coord, misOri in zip(grain.coordList, grain.misOriList):
                     self.misOri[coord[1], coord[0]] = misOri
@@ -1369,6 +1399,12 @@ class Grain(base.Grain):
         self.slipTraceAngles = None             # list of slip trace angles
         self.slipTraceInclinations = None
 
+    @property
+    def plotDefault(self):
+        return lambda *args, **kwargs: self.plotUnitCell(
+            *args, **kwargs
+        )
+
     def addPoint(self, coord, quat):
         """Append a coordinate and a quat to a grain.
 
@@ -1482,7 +1518,7 @@ class Grain(base.Grain):
         return Quat.plotIPF(self.quatList, direction, self.crystalSym,
                             **plotParams)
                             
-    def plotUnitCell(self, fig=None, ax=None, **kwargs):
+    def plotUnitCell(self, fig=None, ax=None, plot=None, **kwargs):
         """Plot an unit cell of the average grain orientation.
 
         Parameters
@@ -1491,13 +1527,17 @@ class Grain(base.Grain):
             Matplotlib figure to plot on
         ax : matplotlib.figure.Figure
             Matplotlib figure to plot on
+        plot : defdap.plotting.PolePlot
+            defdap plot to plot the figure to.
         kwargs
             All other arguments are passed to :func:`defdap.quat.Quat.plotUnitCell`.
 
         """
-        # TODO: Update to use phase
-        Quat.plotUnitCell(self.refOri, fig=fig, ax=ax,
-                          symGroup=self.crystalSym, **kwargs)
+        crystalStructure = self.ebsdMap.phases[self.phaseID].crystalStructure
+        plot = Quat.plotUnitCell(self.refOri, fig=fig, ax=ax, plot=plot,
+                          crystalStructure=crystalStructure, **kwargs)
+
+        return plot
 
     def plotMisOri(self, component=0, **kwargs):
         """Plot misorientation map for a given grain.
@@ -1521,21 +1561,22 @@ class Grain(base.Grain):
             'plotColourBar': True
         }
         if component == 0:
+            if self.misOriList is None: self.buildMisOriList()
             plotParams['clabel'] = "Grain reference orientation " \
                                    "deviation (GROD) ($^\circ$)"
-            plotData = 2 * np.arccos(self.misOriList)
+            plotData = np.rad2deg(2 * np.arccos(self.misOriList))
 
         elif 0 < component < 4:
+            if self.misOriAxisList is None: self.buildMisOriList(calcAxis=True)
             plotParams['clabel'] = "Rotation around {:} ($^\circ$)".format(
                 ['X', 'Y', 'Z'][component-1]
             )
-            plotData = np.array(self.misOriAxisList)[:, component-1]
+            plotData = np.rad2deg(np.array(self.misOriAxisList)[:, component-1])
 
         else:
             raise ValueError("Component must between 0 and 3")
         plotParams.update(kwargs)
 
-        plotData *= 180 / np.pi
         plot = self.plotGrainData(grainData=plotData, **plotParams)
 
         return plot
