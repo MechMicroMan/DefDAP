@@ -108,7 +108,6 @@ class Map(base.Map):
         self.eulerAngleArray = None
         self.bandContrastArray = None
         self.quatArray = None
-        self.numPhases = None
         self.phaseArray = None
         self.phases = []
         self.boundaries = None
@@ -160,7 +159,6 @@ class Map(base.Map):
         self.xDim = metadataDict['xDim']
         self.yDim = metadataDict['yDim']
         self.stepSize = metadataDict['stepSize']
-        self.numPhases = metadataDict['numPhases']
         self.phases = metadataDict['phases']
 
         dataDict = dataLoader.loadedData
@@ -222,6 +220,10 @@ class Map(base.Map):
 
         """
         return self.primaryPhase.cOverA
+
+    @property
+    def numPhases(self):
+        return len(self.phases) or None
 
     @property
     def primaryPhase(self):
