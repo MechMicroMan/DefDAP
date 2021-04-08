@@ -555,16 +555,15 @@ class Quat(object):
                 # Add 30 degrees to phi2 for OI
                 eulerAngles = self.eulerAngles()
                 eulerAngles[2] += np.pi / 6
-                quatToPlot = Quat.fromEulerAngles(*eulerAngles)
+                gg = Quat.fromEulerAngles(*eulerAngles).rotMatrix().T
             else:
-                quatToPlot = self
+                gg = quatToPlot.rotMatrix().T
 
         elif crystalStructure.name == 'cubic':
             szFac = 0.25
-            quatToPlot = self
+            gg = quatToPlot.rotMatrix().T
 
         # Rotate the lattice cell points
-        gg = quatToPlot.rotMatrix().T
         pts = np.matmul(gg, vert.T).T * szFac
 
         # Plot unit cell
