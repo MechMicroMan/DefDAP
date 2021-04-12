@@ -6,7 +6,34 @@
 
 ### Changed
 
+### Fixed
+
+
+## 0.93.1 (12-04-2020)
+
+### Added
+- Started adding type hinting
+- Add save/load support to grainInspector
+- Add `drawLineProfile` function. Click and drag a line, then plot an intensity profile across the line
+
+### Changed
+- Speed up EBSD map data rotation 
+- Speed up 'warp' grain finding
+- Store band slope and MAD arrays from EBSD
+- Update nCorrToDavis.m script
+  - Better description of how to use the function
+  - Sub-window size is subset radius * 2, as defined in nCorr
+  - Subset spacing is subset spacing, as defined in nCorr
+- Generate phase boundary points and lines at same time as grain boundaries
+- Improve histogram plotting
+  - Options for scatter (as before), step and bar
+  - Options for logx, logy, loglog and linear
+- Updates to example notebook
+
 ### Fixed 
+- Fixed docstring links
+- Fix bug in 'warp' grain finding algorithm
+
 
 ## 0.93.0 (20-02-2020)
 
