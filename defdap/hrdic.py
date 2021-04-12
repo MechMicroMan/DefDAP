@@ -1,4 +1,4 @@
-# Copyright 2020 Mechanics of Microstructures Group
+# Copyright 2021 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -175,6 +175,12 @@ class Map(base.Map):
         # max shear component
         self.eMaxShear = np.sqrt(((self.e11 - self.e22) / 2.)**2 + self.e12**2)
 
+        # Dictionary references to all map types
+        self.component = {'f11': self.f11, 'f12': self.f12, 'f21': self.f21, 'f22': self.f22,
+                         'e11': self.e11, 'e12': self.e12, 'e22': self.e22,
+                         'eMaxShear': self.eMaxShear,
+                         'x_map': self.x_map, 'y_map': self.y_map}
+
         # crop distances (default all zeros)
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
 
@@ -296,57 +302,37 @@ class Map(base.Map):
 
         Parameters
         ----------
-        percentiles : list
-            list of percentiles to print (number, Min, Mean or Max).
+        percentiles : list(float)
+            list of percentiles to print i.e. 0, 50, 99.
         components : list(str)
-            list of map components to print i.e. f11, mss.
+            list of map components to print i.e. e11, f11, eMaxShear, x_map.
 
         """
 
+        # Check that components are valid
+        if set(components).issubset(self.component) is False:
+            strFormat = ('{}, ') * (len(self.component) - 1) + ('{}')
+            raise Exception("Components must be: " + strFormat.format(*self.component))
+
         # Print map info
-        print('\033[1m', end='')    # START BOLD
+        print('\033[1m', end=''),  # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} "
               "x {3} pixels, number of points: {4})\n".format(
             self.retrieveName(), self.xDim, self.yDim,
             self.binning, self.xDim * self.yDim
         ))
 
-        # Print table header
-        print("Component\t".format(), end="")
-        for x in percentiles:
-            if x == 'Min' or x == 'Mean' or x == 'Max':
-                print("{0}\t".format(x), end='')
-            else:
-                print("P{0}\t".format(x), end='')
-        print('\033[0m', end='')    # END BOLD
-        print()
+        # Print header
+        strFormat = ('{:10} ') + (len(percentiles)) * '{:12}'
+        print(strFormat.format(*(['Component'] + percentiles)))
+        print('\033[0m', end='')  # END BOLD
 
         # Print table
+        strFormat = ('{:10} ') + (len(percentiles)) * '{:12.4f}'
         for c in components:
-            selmap = []
-            if c == 'mss':
-                selmap = self.crop(self.eMaxShear) * 100
-            if c == 'e11':
-                selmap = self.crop(self.e11) * 100
-            if c == 'e12':
-                selmap = self.crop(self.e12) * 100
-            if c == 'e22':
-                selmap = self.crop(self.e22) * 100
-            plist = []
-            for p in percentiles:
-                if p == 'Min':
-                    plist.append(np.nanmin(selmap))
-                elif p == 'Mean':
-                    plist.append(np.nanmean(selmap))
-                elif p == 'Max':
-                    plist.append(np.nanmax(selmap))
-                else:
-                    plist.append(np.nanpercentile(selmap, p))
-            print("{0}\t\t".format(c), end="")
-            for l in plist:
-                print("{0:.2f}\t".format(l), end='')
-            print()
-        print()
+            # Get the values and print in table
+            per = [np.nanpercentile(self.crop(self.component[c]), p) for p in percentiles]
+            print(strFormat.format(*([c] + per)))
 
     def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
         """Set a crop for the DIC map.
@@ -496,9 +482,14 @@ class Map(base.Map):
         )
 
         # Transform the EBSD boundaryLines to DIC reference frame
-        firstPointCoords = self.ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,0,:])
-        secondPointCoords = self.ebsdTransformInv(np.array(self.ebsdMap.boundaryLines)[:,1,:])
-        self.boundaryLines = np.dstack([firstPointCoords,secondPointCoords]).swapaxes(1,2)
+        boundaryLineList = np.array(self.ebsdMap.boundaryLines).reshape(-1, 2)       # Flatten to coord list
+        boundaryLines = self.ebsdTransformInv(boundaryLineList).reshape(-1, 2, 2)    # Transform & reshape back
+        self.boundaryLines = np.round(boundaryLines - 0.5) + 0.5                         # Round to nearest
+
+        # Transform the EBSD phaseBoundaryLines to DIC reference frame
+        phaseBoundaryLineList = np.array(self.ebsdMap.phaseBoundaryLines).reshape(-1, 2)     # Flatten to coord list
+        phaseBoundaryLines = self.ebsdTransformInv(phaseBoundaryLineList).reshape(-1, 2, 2)  # Transform & reshape back
+        self.phaseBoundaryLines = np.round(phaseBoundaryLines - 0.5) + 0.5                   # Round to nearest
 
     def checkEbsdLinked(self):
         """Check if an EBSD map has been linked.
@@ -570,19 +561,41 @@ class Map(base.Map):
         # return map
         return warpedMap
 
-    def generateThresholdMask(self, threshold, dilation=0, preview=False):
-        """ Generate a mask, based on thresholding of effective shear strain values.
+    def generateThresholdMask(self, mask, dilation=0, preview=True):
+        """ 
+        Generate a dilated mask, based on a boolean array and previews the appication of
+        this mask to the max shear map.
 
         Parameters
         ----------
-        threshold: float
-            Threshold effective shear strain value, above which pixels are masked.
-        dilation: int
-            Number of times to apply binary dilation.
+        mask: numpy.array(bool)
+            A boolean array where points to be removed are True
+        dilation: int, optional
+            Number of pixels to dilate the mask by. Useful to remove anomalous points 
+            around masked values. No dilation applied if not specified.
         preview: bool
-            If true, show the mask and masked effective shear strain map.
+            If true, show the mask and preview the masked effective shear strain map.
+
+        Examples
+        ----------
+        To remove data points in dicMap where eMaxShear is above 0.8, use:
+
+        >>> mask = dicMap.eMaxShear > 0.8
+
+        To remove data points in dicMap where e11 is above 1 or less than -1, use:        
+        
+        >>> mask = (dicMap.e11 > 1) | (dicMap.e11 < -1)
+
+        To remove data points in dicMap where corrVal is less than 0.4, use:
+
+        >>> mask = dicMap.corrVal < 0.4
+
+        Note: correlation value data needs to be loaded seperately from the DIC map, 
+        see :func:`defdap.hrdic.loadCorrValData`
+
         """
-        self.mask = self.eMaxShear > threshold
+        self.mask = mask
+
 
         if dilation != 0:
             self.mask = binary_dilation(self.mask, iterations=dilation)
@@ -592,21 +605,23 @@ class Map(base.Map):
         numRemovedCrop = np.sum(self.crop(self.mask))
         numTotalCrop = self.xDim * self.yDim
 
-        print('Filtering removes {0} \ {1} ({2:.3f} %) datapoints in map'.format(numRemoved, numTotal,
-                                                                       (numRemoved / numTotal)*100))
-        print('Filtering removes {0} \ {1} ({2:.3f} %) datapoints in cropped map'.format(numRemovedCrop, numTotalCrop,
-                                                                       (numRemovedCrop / numTotalCrop * 100)))
+        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
+                    .format(numRemoved, numTotal,(numRemoved / numTotal)*100))
+        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
+                    .format(numRemovedCrop, numTotalCrop,(numRemovedCrop / numTotalCrop * 100)))
 
         if preview == True:
             plot1 = MapPlot.create(self, self.crop(self.mask), cmap='binary')
             plot1.setTitle('Removed datapoints in black')
-            plot2 = MapPlot.create(self, self.crop(np.where(self.mask == True, np.nan, self.eMaxShear)),
-                                  plotColourBar='True', clabel="Effective shear strain")
+            plot2 = MapPlot.create(self, 
+                                  self.crop(np.where(self.mask == True, np.nan, self.eMaxShear)),
+                                  plotColourBar='True', 
+                                  clabel="Effective shear strain")
             plot2.setTitle('Effective shear strain preview')
         print('Use applyThresholdMask function to apply this filtering to data')
 
     def applyThresholdMask(self):
-        """ Apply mask to DIC data by setting masked values to nan.
+        """ Apply mask to all DIC map data by setting masked values to nan.
 
         """
         self.eMaxShear = np.where(self.mask == True, np.nan, self.eMaxShear)
@@ -706,28 +721,54 @@ class Map(base.Map):
 
         return plot
 
-    def plotMaxShear(self, **kwargs):
-        """Plot a map of maximum shear strain.
+    def plotMap(self, component, **kwargs):
+        """Plot a map from the DIC data.
 
         Parameters
         ----------
+        component
+            Map component to plot i.e. e11, f11, eMaxShear.
         kwargs
             All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
 
         Returns
         -------
         defdap.plotting.MapPlot
-            Plot containing BSE image of map.
+            Plot containing map.
 
         """
         # Set default plot parameters then update with any input
         plotParams = {
             'plotColourBar': True,
-            'clabel': "Effective shear strain"
+            'clabel': component
         }
         plotParams.update(kwargs)
 
-        plot = MapPlot.create(self, self.crop(self.eMaxShear), **plotParams)
+        plot = MapPlot.create(self, self.crop(self.component[component]), **plotParams)
+
+        return plot
+
+    def plotMaxShear(self, **kwargs):
+        """Plot a map of maximum shear strain.
+
+        Parameters
+        ----------
+        kwargs
+            All arguments are passed to :func:`defdap.hrdic.plotMap`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+            Plot containing map.
+
+        """
+
+        params = {
+            'clabel': 'Effective Shear Strain'
+        }
+        params.update(kwargs)
+
+        plot = self.plotMap('eMaxShear', **params)
 
         return plot
 
@@ -782,25 +823,27 @@ class Map(base.Map):
             # Make a new list of sequential IDs of same length as number of grains
             dicGrainIds = np.arange(1, len(self.ebsdGrainIds)+1)
 
-            # Map the old EBSD IDs to the new DIC IDs (keep the same mapping for negative values)
-            negVals = np.array([i for i in np.unique(self.grains) if i<0])
+            # Map the EBSD IDs to the DIC IDs (keep the same mapping for values <= 0)
+            negVals = np.array([i for i in np.unique(self.grains) if i<=0])
             old = np.concatenate((negVals, self.ebsdGrainIds))
             new = np.concatenate((negVals, dicGrainIds))
             index = np.digitize(self.grains.ravel(), old, right=True)
             self.grains = new[index].reshape(self.grains.shape)
 
-            # Make grain objects
             self.grainList = []
             for i, (dicGrainId, ebsdGrainId) in enumerate(zip(dicGrainIds, self.ebsdGrainIds)):
                 yield i / len(dicGrainIds)          # Report progress
 
-                currentGrain = Grain(self)
-                coords = np.transpose(np.where(self.grains == dicGrainId))     # Find coordinates
-                for coord in coords:
-                    currentGrain.addPoint((coord[1], coord[0]),
-                                          self.eMaxShear[coord[0] + self.cropDists[1, 0],
-                                                         coord[1] + self.cropDists[0, 0]])
+                # Make grain object
+                currentGrain = Grain(grainID=dicGrainId, dicMap=self)
 
+                # Find (x,y) coordinates and corresponding max shears of grain
+                coords = np.argwhere(self.grains == dicGrainId)       # (y,x)
+                currentGrain.coordList = np.flip(coords, axis=1)      # (x,y)
+                currentGrain.maxShearList = self.eMaxShear[coords[:,0]+ self.cropDists[1, 0], 
+                                                           coords[:,1]+ self.cropDists[0, 0]]
+
+                # Assign EBSD grain ID to DIC grain and increment grain list
                 currentGrain.ebsdGrainId = ebsdGrainId - 1
                 currentGrain.ebsdGrain = self.ebsdMap.grainList[ebsdGrainId - 1]
                 currentGrain.ebsdMap = self.ebsdMap
@@ -946,16 +989,20 @@ class Map(base.Map):
 
         return currentGrain
 
-    def runGrainInspector(self, vmax=0.1):
+    def runGrainInspector(self, vmax=0.1, corrAngle=None):
         """Run the grain inspector interactive tool.
 
         Parameters
         ----------
         vmax : float
             Maximum value of the colour map.
+        corrAngle: float
+            Correction angle in degrees to subtract from measured angles to account
+            for small rotation between DIC and EBSD frames. Approximately the rotation
+            component of affine transform.
 
         """
-        GrainInspector(currMap=self, vmax=vmax)
+        GrainInspector(currMap=self, vmax=vmax, corrAngle=corrAngle)
 
 
 class Grain(base.Grain):

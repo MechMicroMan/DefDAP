@@ -54,8 +54,12 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
+    'sphinx_autodoc_typehints',
     'sphinx_rtd_theme'
 ]
+
+napoleon_use_param = True
+#set_type_checking_flag = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

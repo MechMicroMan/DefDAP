@@ -1,4 +1,4 @@
-# Copyright 2020 Mechanics of Microstructures Group
+# Copyright 2021 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +16,13 @@
 import numpy as np
 import pathlib
 
+from typing import Type
+
 from defdap.quat import Quat
 
 
 class EBSDDataWriter(object):
-    def __init__(self):
+    def __init__(self) -> None:
         self.metadata = {
             'shape': (0, 0),
             'step_size': 0.,
@@ -35,7 +37,7 @@ class EBSDDataWriter(object):
         self.data_format = None
 
     @staticmethod
-    def get_writer(datatype):
+    def get_writer(datatype: str) -> "Type[EBSDDataLoader]":
         if datatype is None:
             datatype = "OxfordText"
 
@@ -46,7 +48,19 @@ class EBSDDataWriter(object):
 
 
 class OxfordTextWriter(EBSDDataWriter):
-    def write(self, file_name, file_dir=""):
+    def write(self, file_name: str, file_dir: str = "") -> None:
+        """ Write an Oxford Instruments .ctf file, which is a HKL single
+        orientation file.
+
+        Parameters
+        ----------
+        file_name
+            File name.
+        file_dir
+            Path to file.
+
+        """
+
         # check output file
         file_name = "{}.ctf".format(file_name)
         file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)

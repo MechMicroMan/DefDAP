@@ -1,4 +1,4 @@
-# Copyright 2020 Mechanics of Microstructures Group
+# Copyright 2021 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,16 @@
 
 import numpy as np
 
-from sklearn.cluster import MeanShift
+import ast
+
+from typing import List
+
 from scipy.stats import linregress
+from scipy.stats._stats_mstats_common import LinregressResult
 import pandas as pd
 
-from defdap.plotting import Plot, GrainPlot, LineSlice
+from defdap.plotting import Plot, GrainPlot
+from defdap import hrdic
 
 
 class GrainInspector:
@@ -28,7 +33,10 @@ class GrainInspector:
     and relative displacement ratio analysis.
 
     """
-    def __init__(self, currMap, vmax=0.1):
+    def __init__(self, 
+        currMap: 'hrdic.Map', 
+        vmax: float = 0.1,
+        corrAngle = None):
         # Initialise some values
         self.grainID = 0
         self.currMap = currMap
@@ -36,9 +44,13 @@ class GrainInspector:
         self.currDICGrain = self.currMap[self.grainID]
         self.currEBSDGrain = self.currDICGrain.ebsdGrain
         self.vmax = vmax
+        self.filename = str(self.currMap.retrieveName()) + '_RDR.txt'
         
         # Draw the figure
         self.draw()
+
+        if corrAngle is not None:
+            self.corrAngle = corrAngle
 
     def draw(self):
         """ Draw the main window, buttons, text boxes and axes.
@@ -47,18 +59,32 @@ class GrainInspector:
         # Plot window
         self.plot = Plot(ax=None, makeInteractive=True, figsize=(14,8), title='Grain Inspector')
         
-        # Buttons
-        self.plot.addButton('Save\nLine', self.saveLine, (0.73, 0.48, 0.05, 0.04))
-        self.plot.addButton('Previous\nGrain', lambda e, p: self.gotoGrain(self.grainID-1, p), (0.73, 0.94, 0.05, 0.04))
-        self.plot.addButton('Next\nGrain', lambda e, p: self.gotoGrain(self.grainID+1, p), (0.79, 0.94, 0.05, 0.04))
-        self.plot.addButton('Run\nAll STA', self.batchRunSTA, (0.81, 0.02, 0.1, 0.04))
-        self.plot.addButton('Clear\nAll Lines', self.clearAllLines, (0.89, 0.48, 0.05, 0.04))
+        ######## Buttons
+        self.plot.addButton(
+            'Save\nLine', self.saveLine, (0.73, 0.48, 0.05, 0.04))
+        self.plot.addButton(
+            'Previous\nGrain', lambda e, p: self.gotoGrain(self.grainID-1, p), (0.73, 0.94, 0.05, 0.04))
+        self.plot.addButton(
+            'Next\nGrain', lambda e, p: self.gotoGrain(self.grainID+1, p), (0.79, 0.94, 0.05, 0.04))
+        self.plot.addButton(
+            'Run\nAll STA', self.batchRunSTA, (0.85, 0.07, 0.11, 0.04))
+        self.plot.addButton(
+            'Clear\nAll Lines', self.clearAllLines, (0.89, 0.48, 0.05, 0.04))
+        self.plot.addButton(
+            'Load\nFile', self.loadFile, (0.85, 0.02, 0.05, 0.04))
+        self.plot.addButton(
+            'Save\nFile', self.saveFile, (0.91, 0.02, 0.05, 0.04))
+        
 
         # Text boxes
-        self.plot.addTextBox(label='Go to \ngrain ID:', loc=(0.9, 0.94, 0.05, 0.04), submitHandler=self.gotoGrain)
-        self.plot.addTextBox(label='Remove\nID:', loc=(0.83, 0.48, 0.05, 0.04), submitHandler=self.removeLine)
-        self.RDRGroupBox = self.plot.addTextBox(label='Run RDR\non group:',
-                                                loc=(0.78, 0.07, 0.05, 0.04), submitHandler=self.runRDRGroup)
+        self.plot.addTextBox(label='', loc=(0.7, 0.02, 0.13, 0.04),
+            changeHandler=self.updateFilename, initial = self.filename)
+        self.plot.addTextBox(label='Go to \ngrain ID:', loc=(0.9, 0.94, 0.05, 0.04), 
+            submitHandler=self.gotoGrain)
+        self.plot.addTextBox(label='Remove\nID:', loc=(0.83, 0.48, 0.05, 0.04), 
+            submitHandler=self.removeLine)
+        self.RDRGroupBox = self.plot.addTextBox(label='Run RDR only\non group:', loc=(0.78, 0.07, 0.05, 0.04), 
+            submitHandler=self.runRDRGroup)
 
         # Axes
         self.maxShearAx = self.plot.addAxes((0.05, 0.4, 0.65, 0.55))
@@ -74,12 +100,14 @@ class GrainInspector:
         # Draw the stuff that will need to be redrawn often in a seperate function
         self.redraw()
 
-    def gotoGrain(self, event, plot):
+    def gotoGrain(self, 
+        event: int, 
+        plot):
         """ Go to a specified grain ID.
 
         Parameters
         ----------
-        event: int
+        event
             Grain ID to go to.
 
         """
@@ -90,66 +118,92 @@ class GrainInspector:
         self.currEBSDGrain = self.currDICGrain.ebsdGrain
         self.redraw()
 
-    def saveLine(self, event, plot):
+    def saveLine(self, 
+        event: np.ndarray,
+        plot):
         """  Save the start point, end point and angle of drawn line into the grain.
 
         Parameters
         ----------
-        event: numpy.ndarray
+        event
             Start x, start y, end x, end y point of line passed from drawn line.
 
         """
+
         # Get angle of lines
-        lineAngle = 90-np.rad2deg(np.arctan2(self.drawnLine.points[3]-self.drawnLine.points[1], 
-                                              self.drawnLine.points[2]-self.drawnLine.points[0]))
+        lineAngle = 90-np.rad2deg(np.arctan2(self.grainPlot.p2[1]-self.grainPlot.p1[1],
+                                              self.grainPlot.p2[0]-self.grainPlot.p1[0]))
         if lineAngle > 180: lineAngle -= 180
         elif lineAngle < 0: lineAngle += 180
-        #lineAngle += self.currMap.ebsdTransform.rotation*-180/np.pi
-            
+        if self.corrAngle is not None:
+            lineAngle -= self.corrAngle
+
+        # Two decimal places
+        points = [float("{:.2f}".format(point)) for point in self.grainPlot.p1+self.grainPlot.p2]
+        lineAngle = float("{:.2f}".format(lineAngle))
+
         # Save drawn line to the DIC grain
-        self.currDICGrain.pointsList.append([self.drawnLine.points, lineAngle, -1])
+        self.currDICGrain.pointsList.append([points, lineAngle, -1])
         
         # Group lines and redraw
         self.groupLines()
-        self.redraw()
+        self.redrawLine()
         
-    def groupLines(self):
+    def groupLines(self,
+                   grain: 'defdap.hrdic.Grain'=None):
         """
         Group the lines drawn in the current grain item using a mean shift algorithm,
-        save the average angle and detect the active slip planes.
+        save the average angle and then detect the active slip planes.
+
+        groupsList is a list of line groups: [id, angle, [slip plane id], [angular deviation]
+
+        Parameters
+        ----------
+        grain
+            Grain for which to group the slip lines.
 
         """
-        angles = [x[1] for x in self.currDICGrain.pointsList]
-        # For single line, don't group
-        if len(angles) == 1:
-            self.currDICGrain.pointsList[0][2]=0
-            self.currDICGrain.groupsList = [[0, angles[0], 0, 0, 0]]
+
+        if grain == None:
+            grain = self.currDICGrain
+
+        if grain.pointsList == []:
+            grain.groupsList = []
         else:
-            # Run clustering algorithm for >1 line
-            ms = MeanShift(bandwidth=10).fit(np.matrix([range(len(angles)), angles]).transpose())
+            for i, line in enumerate(grain.pointsList):
+                angle = line[1]
+                if i == 0:       
+                    line[2]=0       # Make group 0 for first detected angle
+                    grain.groupsList = [[0, angle, 0, 0, 0]]
+                    nextGroup=1
+                else:       # If there is more that one angle
+                    if np.any(np.abs(np.array([x[1] for x in grain.groupsList])-angle)<10):
+                        # If within +- 5 degrees of exisitng group, set that as the group
+                        group =  np.argmin(np.abs(np.array([x[1] for x in grain.groupsList])-angle))
+                        grain.pointsList[i][2]=group
+                        newAv = float('{0:.2f}'.format(np.average([x[1] for x in grain.pointsList if x[2]==group])))
+                        grain.groupsList[group][1] = newAv
+                    else:
+                        # Make new group and set
+                        grain.groupsList.append([nextGroup, angle, 0, 0, 0])
+                        line[2]=nextGroup
+                        nextGroup += 1
+          
+            # Detect active slip systems in each group
+            for group in grain.groupsList:
+                activePlanes = []
+                deviation = []
+                experimentalAngle = group[1]
+                for idx, theoreticalAngle in enumerate(np.rad2deg(grain.ebsdGrain.slipTraceAngles)):
+                    if theoreticalAngle-5 < experimentalAngle < theoreticalAngle+5:
+                        activePlanes.append(idx)
+                        deviation.append(float('{0:.2f}'.format(experimentalAngle-theoreticalAngle)))
+                group[2] = activePlanes
+                group[3] = deviation
             
-            # Add group ID for each line to the points list
-            for i, label in enumerate(ms.labels_):
-                self.currDICGrain.pointsList[i][2] = label
-            
-            # Make array of groups with mean angle
-            self.currDICGrain.groupsList = []
-            for i in range(np.max(ms.labels_+1)):
-                self.currDICGrain.groupsList.append([i, ms.cluster_centers_[i][1], 0, 0, 0])
-                
-        # Detect active slip systems in each group
-        for group in self.currDICGrain.groupsList:
-            activePlanes = []
-            deviation = []
-            experimentalAngle = group[1]
-            for idx, theoreticalAngle in enumerate(np.rad2deg(self.currEBSDGrain.slipTraceAngles)):
-                if theoreticalAngle-5 < experimentalAngle < theoreticalAngle+5:
-                    activePlanes.append(idx)
-                    deviation.append(experimentalAngle-theoreticalAngle)
-            group[2] = activePlanes
-            group[3] = deviation
-            
-    def clearAllLines(self, event, plot):
+    def clearAllLines(self, 
+        event, 
+        plot):
         """ Clear all lines in a given grain.
 
         """
@@ -158,41 +212,31 @@ class GrainInspector:
         self.currDICGrain.groupsList = []
         self.redraw()
 
-    def removeLine(self, event, plot):
+    def removeLine(self, 
+        event: int, 
+        plot):
         """  Remove single line [runs after submitting a text box].
 
         Parameters
         ----------
-        event: int
+        event
             Line ID to remove.
 
         """
         ## Remove single line
         del self.currDICGrain.pointsList[int(event)]
+        self.groupLines()
         self.redraw()
 
     def redraw(self):
-        """
-        Draw items which need to be redrawn often (i.e. when changing grain ID).
+        """Draw items which need to be redrawn when changing grain ID.
 
         """
 
         # Plot max shear for grain
         self.maxShearAx.clear()
-        grainPlot = self.currMap[self.grainID].plotMaxShear(
-            fig=self.plot.fig,ax=self.maxShearAx, vmax=self.vmax, plotColourBar=False, plotScaleBar=True)
-
-        # Draw slip traces
-        self.slipTraceAx.clear()
-        self.slipTraceAx.set_aspect('equal', 'box')
-        slipPlot = GrainPlot(fig=self.plot.fig, callingGrain=self.currMap[self.grainID], ax=self.slipTraceAx)
-        traces = slipPlot.addSlipTraces(topOnly=True)
-        self.slipTraceAx.axis('off')
-        
-        # Draw slip bands
-        bands = [elem[1] for elem in self.currDICGrain.groupsList]
-        if self.currDICGrain.groupsList != None:
-            slipPlot.addSlipBands(topOnly=True, angles=list(np.deg2rad(bands)))
+        self.grainPlot = self.currMap[self.grainID].plotMaxShear(
+            fig=self.plot.fig, ax=self.maxShearAx, vmax=self.vmax, plotColourBar=False, plotScaleBar=True)
         
         # Draw unit cell
         self.unitCellAx.clear()
@@ -201,7 +245,7 @@ class GrainInspector:
         # Write grain info text
         self.grainInfoAx.clear()
         self.grainInfoAx.axis('off')
-        grainInfoText = 'Grain ID: {0} / {1}\n'.format(self.grainID, len(self.currMap.grainList))
+        grainInfoText = 'Grain ID: {0} / {1}\n'.format(self.grainID, len(self.currMap.grainList)-1)
         grainInfoText += 'Min: {0:.1f} %     Mean:{1:.1f} %     Max: {2:.1f} %'.format(
             np.min(self.currDICGrain.maxShearList)*100,
             np.mean(self.currDICGrain.maxShearList)*100,
@@ -209,38 +253,60 @@ class GrainInspector:
         self.plot.addText(self.grainInfoAx, 0, 1, grainInfoText,  va='top', ha='left', fontsize=10)
         
         # Detect lines
-        self.drawnLine = LineSlice(ax=self.maxShearAx, fig=self.plot.fig, action=self.grainPlot.addArrow)
+        self.plot.addEventHandler('button_press_event',lambda e, p: self.grainPlot.lineSlice(e, p))
+        self.plot.addEventHandler('button_release_event', lambda e, p: self.grainPlot.lineSlice(e, p))
 
+        self.redrawLine()
+
+    def redrawLine(self):
+        """
+        Draw items which need to be redrawn when adding a line.
+
+        """
         # Write lines text and draw lines
         linesTxt = 'List of lines\n\nLineID  x0     y0     x1     y1     Angle  Group\n'
 
         if self.currDICGrain.pointsList != []:
             for idx, points in enumerate(self.currDICGrain.pointsList):
                 linesTxt += '{0}          {1:.1f}   {2:.1f}    {3:.1f}   {4:.1f}   {5:.1f}   {6}\n'.format(idx,
-                                    points[0][0], points[0][1], points[0][2], points[0][3], points[1], points[2])
+                         points[0][0],points[0][1],points[0][2],points[0][3],points[1],points[2])
                 self.grainPlot.addArrow(startEnd=points[0], clearPrev=False, persistent=True, label=idx)
-        
+
         self.lineInfoAx.clear()
         self.lineInfoAx.axis('off')
         self.plot.addText(self.lineInfoAx, 0, 1, linesTxt, va='top', fontsize=10)
-        
+
         # Write groups info text
         groupsTxt = 'List of groups\n\nGroupID    Angle      System      Dev     RDR\n'
         if self.currDICGrain.groupsList != []:
             for idx, group in enumerate(self.currDICGrain.groupsList):
                 groupsTxt += '{0}                {1:.1f}      {2}      {3}      {4:.2f}\n'.format(
-                    idx, group[1], group[2], np.round(group[3],3), group[4])
+                    idx, group[1], group[2], np.round(group[3], 3), group[4])
 
         self.groupsInfoAx.clear()
         self.groupsInfoAx.axis('off')
         self.plot.addText(self.groupsInfoAx, 0, 1, groupsTxt, va='top', fontsize=10)
 
-    def runRDRGroup(self, event, plot):
+        # Draw slip traces
+        self.slipTraceAx.clear()
+        self.slipTraceAx.set_aspect('equal', 'box')
+        slipPlot = GrainPlot(fig=self.plot.fig, callingGrain=self.currMap[self.grainID], ax=self.slipTraceAx)
+        traces = slipPlot.addSlipTraces(topOnly=True)
+        self.slipTraceAx.axis('off')
+
+        # Draw slip bands
+        bands = [elem[1] for elem in self.currDICGrain.groupsList]
+        if self.currDICGrain.groupsList != None:
+            slipPlot.addSlipBands(topOnly=True, angles=list(np.deg2rad(bands)))
+
+    def runRDRGroup(self,
+        event: int, 
+        plot):
         """  Run RDR on a specified group, upon submitting a text box.
 
         Parameters
         ----------
-        event: int
+        event
             Group ID specified from text box.
 
         """
@@ -249,7 +315,9 @@ class GrainInspector:
             self.calcRDR(grain = self.currDICGrain, group=int(event))
             self.RDRGroupBox.set_val('')
         
-    def batchRunSTA(self, event, plot):
+    def batchRunSTA(self, 
+        event, 
+        plot):
         """  Run slip trace analysis on all grains which hve slip trace lines drawn.
 
         """
@@ -269,18 +337,22 @@ class GrainInspector:
                                                     group[0], group[1], group[2], np.round(group[3],3), group[4])
                     print(text)
 
-    def calcRDR(self, grain, group, showPlot=True, length=2.5):
+    def calcRDR(self, 
+        grain: int, 
+        group: int, 
+        showPlot: bool = True, 
+        length: float = 2.5):
         """ Calculates the relative displacement ratio for a given grain and group.
 
         Parameters
         ----------
-        grain: int
+        grain
             DIC grain ID to run RDR on.
-        group: int
+        group
             group ID to run RDR on.
-        showPlot: bool
+        showPlot
             if True, show plot window.
-        length: int
+        length
             length of perpendicular lines used for RDR.
 
         """
@@ -350,26 +422,34 @@ class GrainInspector:
 
         if showPlot: self.plotRDR(grain, group, ulist, vlist, allxlist, allylist, linRegResults)
 
-    def plotRDR(self, grain, group, ulist, vlist, allxlist, allylist, linRegResults):
+    def plotRDR(self, 
+        grain: int, 
+        group: int, 
+        ulist: List[float], 
+        vlist: List[float], 
+        allxlist: List[float], 
+        allylist: List[float], 
+        linRegResults: 'LinregressResult'):
         """
         Plot RDR figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered.
         
         Parameters
         ----------
-        grain: int
+        grain
             DIC grain to plot.
-        group: int
+        group
             Group ID to plot.
-        ulist: list
+        ulist
             List of ucentered values.
-        vlist: list
+        vlist
             List of vcentered values.
-        allxlist: list
+        allxlist
             List of all x values.
-        allylist: list
+        allylist
             List of all y values.
-        linRegResults: numpy.ndarray, {slope, intercept, rvalue, pvalue, stderr}
-            Results from linear regression of ucentered vs vcentered.
+        linRegResults
+            Results from linear regression of ucentered vs vcentered 
+            {slope, intercept, rvalue, pvalue, stderr}.
 
         """
 
@@ -465,3 +545,83 @@ class GrainInspector:
 
         self.rdrPlot.numLineAx.set_ylim(slope-1, slope+1)
         self.rdrPlot.numLineAx.set_xlim(-0.01, 0.05)
+
+    def updateFilename(self, 
+        event: str,
+        plot):
+        """  Update class variable filename, based on text input from textbox handler.
+
+        event: 
+            Text in textbox.
+
+        """
+        
+        self.filename = event
+
+    def saveFile(self,
+        event, 
+        plot):
+        """  Save a file which contains definitions of slip lines drawn in grains
+            [(x0, y0, x1, y1), angle, groupID]
+            and groups of lines, defined by an average angle and identified sip plane
+            [groupID, angle, [slip plane id(s)], [angular deviation(s)]]
+
+        """
+
+        with open(self.currMap.path + str(self.filename), 'w') as file:
+            file.write('# This is a file generated by defdap which contains definitions of slip lines drawn in grains by grainInspector\n')
+            file.write('# [(x0, y0, x1, y1), angle, groupID]\n')
+            file.write('# and groups of lines, defined by an average angle and identified sip plane\n')
+            file.write('# [groupID, angle, [slip plane id], [angular deviation]\n\n')
+
+            for i, grain in enumerate(self.currMap):
+                if grain.pointsList != []:
+                    file.write('Grain {0}\n'.format(i))
+                    file.write('{0} Lines\n'.format(len(grain.pointsList)))
+                    for point in grain.pointsList:
+                        file.write(str(point)+'\n')
+                    file.write('{0} Groups\n'.format(len(grain.groupsList)))
+                    for group in grain.groupsList:
+                        file.write(str(group)+'\n')
+                    file.write('\n')
+
+    def loadFile(self,
+        event, 
+        plot):
+        """  Load a file which contains definitions of slip lines drawn in grains
+            [(x0, y0, x1, y1), angle, groupID]
+            and groups of lines, defined by an average angle and identified sip plane
+            [groupID, angle, [slip plane id(s)], [angular deviation(s)]]
+
+        """
+
+        with open(self.currMap.path + str(self.filename), 'r') as file:
+            lines = file.readlines()
+
+        # Parse file and make list of 
+        # [start index, grain ID, number of lines, number of groups]
+        indexlist=[]
+        for i, line in enumerate(lines):
+            if line[0] != '#' and len(line) >1:
+                if ('Grain') in line:
+                    grainID = int(line.split(' ')[-1])
+                    startIndex = i
+                if ('Lines') in line:
+                    numLines = int(line.split(' ')[0])
+                if ('Groups') in line:
+                    numGroups = int(line.split(' ')[0])
+                    indexlist.append([startIndex, grainID, numLines, numGroups])
+
+        # Write data from file into grain
+        for startIndex, grainID, numLines, numGroups in indexlist:
+            startIndexLines = startIndex+2
+            grainPoints = lines[startIndexLines:startIndexLines+numLines]
+            for point in grainPoints:
+                self.currMap[grainID].pointsList.append(ast.literal_eval(point.split('\\')[0]))
+            
+            startIndexGroups = startIndex+3+numLines
+            grainGroups = lines[startIndexGroups:startIndexGroups+numGroups]
+            for group in grainGroups:
+                self.currMap[grainID].groupsList.append(ast.literal_eval(group.split('\\')[0]))
+
+        self.redraw()

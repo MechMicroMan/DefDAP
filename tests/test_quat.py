@@ -396,54 +396,48 @@ class TestTransformVector:
             single_quat.transformVector(np.array([1., 2., 3., 4.]))
 
 
-class TestMisOri:
+class TestMisOriCases:
 
-    # ---- CASES ---- #
-
+    @staticmethod
     @parametrize(rtn_quat=[0, 1, 2, 'potato'])
-    def case_cubic(rtn_quat):
+    def case_cubic(rtn_quat, single_quat, single_quat2):
 
         # TODO: Would be better to get quaternions from a fixture but
         #  not currently supported by pytest-cases
-        ins = (Quat(0.86272992, -0.08583165, 0.01513444, -0.49809735),
-               Quat(0.57922797, 0.51983679, -0.24240388, 0.57922797),
-               "cubic", rtn_quat)
+        ins = (single_quat, single_quat2, "cubic", rtn_quat)
 
         outs = (0.8887075008823285,
                 [0.96034831, 0.13871646, 0.19810764, -0.13871646])
 
         return ins, outs
 
+    @staticmethod
     @parametrize(rtn_quat=[0, 1, 2, 'potato'])
-    def case_hexagonal(rtn_quat):
+    def case_hexagonal(rtn_quat, single_quat, single_quat2):
 
-        ins = (Quat(0.86272992, -0.08583165, 0.01513444, -0.49809735),
-               Quat(0.57922797, 0.51983679, -0.24240388, 0.57922797),
-               "hexagonal", rtn_quat)
+        ins = (single_quat, single_quat2, "hexagonal", rtn_quat)
 
         outs = (0.8011677034014963,
                 [0.57922797, -0.24240388, -0.51983679, -0.57922797])
 
         return ins, outs
 
+    @staticmethod
     @parametrize(rtn_quat=[0, 1, 2, 'potato'])
-    def case_null(rtn_quat):
+    def case_null(rtn_quat, single_quat, single_quat2):
 
-        ins = (Quat(0.86272992, -0.08583165, 0.01513444, -0.49809735),
-               Quat(0.57922797, 0.51983679, -0.24240388, 0.57922797),
-               "potato", rtn_quat)
+        ins = (single_quat, single_quat2, "potato", rtn_quat)
 
         outs = (0.16291828692295218,
                 [0.57922797,  0.51983679, -0.24240388,  0.57922797])
 
         return ins, outs
 
-    # ---- TESTS ---- #
 
-    CASESS = [case_cubic, case_hexagonal, case_null]
+class TestMisOri:
 
     @staticmethod
-    @parametrize_with_cases("ins, outs", cases=CASESS)
+    @parametrize_with_cases("ins, outs", cases=TestMisOriCases)
     def test_return_type(ins, outs):
         result = ins[0].misOri(*ins[1:])
 
@@ -458,7 +452,7 @@ class TestMisOri:
             assert type(result) is np.float64
 
     @staticmethod
-    @parametrize_with_cases("ins, outs", cases=CASESS)
+    @parametrize_with_cases("ins, outs", cases=TestMisOriCases)
     def test_calc(ins, outs):
         result = ins[0].misOri(*ins[1:])
 
@@ -518,10 +512,9 @@ class TestExtractQuatComps:
         assert np.allclose(quat_comps, expected_comps)
 
 
-class TestSymEqv:
+class TestSymEqvCases:
 
-    # ---- CASES ---- #
-
+    @staticmethod
     def case_cubic():
         ins = ('cubic',)
         outs = (
@@ -553,6 +546,7 @@ class TestSymEqv:
 
         return ins, outs
 
+    @staticmethod
     def case_hexagonal():
         ins = ('hexagonal',)
         outs = (
@@ -572,18 +566,18 @@ class TestSymEqv:
 
         return ins, outs
 
+    @staticmethod
     def case_null():
         ins = ('potato',)
         outs = ([[1.0, 0.0, 0.0, 0.0]],)
 
         return ins, outs
 
-    # ---- TESTS ---- #
 
-    CASESS = [case_cubic, case_hexagonal, case_null]
+class TestSymEqv:
 
     @staticmethod
-    @parametrize_with_cases("ins, outs", cases=CASESS)
+    @parametrize_with_cases("ins, outs", cases=TestSymEqvCases)
     def test_return_type(ins, outs):
         syms = Quat.symEqv(*ins)
 
@@ -592,7 +586,7 @@ class TestSymEqv:
         assert all([type(sym) is Quat for sym in syms])
 
     @staticmethod
-    @parametrize_with_cases("ins, outs", cases=CASESS)
+    @parametrize_with_cases("ins, outs", cases=TestSymEqvCases)
     def test_calc(ins, outs):
         syms = Quat.symEqv(*ins)
 
