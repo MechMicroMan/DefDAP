@@ -557,11 +557,11 @@ class Quat(object):
                 eulerAngles[2] += np.pi / 6
                 gg = Quat.fromEulerAngles(*eulerAngles).rotMatrix().T
             else:
-                gg = quatToPlot.rotMatrix().T
+                gg = self.rotMatrix().T
 
         elif crystalStructure.name == 'cubic':
             szFac = 0.25
-            gg = quatToPlot.rotMatrix().T
+            gg = self.rotMatrix().T
 
         # Rotate the lattice cell points
         pts = np.matmul(gg, vert.T).T * szFac
