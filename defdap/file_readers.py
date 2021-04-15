@@ -257,7 +257,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
         metadata = dict()
         groupPat = re.compile("\[(.+)\]")
 
-        def parseLine(line: str) -> None:
+        def parseLine(line: str, groupDict: Dict) -> None:
             try:
                 key, val = line.strip().split('=')
                 groupDict[key] = val
@@ -277,7 +277,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
                 groupName = groupPat.match(line.strip()).group(1)
                 groupDict = dict()
                 readUntilString(cprFile, '[', commentChar=commentChar,
-                                lineProcess=parseLine)
+                                lineProcess=lambda l: parseLine(l, groupDict))
                 metadata[groupName] = groupDict
 
         # Create phase objects and move metadata to object metadata dict
@@ -307,10 +307,18 @@ class OxfordBinaryLoader(EBSDDataLoader):
                 )
             ))
 
+        # Deal with EDX data
+        if 'EDX Windows' in metadata:
+            edx_dict = metadata['EDX Windows']
+            num_edx = int(edx_dict['Count'])
+            edx_fields = {}
+            for i in range(1, num_edx + 1):
+                key = f"Window{i}"
+                edx_fields[100+i] = (f'EDX {edx_dict[key]}', 'float32')
+
         self.checkMetadata()
 
         # Construct binary data format from listed fields
-
         dataFormat = [('phase', 'uint8')]
         fieldLookup = {
             3: ('ph1', 'float32'),
@@ -323,6 +331,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
             11: ('AFI', 'uint8'),  # Advanced Fit index. legacy
             12: ('IB6', 'float32')  # ?
         }
+        fieldLookup.update(edx_fields)
         try:
             for i in range(int(metadata['Fields']['Count'])):
                 fieldID = int(metadata['Fields']['Field{:}'.format(i + 1)])
