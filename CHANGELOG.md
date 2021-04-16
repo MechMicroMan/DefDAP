@@ -9,6 +9,16 @@
 ### Fixed
 
 
+## 0.93.1 (16-04-2020)
+
+### Added
+- Reading of Channel project files that contain EDX data
+
+### Fixed
+- Plotting unit cells
+- Plotting lines with grain inspector
+
+
 ## 0.93.1 (12-04-2020)
 
 ### Added
