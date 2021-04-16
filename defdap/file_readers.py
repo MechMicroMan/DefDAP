@@ -456,8 +456,7 @@ class DICDataLoader(object):
         assert xdim == self.loadedMetadata['xDim'], "Dimensions of data and header do not match"
         assert ydim == self.loadedMetadata['yDim'], "Dimensions of data and header do not match"
 
-    def loadDavisMetadata(
-        self,
+    def loadDavisMetadata(self,
         fileName: str,
         fileDir: str = ""
     ) -> Dict[str, Any]:
@@ -522,7 +521,8 @@ class DICDataLoader(object):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1, header=None)
+        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1,
+                             header=None)
         # x and y coordinates
         self.loadedData['xc'] = data.values[:, 0]
         self.loadedData['yc'] = data.values[:, 1]
@@ -535,10 +535,7 @@ class DICDataLoader(object):
         return self.loadedData
 
     @staticmethod
-    def loadDavisImageData(
-        fileName: str,
-        fileDir: str = ""
-    ) -> np.ndarray:
+    def loadDavisImageData(fileName: str, fileDir: str = "") -> np.ndarray:
         """ A .txt file from DaVis containing a 2D image
 
         Parameters
@@ -558,7 +555,8 @@ class DICDataLoader(object):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1, header=None)
+        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1,
+                             header=None)
        
         # x and y coordinates
         loadedData = np.array(data)
