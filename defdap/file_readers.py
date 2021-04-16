@@ -257,7 +257,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
         metadata = dict()
         groupPat = re.compile("\[(.+)\]")
 
-        def parseLine(line: str) -> None:
+        def parseLine(line: str, groupDict: Dict) -> None:
             try:
                 key, val = line.strip().split('=')
                 groupDict[key] = val
@@ -277,7 +277,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
                 groupName = groupPat.match(line.strip()).group(1)
                 groupDict = dict()
                 readUntilString(cprFile, '[', commentChar=commentChar,
-                                lineProcess=parseLine)
+                                lineProcess=lambda l: parseLine(l, groupDict))
                 metadata[groupName] = groupDict
 
         # Create phase objects and move metadata to object metadata dict
@@ -307,10 +307,18 @@ class OxfordBinaryLoader(EBSDDataLoader):
                 )
             ))
 
+        # Deal with EDX data
+        if 'EDX Windows' in metadata:
+            edx_dict = metadata['EDX Windows']
+            num_edx = int(edx_dict['Count'])
+            edx_fields = {}
+            for i in range(1, num_edx + 1):
+                key = f"Window{i}"
+                edx_fields[100+i] = (f'EDX {edx_dict[key]}', 'float32')
+
         self.checkMetadata()
 
         # Construct binary data format from listed fields
-
         dataFormat = [('phase', 'uint8')]
         fieldLookup = {
             3: ('ph1', 'float32'),
@@ -323,6 +331,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
             11: ('AFI', 'uint8'),  # Advanced Fit index. legacy
             12: ('IB6', 'float32')  # ?
         }
+        fieldLookup.update(edx_fields)
         try:
             for i in range(int(metadata['Fields']['Count'])):
                 fieldID = int(metadata['Fields']['Field{:}'.format(i + 1)])
@@ -447,8 +456,7 @@ class DICDataLoader(object):
         assert xdim == self.loadedMetadata['xDim'], "Dimensions of data and header do not match"
         assert ydim == self.loadedMetadata['yDim'], "Dimensions of data and header do not match"
 
-    def loadDavisMetadata(
-        self,
+    def loadDavisMetadata(self,
         fileName: str,
         fileDir: str = ""
     ) -> Dict[str, Any]:
@@ -513,7 +521,8 @@ class DICDataLoader(object):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1, header=None)
+        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1,
+                             header=None)
         # x and y coordinates
         self.loadedData['xc'] = data.values[:, 0]
         self.loadedData['yc'] = data.values[:, 1]
@@ -526,10 +535,7 @@ class DICDataLoader(object):
         return self.loadedData
 
     @staticmethod
-    def loadDavisImageData(
-        fileName: str,
-        fileDir: str = ""
-    ) -> np.ndarray:
+    def loadDavisImageData(fileName: str, fileDir: str = "") -> np.ndarray:
         """ A .txt file from DaVis containing a 2D image
 
         Parameters
@@ -549,7 +555,8 @@ class DICDataLoader(object):
         if not filePath.is_file():
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
-        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1, header=None)
+        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1,
+                             header=None)
        
         # x and y coordinates
         loadedData = np.array(data)

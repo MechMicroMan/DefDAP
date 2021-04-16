@@ -40,16 +40,20 @@ class Phase(object):
         self.laueGroup = laueGroup
         self.latticeParams = latticeParams
         self.slipSystems = slipSystems
-        self.crystalStructure = {
-            9: crystalStructures['hexagonal'],
-            11: crystalStructures['cubic'],
-        }[laueGroup]
+        try:
+            self.crystalStructure = {
+                9: crystalStructures['hexagonal'],
+                11: crystalStructures['cubic'],
+            }[laueGroup]
+        except KeyError:
+            raise ValueError(f"Unknown Laue group key: {laueGroup}")
 
     def __str__(self):
         text = "Phase: {:}\n  Crystal structure: {:}\n  Lattice params: " \
                "({:.2f}, {:.2f}, {:.2f}, {:.0f}, {:.0f}, {:.0f})"
         return text.format(self.name, self.crystalStructure.name,
-                           *self.latticeParams)
+                           *self.latticeParams[:3],
+                           *np.array(self.latticeParams[3:])*180/np.pi)
 
     @property
     def cOverA(self):
@@ -65,7 +69,8 @@ class CrystalStructure(object):
         self.vertices = vertices
         self.faces = faces
 
-    # TODO: Move these to the phase class where the lattice parameters can be accessed
+    # TODO: Move these to the phase class where the lattice parameters
+    #  can be accessed
     @staticmethod
     def lMatrix(a, b, c, alpha, beta, gamma, convention=None):
         """ Construct L matrix based on Page 22 of
@@ -109,8 +114,8 @@ class CrystalStructure(object):
 
         elif convention.lower() != 'tsl':
             raise ValueError(
-                "Unknown convention '{:}' for orthonormalisation of crystal "
-                "structure, can be 'hkl' or 'tsl'".format(convention)
+                f"Unknown convention '{convention}' for orthonormalisation of "
+                f"crystal structure, can be 'hkl' or 'tsl'"
             )
 
         # Set small components to 0
@@ -313,9 +318,8 @@ class SlipSystem(object):
         return self.slipPlaneLabel + self.slipDirLabel
 
     def __repr__(self):
-        return "SlipSystem(slipPlane={}, slipDir={}, crystalSym={})".format(
-            self.slipPlaneLabel, self.slipDirLabel, self.crystalSym
-        )
+        return f"SlipSystem(slipPlane={self.slipPlaneLabel}, " \
+               f"slipDir={self.slipDirLabel}, crystalSym={self.crystalSym})"
 
     @property
     def slipPlaneLabel(self):
@@ -428,9 +432,7 @@ class SlipSystem(object):
         try:
             fileExt = ".txt"
             packageDir, _ = os.path.split(__file__)
-            filepath = "{:}/slip_systems/{:}{:}".format(
-                packageDir, name, fileExt
-            )
+            filepath = f"{packageDir}/slip_systems/{name}{fileExt}"
 
             slipSystemFile = open(filepath)
 
@@ -527,7 +529,7 @@ class SlipSystem(object):
         """
         packageDir, _ = os.path.split(__file__)
         print("Slip system definition files are stored in directory:")
-        print("{:}/slip_systems/".format(packageDir))
+        print(f"{packageDir}/slip_systems/")
 
 
 def convertIdc(inType, *, dir=None, plane=None):
@@ -559,7 +561,7 @@ def convertIdc(inType, *, dir=None, plane=None):
 
     def checkLen(val, length):
         if len(val) != length:
-            raise ValueError("Vector must have {} values.".format(length))
+            raise ValueError(f"Vector must have {length} values.")
 
     if inType.lower() == 'm':
         if dir is None:
