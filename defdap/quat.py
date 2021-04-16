@@ -433,6 +433,8 @@ class Quat(object):
         plot: Optional['plotting.Plot'] = None,
         fig: Optional['matplotlib.figure.Figure'] = None,
         ax: Optional['matplotlib.axes.Axes'] = None,
+        plotColourBar: Optional[bool] = False,
+        clabel: Optional[str] = "",
         makeInteractive: Optional[bool] = False,
         markerColour: Optional[Union[List[str], str]] = None,
         markerSize: Optional[float] = 40,
@@ -460,6 +462,10 @@ class Quat(object):
             active axis is used.
         makeInteractive
             If true, make the plot interactive.
+        plotColourBar : bool
+            If true, plot a colour bar next to the map.
+        clabel : str
+            Label for the colour bar.
         markerColour: str or list of str
             Colour of markers (only used for half and half colouring,
             otherwise use argument c).
@@ -486,9 +492,14 @@ class Quat(object):
                 "IPF", symGroup, projection=projection,
                 ax=ax, fig=fig, makeInteractive=makeInteractive
             )
-        plot.addPoints(alphaFund, betaFund,
-                       markerColour=markerColour, markerSize=markerSize,
-                       **plotParams)
+        plot.addPoints(
+            alphaFund, betaFund,
+            markerColour=markerColour, markerSize=markerSize,
+            **plotParams
+        )
+
+        if plotColourBar:
+            plot.addColourBar(clabel)
 
         return plot
 
