@@ -36,7 +36,7 @@ class GrainInspector:
     def __init__(self, 
         currMap: 'hrdic.Map', 
         vmax: float = 0.1,
-        corrAngle = None):
+        corrAngle: float = 0):
         # Initialise some values
         self.grainID = 0
         self.currMap = currMap
@@ -44,13 +44,11 @@ class GrainInspector:
         self.currDICGrain = self.currMap[self.grainID]
         self.currEBSDGrain = self.currDICGrain.ebsdGrain
         self.vmax = vmax
+        self.corrAngle = corrAngle
         self.filename = str(self.currMap.retrieveName()) + '_RDR.txt'
         
         # Draw the figure
-        self.draw()
-
-        if corrAngle is not None:
-            self.corrAngle = corrAngle
+        self.draw()        
 
     def draw(self):
         """ Draw the main window, buttons, text boxes and axes.
@@ -135,8 +133,8 @@ class GrainInspector:
                                               self.grainPlot.p2[0]-self.grainPlot.p1[0]))
         if lineAngle > 180: lineAngle -= 180
         elif lineAngle < 0: lineAngle += 180
-        if self.corrAngle is not None:
-            lineAngle -= self.corrAngle
+        
+        lineAngle -= self.corrAngle
 
         # Two decimal places
         points = [float("{:.2f}".format(point)) for point in self.grainPlot.p1+self.grainPlot.p2]
