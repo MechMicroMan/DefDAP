@@ -308,10 +308,10 @@ class OxfordBinaryLoader(EBSDDataLoader):
             ))
 
         # Deal with EDX data
+        edx_fields = {}
         if 'EDX Windows' in metadata:
             edx_dict = metadata['EDX Windows']
             num_edx = int(edx_dict['Count'])
-            edx_fields = {}
             for i in range(1, num_edx + 1):
                 key = f"Window{i}"
                 edx_fields[100+i] = (f'EDX {edx_dict[key]}', 'float32')
