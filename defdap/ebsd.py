@@ -71,8 +71,6 @@ class Map(base.Map):
         Map of misorientation axis components.
     kam : numpy.ndarray
         Map of KAM.
-    averageSchmidFactor : numpy.ndarray
-        Map of average Schmid factor.
     slipSystems : list of list of defdap.crystal.SlipSystem
         Slip systems grouped by slip plane.
     slipTraceColours list(str)
@@ -122,7 +120,6 @@ class Map(base.Map):
         self.misOri = None
         self.misOriAxis = None
         self.kam = None
-        self.averageSchmidFactor = None
         self.origin = (0, 0)
         self.GND = None
         self.Nye = None
@@ -1299,57 +1296,53 @@ class Map(base.Map):
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {
+        plot_params = {
             'vmin': 0,
             'vmax': 0.5,
             'cmap': 'gray',
             'plotColourBar': True,
             'clabel': "Schmid factor"
         }
-        plotParams.update(kwargs)
+        plot_params.update(kwargs)
 
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
-        self.averageSchmidFactor = np.zeros([self.yDim, self.xDim])
 
         if self[0].averageSchmidFactors is None:
             raise Exception("Run 'calcAverageGrainSchmidFactors' first")
 
+        grains_sf = []
         for grain in self.grainList:
-            currentSchmidFactor = []
+            current_sf = []
 
             if planes is not None:
-                # Error catching
-                if np.max(planes) > len(self.slipSystems) - 1:
-                    raise Exception("Check plane IDs exists, IDs range from 0 "
-                                    "to {0}".format(len(self.slipSystems) - 1))
-
                 for plane in planes:
                     if directions is not None:
                         for direction in directions:
-                            currentSchmidFactor.append(grain.averageSchmidFactors[plane][direction])
+                            current_sf.append(
+                                grain.averageSchmidFactors[plane][direction]
+                            )
                     else:
-                        currentSchmidFactor.append(grain.averageSchmidFactors[plane])
-                # TODO: what is this doing?
-                currentSchmidFactor = [max(s) for s in zip(*currentSchmidFactor)]
+                        current_sf += grain.averageSchmidFactors[plane]
             else:
-                currentSchmidFactor = [max(s) for s in zip(*grain.averageSchmidFactors)]
+                for sf_group in grain.averageSchmidFactors:
+                    current_sf += sf_group
 
-            # Fill grain with colour
-            for coord in grain.coordList:
-                self.averageSchmidFactor[coord[1], coord[0]] = currentSchmidFactor[0]
+            grains_sf.append(current_sf)
 
-        self.averageSchmidFactor[self.averageSchmidFactor == 0] = 0.5
+        grains_sf = np.array(grains_sf)
+        grains_sf_max = np.max(grains_sf, axis=1)
 
-        plot = MapPlot.create(self, self.averageSchmidFactor, **plotParams)
+        plot = self.plotGrainDataMap(grainData=grains_sf_max, bg=0.5,
+                                     **plot_params)
 
         return plot
 
 
 class Grain(base.Grain):
     """
-    Class to encapsulate a grain in an EBSD map and useful analysis and plotting
-    methods.
+    Class to encapsulate a grain in an EBSD map and useful analysis and
+    plotting methods.
 
     Attributes
     ----------
@@ -1517,7 +1510,7 @@ class Grain(base.Grain):
         plotParams.update(kwargs)
         return Quat.plotIPF(self.quatList, direction, self.crystalSym,
                             **plotParams)
-                            
+
     def plotUnitCell(self, fig=None, ax=None, plot=None, **kwargs):
         """Plot an unit cell of the average grain orientation.
 
