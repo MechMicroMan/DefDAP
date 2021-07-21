@@ -149,6 +149,9 @@ class OxfordTextLoader(EBSDDataLoader):
             *(np.array(acqEulers) * np.pi / 180)
         )
 
+        # TODO: Load EDX data from .ctf file, if it's accesible
+        self.loadedMetadata['EDX Window Count'] = 0
+
         self.checkMetadata()
 
         # Construct data format from table header
@@ -306,15 +309,19 @@ class OxfordBinaryLoader(EBSDDataLoader):
                     round(float(phaseMetadata['gamma']), 3) * np.pi / 180
                 )
             ))
-
+ 
         # Deal with EDX data
         edx_fields = {}
         if 'EDX Windows' in metadata:
             edx_dict = metadata['EDX Windows']
             num_edx = int(edx_dict['Count'])
-            for i in range(1, num_edx + 1):
+            self.loadedMetadata['EDX Window Count'] = num_edx
+            edx_fields = {}
+            for i in range(1, self.loadedMetadata['EDX Window Count'] + 1):
                 key = f"Window{i}"
                 edx_fields[100+i] = (f'EDX {edx_dict[key]}', 'float32')
+        else:
+            self.loadedMetadata['EDX Window Count'] = 0
 
         self.checkMetadata()
 
@@ -378,6 +385,14 @@ class OxfordBinaryLoader(EBSDDataLoader):
         eulerAngles = np.reshape(
             binData[['ph1', 'phi', 'ph2']], (yDim, xDim)
         )
+
+        # Load EDX data into a dict
+        if self.loadedMetadata['EDX Window Count'] > 0:
+            EDXFields = [key for key in binData.dtype.fields.keys() if key.startswith('EDX')]        
+            self.loadedData['EDXDict'] = dict(
+                [(field[4:], np.reshape(binData[field], (yDim, xDim))) for field in EDXFields]
+                )
+
         # flatten the structures so that the Euler angles are stored
         # into a normal array
         eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
@@ -406,6 +421,7 @@ class PythonDictLoader(EBSDDataLoader):
         self.loadedMetadata['stepSize'] = dataDict['stepSize']
         assert type(dataDict['phases']) is list
         self.loadedMetadata['phases'] = dataDict['phases']
+        self.loadedMetadata['EDX Window Count'] = 0
 
         self.checkMetadata()
 

@@ -164,6 +164,8 @@ class Map(base.Map):
         self.bandSlopeArray = dataDict['bandSlope']
         self.meanAngularDeviationArray = dataDict['meanAngularDeviation']
         self.phaseArray = dataDict['phase']
+        if metadataDict['EDX Window Count'] > 0:
+            self.EDX = dataDict['EDXDict']
 
         # write final status
         yield "Loaded EBSD data (dimensions: {:} x {:} pixels, step " \

@@ -14,6 +14,7 @@
 ### Fixed
 - Fix bug with reading cpr EBSD file without EDX data
 - Fix issue with plotting Schmid factor maps
+- Store EDX data as a dictionary called `EDX` accessible from the EBSD `Map` object
 
 
 ## 0.93.2 (16-04-2021)
