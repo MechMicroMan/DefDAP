@@ -175,17 +175,21 @@ class Map(base.Map):
         # max shear component
         self.eMaxShear = np.sqrt(((self.e11 - self.e22) / 2.)**2 + self.e12**2)
 
-        # Dictionary references to all map types
-        self.component = {'f11': self.f11, 'f12': self.f12, 'f21': self.f21, 'f22': self.f22,
-                         'e11': self.e11, 'e12': self.e12, 'e22': self.e22,
-                         'eMaxShear': self.eMaxShear,
-                         'x_map': self.x_map, 'y_map': self.y_map}
-
         # crop distances (default all zeros)
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
 
         self.plotDefault = lambda *args, **kwargs: self.plotMaxShear(plotGBs=True, *args, **kwargs)
 
+    @property
+    def component(self):
+        # Dictionary references to all map components
+        components = {'f11': self.f11, 'f12': self.f12, 'f21': self.f21, 'f22': self.f22,
+                         'e11': self.e11, 'e12': self.e12, 'e22': self.e22,
+                         'eMaxShear': self.eMaxShear,
+                         'x_map': self.x_map, 'y_map': self.y_map}
+
+        return components
+    
     @property
     def crystalSym(self):
         return self.ebsdMap.crystalSym
