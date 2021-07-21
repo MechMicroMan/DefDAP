@@ -328,7 +328,7 @@ class Map(base.Map):
 
         return MapPlot.create(self, map_colours, **plot_params)
 
-    def plotIPFMap(self, direction, phases=None, **kwargs):
+    def plotIPFMap(self, direction, backgroundColour = [0., 0., 0.], phases=None, **kwargs):
         """
         Plot a map with points coloured in IPF colouring,
         with respect to a given sample direction.
@@ -337,8 +337,10 @@ class Map(base.Map):
         ----------
         direction : np.array len 3
             Sample directiom.
+        backgroundColour : np.array len 3
+            Colour of background (i.e. for phases not plotted).
         phases : list of int
-            Which phases to plot for
+            Which phases to plot IPF data for.
         kwargs
             Other arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
@@ -358,7 +360,7 @@ class Map(base.Map):
             phase_ids = phases
             phases = [self.phases[i] for i in phase_ids]
 
-        map_colours = np.zeros(self.shape + (3,))
+        map_colours = np.tile(np.array(backgroundColour), self.shape + (1,))
 
         for phase, phase_id in zip(phases, phase_ids):
             # calculate IPF colours for phase
