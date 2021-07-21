@@ -14,6 +14,7 @@
 ### Fixed
 - Fix bug with reading cpr EBSD file without EDX data
 - Fix issue with plotting Schmid factor maps
+- Fix bug with maps `component` not updating after masking
 - Store EDX data as a dictionary called `EDX` accessible from the EBSD `Map` object
 
 
