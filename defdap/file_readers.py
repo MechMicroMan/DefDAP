@@ -150,7 +150,7 @@ class OxfordTextLoader(EBSDDataLoader):
         )
 
         # TODO: Load EDX data from .ctf file, if it's accesible
-        self.loadedMetadata['EDX Window Count'] = 0
+        self.loadedMetadata['EDX Windows'] = {'Count': int(0)}
 
         self.checkMetadata()
 
@@ -313,15 +313,13 @@ class OxfordBinaryLoader(EBSDDataLoader):
         # Deal with EDX data
         edx_fields = {}
         if 'EDX Windows' in metadata:
-            edx_dict = metadata['EDX Windows']
-            num_edx = int(edx_dict['Count'])
-            self.loadedMetadata['EDX Window Count'] = num_edx
+            self.loadedMetadata['EDX Windows'] = metadata['EDX Windows']
             edx_fields = {}
-            for i in range(1, self.loadedMetadata['EDX Window Count'] + 1):
-                key = f"Window{i}"
-                edx_fields[100+i] = (f'EDX {edx_dict[key]}', 'float32')
+            for i in range(1, int(self.loadedMetadata['EDX Windows']['Count']) + 1):
+                name = self.loadedMetadata['EDX Windows'][f"Window{i}"]
+                edx_fields[100+i] = (f'EDX {name}', 'float32')
         else:
-            self.loadedMetadata['EDX Window Count'] = 0
+            self.loadedMetadata['EDX Windows'] = {'Count': int(0)}
 
         self.checkMetadata()
 
@@ -387,7 +385,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
         )
 
         # Load EDX data into a dict
-        if self.loadedMetadata['EDX Window Count'] > 0:
+        if int(self.loadedMetadata['EDX Windows']['Count']) > 0:
             EDXFields = [key for key in binData.dtype.fields.keys() if key.startswith('EDX')]        
             self.loadedData['EDXDict'] = dict(
                 [(field[4:], np.reshape(binData[field], (yDim, xDim))) for field in EDXFields]
@@ -421,7 +419,7 @@ class PythonDictLoader(EBSDDataLoader):
         self.loadedMetadata['stepSize'] = dataDict['stepSize']
         assert type(dataDict['phases']) is list
         self.loadedMetadata['phases'] = dataDict['phases']
-        self.loadedMetadata['EDX Window Count'] = 0
+        self.loadedMetadata['EDX Windows'] = {'Count': int(0)}
 
         self.checkMetadata()
 
