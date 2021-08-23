@@ -9,7 +9,7 @@
 ### Fixed
 
 
-## 0.93.3 (09-07-2021)
+## 0.93.3 (23-08-2021)
 
 ### Added
 - Store EDX data as a dictionary called `EDX` accessible from the EBSD `Map` object
