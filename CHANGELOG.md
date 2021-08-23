@@ -9,7 +9,19 @@
 ### Fixed
 
 
-## 0.93.1 (16-04-2020)
+## 0.93.3 (23-08-2021)
+
+### Added
+- Store EDX data as a dictionary called `EDX` accessible from the EBSD `Map` object
+- Add option to change IPF map background colour
+
+### Fixed
+- Fix bug with reading cpr EBSD file without EDX data
+- Fix issue with plotting Schmid factor maps
+- Fix bug with maps `component` not updating after masking
+
+
+## 0.93.2 (16-04-2021)
 
 ### Added
 - Reading of Channel project files that contain EDX data
@@ -19,7 +31,7 @@
 - Plotting lines with grain inspector
 
 
-## 0.93.1 (12-04-2020)
+## 0.93.1 (12-04-2021)
 
 ### Added
 - Started adding type hinting
@@ -45,7 +57,7 @@
 - Fix bug in 'warp' grain finding algorithm
 
 
-## 0.93.0 (20-02-2020)
+## 0.93.0 (20-02-2021)
 
 ### Added
 - Add EBSD file writing to CTF format.
