@@ -51,8 +51,6 @@ class Map(base.Map):
         Band contrast for each point of map. Shape (yDim, xDim).
     quatArray : numpy.ndarray of defdap.quat.Quat
         Quaterions for each point of map. Shape (yDim, xDim).
-    numPhases : int
-        Number of phases.
     phaseArray : numpy.ndarray
         Map of phase ids. 1-based, 0 is non-indexed points
     phases : list of defdap.crystal.Phase
@@ -76,7 +74,7 @@ class Map(base.Map):
     slipTraceColours list(str)
         Colours used when plotting slip traces.
     origin : tuple(int)
-        Map origin (y, x). Used by linker class where origin is a
+        Map origin (x, y). Used by linker class where origin is a
         homologue point of the maps.
     GND : numpy.ndarray
         GND scalar map.
@@ -84,7 +82,6 @@ class Map(base.Map):
         3x3 Nye tensor at each point.
 
     """
-
     def __init__(self, fileName, dataType=None):
         """
         Initialise class and load EBSD data.
@@ -1797,122 +1794,147 @@ class BoundarySegment(object):
 class Linker(object):
     """Class for linking multiple EBSD maps of the same region for analysis of deformation.
 
-    Parameters
+    Attributes
     ----------
-    ebsdMaps : list(ebsd.Map)
-        List of ebsd.Map objects that are linked.
-    links : list
+    ebsd_maps : list(ebsd.Map)
+        List of `ebsd.Map` objects that are linked.
+    links : list(tuple(int))
         List of grain link. Each link is stored as a tuple of
         grain IDs (one from each map stored in same order of maps).
-    numMaps : int
-        Number of linked maps.
+    plots : list(plotting.MapPlot)
+        List of last opened plot of each map.
 
     """
+    def __init__(self, ebsd_maps):
+        """Initialise linker and set ebsd maps
 
-    def __init__(self, maps):
-        self.ebsdMaps = maps
-        self.numMaps = len(maps)
-        self.links = []
-        return
-
-    def setOrigin(self):
-        """Interacive tool to set origin of each EBSD map.
+        Parameters
+        ----------
+        ebsd_maps : list(ebsd.Map)
+            List of `ebsd.Map` objects that are linked.
 
         """
-        for ebsdMap in self.ebsdMaps:
-            ebsdMap.locateGrainID(clickEvent=self.clickSetOrigin)
+        self.ebsd_maps = ebsd_maps
+        self.links = []
+        self.plots = None
 
-    def clickSetOrigin(self, event, currentEbsdMap):
+    def set_origin(self, **kwargs):
+        """Interacive tool to set origin of each EBSD map.
+
+        Parameters
+        ----------
+        kwargs : dict, optional
+            Keyword arguments passed to :func:`defdap.ebsd.Map.plotDefault`
+
+        """
+        self.plots = []
+        for ebsd_map in self.ebsd_maps:
+            plot = ebsd_map.plotDefault(makeInteractive=True, **kwargs)
+            plot.addEventHandler('button_press_event', self.click_set_origin)
+            plot.addPoints([ebsd_map.origin[0]], [ebsd_map.origin[1]],
+                           c='w', s=60, marker='x')
+            self.plots.append(plot)
+
+    def click_set_origin(self, event, plot):
         """Event handler for clicking to set origin of map.
 
         Parameters
         ----------
         event
             Click event.
-        currentEbsdMap : defdap.ebsd.Map
-            EBSD map to set origin for.
+        plot : defdap.plotting.MapPlot
+            Plot to capture clicks from.
 
         """
-        currentEbsdMap.origin = (int(event.ydata), int(event.xdata))
-        print("Origin set to ({:}, {:})".format(currentEbsdMap.origin[0], currentEbsdMap.origin[1]))
+        # check if click was on the map
+        if event.inaxes is not plot.ax:
+            return
 
-    def startLinking(self):
+        origin = (int(event.xdata), int(event.ydata))
+        plot.callingMap.origin = origin
+        plot.addPoints([origin[0]], [origin[1]], updateLayer=0)
+        print(f"Origin set to ({origin[0]}, {origin[1]})")
+
+    def start_linking(self):
         """Start interactive grain linking process of each EBSD map.
 
         """
-        for ebsdMap in self.ebsdMaps:
-            ebsdMap.locateGrainID(clickEvent=self.clickGrainGuess)
+        self.plots = []
+        for ebsd_map in self.ebsd_maps:
+            plot = ebsd_map.locateGrainID(clickEvent=self.click_grain_guess)
 
             # Add make link button to axes
-            btnAx = ebsdMap.fig.add_axes([0.8, 0.0, 0.1, 0.07])
-            Button(btnAx, 'Make link', color='0.85', hovercolor='0.95')
+            plot.addButton('Make link', self.make_link,
+                           color='0.85', hovercolor='0.95')
 
-    def clickGrainGuess(self, event, currentEbsdMap):
+            self.plots.append(plot)
+
+    def click_grain_guess(self, event, plot):
         """Guesses grain position in other maps, given click on one.
 
         Parameters
         ----------
         event
             Click handler.
-        currentEbsdMap : defdap.ebsd.Map
-            EBSD map that is clicked on.
+        plot : defdap.plotting.Plot
+            Plot to capture clicks from.
 
         """
-        # self is current linker instance even if run as click event handler from map class
-        if event.inaxes is currentEbsdMap.fig.axes[0]:
-            # axis 0 then is a click on the map
+        # check if click was on the map
+        if event.inaxes is not plot.ax:
+            return
 
-            if currentEbsdMap is self.ebsdMaps[0]:
-                # clicked on 'master' map so highlight and guess grain on other maps
-                for ebsdMap in self.ebsdMaps:
-                    if ebsdMap is currentEbsdMap:
-                        # set current grain in ebsd map that clicked
-                        ebsdMap.clickGrainID(event)
-                    else:
-                        # Guess at grain in other maps
-                        # Calculated position relative to set origin of the map, scaled from step size of maps
-                        y0m = currentEbsdMap.origin[0]
-                        x0m = currentEbsdMap.origin[1]
-                        y0 = ebsdMap.origin[0]
-                        x0 = ebsdMap.origin[1]
-                        scaling = currentEbsdMap.stepSize / ebsdMap.stepSize
+        curr_ebsd_map = plot.callingMap
 
-                        x = int((event.xdata - x0m) * scaling + x0)
-                        y = int((event.ydata - y0m) * scaling + y0)
+        if curr_ebsd_map is self.ebsd_maps[0]:
+            # clicked on 'master' map so highlight and guess grain on others
 
-                        ebsdMap.currGrainId = int(ebsdMap.grains[y, x]) - 1
-                        print(ebsdMap.currGrainId)
+            # set current grain in 'master' ebsd map
+            self.ebsd_maps[0].clickGrainID(event, plot, False)
 
-                        # clear current axis and redraw euler map with highlighted grain overlay
-                        ebsdMap.ax.clear()
-                        ebsdMap.plotEulerMap(updateCurrent=True, highlightGrains=[ebsdMap.currGrainId])
-                        ebsdMap.fig.canvas.draw()
-            else:
-                # clicked on other map so correct guessed selected grain
-                currentEbsdMap.clickGrainID(event)
+            # guess at grain in other maps
+            for ebsd_map, plot in zip(self.ebsd_maps[1:], self.plots[1:]):
+                # calculated position relative to set origin of the
+                # map, scaled from step size of maps
+                x0m = curr_ebsd_map.origin[0]
+                y0m = curr_ebsd_map.origin[1]
+                x0 = ebsd_map.origin[0]
+                y0 = ebsd_map.origin[1]
+                scaling = curr_ebsd_map.stepSize / ebsd_map.stepSize
 
-        elif event.inaxes is currentEbsdMap.fig.axes[1]:
-            # axis 1 then is a click on the button
-            self.makeLink()
+                x = int((event.xdata - x0m) * scaling + x0)
+                y = int((event.ydata - y0m) * scaling + y0)
 
-    def makeLink(self):
+                ebsd_map.currGrainId = int(ebsd_map.grains[y, x]) - 1
+                print(ebsd_map.currGrainId)
+
+                # update the grain highlights layer in the plot
+                plot.addGrainHighlights([ebsd_map.currGrainId],
+                                        alpha=ebsd_map.highlightAlpha)
+
+        else:
+            # clicked on other map so correct guessed selected grain
+            curr_ebsd_map.clickGrainID(event, plot, False)
+
+    def make_link(self, event, plot):
         """Make a link between the EBSD maps after clicking.
 
         """
         # create empty list for link
-        currLink = []
+        curr_link = []
 
-        for i, ebsdMap in enumerate(self.ebsdMaps):
-            if ebsdMap.currGrainId is not None:
-                currLink.append(ebsdMap.currGrainId)
+        for i, ebsd_map in enumerate(self.ebsd_maps):
+            if ebsd_map.currGrainId is not None:
+                curr_link.append(ebsd_map.currGrainId)
             else:
-                raise Exception("No grain setected in map {:d}.".format(i + 1))
+                raise Exception(f"No grain setected in map {i + 1}.")
 
-        self.links.append(tuple(currLink))
+        curr_link = tuple(curr_link)
+        if curr_link not in self.links:
+            self.links.append(curr_link)
+            print("Link added " + str(curr_link))
 
-        print("Link added " + str(tuple(currLink)))
-
-    def resetLinks(self):
+    def reset_links(self):
         """Reset links.
 
         """
@@ -1920,30 +1942,26 @@ class Linker(object):
 
 #   Analysis routines
 
-    def setAvOriFromInitial(self):
+    def set_ref_ori_from_master(self):
         """Loop over each map (not first/reference) and each link.
         Sets refOri of linked grains to refOri of grain in first map.
 
         """
-        masterMap = self.ebsdMaps[0]
-
-        for i, ebsdMap in enumerate(self.ebsdMaps[1:], start=1):
+        for i, ebsd_map in enumerate(self.ebsd_maps[1:], start=1):
             for link in self.links:
-                ebsdMap.grainList[link[i]].refOri = copy.deepcopy(masterMap.grainList[link[0]].refOri)
+                ebsd_map.grainList[link[i]].refOri = copy.deepcopy(
+                    self.ebsd_maps[0].grainList[link[0]].refOri
+                )
 
-        return
-
-    def updateMisOri(self, calcAxis=False):
+    def update_misori(self, calc_axis=False):
         """Recalculate misorientation for linked grain (not for first map)
 
         Parameters
         ----------
-        calcAxis : bool
+        calc_axis : bool
             Calculate the misorientation axis if True.
 
         """
-        for i, ebsdMap in enumerate(self.ebsdMaps[1:], start=1):
+        for i, ebsdMap in enumerate(self.ebsd_maps[1:], start=1):
             for link in self.links:
-                ebsdMap.grainList[link[i]].buildMisOriList(calcAxis=calcAxis)
-
-        return
+                ebsdMap.grainList[link[i]].buildMisOriList(calcAxis=calc_axis)
