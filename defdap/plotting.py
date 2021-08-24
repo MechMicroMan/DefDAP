@@ -260,17 +260,19 @@ class Plot(object):
         >>> plot.addEventHandler('button_release_event', lambda e, p: lineSlice(e, p))
 
         """
+        # check if click was on the map
+        if event.inaxes is not self.ax:
+            return
 
-        if event.inaxes is self.ax:
-            if event.name == 'button_press_event':
-                self.p1 = (event.xdata, event.ydata)  # save 1st point
-            elif event.name == 'button_release_event':
-                self.p2 = (event.xdata, event.ydata)  # save 2nd point
-                self.addArrow(startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
-                self.fig.canvas.draw_idle()
+        if event.name == 'button_press_event':
+            self.p1 = (event.xdata, event.ydata)  # save 1st point
+        elif event.name == 'button_release_event':
+            self.p2 = (event.xdata, event.ydata)  # save 2nd point
+            self.addArrow(startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
+            self.fig.canvas.draw_idle()
 
-                if action is not None:
-                    action(plot=self, startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
+            if action is not None:
+                action(plot=self, startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
 
     @property
     def exists(self):
