@@ -325,7 +325,8 @@ class Map(base.Map):
 
         return MapPlot.create(self, map_colours, **plot_params)
 
-    def plotIPFMap(self, direction, backgroundColour = [0., 0., 0.], phases=None, **kwargs):
+    def plotIPFMap(self, direction, backgroundColour=None, phases=None,
+                   **kwargs):
         """
         Plot a map with points coloured in IPF colouring,
         with respect to a given sample direction.
@@ -356,6 +357,9 @@ class Map(base.Map):
         else:
             phase_ids = phases
             phases = [self.phases[i] for i in phase_ids]
+
+        if backgroundColour is None:
+            backgroundColour = [0., 0., 0.]
 
         map_colours = np.tile(np.array(backgroundColour), self.shape + (1,))
 
@@ -625,21 +629,18 @@ class Map(base.Map):
         return True
 
     @reportProgress("building quaternion array")
-    def buildQuatArray(self, force = False):
+    def buildQuatArray(self, force=False):
         """Build quaternion array
 
         Parameters
         ----------
-        force, optional
+        force : bool, optional
             If true, re-build quaternion array
         """
         self.checkDataLoaded()
 
-        if force == False:
-            if self.quatArray is None:
-                # create the array of quat objects
-                self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
-        if force == True:
+        if force or self.quatArray is None:
+            # create the array of quat objects
             self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
 
         yield 1.
@@ -904,7 +905,6 @@ class Map(base.Map):
         self.neighbourNetwork = nn
 
     @reportProgress("finding phase boundaries")
-
     def plotPhaseBoundaryMap(self, dilate=False, **kwargs):
         """Plot phase boundary map.
 
