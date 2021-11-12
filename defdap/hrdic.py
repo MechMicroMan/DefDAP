@@ -431,7 +431,7 @@ class Map(base.Map):
             # Call set homog points from base class setting the bin size
             super(type(self), self).setHomogPoint(binSize=binSize, points=points, **kwargs)
 
-    def linkEbsdMap(self, ebsdMap, transformType="affine", order=2):
+    def linkEbsdMap(self, ebsdMap, transformType="affine", **kwargs):
         """Calculates the transformation required to align EBSD dataset to DIC.
 
         Parameters
@@ -440,55 +440,39 @@ class Map(base.Map):
             EBSD map object to link.
         transformType : str, optional
             affine, piecewiseAffine or polynomial.
-        order : int, optional
-            Order of polynomial transform to apply.
+        kwargs
+            All arguments are passed to `estimate` method of the transform.
 
         """
         self.ebsdMap = ebsdMap
+        calc_inv = False
         if transformType.lower() == "piecewiseaffine":
             self.ebsdTransform = tf.PiecewiseAffineTransform()
-            self.ebsdTransformInv = self.ebsdTransform.inverse
         elif transformType.lower() == "projective":
             self.ebsdTransform = tf.ProjectiveTransform()
-            self.ebsdTransformInv = self.ebsdTransform.inverse
         elif transformType.lower() == "polynomial":
+            calc_inv = True
             self.ebsdTransform = tf.PolynomialTransform()
-            # You can't calculate the inverse of a polynomial transform
-            # so have to estimate by swapping source and destination
-            # homog points
             self.ebsdTransformInv = tf.PolynomialTransform()
-            self.ebsdTransformInv.estimate(
-                np.array(self.ebsdMap.homogPoints),
-                np.array(self.homogPoints),
-                order=order
-            )
-            # calculate transform from EBSD to DIC frame
-            self.ebsdTransform.estimate(
-                np.array(self.homogPoints),
-                np.array(self.ebsdMap.homogPoints),
-                order=order
-            )
-            return
         else:
             # default to using affine
             self.ebsdTransform = tf.AffineTransform()
-            self.ebsdTransformInv = self.ebsdTransform.inverse
 
         # calculate transform from EBSD to DIC frame
         self.ebsdTransform.estimate(
             np.array(self.homogPoints),
-            np.array(self.ebsdMap.homogPoints)
+            np.array(self.ebsdMap.homogPoints),
+            **kwargs
         )
-
-        # Transform the EBSD boundaryLines to DIC reference frame
-        boundaryLineList = np.array(self.ebsdMap.boundaryLines).reshape(-1, 2)       # Flatten to coord list
-        boundaryLines = self.ebsdTransformInv(boundaryLineList).reshape(-1, 2, 2)    # Transform & reshape back
-        self.boundaryLines = np.round(boundaryLines - 0.5) + 0.5                         # Round to nearest
-
-        # Transform the EBSD phaseBoundaryLines to DIC reference frame
-        phaseBoundaryLineList = np.array(self.ebsdMap.phaseBoundaryLines).reshape(-1, 2)     # Flatten to coord list
-        phaseBoundaryLines = self.ebsdTransformInv(phaseBoundaryLineList).reshape(-1, 2, 2)  # Transform & reshape back
-        self.phaseBoundaryLines = np.round(phaseBoundaryLines - 0.5) + 0.5                   # Round to nearest
+        # Calculate inverse if required
+        if calc_inv:
+            self.ebsdTransformInv.estimate(
+                np.array(self.ebsdMap.homogPoints),
+                np.array(self.homogPoints),
+                **kwargs
+            )
+        else:
+            self.ebsdTransformInv = self.ebsdTransform.inverse
 
     def checkEbsdLinked(self):
         """Check if an EBSD map has been linked.
@@ -524,8 +508,8 @@ class Map(base.Map):
 
         Returns
         ----------
-        warpedMap
-            Map (i.e. EBSD map) warped to the DIC frame.
+        numpy.ndarray
+            Map (i.e. EBSD map data) warped to the DIC frame.
 
         """
         # Check a EBSD map is linked
@@ -557,89 +541,32 @@ class Map(base.Map):
                 order=order, preserve_range=preserve_range
             )
 
-        # return map
         return warpedMap
 
-    def generateThresholdMask(self, mask, dilation=0, preview=True):
-        """ 
-        Generate a dilated mask, based on a boolean array and previews the appication of
-        this mask to the max shear map.
+    def warp_lines_to_dic_frame(self, lines):
+        """Warp a set of lines to the DIC reference frame.
 
         Parameters
         ----------
-        mask: numpy.array(bool)
-            A boolean array where points to be removed are True
-        dilation: int, optional
-            Number of pixels to dilate the mask by. Useful to remove anomalous points 
-            around masked values. No dilation applied if not specified.
-        preview: bool
-            If true, show the mask and preview the masked effective shear strain map.
+        lines : list of tuples
+            Lines to warp. Each line is represented as a tuple of start
+            and end coordinates (x, y).
 
-        Examples
-        ----------
-        To remove data points in dicMap where eMaxShear is above 0.8, use:
-
-        >>> mask = dicMap.eMaxShear > 0.8
-
-        To remove data points in dicMap where e11 is above 1 or less than -1, use:        
-        
-        >>> mask = (dicMap.e11 > 1) | (dicMap.e11 < -1)
-
-        To remove data points in dicMap where corrVal is less than 0.4, use:
-
-        >>> mask = dicMap.corrVal < 0.4
-
-        Note: correlation value data needs to be loaded seperately from the DIC map, 
-        see :func:`defdap.hrdic.loadCorrValData`
+        Returns
+        -------
+        list of tuples
+            List of warped lines with same representation as input.
 
         """
-        self.mask = mask
+        # Flatten to coord list
+        lines = np.array(lines).reshape(-1, 2)
+        # Transform & reshape back
+        lines = self.ebsdTransformInv(lines_list).reshape(-1, 2, 2)
+        # Round to nearest
+        lines = np.round(lines - 0.5) + 0.5
+        lines = [(tuple(l[0]), tuple(l[1])) for l in lines]
 
-
-        if dilation != 0:
-            self.mask = binary_dilation(self.mask, iterations=dilation)
-
-        numRemoved = np.sum(self.mask)
-        numTotal = self.xdim*self.ydim
-        numRemovedCrop = np.sum(self.crop(self.mask))
-        numTotalCrop = self.xDim * self.yDim
-
-        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
-                    .format(numRemoved, numTotal,(numRemoved / numTotal)*100))
-        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
-                    .format(numRemovedCrop, numTotalCrop,(numRemovedCrop / numTotalCrop * 100)))
-
-        if preview == True:
-            plot1 = MapPlot.create(self, self.crop(self.mask), cmap='binary')
-            plot1.setTitle('Removed datapoints in black')
-            plot2 = MapPlot.create(self, 
-                                  self.crop(np.where(self.mask == True, np.nan, self.eMaxShear)),
-                                  plotColourBar='True', 
-                                  clabel="Effective shear strain")
-            plot2.setTitle('Effective shear strain preview')
-        print('Use applyThresholdMask function to apply this filtering to data')
-
-    def applyThresholdMask(self):
-        """ Apply mask to all DIC map data by setting masked values to nan.
-
-        """
-        self.eMaxShear = np.where(self.mask == True, np.nan, self.eMaxShear)
-
-        self.e11 = np.where(self.mask == True, np.nan, self.e11)
-        self.e12 = np.where(self.mask == True, np.nan, self.e12)
-        self.e22 = np.where(self.mask == True, np.nan, self.e22)
-
-        self.f11 = np.where(self.mask == True, np.nan, self.f11)
-        self.f12 = np.where(self.mask == True, np.nan, self.f12)
-        self.f22 = np.where(self.mask == True, np.nan, self.f22)
-
-        self.x_map = np.where(self.mask == True, np.nan, self.x_map)
-        self.y_map = np.where(self.mask == True, np.nan, self.y_map)
-
-        self.component = {'f11': self.f11, 'f12': self.f12, 'f21': self.f21, 'f22': self.f22,
-                 'e11': self.e11, 'e12': self.e12, 'e22': self.e22,
-                 'eMaxShear': self.eMaxShear,
-                 'x_map': self.x_map, 'y_map': self.y_map}
+        return lines
 
     @property
     def boundaries(self):
@@ -674,6 +601,100 @@ class Map(base.Map):
                                     crop[0]:crop[0] + self.xDim]
 
         return -boundaries.astype(int)
+
+    @property
+    def boundaryLines(self):
+        return self.warp_lines_to_dic_frame(self.ebsdMap.boundaryLines)
+
+    @property
+    def phaseBoundaryLines(self):
+        return self.warp_lines_to_dic_frame(self.ebsdMap.phaseBoundaryLines)
+
+    def generateThresholdMask(self, mask, dilation=0, preview=True):
+        """
+        Generate a dilated mask, based on a boolean array and previews the appication of
+        this mask to the max shear map.
+
+        Parameters
+        ----------
+        mask: numpy.array(bool)
+            A boolean array where points to be removed are True
+        dilation: int, optional
+            Number of pixels to dilate the mask by. Useful to remove anomalous points
+            around masked values. No dilation applied if not specified.
+        preview: bool
+            If true, show the mask and preview the masked effective shear strain map.
+
+        Examples
+        ----------
+        To remove data points in dicMap where eMaxShear is above 0.8, use:
+
+        >>> mask = dicMap.eMaxShear > 0.8
+
+        To remove data points in dicMap where e11 is above 1 or less than -1, use:
+
+        >>> mask = (dicMap.e11 > 1) | (dicMap.e11 < -1)
+
+        To remove data points in dicMap where corrVal is less than 0.4, use:
+
+        >>> mask = dicMap.corrVal < 0.4
+
+        Note: correlation value data needs to be loaded seperately from the DIC map,
+        see :func:`defdap.hrdic.loadCorrValData`
+
+        """
+        self.mask = mask
+
+        if dilation != 0:
+            self.mask = binary_dilation(self.mask, iterations=dilation)
+
+        numRemoved = np.sum(self.mask)
+        numTotal = self.xdim * self.ydim
+        numRemovedCrop = np.sum(self.crop(self.mask))
+        numTotalCrop = self.xDim * self.yDim
+
+        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
+              .format(numRemoved, numTotal, (numRemoved / numTotal) * 100))
+        print(
+            'Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
+            .format(numRemovedCrop, numTotalCrop,
+                    (numRemovedCrop / numTotalCrop * 100)))
+
+        if preview == True:
+            plot1 = MapPlot.create(self, self.crop(self.mask), cmap='binary')
+            plot1.setTitle('Removed datapoints in black')
+            plot2 = MapPlot.create(self,
+                                   self.crop(
+                                       np.where(self.mask == True, np.nan,
+                                                self.eMaxShear)),
+                                   plotColourBar='True',
+                                   clabel="Effective shear strain")
+            plot2.setTitle('Effective shear strain preview')
+        print(
+            'Use applyThresholdMask function to apply this filtering to data')
+
+    def applyThresholdMask(self):
+        """ Apply mask to all DIC map data by setting masked values to nan.
+
+        """
+        self.eMaxShear = np.where(self.mask == True, np.nan, self.eMaxShear)
+
+        self.e11 = np.where(self.mask == True, np.nan, self.e11)
+        self.e12 = np.where(self.mask == True, np.nan, self.e12)
+        self.e22 = np.where(self.mask == True, np.nan, self.e22)
+
+        self.f11 = np.where(self.mask == True, np.nan, self.f11)
+        self.f12 = np.where(self.mask == True, np.nan, self.f12)
+        self.f22 = np.where(self.mask == True, np.nan, self.f22)
+
+        self.x_map = np.where(self.mask == True, np.nan, self.x_map)
+        self.y_map = np.where(self.mask == True, np.nan, self.y_map)
+
+        self.component = {'f11': self.f11, 'f12': self.f12, 'f21': self.f21,
+                          'f22': self.f22,
+                          'e11': self.e11, 'e12': self.e12, 'e22': self.e22,
+                          'eMaxShear': self.eMaxShear,
+                          'x_map': self.x_map, 'y_map': self.y_map}
 
     def setPatternPath(self, filePath, windowSize):
         """Set the path to the image of the pattern.

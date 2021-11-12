@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import numpy as np
-from matplotlib.widgets import Button
 from skimage import morphology as mph
 import networkx as nx
 
@@ -815,47 +814,17 @@ class Map(base.Map):
         self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
         self.boundaries = -self.boundaries.astype(int)
 
-        _, _, self.boundaryLines = Map.create_boundary_lines(
-            boundaries_x=self.boundariesX,
-            boundaries_y=self.boundariesY
+        _, _, self.boundaryLines = BoundarySegment.boundary_points_to_lines(
+            boundary_points_x=zip(*self.boundariesX.transpose().nonzero()),
+            boundary_points_y=zip(*self.boundariesY.transpose().nonzero())
         )
-        _, _, self.phaseBoundaryLines = Map.create_boundary_lines(
-            boundaries_x=self.phaseBoundariesX,
-            boundaries_y=self.phaseBoundariesY
+
+        _, _, self.phaseBoundaryLines = BoundarySegment.boundary_points_to_lines(
+            boundary_points_x=zip(*self.phaseBoundariesX.transpose().nonzero()),
+            boundary_points_y=zip(*self.phaseBoundariesY.transpose().nonzero())
         )
 
         yield 1.
-
-    @staticmethod
-    def create_boundary_lines(*, boundaries_x=None, boundaries_y=None):
-        boundary_data = {}
-        if boundaries_x is not None:
-            boundary_data['x'] = boundaries_x
-        if boundaries_y is not None:
-            boundary_data['y'] = boundaries_y
-        if not boundary_data:
-            raise ValueError("No boundaries provided.")
-
-        deltas = {
-            'x': (0.5, -0.5, 0.5, 0.5),
-            'y': (-0.5, 0.5, 0.5, 0.5)
-        }
-        all_lines = []
-        for mode, boundaries in boundary_data.items():
-            points = np.where(boundaries)
-            lines = []
-            for i, j in zip(*points):
-                lines.append((
-                    (j + deltas[mode][0], i + deltas[mode][1]),
-                    (j + deltas[mode][2], i + deltas[mode][3])
-                ))
-            all_lines.append(lines)
-
-        if len(all_lines) == 2:
-            all_lines.append(all_lines[0] + all_lines[1])
-            return tuple(all_lines)
-        else:
-            return all_lines[0]
 
     @reportProgress("constructing neighbour network")
     def buildNeighbourNetwork(self):
@@ -1771,6 +1740,15 @@ class BoundarySegment(object):
         """
         return self.boundaryPointPairs(1)
 
+    @property
+    def boundaryLines(self):
+        """Return line points along this boundary segment"""
+        _, _, lines = self.boundary_points_to_lines(
+            boundary_points_x=self.boundaryPointsX,
+            boundary_points_y=self.boundaryPointsY
+        )
+        return lines
+
     def misorientation(self):
         misOri, minSymm = self.grain1.refOri.misOri(
             self.grain2.refOri, self.ebsdMap.crystalSym, returnQuat=2
@@ -1789,6 +1767,37 @@ class BoundarySegment(object):
         #     (np.sqrt(np.dot(misOriAxis, misOriAxis) * np.dot(compVector,
         #                                                      compVector))))
         # print(deviation * 180 / np.pi)
+
+    @staticmethod
+    def boundary_points_to_lines(*, boundary_points_x=None,
+                                 boundary_points_y=None):
+        boundary_data = {}
+        if boundary_points_x is not None:
+            boundary_data['x'] = boundary_points_x
+        if boundary_points_y is not None:
+            boundary_data['y'] = boundary_points_y
+        if not boundary_data:
+            raise ValueError("No boundaries provided.")
+
+        deltas = {
+            'x': (0.5, -0.5, 0.5, 0.5),
+            'y': (-0.5, 0.5, 0.5, 0.5)
+        }
+        all_lines = []
+        for mode, points in boundary_data.items():
+            lines = []
+            for i, j in points:
+                lines.append((
+                    (i + deltas[mode][0], j + deltas[mode][1]),
+                    (i + deltas[mode][2], j + deltas[mode][3])
+                ))
+            all_lines.append(lines)
+
+        if len(all_lines) == 2:
+            all_lines.append(all_lines[0] + all_lines[1])
+            return tuple(all_lines)
+        else:
+            return all_lines[0]
 
 
 class Linker(object):
@@ -1823,7 +1832,7 @@ class Linker(object):
 
         Parameters
         ----------
-        kwargs : dict, optional
+        kwargs
             Keyword arguments passed to :func:`defdap.ebsd.Map.plotDefault`
 
         """
