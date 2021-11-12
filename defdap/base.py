@@ -778,6 +778,16 @@ class Map(object):
 class Grain(object):
     """
     Base class for a grain.
+
+    Attributes
+    ----------
+    grainID : int
+
+    ownerMap : defdap.base.Map
+
+    coordList : list of tuples
+
+
     """
     def __init__(self, grainID, ownerMap):
         # list of coords stored as tuples (x, y). These are coords in a

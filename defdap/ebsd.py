@@ -68,10 +68,6 @@ class Map(base.Map):
         Map of misorientation axis components.
     kam : numpy.ndarray
         Map of KAM.
-    slipSystems : list of list of defdap.crystal.SlipSystem
-        Slip systems grouped by slip plane.
-    slipTraceColours list(str)
-        Colours used when plotting slip traces.
     origin : tuple(int)
         Map origin (x, y). Used by linker class where origin is a
         homologue point of the maps.
@@ -119,8 +115,6 @@ class Map(base.Map):
         self.origin = (0, 0)
         self.GND = None
         self.Nye = None
-        self.slipSystems = None
-        self.slipTraceColours = None
 
         # Phase used for the maps crystal structure and cOverA. So old
         # functions still work for the 'main' phase in the map. 0-based
@@ -939,7 +933,6 @@ class Map(base.Map):
             Minimum grain area in pixels.
 
         """
-        # TODO: grains need to be assigned a phase
         # Initialise the grain map
         # TODO: Look at grain map compared to boundary map
         # self.grains = np.copy(self.boundaries)
@@ -1188,38 +1181,6 @@ class Map(base.Map):
 
         return plot
 
-    def loadSlipSystems(self, name):
-        """Load slip system definitions from file.
-
-        Parameters
-        ----------
-        name : str
-            name of the slip system file (without file extension)
-            stored in the defdap install dir or path to a file.
-
-        """
-        # TODO: should be loaded into the phases of the map
-        self.slipSystems, self.slipTraceColours = SlipSystem.loadSlipSystems(
-            name, self.crystalSym, cOverA=self.cOverA
-        )
-
-        if self.checkGrainsDetected(raiseExc=False):
-            for grain in self:
-                grain.slipSystems = self.slipSystems
-
-    def printSlipSystems(self):
-        """Print a list of slip planes (with colours) and slip directions.
-
-        """
-        # TODO: this should be moved to static method of the SlipSystem class
-        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems,
-                                                  self.slipTraceColours)):
-            print('Plane {0}: {1}\tColour: {2}'.format(
-                i, ssGroup[0].slipPlaneLabel, colour
-            ))
-            for j, ss in enumerate(ssGroup):
-                print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
-
     @reportProgress("calculating grain average Schmid factors")
     def calcAverageGrainSchmidFactors(self, loadVector, slipSystems=None):
         """
@@ -1231,8 +1192,8 @@ class Map(base.Map):
         loadVector :
             Loading vector, e.g. [1, 0, 0].
         slipSystems : list, optional
-            Slip planes to calculate Schmid factor for,
-            maximum of all planes calculated if not given.
+            Slip planes to calculate Schmid factor for, maximum of all
+            planes calculated if not given.
 
         """
         # Check that grains have been detected in the map
@@ -1316,14 +1277,14 @@ class Grain(base.Grain):
 
     Attributes
     ----------
-    crystalSym : str
-        Symmetry of material e.g. "cubic", "hexagonal"
-    slipSystems : list(list(defdap.crystal.SlipSystem))
-        Slip systems
     ebsdMap : defdap.ebsd.Map
         EBSD map this grain is a member of.
     ownerMap : defdap.ebsd.Map
         EBSD map this grain is a member of.
+    phaseID : int
+
+    phase : defdap.crystal.Phase
+
     quatList : list
         List of quats.
     misOriList : list
@@ -1342,15 +1303,10 @@ class Grain(base.Grain):
          Angle between slip plane and screen plane.
 
     """
-
-    # TODO: each grain should be assigned a phase and slip systems
-    # slip systems accessed from the phase
     def __init__(self, grainID, ebsdMap):
         # Call base class constructor
         super(Grain, self).__init__(grainID, ebsdMap)
 
-        self.crystalSym = ebsdMap.crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
-        self.slipSystems = ebsdMap.slipSystems
         self.ebsdMap = self.ownerMap            # ebsd map this grain is a member of
         self.quatList = []                      # list of quats
         self.misOriList = None                  # list of misOri at each point in grain
@@ -1367,6 +1323,11 @@ class Grain(base.Grain):
         return lambda *args, **kwargs: self.plotUnitCell(
             *args, **kwargs
         )
+
+    @property
+    def crystalSym(self):
+        """Temporary"""
+        return self.phase.crystalStructure.name
 
     def addPoint(self, coord, quat):
         """Append a coordinate and a quat to a grain.
@@ -1558,7 +1519,7 @@ class Grain(base.Grain):
 
         """
         if slipSystems is None:
-            slipSystems = self.slipSystems
+            slipSystems = self.phase.slipSystems
         if self.refOri is None:
             self.calcAverageOri()
 
@@ -1602,14 +1563,17 @@ class Grain(base.Grain):
         """Print a list of slip planes (with colours) and slip directions
 
         """
-
         self.calcSlipTraces()
 
         if self.averageSchmidFactors is None:
             raise Exception("Run 'calcAverageGrainSchmidFactors' on the EBSD map first")
 
-        for ssGroup, colour, sfGroup, slipTrace in zip(self.slipSystems, self.ebsdMap.slipTraceColours,
-                                                       self.averageSchmidFactors, self.slipTraces):
+        for ssGroup, colour, sfGroup, slipTrace in zip(
+            self.phase.slipSystems,
+            self.phase.slipTraceColours,
+            self.averageSchmidFactors,
+            self.slipTraces
+        ):
             print('{0}\tColour: {1}\tAngle: {2:.2f}'.format(ssGroup[0].slipPlaneLabel, colour, slipTrace * 180 / np.pi))
             for ss, sf in zip(ssGroup, sfGroup):
                 print('  {0}   SF: {1:.3f}'.format(ss.slipDirLabel, sf))
@@ -1623,7 +1587,7 @@ class Grain(base.Grain):
 
         """
         if slipSystems is None:
-            slipSystems = self.slipSystems
+            slipSystems = self.phase.slipSystems
         if self.refOri is None:
             self.calcAverageOri()
 
