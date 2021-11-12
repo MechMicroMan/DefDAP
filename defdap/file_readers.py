@@ -112,6 +112,7 @@ class OxfordTextLoader(EBSDDataLoader):
             phase = Phase(
                 lineSplit[2],
                 int(lineSplit[3]),
+                int(lineSplit[4]),
                 latticeParams
             )
             return phase
@@ -300,6 +301,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
             self.loadedMetadata['phases'].append(Phase(
                 phaseMetadata['StructureName'],
                 int(phaseMetadata['LaueGroup']),
+                int(phaseMetadata['SpaceGroup']),
                 (
                     round(float(phaseMetadata['a']), 3),
                     round(float(phaseMetadata['b']), 3),

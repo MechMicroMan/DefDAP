@@ -22,7 +22,7 @@ from defdap.quat import Quat
 
 
 class Phase(object):
-    def __init__(self, name, laueGroup, latticeParams,
+    def __init__(self, name, laueGroup, spaceGroup, latticeParams,
                  slipSystems=None):
         """
         Parameters
@@ -31,6 +31,10 @@ class Phase(object):
             Name of the phase
         latticeParams : tuple
             Lattice parameters in order (a,b,c,alpha,beta,gamma)
+        laueGroup : int
+            Laue group
+        spaceGroup : int
+            Space group
         crystalStructure : defdap.crystal.CrystalStructure
             Crystal structure of this phase
         slipSystems : collection of defdap.crystal.SlipSystem
@@ -38,6 +42,7 @@ class Phase(object):
         """
         self.name = name
         self.laueGroup = laueGroup
+        self.spaceGroup = spaceGroup
         self.latticeParams = latticeParams
         self.slipSystems = slipSystems
         try:
