@@ -61,8 +61,6 @@ setup(
         'peakutils',
         'matplotlib_scalebar',
         'networkx',
-        'IPython',
-        'jupyter'
     ],
     extras_require={
         'testing': ['pytest', 'coverage', 'pytest-cov', 'pytest_cases'],
