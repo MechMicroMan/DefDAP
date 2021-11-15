@@ -1014,7 +1014,7 @@ class Map(base.Map):
 
         return currentGrain
 
-    def runGrainInspector(self, vmax=0.1, corrAngle=None):
+    def runGrainInspector(self, vmax=0.1, corrAngle=0):
         """Run the grain inspector interactive tool.
 
         Parameters

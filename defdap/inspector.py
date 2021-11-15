@@ -35,8 +35,8 @@ class GrainInspector:
     """
     def __init__(self, 
         currMap: 'hrdic.Map', 
-        vmax: float = 0.1,
-        corrAngle: float = 0):
+        vmax: float,
+        corrAngle: float):
         # Initialise some values
         self.grainID = 0
         self.currMap = currMap
