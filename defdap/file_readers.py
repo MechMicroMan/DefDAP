@@ -22,6 +22,7 @@ from typing import TextIO, Dict, List, Callable, Any, Type, Optional
 
 from defdap.crystal import Phase
 from defdap.quat import Quat
+from defdap.utils import Datastore
 
 
 class EBSDDataLoader(object):
@@ -29,18 +30,23 @@ class EBSDDataLoader(object):
 
     """
     def __init__(self) -> None:
+        # required metadata
         self.loadedMetadata = {
-            'xDim': 0,
-            'yDim': 0,
-            'stepSize': 0.,
-            'acquisitionRotation': Quat(1.0, 0.0, 0.0, 0.0),
-            'phases': []
+            'shape': (0, 0),
+            'step_size': 0.,
+            'acquisition_rotation': Quat(1.0, 0.0, 0.0, 0.0),
+            'phases': [],
+            'edx': {'Count': 0},
         }
-        self.loadedData = {
-            'phase': None,
-            'eulerAngle': None,
-            'bandContrast': None
-        }
+        # required data
+        self.loadedData = Datastore()
+        self.loadedData.add(
+            'phase', None, unit='', type='map', dims=0,
+            comment='1-based, 0 is non-indexed points'
+        )
+        self.loadedData.add(
+            'euler_angle', None, unit='rad', type='map', dims=1
+        )
         self.dataFormat = None
 
     @staticmethod
@@ -67,11 +73,11 @@ class EBSDDataLoader(object):
             assert type(phase) is Phase
 
     def checkData(self) -> None:
-        mapShape = (self.loadedMetadata['yDim'], self.loadedMetadata['xDim'])
+        shape = self.loadedMetadata['shape']
 
-        assert self.loadedData['phase'].shape == mapShape
-        assert self.loadedData['eulerAngle'].shape == (3,) + mapShape
-        assert self.loadedData['bandContrast'].shape == mapShape
+        assert self.loadedData.phase.shape == shape
+        assert self.loadedData.euler_angle.shape == (3,) + shape
+        # assert self.loadedData['bandContrast'].shape == mapShape
 
 
 class OxfordTextLoader(EBSDDataLoader):
@@ -123,12 +129,10 @@ class OxfordTextLoader(EBSDDataLoader):
             for i, line in enumerate(ctfFile):
                 if 'XCells' in line:
                     xDim = int(line.split()[-1])
-                    self.loadedMetadata['xDim'] = xDim
                 elif 'YCells' in line:
                     yDim = int(line.split()[-1])
-                    self.loadedMetadata['yDim'] = yDim
                 elif 'XStep' in line:
-                    self.loadedMetadata['stepSize'] = float(line.split()[-1])
+                    self.loadedMetadata['step_size'] = float(line.split()[-1])
                 elif 'AcqE1' in line:
                     acqEulers[0] = float(line.split()[-1])
                 elif 'AcqE2' in line:
@@ -146,12 +150,11 @@ class OxfordTextLoader(EBSDDataLoader):
                     numHeaderLines = i + j + 3
                     break
 
-        self.loadedMetadata['acquisitionRotation'] = Quat.fromEulerAngles(
+        shape = (yDim, xDim)
+        self.loadedMetadata['shape'] = shape
+        self.loadedMetadata['acquisition_rotation'] = Quat.fromEulerAngles(
             *(np.array(acqEulers) * np.pi / 180)
         )
-
-        # TODO: Load EDX data from .ctf file, if it's accesible
-        self.loadedMetadata['EDX Windows'] = {'Count': int(0)}
 
         self.checkMetadata()
 
@@ -188,25 +191,26 @@ class OxfordTextLoader(EBSDDataLoader):
             skiprows=numHeaderLines
         )
 
-        self.loadedData['bandContrast'] = np.reshape(
-            binData['BC'], (yDim, xDim)
+        self.loadedData.add(
+            'band_contrast', np.reshape(binData['BC'], shape),
+            unit='', type='map', dims=0
         )
-        self.loadedData['bandSlope'] = np.reshape(
-            binData['BS'], (yDim, xDim)
+        self.loadedData.add(
+            'band_slope', np.reshape(binData['BS'], shape),
+            unit='', type='map', dims=0
         )
-        self.loadedData['meanAngularDeviation'] = np.reshape(
-            binData['MAD'], (yDim, xDim)
+        self.loadedData.add(
+            'mean_angular_deviation',
+            np.reshape(binData['MAD'], shape),
+            unit='', type='map', dims=0
         )
-        self.loadedData['phase'] = np.reshape(
-            binData['phase'], (yDim, xDim)
-        )
-        eulerAngles = np.reshape(
-            binData[['ph1', 'phi', 'ph2']], (yDim, xDim)
-        )
+        self.loadedData.phase = np.reshape(binData['phase'], shape)
+
+        eulerAngles = np.reshape(binData[['ph1', 'phi', 'ph2']], shape)
         # flatten the structures so that the Euler angles are stored
         # into a normal array
         eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
-        self.loadedData['eulerAngle'] = eulerAngles * np.pi / 180.
+        self.loadedData.euler_angle = eulerAngles * np.pi / 180.
 
         self.checkData()
 
@@ -286,10 +290,11 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
         # Create phase objects and move metadata to object metadata dict
 
-        self.loadedMetadata['xDim'] = int(metadata['Job']['xCells'])
-        self.loadedMetadata['yDim'] = int(metadata['Job']['yCells'])
-        self.loadedMetadata['stepSize'] = float(metadata['Job']['GridDistX'])
-        self.loadedMetadata['acquisitionRotation'] = Quat.fromEulerAngles(
+        xDim = int(metadata['Job']['xCells'])
+        yDim = int(metadata['Job']['yCells'])
+        self.loadedMetadata['shape'] = (yDim, xDim)
+        self.loadedMetadata['step_size'] = float(metadata['Job']['GridDistX'])
+        self.loadedMetadata['acquisition_rotation'] = Quat.fromEulerAngles(
             float(metadata['Acquisition Surface']['Euler1']) * np.pi / 180.,
             float(metadata['Acquisition Surface']['Euler2']) * np.pi / 180.,
             float(metadata['Acquisition Surface']['Euler3']) * np.pi / 180.
@@ -311,17 +316,14 @@ class OxfordBinaryLoader(EBSDDataLoader):
                     round(float(phaseMetadata['gamma']), 3) * np.pi / 180
                 )
             ))
- 
+
         # Deal with EDX data
         edx_fields = {}
         if 'EDX Windows' in metadata:
-            self.loadedMetadata['EDX Windows'] = metadata['EDX Windows']
-            edx_fields = {}
-            for i in range(1, int(self.loadedMetadata['EDX Windows']['Count']) + 1):
-                name = self.loadedMetadata['EDX Windows'][f"Window{i}"]
+            self.loadedMetadata['edx'] = metadata['EDX Windows']
+            for i in range(1, int(self.loadedMetadata['edx']['Count']) + 1):
+                name = self.loadedMetadata['edx'][f"Window{i}"]
                 edx_fields[100+i] = (f'EDX {name}', 'float32')
-        else:
-            self.loadedMetadata['EDX Windows'] = {'Count': int(0)}
 
         self.checkMetadata()
 
@@ -359,8 +361,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
             Path to file.
 
         """
-        xDim = self.loadedMetadata['xDim']
-        yDim = self.loadedMetadata['yDim']
+        shape = self.loadedMetadata['shape']
 
         fileName = "{}.crc".format(fileName)
         filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
@@ -370,33 +371,36 @@ class OxfordBinaryLoader(EBSDDataLoader):
         # load binary data from file
         binData = np.fromfile(str(filePath), self.dataFormat, count=-1)
 
-        self.loadedData['bandContrast'] = np.reshape(
-            binData['BC'], (yDim, xDim)
+        self.loadedData.add(
+            'band_contrast', np.reshape(binData['BC'], shape),
+            unit='', type='map', dims=0
         )
-        self.loadedData['bandSlope'] = np.reshape(
-            binData['BS'], (yDim, xDim)
+        self.loadedData.add(
+            'band_slope', np.reshape(binData['BS'], shape),
+            unit='', type='map', dims=0
         )
-        self.loadedData['meanAngularDeviation'] = np.reshape(
-            binData['MAD'], (yDim, xDim)
+        self.loadedData.add(
+            'mean_angular_deviation',
+            np.reshape(binData['MAD'], shape),
+            unit='', type='map', dims=0
         )
-        self.loadedData['phase'] = np.reshape(
-            binData['phase'], (yDim, xDim)
-        )
-        eulerAngles = np.reshape(
-            binData[['ph1', 'phi', 'ph2']], (yDim, xDim)
-        )
+        self.loadedData.phase = np.reshape(binData['phase'], shape)
 
-        # Load EDX data into a dict
-        if int(self.loadedMetadata['EDX Windows']['Count']) > 0:
-            EDXFields = [key for key in binData.dtype.fields.keys() if key.startswith('EDX')]        
-            self.loadedData['EDXDict'] = dict(
-                [(field[4:], np.reshape(binData[field], (yDim, xDim))) for field in EDXFields]
-                )
-
+        eulerAngles = np.reshape(binData[['ph1', 'phi', 'ph2']], shape)
         # flatten the structures so that the Euler angles are stored
         # into a normal array
         eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
-        self.loadedData['eulerAngle'] = eulerAngles
+        self.loadedData.euler_angle = eulerAngles
+
+        # TODO: FIX EDX STUFF
+        # Load EDX data into a dict
+        # if int(self.loadedMetadata['edx']['Count']) > 0:
+        #     EDXFields = [key for key in binData.dtype.fields.keys()
+        #                  if key.startswith('EDX')]
+        #     self.loadedData['EDXDict'] = dict(
+        #         [(field[4:], np.reshape(binData[field], shape))
+        #          for field in EDXFields]
+        #     )
 
         self.checkData()
 
@@ -409,26 +413,25 @@ class PythonDictLoader(EBSDDataLoader):
         ----------
         dataDict
             Dictionary with keys:
-                'stepSize'
+                'step_size'
                 'phases'
                 'phase'
-                'eulerAngle'
-                'bandContrast'
+                'euler_angle'
+                'band_contrast'
 
         """
-        self.loadedMetadata['xDim'] = dataDict['phase'].shape[1]
-        self.loadedMetadata['yDim'] = dataDict['phase'].shape[0]
-        self.loadedMetadata['stepSize'] = dataDict['stepSize']
+        self.loadedMetadata['shape'] = dataDict['phase'].shape
+        self.loadedMetadata['step_size'] = dataDict['step_size']
         assert type(dataDict['phases']) is list
         self.loadedMetadata['phases'] = dataDict['phases']
-        self.loadedMetadata['EDX Windows'] = {'Count': int(0)}
-
         self.checkMetadata()
 
-        self.loadedData['phase'] = dataDict['phase']
-        self.loadedData['eulerAngle'] = dataDict['eulerAngle']
-        self.loadedData['bandContrast'] = dataDict['bandContrast']
-
+        self.loadedData.add(
+            'band_contrast', dataDict['band_contrast'],
+            unit='', type='map', dims=0
+        )
+        self.loadedData.phase = dataDict['phase']
+        self.loadedData.euler_angle = dataDict['euler_angle']
         self.checkData()
 
 
@@ -438,18 +441,17 @@ class DICDataLoader(object):
     """
     def __init__(self) -> None:
         self.loadedMetadata = {
-            'format': "",
-            'version': "",
-            'binning': "",
-            'xDim': 0,
-            'yDim': 0
+            'format': '',
+            'version': '',
+            'binning': '',
+            'shape': (0, 0),
         }
-        self.loadedData = {
-            'xc': None,
-            'yc': None,
-            'xd': None,
-            'yd': None
-        }
+        # required data
+        self.loadedData = Datastore()
+        self.loadedData.add('xc', None, unit='px', type='list', dims=0)
+        self.loadedData.add('yc', None, unit='px', type='list', dims=0)
+        self.loadedData.add('xd', None, unit='px', type='list', dims=0)
+        self.loadedData.add('yd', None, unit='px', type='list', dims=0)
 
     def checkMetadata(self) -> None:
         return
@@ -469,10 +471,11 @@ class DICDataLoader(object):
             (coords.max() - coords.min()) / max(abs(np.diff(coords))) + 1
         )
 
-        assert xdim == self.loadedMetadata['xDim'], "Dimensions of data and header do not match"
-        assert ydim == self.loadedMetadata['yDim'], "Dimensions of data and header do not match"
+        if (ydim, xdim) != self.loadedMetadata['shape']:
+            raise ValueError('Dimensions of data and header do not match')
 
-    def loadDavisMetadata(self,
+    def loadDavisMetadata(
+        self,
         fileName: str,
         fileDir: str = ""
     ) -> Dict[str, Any]:
@@ -504,9 +507,8 @@ class DICDataLoader(object):
         self.loadedMetadata['version'] = metadata[1]
         # Sub-window width in pixels
         self.loadedMetadata['binning'] = int(metadata[3])
-        # size of map along x and y (from header)
-        self.loadedMetadata['xDim'] = int(metadata[5])
-        self.loadedMetadata['yDim'] = int(metadata[4])
+        # shape of map (from header)
+        self.loadedMetadata['shape'] = (int(metadata[4]), int(metadata[5]))
 
         self.checkMetadata()
 
@@ -540,11 +542,11 @@ class DICDataLoader(object):
         data = pd.read_table(str(filePath), delimiter='\t', skiprows=1,
                              header=None)
         # x and y coordinates
-        self.loadedData['xc'] = data.values[:, 0]
-        self.loadedData['yc'] = data.values[:, 1]
+        self.loadedData.xc = data.values[:, 0]
+        self.loadedData.yc = data.values[:, 1]
         # x and y displacement
-        self.loadedData['xd'] = data.values[:, 2]
-        self.loadedData['yd'] = data.values[:, 3]
+        self.loadedData.xd = data.values[:, 2]
+        self.loadedData.yd = data.values[:, 3]
 
         self.checkData()
 

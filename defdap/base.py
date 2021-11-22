@@ -22,7 +22,7 @@ from defdap.plotting import Plot, MapPlot, GrainPlot
 
 from skimage.measure import profile_line
 
-from defdap.utils import reportProgress
+from defdap.utils import reportProgress, Datastore
 
 
 class Map(object):
@@ -39,8 +39,10 @@ class Map(object):
 
     """
     def __init__(self):
-        self.xDim = None
-        self.yDim = None
+
+        self.data = Datastore()
+
+        self.shape = (0, 0)
 
         self.grainList = None
         self.currGrainId = None  # ID of last selected grain
@@ -63,8 +65,12 @@ class Map(object):
         return self.grainList[key]
 
     @property
-    def shape(self):
-        return self.yDim, self.xDim
+    def xDim(self):
+        return self.shape[1]
+
+    @property
+    def yDim(self):
+        return self.shape[0]
 
     def checkGrainsDetected(self, raiseExc=True):
         """Check if grains have been detected.

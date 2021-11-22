@@ -23,7 +23,6 @@ from warnings import warn
 from defdap.file_readers import EBSDDataLoader
 from defdap.file_writers import EBSDDataWriter
 from defdap.quat import Quat
-from defdap.crystal import SlipSystem
 from defdap import base
 
 from defdap import defaults
@@ -38,20 +37,8 @@ class Map(base.Map):
 
     Attributes
     ----------
-    xDim : int
-        Size of map in x direction.
-    yDim : int
-        Size of map in y direction.
-    stepSize : float
+    step_size : float
         Step size in micron.
-    eulerAngleArray : numpy.ndarray
-        Euler angles for eaxh point of the map. Shape (3, yDim, xDim).
-    bandContrastArray : numpy.ndarray
-        Band contrast for each point of map. Shape (yDim, xDim).
-    quatArray : numpy.ndarray of defdap.quat.Quat
-        Quaterions for each point of map. Shape (yDim, xDim).
-    phaseArray : numpy.ndarray
-        Map of phase ids. 1-based, 0 is non-indexed points
     phases : list of defdap.crystal.Phase
         List of phases.
     boundaries : numpy.ndarray
@@ -66,15 +53,25 @@ class Map(base.Map):
         Map of misorientation.
     misOriAxis : list of numpy.ndarray
         Map of misorientation axis components.
-    kam : numpy.ndarray
-        Map of KAM.
     origin : tuple(int)
         Map origin (x, y). Used by linker class where origin is a
         homologue point of the maps.
-    GND : numpy.ndarray
-        GND scalar map.
-    Nye : numpy.ndarray
-        3x3 Nye tensor at each point.
+
+    data : defdap.utils.Datastore
+        Must contain after loading data (maps):
+            phase : numpy.ndarray
+                1-based, 0 is non-indexed points
+            euler_angle : numpy.ndarray
+                stored as (3, yDim, xDim) in radians
+        Derived data:
+            orientation : numpy.ndarray of defdap.quat.Quat
+                Quaterion for each point of map. Shape (yDim, xDim).
+            KAM : numpy.ndarray
+                Kernal average misorientaion map.
+            GND : numpy.ndarray
+                GND scalar map.
+            Nye_tensor : numpy.ndarray
+                3x3 Nye tensor at each point.
 
     """
     def __init__(self, fileName, dataType=None):
@@ -92,13 +89,7 @@ class Map(base.Map):
         # Call base class constructor
         super(Map, self).__init__()
 
-        self.xDim = None
-        self.yDim = None
-        self.stepSize = None
-        self.eulerAngleArray = None
-        self.bandContrastArray = None
-        self.quatArray = None
-        self.phaseArray = None
+        self.step_size = None
         self.phases = []
         self.boundaries = None
         self.boundariesX = None
@@ -111,10 +102,7 @@ class Map(base.Map):
         self.grains = None
         self.misOri = None
         self.misOriAxis = None
-        self.kam = None
         self.origin = (0, 0)
-        self.GND = None
-        self.Nye = None
 
         # Phase used for the maps crystal structure and cOverA. So old
         # functions still work for the 'main' phase in the map. 0-based
@@ -143,23 +131,19 @@ class Map(base.Map):
         dataLoader.load(fileName)
 
         metadataDict = dataLoader.loadedMetadata
-        self.xDim = metadataDict['xDim']
-        self.yDim = metadataDict['yDim']
-        self.stepSize = metadataDict['stepSize']
+        self.shape = metadataDict['shape']
+        self.step_size = metadataDict['step_size']
         self.phases = metadataDict['phases']
 
-        dataDict = dataLoader.loadedData
-        self.eulerAngleArray = dataDict['eulerAngle']
-        self.bandContrastArray = dataDict['bandContrast']
-        self.bandSlopeArray = dataDict['bandSlope']
-        self.meanAngularDeviationArray = dataDict['meanAngularDeviation']
-        self.phaseArray = dataDict['phase']
-        if int(metadataDict['EDX Windows']['Count']) > 0:
-            self.EDX = dataDict['EDXDict']
+        self.data.update(dataLoader.loadedData)
+
+        # TODO: FIX EDX STUFF
+        # if int(metadataDict['EDX Windows']['Count']) > 0:
+        #     self.EDX = dataDict['EDXDict']
 
         # write final status
         yield "Loaded EBSD data (dimensions: {:} x {:} pixels, step " \
-              "size: {:} um)".format(self.xDim, self.yDim, self.stepSize)
+              "size: {:} um)".format(self.xDim, self.yDim, self.step_size)
 
     def save(self, file_name, data_type=None, file_dir=""):
         """Save EBSD map to file.
@@ -177,12 +161,12 @@ class Map(base.Map):
         data_writer = EBSDDataWriter.get_writer(data_type)
 
         data_writer.metadata['shape'] = self.shape
-        data_writer.metadata['step_size'] = self.stepSize
+        data_writer.metadata['step_size'] = self.step_size
         data_writer.metadata['phases'] = self.phases
 
-        data_writer.data['phase'] = self.phaseArray
-        data_writer.data['quat'] = self.quatArray
-        data_writer.data['band_contrast'] = self.bandContrastArray
+        data_writer.data['phase'] = self.data.phase
+        data_writer.data['quat'] = self.data.orientation
+        data_writer.data['band_contrast'] = self.data.band_contrast
 
         data_writer.write(file_name, file_dir=file_dir)
 
@@ -228,26 +212,27 @@ class Map(base.Map):
 
     @property
     def scale(self):
-        return self.stepSize
+        return self.step_size
 
-    @reportProgress("rotating EBSD data")
-    def rotateData(self):
-        """Rotate map by 180 degrees and transform quats accordingly.
-
-        """
-        self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
-        self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
-        self.phaseArray = self.phaseArray[::-1, ::-1]
-        self.buildQuatArray(force=True)     # Force rebuild quat array
-
-        # Rotation from old coord system to new
-        transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi).conjugate
-
-        # Perform vectorised multiplication
-        quats = Quat.multiplyManyQuats(self.quatArray.flatten(), transformQuat)
-        self.quatArray = np.array(quats).reshape(self.yDim, self.xDim)
-
-        yield 1.
+    # TODO: FIX this?
+    # @reportProgress("rotating EBSD data")
+    # def rotateData(self):
+    #     """Rotate map by 180 degrees and transform quats accordingly.
+    #
+    #     """
+    #     self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
+    #     self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
+    #     self.phaseArray = self.phaseArray[::-1, ::-1]
+    #     self.buildQuatArray(force=True)     # Force rebuild quat array
+    #
+    #     # Rotation from old coord system to new
+    #     transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi).conjugate
+    #
+    #     # Perform vectorised multiplication
+    #     quats = Quat.multiplyManyQuats(self.quatArray.flatten(), transformQuat)
+    #     self.quatArray = np.array(quats).reshape(self.yDim, self.xDim)
+    #
+    #     yield 1.
 
     def plotBandContrastMap(self, **kwargs):
         """Plot band contrast map
@@ -270,7 +255,7 @@ class Map(base.Map):
         }
         plotParams.update(kwargs)
 
-        plot = MapPlot.create(self, self.bandContrastArray, **plotParams)
+        plot = MapPlot.create(self, self.data.band_contrast, **plotParams)
 
         return plot
 
@@ -313,8 +298,8 @@ class Map(base.Map):
                 ValueError("Only hexagonal and cubic symGroup supported")
 
             # Apply normalisation for each phase
-            phase_mask = self.phaseArray == phase_id + 1
-            map_colours[phase_mask] = self.eulerAngleArray[:, phase_mask].T / norm
+            phase_mask = self.data.phase == phase_id + 1
+            map_colours[phase_mask] = self.data.euler_angle[:, phase_mask].T / norm
 
         return MapPlot.create(self, map_colours, **plot_params)
 
@@ -358,9 +343,9 @@ class Map(base.Map):
 
         for phase, phase_id in zip(phases, phase_ids):
             # calculate IPF colours for phase
-            phase_mask = self.phaseArray == phase_id + 1
+            phase_mask = self.data.phase == phase_id + 1
             map_colours[phase_mask] = Quat.calcIPFcolours(
-                self.quatArray[phase_mask],
+                self.data.orientation[phase_mask],
                 direction,
                 phase.crystalStructure.name
             ).T
@@ -387,7 +372,7 @@ class Map(base.Map):
         }
         plotParams.update(kwargs)
 
-        plot = MapPlot.create(self, self.phaseArray, **plotParams)
+        plot = MapPlot.create(self, self.data.phase, **plotParams)
 
         # add a legend to the plot
         phaseIDs = list(range(0, self.numPhases + 1))
@@ -400,36 +385,50 @@ class Map(base.Map):
         """
         Calculates Kernel Average Misorientaion (KAM) for the EBSD map,
         based on a 3x3 kernel. Crystal symmetric equivalences are not
-        considered. Stores result in self.kam.
+        considered. Stores result as `KAM`.
 
         """
-        quatComps = np.empty((4, self.yDim, self.xDim))
+        quatComps = np.empty((4, ) + self.shape)
 
-        for i, row in enumerate(self.quatArray):
+        for i, row in enumerate(self.data.orientation):
             for j, quat in enumerate(row):
                 quatComps[:, i, j] = quat.quatCoef
 
-        self.kam = np.empty((self.yDim, self.xDim))
+        kam = np.empty(self.shape)
 
         # Start with rows. Calculate misorientation with neighbouring rows.
         # First and last row only in one direction
-        self.kam[0, :] = abs(np.einsum("ij,ij->j", quatComps[:, 0, :], quatComps[:, 1, :]))
-        self.kam[-1, :] = abs(np.einsum("ij,ij->j", quatComps[:, -1, :], quatComps[:, -2, :]))
+        kam[0] = abs(np.einsum("ij,ij->j",
+                               quatComps[:, 0], quatComps[:, 1]))
+        kam[-1] = abs(np.einsum("ij,ij->j",
+                                quatComps[:, -1], quatComps[:, -2]))
         for i in range(1, self.yDim - 1):
-            self.kam[i, :] = (abs(np.einsum("ij,ij->j", quatComps[:, i, :], quatComps[:, i + 1, :])) +
-                              abs(np.einsum("ij,ij->j", quatComps[:, i, :], quatComps[:, i - 1, :]))) / 2
-
-        self.kam[self.kam > 1] = 1
+            kam[i] = (abs(np.einsum("ij,ij->j",
+                                    quatComps[:, i], quatComps[:, i + 1])) +
+                      abs(np.einsum("ij,ij->j",
+                                    quatComps[:, i], quatComps[:, i - 1]))
+                      ) / 2
+        kam[kam > 1] = 1
 
         # Do the same for columns
-        self.kam[:, 0] += abs(np.einsum("ij,ij->j", quatComps[:, :, 0], quatComps[:, :, 1]))
-        self.kam[:, -1] += abs(np.einsum("ij,ij->j", quatComps[:, :, -1], quatComps[:, :, -2]))
+        kam[:, 0] += abs(np.einsum("ij,ij->j",
+                                   quatComps[:, :, 0], quatComps[:, :, 1]))
+        kam[:, -1] += abs(np.einsum("ij,ij->j",
+                                    quatComps[:, :, -1], quatComps[:, :, -2]))
         for i in range(1, self.xDim - 1):
-            self.kam[:, i] += (abs(np.einsum("ij,ij->j", quatComps[:, :, i], quatComps[:, :, i + 1])) +
-                               abs(np.einsum("ij,ij->j", quatComps[:, :, i], quatComps[:, :, i - 1]))) / 2
+            kam[:, i] += (abs(np.einsum("ij,ij->j",
+                                        quatComps[:, :, i],
+                                        quatComps[:, :, i + 1])) +
+                          abs(np.einsum("ij,ij->j",
+                                        quatComps[:, :, i],
+                                        quatComps[:, :, i - 1]))
+                          ) / 2
+        kam /= 2
+        kam[kam > 1] = 1
 
-        self.kam /= 2
-        self.kam[self.kam > 1] = 1
+        self.data.add(
+            'KAM', kam, unit='', type='map', dims=0,
+        )
 
     def plotKamMap(self, **kwargs):
         """Plot Kernel Average Misorientaion (KAM) for the EBSD map.
@@ -453,7 +452,7 @@ class Map(base.Map):
 
         self.calcKam()
         # Convert to degrees and plot
-        kam = 2 * np.arccos(self.kam) * 180 / np.pi
+        kam = 2 * np.arccos(self.data.KAM) * 180 / np.pi
 
         plot = MapPlot.create(self, kam, **plotParams)
 
@@ -463,7 +462,7 @@ class Map(base.Map):
     def calcNye(self):
         """
         Calculates Nye tensor and related GND density for the EBSD map.
-        Stores result in self.Nye and self.GND. Uses the crystal
+        Stores result as `Nye_tensor` and `GND`. Uses the crystal
         symmetry of the primary phase.
 
         """
@@ -475,7 +474,7 @@ class Map(base.Map):
         quatComps = np.empty((numSyms, 4, self.yDim, self.xDim))
 
         # populate with initial quat components
-        for i, row in enumerate(self.quatArray):
+        for i, row in enumerate(self.data.orientation):
             for j, quat in enumerate(row):
                 quatComps[0, :, i, j] = quat.quatCoef
 
@@ -533,7 +532,7 @@ class Map(base.Map):
                            quatComps[argmisOrix[j, i], 3, j, i + 1])
                 misoquatx = qix.conjugate * q0x
                 # change stepsize to meters
-                betaderx[:, :, j, i] = (Quat.rotMatrix(misoquatx) - np.eye(3)) / self.stepSize / 1e-6
+                betaderx[:, :, j, i] = (Quat.rotMatrix(misoquatx) - np.eye(3)) / self.step_size / 1e-6
                 q0y = Quat(quatComps[0, 0, j, i], quatComps[0, 1, j, i],
                            quatComps[0, 2, j, i], quatComps[0, 3, j, i])
                 qiy = Quat(quatComps[argmisOriy[j, i], 0, j + 1, i],
@@ -542,7 +541,7 @@ class Map(base.Map):
                            quatComps[argmisOriy[j, i], 3, j + 1, i])
                 misoquaty = qiy.conjugate * q0y
                 # change stepsize to meters
-                betadery[:, :, j, i] = (Quat.rotMatrix(misoquaty) - np.eye(3)) / self.stepSize / 1e-6
+                betadery[:, :, j, i] = (Quat.rotMatrix(misoquaty) - np.eye(3)) / self.step_size / 1e-6
 
         # Calculate the Nye Tensor
         alpha = np.empty((3, 3, self.yDim, self.xDim))
@@ -577,8 +576,12 @@ class Map(base.Map):
 
         # choose from the different alpha_totals according to preference;
         # see Ruggles GND density paper
-        self.GND = alpha_total9
-        self.Nye = alpha
+        self.data.add(
+            'GND', alpha_total9, unit='', type='map', dims=0,
+        )
+        self.data.add(
+            'Nye_tensor', alpha, unit='', type='map', dims=2,
+        )
 
         yield 1.
 
@@ -604,7 +607,7 @@ class Map(base.Map):
 
         self.calcNye()
 
-        plot = MapPlot.create(self, np.log10(self.GND), **plotParams)
+        plot = MapPlot.create(self, np.log10(self.data.GND), **plotParams)
 
         return plot
 
@@ -617,7 +620,7 @@ class Map(base.Map):
             True if data loaded
 
         """
-        if self.eulerAngleArray is None:
+        if 'euler_angle' not in self.data:
             raise Exception("Data not loaded")
         return True
 
@@ -632,9 +635,12 @@ class Map(base.Map):
         """
         self.checkDataLoaded()
 
-        if force or self.quatArray is None:
+        if force or 'orientation' not in self.data:
             # create the array of quat objects
-            self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
+            self.data.add(
+                'orientation', Quat.createManyQuats(self.data.euler_angle),
+                unit='', type='map', dims=0
+            )
 
         yield 1.
 
@@ -647,7 +653,7 @@ class Map(base.Map):
         # store quat components in array
         quatComps = np.empty((4,) + self.shape)
         for idx in np.ndindex(self.shape):
-            quatComps[(slice(None),) + idx] = self.quatArray[idx].quatCoef
+            quatComps[(slice(None),) + idx] = self.data.orientation[idx].quatCoef
 
         # misorientation in each quadrant surrounding a point
         misOris = np.zeros((8,) + self.shape)
@@ -716,7 +722,7 @@ class Map(base.Map):
         for idx in np.ndindex(self.shape):
             quatArrayNew[idx] = Quat(quatCompsNew[(slice(None),) + idx])
 
-        self.quatArray = quatArrayNew
+        self.data.orientation = quatArrayNew
 
         return quats
 
@@ -739,7 +745,7 @@ class Map(base.Map):
         quatComps = np.empty((numSyms, 4, self.yDim, self.xDim))
 
         # populate with initial quat components
-        for i, row in enumerate(self.quatArray):
+        for i, row in enumerate(self.data.orientation):
             for j, quat in enumerate(row):
                 quatComps[0, :, i, j] = quat.quatCoef
 
@@ -791,11 +797,11 @@ class Map(base.Map):
 
         # PHASE boundary POINTS
         self.phaseBoundariesX = np.not_equal(
-            self.phaseArray, np.roll(self.phaseArray, -1, axis=1))
+            self.data.phase, np.roll(self.data.phase, -1, axis=1))
         self.phaseBoundariesX[:, -1] = False
 
         self.phaseBoundariesY = np.not_equal(
-            self.phaseArray, np.roll(self.phaseArray, -1, axis=0))
+            self.data.phase, np.roll(self.data.phase, -1, axis=0))
         self.phaseBoundariesY[-1, :] = False
 
         self.phaseBoundaries = np.logical_or(
@@ -941,7 +947,7 @@ class Map(base.Map):
         self.grainList = []
 
         # List of points where no grain has be set yet
-        points_left = self.phaseArray != 0
+        points_left = self.data.phase != 0
         total_points = points_left.sum()
         found_point = 0
         next_point = points_left.tobytes().find(b'\x01')
@@ -981,7 +987,7 @@ class Map(base.Map):
 
         # Assign phase to each grain
         for grain in self:
-            phaseVals = grain.grainData(self.phaseArray)
+            phaseVals = grain.grainData(self.data.phase)
             if np.max(phaseVals) != np.min(phaseVals):
                 warn(f"Grain {grain.grainID} could not be assigned a "
                      f"phase, phase vals not constant.")
@@ -1042,7 +1048,7 @@ class Map(base.Map):
         currentGrain = Grain(grainIndex - 1, self)
 
         # add first point to the grain
-        currentGrain.addPoint((x, y), self.quatArray[y, x])
+        currentGrain.addPoint((x, y), self.data.orientation[y, x])
         self.grains[y, x] = grainIndex
         points_left[y, x] = False
         edge = [(x, y)]
@@ -1085,7 +1091,7 @@ class Map(base.Map):
                         addPoint = not self.boundariesY[t, s]
 
                 if addPoint:
-                    currentGrain.addPoint((s, t), self.quatArray[t, s])
+                    currentGrain.addPoint((s, t), self.data.orientation[t, s])
                     self.grains[t, s] = grainIndex
                     points_left[t, s] = False
                     edge.append((s, t))
@@ -1873,7 +1879,7 @@ class Linker(object):
                 y0m = curr_ebsd_map.origin[1]
                 x0 = ebsd_map.origin[0]
                 y0 = ebsd_map.origin[1]
-                scaling = curr_ebsd_map.stepSize / ebsd_map.stepSize
+                scaling = curr_ebsd_map.step_size / ebsd_map.step_size
 
                 x = int((event.xdata - x0m) * scaling + x0)
                 y = int((event.ydata - y0m) * scaling + y0)

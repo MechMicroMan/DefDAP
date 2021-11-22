@@ -52,14 +52,8 @@ class Map(base.Map):
         Size of map along x (from header).
     ydim : int
         Size of map along y (from header).
-    xc : numpy.ndarray
-        X coordinates.
-    yc : numpy.ndarray
-        Y coordinates.
-    xd : numpy.ndarray
-        X displacement.
-    yd : numpy.ndarray
-        Y displacement.
+    shape : tuple
+        Size of map (after cropping, like *Dim).
     corrVal : numpy.ndarray
         Correlation value.
     ebsdMap : defdap.ebsd.Map
@@ -85,22 +79,30 @@ class Map(base.Map):
         File path.
     fname : str
         File name.
-    xDim : int
-        Size of map along x (after cropping).
-    yDim : int
-        Size of map along y (after cropping).
-    self.x_map : numpy.ndarray
-        Map of u displacement component along x.
-    self.y_map : numpy.ndarray
-        Map of v displacement component along x.
-    f11, f22, f12, f21 ; numpy.ndarray
-        Components of the deformation gradient, where 1=x and 2=y.
-    e11, e22, e12 : numpy.ndarray
-        Components of the green strain , where 1=x and 2=y.
-    eMaxShear : numpy.ndarray
-        Max shear component np.sqrt(((e11 - e22) / 2.)**2 + e12**2).
     cropDists : numpy.ndarray
         Crop distances (default all zeros).
+
+    data : defdap.utils.Datastore
+        Must contain after loading data:
+            xc : numpy.ndarray
+                X coordinate
+            yc : numpy.ndarray
+                Y coordinate
+            xd : numpy.ndarray
+                X displacement
+            yd : numpy.ndarray
+                Y displacement
+        Derived data:
+            x_map : numpy.ndarray
+                Map of u displacement component along x
+            y_map : numpy.ndarray
+                Map of v displacement component along x
+            f11, f12, f21, f22 : numpy.ndarray
+                Components of the deformation gradient, where 1=x and 2=y.
+            e11, e12, e22 : numpy.ndarray
+                Components of the green strain , where 1=x and 2=y.
+            max_shear : numpy.ndarray
+                Max shear component np.sqrt(((e11 - e22) / 2.)**2 + e12**2).
 
     """
     def __init__(self, path, fname, dataType=None):
@@ -126,11 +128,6 @@ class Map(base.Map):
         self.xdim = None        # size of map along x (from header)
         self.ydim = None        # size of map along y (from header)
 
-        self.xc = None          # x coordinates
-        self.yc = None          # y coordinates
-        self.xd = None          # x displacement
-        self.yd = None          # y displacement
-        
         self.corrVal = None     # correlation value
 
         self.ebsdMap = None                 # EBSD map linked to DIC map
@@ -149,36 +146,35 @@ class Map(base.Map):
         self.fname = fname                  # file name
 
         self.loadData(path, fname, dataType=dataType)
-  
-        # *dim are full size of data. *Dim are size after cropping
-        self.xDim = self.xdim
-        self.yDim = self.ydim
-        
-        self.x_map = self._map(self.xd)     # u displacement component along x
-        self.y_map = self._map(self.yd)     # v displacement component along x
-        xDispGrad = self._grad(self.x_map)  #d/dy is first term, d/dx is second
-        yDispGrad = self._grad(self.y_map)
+
+        self.data.add('x_map', self._map(self.data.xd),
+                      unit=self.data['xd', 'unit'], type='map', dims=0)
+        self.data.add('y_map', self._map(self.data.yd),
+                      unit=self.data['yd', 'unit'], type='map', dims=0)
+
+        xDispGrad = self._grad(self.data.x_map)  #d/dy is first term, d/dx is second
+        yDispGrad = self._grad(self.data.y_map)
 
         # Deformation gradient
-        self.f11 = xDispGrad[1] + 1
-        self.f22 = yDispGrad[0] + 1
-        self.f12 = xDispGrad[0]
-        self.f21 = yDispGrad[1]
+        self.data.add('f11', xDispGrad[1] + 1, unit='', type='map', dims=0)
+        self.data.add('f22', yDispGrad[0] + 1, unit='', type='map', dims=0)
+        self.data.add('f12', xDispGrad[0], unit='', type='map', dims=0)
+        self.data.add('f21', yDispGrad[1], unit='', type='map', dims=0)
 
         # Green strain
-        self.e11 = xDispGrad[1] + \
-                   0.5*(xDispGrad[1]*xDispGrad[1] + yDispGrad[1]*yDispGrad[1])
-        self.e22 = yDispGrad[0] + \
-                   0.5*(xDispGrad[0]*xDispGrad[0] + yDispGrad[0]*yDispGrad[0])
-        self.e12 = 0.5*(xDispGrad[0] + yDispGrad[1] +
-                        xDispGrad[1]*xDispGrad[0] + yDispGrad[1]*yDispGrad[0])
-        # max shear component
-        self.eMaxShear = np.sqrt(((self.e11 - self.e22) / 2.)**2 + self.e12**2)
+        e11 = (xDispGrad[1] +
+               0.5*(xDispGrad[1]*xDispGrad[1] + yDispGrad[1]*yDispGrad[1]))
+        e22 = (yDispGrad[0] +
+               0.5*(xDispGrad[0]*xDispGrad[0] + yDispGrad[0]*yDispGrad[0]))
+        e12 = 0.5*(xDispGrad[0] + yDispGrad[1] +
+                   xDispGrad[1]*xDispGrad[0] + yDispGrad[1]*yDispGrad[0])
+        self.data.add('e11', e11, unit='', type='map', dims=0)
+        self.data.add('e22', e22, unit='', type='map', dims=0)
+        self.data.add('e12', e12, unit='', type='map', dims=0)
 
-        self.component = {'f11': self.f11, 'f12': self.f12, 'f21': self.f21, 'f22': self.f22,
-                         'e11': self.e11, 'e12': self.e12, 'e22': self.e22,
-                         'eMaxShear': self.eMaxShear,
-                         'x_map': self.x_map, 'y_map': self.y_map}
+        # max shear component
+        maxshear = np.sqrt(((e11 - e22) / 2.)**2 + e12**2)
+        self.data.add('max_shear', maxshear, unit='', type='map', dims=0)
 
         # crop distances (default all zeros)
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
@@ -210,18 +206,17 @@ class Map(base.Map):
             metadataDict = dataLoader.loadDavisMetadata(fileName, fileDir)
             dataDict = dataLoader.loadDavisData(fileName, fileDir)
         else:
-            raise Exception("No loader found for this DIC data.")
+            raise ValueError("No loader found for this DIC data.")
 
         self.format = metadataDict['format']      # Software name
         self.version = metadataDict['version']    # Software version
         self.binning = metadataDict['binning']    # Sub-window width in pixels
-        self.xdim = metadataDict['xDim']          # size of map along x (from header)
-        self.ydim = metadataDict['yDim']          # size of map along y (from header)
+        # *dim are full size of data. shape (old *Dim) are size after cropping
+        self.shape = metadataDict['shape']
+        self.xdim = metadataDict['shape'][1]      # size of map along x (from header)
+        self.ydim = metadataDict['shape'][0]      # size of map along y (from header)
 
-        self.xc = dataDict['xc']    # x coordinates
-        self.yc = dataDict['yc']    # y coordinates
-        self.xd = dataDict['xd']    # x displacement
-        self.yd = dataDict['yd']    # y displacement
+        self.data.update(dataDict)
 
         # write final status
         yield "Loaded {0} {1} data (dimensions: {2} x {3} pixels, " \
@@ -262,7 +257,7 @@ class Map(base.Map):
         return data_map
 
     def _grad(self, data_map):
-        grad_step = min(abs((np.diff(self.xc))))
+        grad_step = min(abs((np.diff(self.data.xc))))
         data_grad = np.gradient(data_map, grad_step, grad_step)
         return data_grad
 
@@ -301,17 +296,17 @@ class Map(base.Map):
 
         Parameters
         ----------
-        percentiles : list(float)
+        percentiles : list of float
             list of percentiles to print i.e. 0, 50, 99.
-        components : list(str)
-            list of map components to print i.e. e11, f11, eMaxShear, x_map.
+        components : list of str
+            list of map components to print i.e. e11, f11, max_shear, x_map.
 
         """
 
         # Check that components are valid
-        if set(components).issubset(self.component) is False:
-            strFormat = ('{}, ') * (len(self.component) - 1) + ('{}')
-            raise Exception("Components must be: " + strFormat.format(*self.component))
+        if not set(components).issubset(self.data):
+            strFormat = '{}, ' * (len(self.data) - 1) + '{}'
+            raise Exception("Components must be: " + strFormat.format(*self.data))
 
         # Print map info
         print('\033[1m', end=''),  # START BOLD
@@ -322,16 +317,16 @@ class Map(base.Map):
         ))
 
         # Print header
-        strFormat = ('{:10} ') + (len(percentiles)) * '{:12}'
-        print(strFormat.format(*(['Component'] + percentiles)))
+        strFormat = '{:10} ' + '{:12}' * len(percentiles)
+        print(strFormat.format('Component', *percentiles))
         print('\033[0m', end='')  # END BOLD
 
         # Print table
-        strFormat = ('{:10} ') + (len(percentiles)) * '{:12.4f}'
+        strFormat = '{:10} ' + '{:12.4f}' * len(percentiles)
         for c in components:
             # Get the values and print in table
-            per = [np.nanpercentile(self.crop(self.component[c]), p) for p in percentiles]
-            print(strFormat.format(*([c] + per)))
+            per = [np.nanpercentile(self.crop(self.data[c]), p) for p in percentiles]
+            print(strFormat.format(c, *per))
 
     def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
         """Set a crop for the DIC map.
@@ -373,8 +368,9 @@ class Map(base.Map):
             self.updateHomogPoint(homogID=-1, delta=(dx, dy))
 
         # set new cropped dimensions
-        self.xDim = self.xdim - self.cropDists[0, 0] - self.cropDists[0, 1]
-        self.yDim = self.ydim - self.cropDists[1, 0] - self.cropDists[1, 1]
+        xDim = self.xdim - self.cropDists[0, 0] - self.cropDists[0, 1]
+        yDim = self.ydim - self.cropDists[1, 0] - self.cropDists[1, 1]
+        self.shape = (yDim, xDim)
 
     def crop(self, mapData, binned=True):
         """ Crop given data using crop parameters stored in map
@@ -516,12 +512,10 @@ class Map(base.Map):
         self.checkEbsdLinked()
 
         if (cropImage or type(self.ebsdTransform) is not tf.AffineTransform):
-            # crop to size of DIC map
-            outputShape = (self.yDim, self.xDim)
-            # warp the map
+            # warp the map. Crop to size of DIC map
             warpedMap = tf.warp(
                 mapData, self.ebsdTransform,
-                output_shape=outputShape,
+                output_shape=self.shape,
                 order=order, preserve_range=preserve_range
             )
         else:
@@ -561,7 +555,7 @@ class Map(base.Map):
         # Flatten to coord list
         lines = np.array(lines).reshape(-1, 2)
         # Transform & reshape back
-        lines = self.ebsdTransformInv(lines_list).reshape(-1, 2, 2)
+        lines = self.ebsdTransformInv(lines).reshape(-1, 2, 2)
         # Round to nearest
         lines = np.round(lines - 0.5) + 0.5
         lines = [(tuple(l[0]), tuple(l[1])) for l in lines]
@@ -627,13 +621,13 @@ class Map(base.Map):
 
         Examples
         ----------
-        To remove data points in dicMap where eMaxShear is above 0.8, use:
+        To remove data points in dicMap where `max_shear` is above 0.8, use:
 
-        >>> mask = dicMap.eMaxShear > 0.8
+        >>> mask = dicMap.data.max_shear > 0.8
 
         To remove data points in dicMap where e11 is above 1 or less than -1, use:
 
-        >>> mask = (dicMap.e11 > 1) | (dicMap.e11 < -1)
+        >>> mask = (dicMap.data.e11 > 1) | (dicMap.data.e11 < -1)
 
         To remove data points in dicMap where corrVal is less than 0.4, use:
 
@@ -666,7 +660,7 @@ class Map(base.Map):
             plot2 = MapPlot.create(self,
                                    self.crop(
                                        np.where(self.mask == True, np.nan,
-                                                self.eMaxShear)),
+                                                self.data.max_shear)),
                                    plotColourBar='True',
                                    clabel="Effective shear strain")
             plot2.setTitle('Effective shear strain preview')
@@ -677,24 +671,12 @@ class Map(base.Map):
         """ Apply mask to all DIC map data by setting masked values to nan.
 
         """
-        self.eMaxShear = np.where(self.mask == True, np.nan, self.eMaxShear)
-
-        self.e11 = np.where(self.mask == True, np.nan, self.e11)
-        self.e12 = np.where(self.mask == True, np.nan, self.e12)
-        self.e22 = np.where(self.mask == True, np.nan, self.e22)
-
-        self.f11 = np.where(self.mask == True, np.nan, self.f11)
-        self.f12 = np.where(self.mask == True, np.nan, self.f12)
-        self.f22 = np.where(self.mask == True, np.nan, self.f22)
-
-        self.x_map = np.where(self.mask == True, np.nan, self.x_map)
-        self.y_map = np.where(self.mask == True, np.nan, self.y_map)
-
-        self.component = {'f11': self.f11, 'f12': self.f12, 'f21': self.f21,
-                          'f22': self.f22,
-                          'e11': self.e11, 'e12': self.e12, 'e22': self.e22,
-                          'eMaxShear': self.eMaxShear,
-                          'x_map': self.x_map, 'y_map': self.y_map}
+        for comp in ('max_shear',
+                     'e11', 'e12', 'e22',
+                     'f11', 'f12', 'f21', 'e22',
+                     'x_map', 'y_map'):
+            # self.data[comp] = np.where(self.mask == True, np.nan, self.data[comp])
+            self.data[comp][self.mask] = np.nan
 
     def setPatternPath(self, filePath, windowSize):
         """Set the path to the image of the pattern.
@@ -752,7 +734,7 @@ class Map(base.Map):
         Parameters
         ----------
         component
-            Map component to plot i.e. e11, f11, eMaxShear.
+            Map component to plot i.e. e11, f11, max_shear.
         kwargs
             All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
 
@@ -769,7 +751,7 @@ class Map(base.Map):
         }
         plotParams.update(kwargs)
 
-        plot = MapPlot.create(self, self.crop(self.component[component]), **plotParams)
+        plot = MapPlot.create(self, self.crop(self.data[component]), **plotParams)
 
         return plot
 
@@ -793,7 +775,7 @@ class Map(base.Map):
         }
         params.update(kwargs)
 
-        plot = self.plotMap('eMaxShear', **params)
+        plot = self.plotMap('max_shear', **params)
 
         return plot
 
@@ -815,7 +797,7 @@ class Map(base.Map):
         plotParams.update(kwargs)
 
         plot = self.plotGrainDataMap(
-            mapData=self.crop(self.eMaxShear), **plotParams
+            mapData=self.crop(self.data.max_shear), **plotParams
         )
 
         return plot
@@ -865,8 +847,8 @@ class Map(base.Map):
                 # Find (x,y) coordinates and corresponding max shears of grain
                 coords = np.argwhere(self.grains == dicGrainId)       # (y,x)
                 currentGrain.coordList = np.flip(coords, axis=1)      # (x,y)
-                currentGrain.maxShearList = self.eMaxShear[coords[:,0]+ self.cropDists[1, 0], 
-                                                           coords[:,1]+ self.cropDists[0, 0]]
+                currentGrain.maxShearList = self.data.max_shear[coords[:,0]+ self.cropDists[1, 0],
+                                                                coords[:,1]+ self.cropDists[0, 0]]
 
                 # Assign EBSD grain ID to DIC grain and increment grain list
                 currentGrain.ebsdGrainId = ebsdGrainId - 1
@@ -925,7 +907,7 @@ class Map(base.Map):
             warpedDicGrains = tf.warp(
                 np.ascontiguousarray(dicGrains.astype(float)),
                 self.ebsdTransformInv,
-                output_shape=(self.ebsdMap.yDim, self.ebsdMap.xDim),
+                output_shape=self.ebsdMap.shape,
                 order=0
             ).astype(int)
 
@@ -973,8 +955,8 @@ class Map(base.Map):
         currentGrain = Grain(grainIndex - 1, self)
 
         # add first point to the grain
-        currentGrain.addPoint((x, y), self.eMaxShear[y + self.cropDists[1, 0],
-                                                     x + self.cropDists[0, 0]])
+        currentGrain.addPoint((x, y), self.data.max_shear[y + self.cropDists[1, 0],
+                                                          x + self.cropDists[0, 0]])
         self.grains[y, x] = grainIndex
         points_left[y, x] = False
         edge = [(x, y)]
@@ -1006,8 +988,8 @@ class Map(base.Map):
                 if addPoint:
                     currentGrain.addPoint(
                         (s, t),
-                        self.eMaxShear[t + self.cropDists[1, 0],
-                                       s + self.cropDists[0, 0]]
+                        self.data.max_shear[t + self.cropDists[1, 0],
+                                            s + self.cropDists[0, 0]]
                     )
                     self.grains[t, s] = grainIndex
                     points_left[t, s] = False

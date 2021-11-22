@@ -67,3 +67,83 @@ def reportProgress(message: str = ""):
         return wrapper
     return decorator
 
+
+class Datastore(object):
+    __slots__ = ['_store']
+
+    def __init__(self):
+        self._store = {}
+
+    def __len__(self):
+        return len(self._store)
+
+    def __str__(self):
+        text = 'Datastore'
+        for key, val in self._store.items():
+            text += f'\n  {key}: {val["data"].__repr__()}'
+
+        return text
+
+    def __contains__(self, key):
+        return key in self._store
+
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            attr = key[1]
+            key = key[0]
+        else:
+            attr = 'data'
+
+        if key not in self:
+            raise ValueError(f'Data with key `{key}` does not exist.')
+
+        return self._store[key][attr]
+
+    def __setitem__(self, key, val):
+        if isinstance(key, tuple):
+            attr = key[1]
+            key = key[0]
+        else:
+            attr = 'data'
+
+        self._store[key][attr] = val
+
+    def __getattr__(self, key):
+        return self[key]
+
+    def __setattr__(self, key, val):
+        if key == '_store':
+            super().__setattr__(key, val)
+        else:
+            self[key] = val
+
+    def __iter__(self):
+        for key in self.keys():
+            yield key
+
+    def keys(self):
+        return self._store.keys()
+
+    # def values(self):
+    #     return self._store.values()
+
+    def items(self):
+        return dict(**self)
+
+    def add(self, key, data, **kwargs):
+        if key in self:
+            raise ValueError(f'Data with key `{key}` already exists.')
+        if 'data' in kwargs:
+            raise ValueError(f'Metadata name `data` is not allowed.')
+
+        self._store[key] = {
+            'data': data,
+            **kwargs
+        }
+
+    def update(self, other, priority='other'):
+        if priority == 'self':
+            other._store.update(self._store)
+            self._store = other._store
+        else:
+            self._store.update(other._store)
