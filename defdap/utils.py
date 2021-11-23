@@ -127,8 +127,8 @@ class Datastore(object):
     # def values(self):
     #     return self._store.values()
 
-    def items(self):
-        return dict(**self)
+    # def items(self):
+    #     return dict(**self)
 
     def add(self, key, data, **kwargs):
         if key in self:

@@ -58,6 +58,8 @@ class EBSDDataLoader(object):
             return OxfordBinaryLoader()
         elif dataType == "OxfordText":
             return OxfordTextLoader()
+        elif dataType == "EdaxAng":
+            return EdaxAngLoader()
         elif dataType == "PythonDict":
             return PythonDictLoader()
         else:
@@ -95,11 +97,6 @@ class OxfordTextLoader(EBSDDataLoader):
             File name.
         fileDir
             Path to file.
-
-        Returns
-        -------
-        dict, dict
-            EBSD metadata and EBSD data.
 
         """
         # open data file and read in metadata
@@ -187,7 +184,7 @@ class OxfordTextLoader(EBSDDataLoader):
 
         # now read the data from file
         binData = np.loadtxt(
-            str(filePath), self.dataFormat, usecols=loadCols,
+            str(filePath), dtype=self.dataFormat, usecols=loadCols,
             skiprows=numHeaderLines
         )
 
@@ -215,6 +212,144 @@ class OxfordTextLoader(EBSDDataLoader):
         self.checkData()
 
 
+class EdaxAngLoader(EBSDDataLoader):
+    def load(
+        self,
+        file_name: str,
+        file_dir: str = ""
+    ) -> None:
+        """ Read an EDAX .ang file.
+
+        Parameters
+        ----------
+        file_name
+            File name.
+        file_dir
+            Path to file.
+
+        """
+        # open data file and read in metadata
+        file_name = f'{file_name}.ang'
+        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
+        if not file_path.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_path))
+
+        i_phase = 1
+        # parse header lines (starting with #)
+        with open(str(file_path), 'r') as ang_file:
+            while True:
+                line = ang_file.readline()
+
+                if not line.startswith('#'):
+                    # end of header
+                    break
+                # remove #
+                line = line[1:].strip()
+
+                if line.startswith('Phase'):
+                    if int(line.split()[1]) != i_phase:
+                        raise ValueError('Phases not sequential in file?')
+
+                    phase_lines = readUntilString(
+                        ang_file, '#', exact=True,
+                        lineProcess=lambda l: l[1:].strip()
+                    )
+                    self.loadedMetadata['phases'].append(
+                        EdaxAngLoader.parse_phase(phase_lines)
+                    )
+                    i_phase += 1
+
+                elif line.startswith('GRID'):
+                    if line.split()[-1] != 'SqrGrid':
+                        raise ValueError('Only square grids supported')
+                elif line.startswith('XSTEP'):
+                    self.loadedMetadata['step_size'] = float(line.split()[-1])
+                elif line.startswith('NCOLS_ODD'):
+                    xdim = int(line.split()[-1])
+                elif line.startswith('NROWS'):
+                    ydim = int(line.split()[-1])
+
+        shape = (ydim, xdim)
+        self.loadedMetadata['shape'] = shape
+
+        self.checkMetadata()
+
+        # Construct fixed data format
+        self.dataFormat = np.dtype([
+            ('ph1', 'float32'),
+            ('phi', 'float32'),
+            ('ph2', 'float32'),
+            # ('x', 'float32'),
+            # ('y', 'float32'),
+            ('IQ', 'float32'),
+            ('CI', 'float32'),
+            ('phase', 'uint8'),
+            # ('SE_signal', 'float32'),
+            ('FF', 'float32'),
+        ])
+        load_cols = (0, 1, 2, 5, 6, 7, 8, 9)
+
+        # now read the data from file
+        data = np.loadtxt(
+            str(file_path), dtype=self.dataFormat, comments='#',
+            usecols=load_cols
+        )
+
+        self.loadedData.add(
+            'image_quality', np.reshape(data['IQ'], shape),
+            unit='', type='map', dims=0
+        )
+        self.loadedData.add(
+            'confidence_index', np.reshape(data['CI'], shape),
+            unit='', type='map', dims=0
+        )
+        self.loadedData.add(
+            'fit_factor', np.reshape(data['FF'], shape),
+            unit='', type='map', dims=0
+        )
+        self.loadedData.phase = np.reshape(data['phase'], shape) + 1
+
+        euler_angle = np.reshape(data[['ph1', 'phi', 'ph2']], shape)
+        # flatten the structures so that the Euler angles are stored
+        # into a normal array
+        euler_angle = np.array(euler_angle.tolist()).transpose((2, 0, 1))
+        euler_angle[0] -= np.pi / 2
+        euler_angle[0, euler_angle[0] < 0.] += 2 * np.pi
+        self.loadedData.euler_angle = euler_angle
+
+        self.checkData()
+
+    @staticmethod
+    def parse_phase(lines) -> Phase:
+        for line in lines:
+            line = line.split()
+
+            if line[0] == 'MaterialName':
+                name = line[1]
+            if line[0] == 'Symmetry':
+                point_group = line[1]
+                if point_group in ('43', 'm3m'):
+                    # cubic high
+                    laue_group = 11
+                    # can't determine but set to BCC for now
+                    space_group = 229
+                elif point_group == '6/mmm':
+                    # hex high
+                    laue_group = 11
+                    space_group = None
+                else:
+                    raise ValueError(f'Unknown crystal symmetry {point_group}')
+            elif line[0] == 'LatticeConstants':
+                dims = line[1:4]
+                dims = tuple(round(float(s), 3) for s in dims)
+                angles = line[4:7]
+                angles = tuple(round(float(s), 3) * np.pi / 180
+                               for s in angles)
+                lattice_params = dims + angles
+
+        return Phase(name, laue_group, space_group, lattice_params)
+
+
 class OxfordBinaryLoader(EBSDDataLoader):
     def load(
         self,
@@ -229,11 +364,6 @@ class OxfordBinaryLoader(EBSDDataLoader):
             File name.
         fileDir
             Path to file.
-
-        Returns
-        -------
-        dict, dict
-            EBSD metadata and EBSD data.
 
         """
         self.loadOxfordCPR(fileName, fileDir=fileDir)
@@ -586,7 +716,8 @@ def readUntilString(
     file: TextIO,
     termString: str,
     commentChar: str = '*',
-    lineProcess: Optional[Callable[[str], Any]] = None
+    lineProcess: Optional[Callable[[str], Any]] = None,
+    exact: bool = False
 ) -> List[Any]:
     """Read lines in a file until a line starting with the `termString`
     is encounted. The file position is returned before the line starting
@@ -602,6 +733,8 @@ def readUntilString(
         Character at start of a comment line to ignore.
     lineProcess
         Function to apply to each line when loaded.
+    exact
+        A line must exactly match `termString` to stop.
 
     Returns
     -------
@@ -613,7 +746,9 @@ def readUntilString(
     while True:
         currPos = file.tell()  # save position in file
         line = file.readline()
-        if not line or line.strip().startswith(termString):
+        if (not line
+                or (exact and line.strip() == termString)
+                or (not exact and line.strip().startswith(termString))):
             file.seek(currPos)  # return to before prev line
             break
         if line.strip() == '' or line.strip()[0] == commentChar:

@@ -55,6 +55,7 @@ class Phase(object):
             try:
                 self.ss_file = defaults['slip_system_file'][
                     {225: 'FCC', 229: 'BCC'}[spaceGroup]
+                    # See http://pd.chem.ucl.ac.uk/pdnn/symm3/allsgp.htm
                 ]
             except KeyError:
                 self.ss_file = None
