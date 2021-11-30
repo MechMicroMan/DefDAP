@@ -606,23 +606,23 @@ class Map(object):
         if map_name not in self.data:
             raise ValueError(f'`{map_name}` does not exist.')
         if (self.data.get_metadata(map_name, 'type') != 'map' or
-                self.data.get_metadata(map_name, 'dims') is None):
+                self.data.get_metadata(map_name, 'order') is None):
             raise ValueError(f'`{map_name}` is not a valid map.')
 
         return map_name
 
     def _validate_comp(self, map_name, comp):
-        dims = self.data[map_name, 'dims']
+        order = self.data[map_name, 'order']
         if comp is None:
-            if dims != 0:
+            if order != 0:
                 raise ValueError('`comp` must be specified.')
             else:
                 return comp
         if isinstance(comp, int):
             comp = (comp,)
-        if len(comp) != self.data[map_name, 'dims']:
+        if len(comp) != self.data[map_name, 'order']:
             raise ValueError(f'Component length does not match data, expected '
-                             f'{self.data[map_name, "dims"]} values but got '
+                             f'{self.data[map_name, "order"]} values but got '
                              f'{len(comp)}.')
 
         return comp

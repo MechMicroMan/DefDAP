@@ -80,7 +80,7 @@ class Datastore(object):
         possibly including:
             type : str
                 Type of data stored:
-                    `map` - at least a 2-axis array, trailing dims are spatial
+                    `map` - at least a 2-axis array, trailing axes are spatial
             order : int
                 Tensor order of the data
             unit : str

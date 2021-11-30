@@ -42,7 +42,7 @@ class EBSDDataLoader(object):
         # required data
         self.loadedData = Datastore()
         self.loadedData.add(
-            'phase', None, unit='', type='map', dims=0,
+            'phase', None, unit='', type='map', order=0,
             comment='1-based, 0 is non-indexed points',
             plot_params={
                 'plotColourBar': True,
@@ -50,7 +50,7 @@ class EBSDDataLoader(object):
             }
         )
         self.loadedData.add(
-            'euler_angle', None, unit='rad', type='map', dims=1,
+            'euler_angle', None, unit='rad', type='map', order=1,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Euler angle',
@@ -199,7 +199,7 @@ class OxfordTextLoader(EBSDDataLoader):
 
         self.loadedData.add(
             'band_contrast', data['BC'].reshape(shape),
-            unit='', type='map', dims=0,
+            unit='', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'cmap': 'gray',
@@ -209,7 +209,7 @@ class OxfordTextLoader(EBSDDataLoader):
         )
         self.loadedData.add(
             'band_slope', data['BS'].reshape(shape),
-            unit='', type='map', dims=0,
+            unit='', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'cmap': 'gray',
@@ -218,7 +218,7 @@ class OxfordTextLoader(EBSDDataLoader):
         )
         self.loadedData.add(
             'mean_angular_deviation', data['MAD'].reshape(shape),
-            unit='', type='map', dims=0,
+            unit='', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Mean angular deviation',
@@ -319,7 +319,7 @@ class EdaxAngLoader(EBSDDataLoader):
 
         self.loadedData.add(
             'image_quality', data['IQ'].reshape(shape),
-            unit='', type='map', dims=0,
+            unit='', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Image quality',
@@ -327,7 +327,7 @@ class EdaxAngLoader(EBSDDataLoader):
         )
         self.loadedData.add(
             'confidence_index', data['CI'].reshape(shape),
-            unit='', type='map', dims=0,
+            unit='', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Confidence index',
@@ -335,7 +335,7 @@ class EdaxAngLoader(EBSDDataLoader):
         )
         self.loadedData.add(
             'fit_factor', data['FF'].reshape(shape),
-            unit='', type='map', dims=0,
+            unit='', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Fit factor',
@@ -538,7 +538,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
         self.loadedData.add(
             'band_contrast', data['BC'].reshape(shape),
-            unit='', type='map', dims=0,
+            unit='', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'cmap': 'gray',
@@ -547,7 +547,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
         )
         self.loadedData.add(
             'band_slope', data['BS'].reshape(shape),
-            unit='', type='map', dims=0,
+            unit='', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'cmap': 'gray',
@@ -557,7 +557,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
         self.loadedData.add(
             'mean_angular_deviation',
             data['MAD'].reshape(shape),
-            unit='', type='map', dims=0,
+            unit='', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Mean angular deviation',
@@ -605,7 +605,7 @@ class PythonDictLoader(EBSDDataLoader):
 
         self.loadedData.add(
             'band_contrast', dataDict['band_contrast'],
-            unit='', type='map', dims=0
+            unit='', type='map', order=0
         )
         self.loadedData.phase = dataDict['phase']
         self.loadedData.euler_angle = dataDict['euler_angle']
@@ -626,14 +626,14 @@ class DICDataLoader(object):
         # required data
         self.loadedData = Datastore()
         self.loadedData.add(
-            'coordinate', None, unit='px', type='map', dims=1,
+            'coordinate', None, unit='px', type='map', order=1,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Coordinate',
             }
         )
         self.loadedData.add(
-            'displacement', None, unit='px', type='map', dims=1,
+            'displacement', None, unit='px', type='map', order=1,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Displacement',

@@ -116,10 +116,10 @@ class Map(base.Map):
         self.loadData(fileName, dataType=dataType)
 
         self.data.add_generator(
-            'orientation', self.buildQuatArray, unit='', type='map', dims=0
+            'orientation', self.buildQuatArray, unit='', type='map', order=0
         )
         self.data.add_generator(
-            'KAM', self.calc_kam, unit='rad', type='map', dims=0,
+            'KAM', self.calc_kam, unit='rad', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Kernel average misorientation (KAM)',
@@ -130,7 +130,7 @@ class Map(base.Map):
             metadatas=({
                 'unit': '',
                 'type': 'map',
-                'dims': 0,
+                'order': 0,
                 'plot_params': {
                     'plotColourBar': True,
                     'clabel': 'Geometrically necessary dislocation (GND) content',
@@ -138,7 +138,7 @@ class Map(base.Map):
             }, {
                 'unit': '',
                 'type': 'map',
-                'dims': 2,
+                'order': 2,
                 'plot_params': {
                     'plotColourBar': True,
                     'clabel': 'Nye tensor',

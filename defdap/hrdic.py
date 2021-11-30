@@ -146,7 +146,7 @@ class Map(base.Map):
         f[0, 0] += 1
         f[1, 1] += 1
         self.data.add(
-            'f', f, unit='', type='map', dims=2,
+            'f', f, unit='', type='map', order=2,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Deformation gradient',
@@ -158,7 +158,7 @@ class Map(base.Map):
         e[0, 0] -= 0.5
         e[1, 1] -= 0.5
         self.data.add(
-            'e', e, unit='', type='map', dims=2,
+            'e', e, unit='', type='map', order=2,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Green strain',
@@ -168,7 +168,7 @@ class Map(base.Map):
         # max shear component
         max_shear = np.sqrt(((e[0, 0] - e[1, 1]) / 2.) ** 2 + e[0, 1] ** 2)
         self.data.add(
-            'max_shear', max_shear, unit='', type='map', dims=0,
+            'max_shear', max_shear, unit='', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Effective shear strain',
