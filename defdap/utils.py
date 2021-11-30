@@ -141,12 +141,10 @@ class Datastore(object):
         # Generate data if needed
         if attr == 'data' and val is None:
             try:
-                self.generate(key)
+                val = self.generate(key)
             except ValueError:
                 # No generator found
-                return val
-
-            val = self._store[key][attr]
+                pass
 
         return val
 
@@ -262,23 +260,39 @@ class Datastore(object):
         self._generators[keys] = func
 
     def generate(self, key):
-        """Generate data from the associated data generation method and store.
+        """Generate data from the associated data generation method and
+        store if metadata `save` is not set to False.
 
         Parameters
         ----------
         key : str
             Name of the data to generate.
 
+        Returns
+        -------
+        Requested data after generating.
+
         """
         for (keys, generator) in self._generators.items():
-            if key in keys:
-                datas = generator()
-                if len(keys) == 1:
+            if key not in keys:
+                continue
+
+            datas = generator()
+            if len(keys) == 1:
+                if self.get_metadata(key, 'save', True):
                     self[key] = datas
-                    break
-                for key, data in zip(keys, datas):
-                    self[key] = data
-                break
+                return datas
+
+            if len(keys) != len(datas):
+                raise ValueError('Data generator method did not return '
+                                 'the expected number of values.')
+            for key_i, data in zip(keys, datas):
+                if self.get_metadata(key_i, 'save', True):
+                    self[key_i] = data
+                if key_i == key:
+                    rtn_val = data
+            return rtn_val
+
         else:
             ValueError(f'Generator not found for data `{key}`')
 

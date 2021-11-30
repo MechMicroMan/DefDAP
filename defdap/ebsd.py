@@ -139,6 +139,7 @@ class Map(base.Map):
                 'unit': '',
                 'type': 'map',
                 'order': 2,
+                'save': False,
                 'plot_params': {
                     'plotColourBar': True,
                     'clabel': 'Nye tensor',
