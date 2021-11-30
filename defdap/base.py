@@ -605,7 +605,7 @@ class Map(object):
     def _validate_map(self, map_name):
         if map_name not in self.data:
             raise ValueError(f'`{map_name}` does not exist.')
-        if (self.data.get_metadata(map_name, 'type') != 'map' and
+        if (self.data.get_metadata(map_name, 'type') != 'map' or
                 self.data.get_metadata(map_name, 'dims') is None):
             raise ValueError(f'`{map_name}` is not a valid map.')
 
