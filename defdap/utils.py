@@ -69,10 +69,11 @@ def reportProgress(message: str = ""):
 
 
 class Datastore(object):
-    __slots__ = ['_store']
+    __slots__ = ['_store', '_generators']
 
     def __init__(self):
         self._store = {}
+        self._generators = {}
 
     def __len__(self):
         return len(self._store)
@@ -96,8 +97,22 @@ class Datastore(object):
 
         if key not in self:
             raise ValueError(f'Data with key `{key}` does not exist.')
+        if attr not in self._store[key]:
+            raise ValueError(f'Metadata `{attr}` does not exist for `{key}`.')
 
-        return self._store[key][attr]
+        val = self._store[key][attr]
+
+        # Generate data if needed
+        if attr == 'data' and val is None:
+            try:
+                self.generate(key)
+            except ValueError:
+                # No generator found
+                return val
+
+            val = self._store[key][attr]
+
+        return val
 
     def __setitem__(self, key, val):
         if isinstance(key, tuple):
@@ -112,7 +127,7 @@ class Datastore(object):
         return self[key]
 
     def __setattr__(self, key, val):
-        if key == '_store':
+        if key in ('_store', '_generators'):
             super().__setattr__(key, val)
         else:
             self[key] = val
@@ -141,9 +156,51 @@ class Datastore(object):
             **kwargs
         }
 
+    def add_generator(self, keys, func, metadatas=None, **kwargs):
+        """
+
+        Parameters
+        ----------
+        keys: str or tuple of str
+        func: callable
+        kwargs
+
+        Returns
+        -------
+
+        """
+        if isinstance(keys, str):
+            keys = (keys, )
+        if isinstance(metadatas, dict):
+            metadatas = (metadatas, )
+        for i, key in enumerate(keys):
+            if metadatas is None:
+                metadata = {}
+            else:
+                metadata = metadatas[i]
+            metadata.update(kwargs)
+            self.add(key, None, **metadata)
+        self._generators[keys] = func
+
+    def generate(self, key):
+        for (keys, generator) in self._generators.items():
+            if key in keys:
+                datas = generator()
+                if len(keys) == 1:
+                    self[key] = datas
+                    break
+                for key, data in zip(keys, datas):
+                    self[key] = data
+                break
+        else:
+            ValueError(f'Generator not found for data `{key}`')
+
     def update(self, other, priority='other'):
         if priority == 'self':
             other._store.update(self._store)
             self._store = other._store
         else:
             self._store.update(other._store)
+
+    def get_metadata(self, key, attr, value=None):
+        return self._store[key].get(attr, value)

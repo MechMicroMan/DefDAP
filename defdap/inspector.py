@@ -401,8 +401,8 @@ class GrainInspector:
                 ### For all points, append u and v to list
                 u = []; v = [];
                 for xmap, ymap in zip(xmap,ymap):
-                    u.append((self.currMap.crop(self.currMap.data.x_map))[ymap, xmap])
-                    v.append((self.currMap.crop(self.currMap.data.y_map))[ymap, xmap])
+                    u.append((self.currMap.crop(self.currMap.data.coordinate[0]))[ymap, xmap])
+                    v.append((self.currMap.crop(self.currMap.data.coordinate[1]))[ymap, xmap])
 
                 ### Take away mean
                 u = u-np.mean(u); v = v-np.mean(v)

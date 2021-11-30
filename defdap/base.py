@@ -72,6 +72,9 @@ class Map(object):
     def yDim(self):
         return self.shape[0]
 
+    def crop(self, map_data):
+        return map_data
+
     def checkGrainsDetected(self, raiseExc=True):
         """Check if grains have been detected.
 
@@ -598,6 +601,78 @@ class Map(object):
         self.proxigramArr = trialDistances.min(axis=0)
 
         trialDistances = None
+
+    def _validate_map(self, map_name):
+        if map_name not in self.data:
+            raise ValueError(f'`{map_name}` does not exist.')
+        if (self.data.get_metadata(map_name, 'type') != 'map' and
+                self.data.get_metadata(map_name, 'dims') is None):
+            raise ValueError(f'`{map_name}` is not a valid map.')
+
+        return map_name
+
+    def _validate_comp(self, map_name, comp):
+        dims = self.data[map_name, 'dims']
+        if comp is None:
+            if dims != 0:
+                raise ValueError('`comp` must be specified.')
+            else:
+                return comp
+        if isinstance(comp, int):
+            comp = (comp,)
+        if len(comp) != self.data[map_name, 'dims']:
+            raise ValueError(f'Component length does not match data, expected '
+                             f'{self.data[map_name, "dims"]} values but got '
+                             f'{len(comp)}.')
+
+        return comp
+
+    def plot_map(self, map_name, comp=None, **kwargs):
+        """Plot a map from the DIC data.
+
+        Parameters
+        ----------
+        map_name : str
+            Map component to plot i.e. e11, f11, max_shear.
+        comp : tuple
+
+        kwargs
+            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+            Plot containing map.
+
+        """
+        map_name = self._validate_map(map_name)
+        comp = self._validate_comp(map_name, comp)
+
+        # Set default plot parameters then update with any input
+        plot_params = {}   # should load default plotting params
+        plot_params.update(self.data.get_metadata(map_name, 'plot_params'))
+
+        # Add extra info to label
+        clabel = plot_params.get('clabel')
+        if clabel is not None:
+            # tensor component
+            if comp is not None:
+                comp_fmt = ' (' + '{}' * len(comp) + ')'
+                clabel += comp_fmt.format(*(i+1 for i in comp))
+            # unit
+            unit = self.data.get_metadata(map_name, 'unit')
+            if unit is not None and unit != '':
+                clabel += f' ({unit})'
+
+            plot_params['clabel'] = clabel
+
+        plot_params.update(kwargs)
+
+        map_data = self.data[map_name]
+        if comp is not None:
+            map_data = map_data[comp]
+
+        return MapPlot.create(self, self.crop(map_data), **plot_params)
 
     def calcGrainAv(self, mapData, grainIds=-1):
         """Calculate grain average of any DIC map data.

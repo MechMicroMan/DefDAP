@@ -95,10 +95,10 @@ class Map(base.Map):
         self.boundariesX = None
         self.boundariesY = None
         self.boundaryLines = None
+        self.phaseBoundaries = None
         self.phaseBoundariesX = None
         self.phaseBoundariesY = None
         self.phaseBoundaryLines = None
-        self.phaseBoundaries = None
         self.grains = None
         self.misOri = None
         self.misOriAxis = None
@@ -114,6 +114,37 @@ class Map(base.Map):
         self.highlightAlpha = 1
 
         self.loadData(fileName, dataType=dataType)
+
+        self.data.add_generator(
+            'orientation', self.buildQuatArray, unit='', type='map', dims=0
+        )
+        self.data.add_generator(
+            'KAM', self.calc_kam, unit='rad', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Kernel average misorientation (KAM)',
+            }
+        )
+        self.data.add_generator(
+            ('GND', 'Nye_tensor'), self.calc_nye,
+            metadatas=({
+                'unit': '',
+                'type': 'map',
+                'dims': 0,
+                'plot_params': {
+                    'plotColourBar': True,
+                    'clabel': 'Geometrically necessary dislocation (GND) content',
+                }
+            }, {
+                'unit': '',
+                'type': 'map',
+                'dims': 2,
+                'plot_params': {
+                    'plotColourBar': True,
+                    'clabel': 'Nye tensor',
+                }
+            })
+        )
 
     @reportProgress("loading EBSD data")
     def loadData(self, fileName, dataType=None):
@@ -138,7 +169,7 @@ class Map(base.Map):
         self.data.update(dataLoader.loadedData)
 
         # TODO: FIX EDX STUFF
-        # if int(metadataDict['EDX Windows']['Count']) > 0:
+        # if metadataDict['EDX Windows']['Count'] > 0:
         #     self.EDX = dataDict['EDXDict']
 
         # write final status
@@ -230,7 +261,7 @@ class Map(base.Map):
     #
     #     # Perform vectorised multiplication
     #     quats = Quat.multiplyManyQuats(self.quatArray.flatten(), transformQuat)
-    #     self.quatArray = np.array(quats).reshape(self.yDim, self.xDim)
+    #     self.quatArray = np.array(quats).reshape(self.shape)
     #
     #     yield 1.
 
@@ -381,7 +412,8 @@ class Map(base.Map):
 
         return plot
 
-    def calcKam(self):
+    @reportProgress("calculating KAM")
+    def calc_kam(self):
         """
         Calculates Kernel Average Misorientaion (KAM) for the EBSD map,
         based on a 3x3 kernel. Crystal symmetric equivalences are not
@@ -426,9 +458,8 @@ class Map(base.Map):
         kam /= 2
         kam[kam > 1] = 1
 
-        self.data.add(
-            'KAM', kam, unit='', type='map', dims=0,
-        )
+        yield 1.
+        return 2 * np.arccos(kam)
 
     def plotKamMap(self, **kwargs):
         """Plot Kernel Average Misorientaion (KAM) for the EBSD map.
@@ -450,28 +481,26 @@ class Map(base.Map):
         }
         plotParams.update(kwargs)
 
-        self.calcKam()
         # Convert to degrees and plot
-        kam = 2 * np.arccos(self.data.KAM) * 180 / np.pi
+        kam = self.data.KAM * 180 / np.pi
 
         plot = MapPlot.create(self, kam, **plotParams)
 
         return plot
 
     @reportProgress("calculating Nye tensor")
-    def calcNye(self):
+    def calc_nye(self):
         """
         Calculates Nye tensor and related GND density for the EBSD map.
         Stores result as `Nye_tensor` and `GND`. Uses the crystal
         symmetry of the primary phase.
 
         """
-        self.buildQuatArray()
         syms = self.primaryPhase.crystalStructure.symmetries
         numSyms = len(syms)
 
         # array to store quat components of initial and symmetric equivalents
-        quatComps = np.empty((numSyms, 4, self.yDim, self.xDim))
+        quatComps = np.empty((numSyms, 4) + self.shape)
 
         # populate with initial quat components
         for i, row in enumerate(self.data.orientation):
@@ -495,8 +524,8 @@ class Map(base.Map):
             quatComps[i, :, quatComps[i, 0] < 0] *= -1
 
         # Arrays to store neigbour misorientation in positive x and y direction
-        misOrix = np.zeros((numSyms, self.yDim, self.xDim))
-        misOriy = np.zeros((numSyms, self.yDim, self.xDim))
+        misOrix = np.zeros((numSyms, ) + self.shape)
+        misOriy = np.zeros((numSyms, ) + self.shape)
 
         # loop over symmetries calculating misorientation to initial
         for i in range(numSyms):
@@ -520,7 +549,7 @@ class Map(base.Map):
         misOriy = 360 * np.arccos(misOriy) / np.pi
 
         # calculate relative elastic distortion tensors at each point in the two directions
-        betaderx = np.zeros((3, 3, self.yDim, self.xDim))
+        betaderx = np.zeros((3, 3) + self.shape)
         betadery = betaderx
         for i in range(self.xDim - 1):
             for j in range(self.yDim - 1):
@@ -544,7 +573,7 @@ class Map(base.Map):
                 betadery[:, :, j, i] = (Quat.rotMatrix(misoquaty) - np.eye(3)) / self.step_size / 1e-6
 
         # Calculate the Nye Tensor
-        alpha = np.empty((3, 3, self.yDim, self.xDim))
+        alpha = np.empty((3, 3) + self.shape)
         bavg = 1.4e-10  # Burgers vector
         alpha[0, 2] = (betadery[0, 0] - betaderx[0, 1]) / bavg
         alpha[1, 2] = (betadery[1, 0] - betaderx[1, 1]) / bavg
@@ -554,12 +583,11 @@ class Map(base.Map):
 
         # Calculate 3 possible L1 norms of Nye tensor for total
         # disloction density
-        alpha_total3 = np.empty((self.yDim, self.xDim))
-        alpha_total5 = np.empty((self.yDim, self.xDim))
-        alpha_total9 = np.empty((self.yDim, self.xDim))
-        alpha_total3 = 30 / 10. *(
-                abs(alpha[0, 2]) + abs(alpha[1, 2]) +
-                abs(alpha[2, 2])
+        alpha_total3 = np.empty(self.shape)
+        alpha_total5 = np.empty(self.shape)
+        alpha_total9 = np.empty(self.shape)
+        alpha_total3 = 30 / 10. * (
+                abs(alpha[0, 2]) + abs(alpha[1, 2]) + abs(alpha[2, 2])
         )
         alpha_total5 = 30 / 14. * (
                 abs(alpha[0, 2]) + abs(alpha[1, 2]) + abs(alpha[2, 2]) +
@@ -576,14 +604,9 @@ class Map(base.Map):
 
         # choose from the different alpha_totals according to preference;
         # see Ruggles GND density paper
-        self.data.add(
-            'GND', alpha_total9, unit='', type='map', dims=0,
-        )
-        self.data.add(
-            'Nye_tensor', alpha, unit='', type='map', dims=2,
-        )
 
         yield 1.
+        return alpha_total9, alpha
 
     def plotGNDMap(self, **kwargs):
         """Plots a map of geometrically necessary dislocation (GND) density
@@ -605,8 +628,6 @@ class Map(base.Map):
         }
         plotParams.update(kwargs)
 
-        self.calcNye()
-
         plot = MapPlot.create(self, np.log10(self.data.GND), **plotParams)
 
         return plot
@@ -625,24 +646,17 @@ class Map(base.Map):
         return True
 
     @reportProgress("building quaternion array")
-    def buildQuatArray(self, force=False):
+    def buildQuatArray(self):
         """Build quaternion array
 
-        Parameters
-        ----------
-        force : bool, optional
-            If true, re-build quaternion array
         """
         self.checkDataLoaded()
 
-        if force or 'orientation' not in self.data:
-            # create the array of quat objects
-            self.data.add(
-                'orientation', Quat.createManyQuats(self.data.euler_angle),
-                unit='', type='map', dims=0
-            )
+        # create the array of quat objects
+        quats = Quat.createManyQuats(self.data.euler_angle)
 
         yield 1.
+        return quats
 
     def filterData(self, misOriTol=5):
         # Kuwahara filter
@@ -742,7 +756,7 @@ class Map(base.Map):
         numSyms = len(syms)
 
         # array to store quat components of initial and symmetric equivalents
-        quatComps = np.empty((numSyms, 4, self.yDim, self.xDim))
+        quatComps = np.empty((numSyms, 4) + self.shape)
 
         # populate with initial quat components
         for i, row in enumerate(self.data.orientation):
@@ -767,17 +781,17 @@ class Map(base.Map):
 
         # Arrays to store neighbour misorientation in positive x and y
         # directions
-        misOriX = np.ones((numSyms, self.yDim, self.xDim))
-        misOriY = np.ones((numSyms, self.yDim, self.xDim))
+        misOriX = np.ones((numSyms, ) + self.shape)
+        misOriY = np.ones((numSyms, ) + self.shape)
 
         # loop over symmetries calculating misorientation to initial
         for i in range(numSyms):
-            for j in range(self.xDim - 1):
+            for j in range(self.shape[1] - 1):
                 misOriX[i, :, j] = abs(
                     np.einsum("ij,ij->j", quatComps[0, :, :, j], quatComps[i, :, :, j + 1]))
 
-            for j in range(self.yDim - 1):
-                misOriY[i, j, :] = abs(np.einsum("ij,ij->j", quatComps[0, :, j, :], quatComps[i, :, j + 1, :]))
+            for j in range(self.shape[0] - 1):
+                misOriY[i, j] = abs(np.einsum("ij,ij->j", quatComps[0, :, j], quatComps[i, :, j + 1]))
 
         misOriX[misOriX > 1] = 1
         misOriY[misOriY > 1] = 1
@@ -1151,7 +1165,7 @@ class Map(base.Map):
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
-        self.misOri = np.ones([self.yDim, self.xDim])
+        self.misOri = np.ones(self.shape)
 
         if component in [1, 2, 3]:
             # Calculate misorientation axis if not calculated

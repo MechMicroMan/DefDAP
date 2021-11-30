@@ -83,24 +83,16 @@ class Map(base.Map):
         Crop distances (default all zeros).
 
     data : defdap.utils.Datastore
-        Must contain after loading data:
-            xc : numpy.ndarray
-                X coordinate
-            yc : numpy.ndarray
-                Y coordinate
-            xd : numpy.ndarray
-                X displacement
-            yd : numpy.ndarray
-                Y displacement
+        Must contain after loading data (maps):
+            coordinate : numpy.ndarray
+                X and Y coordinates
+            displacement : numpy.ndarray
+                X and Y displacements
         Derived data:
-            x_map : numpy.ndarray
-                Map of u displacement component along x
-            y_map : numpy.ndarray
-                Map of v displacement component along x
-            f11, f12, f21, f22 : numpy.ndarray
-                Components of the deformation gradient, where 1=x and 2=y.
-            e11, e12, e22 : numpy.ndarray
-                Components of the green strain , where 1=x and 2=y.
+            f : numpy.ndarray
+                Components of the deformation gradient (0=x, 1=y).
+            e : numpy.ndarray
+                Components of the green strain (0=x, 1=y).
             max_shear : numpy.ndarray
                 Max shear component np.sqrt(((e11 - e22) / 2.)**2 + e12**2).
 
@@ -147,34 +139,41 @@ class Map(base.Map):
 
         self.loadData(path, fname, dataType=dataType)
 
-        self.data.add('x_map', self._map(self.data.xd),
-                      unit=self.data['xd', 'unit'], type='map', dims=0)
-        self.data.add('y_map', self._map(self.data.yd),
-                      unit=self.data['yd', 'unit'], type='map', dims=0)
-
-        xDispGrad = self._grad(self.data.x_map)  #d/dy is first term, d/dx is second
-        yDispGrad = self._grad(self.data.y_map)
-
         # Deformation gradient
-        self.data.add('f11', xDispGrad[1] + 1, unit='', type='map', dims=0)
-        self.data.add('f22', yDispGrad[0] + 1, unit='', type='map', dims=0)
-        self.data.add('f12', xDispGrad[0], unit='', type='map', dims=0)
-        self.data.add('f21', yDispGrad[1], unit='', type='map', dims=0)
+        f = np.gradient(self.data.displacement, self.binning,
+                               axis=(1, 2))
+        f = np.array(f).transpose((1, 0, 2, 3))[:, ::-1]
+        f[0, 0] += 1
+        f[1, 1] += 1
+        self.data.add(
+            'f', f, unit='', type='map', dims=2,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Deformation gradient',
+            }
+        )
 
         # Green strain
-        e11 = (xDispGrad[1] +
-               0.5*(xDispGrad[1]*xDispGrad[1] + yDispGrad[1]*yDispGrad[1]))
-        e22 = (yDispGrad[0] +
-               0.5*(xDispGrad[0]*xDispGrad[0] + yDispGrad[0]*yDispGrad[0]))
-        e12 = 0.5*(xDispGrad[0] + yDispGrad[1] +
-                   xDispGrad[1]*xDispGrad[0] + yDispGrad[1]*yDispGrad[0])
-        self.data.add('e11', e11, unit='', type='map', dims=0)
-        self.data.add('e22', e22, unit='', type='map', dims=0)
-        self.data.add('e12', e12, unit='', type='map', dims=0)
+        e = 0.5 * (np.einsum('ki...,kj...->ij...', f, f))
+        e[0, 0] -= 0.5
+        e[1, 1] -= 0.5
+        self.data.add(
+            'e', e, unit='', type='map', dims=2,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Green strain',
+            }
+        )
 
         # max shear component
-        maxshear = np.sqrt(((e11 - e22) / 2.)**2 + e12**2)
-        self.data.add('max_shear', maxshear, unit='', type='map', dims=0)
+        max_shear = np.sqrt(((e[0, 0] - e[1, 1]) / 2.) ** 2 + e[0, 1] ** 2)
+        self.data.add(
+            'max_shear', max_shear, unit='', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Effective shear strain',
+            }
+        )
 
         # crop distances (default all zeros)
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
@@ -252,15 +251,6 @@ class Map(base.Map):
         assert self.ydim == self.corrVal.shape[0], \
             "Dimensions of imported data and dic data do not match"
 
-    def _map(self, data_col):
-        data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))
-        return data_map
-
-    def _grad(self, data_map):
-        grad_step = min(abs((np.diff(self.data.xc))))
-        data_grad = np.gradient(data_map, grad_step, grad_step)
-        return data_grad
-
     def retrieveName(self):
         """Gets the first name assigned to the a map, as a string
 
@@ -299,7 +289,7 @@ class Map(base.Map):
         percentiles : list of float
             list of percentiles to print i.e. 0, 50, 99.
         components : list of str
-            list of map components to print i.e. e11, f11, max_shear, x_map.
+            list of map components to print i.e. e11, f11, max_shear.
 
         """
 
@@ -394,7 +384,7 @@ class Map(base.Map):
         minX = int(self.cropDists[0, 0] * multiplier)
         maxX = int((self.xdim - self.cropDists[0, 1]) * multiplier)
 
-        return mapData[minY:maxY, minX:maxX]
+        return mapData[..., minY:maxY, minX:maxX]
 
     def setHomogPoint(self, points=None, display=None, **kwargs):
         """Set homologous points. Uses interactive GUI if points is None.
@@ -604,6 +594,7 @@ class Map(base.Map):
     def phaseBoundaryLines(self):
         return self.warp_lines_to_dic_frame(self.ebsdMap.phaseBoundaryLines)
 
+    # TODO: fix component stuff
     def generateThresholdMask(self, mask, dilation=0, preview=True):
         """
         Generate a dilated mask, based on a boolean array and previews the appication of
@@ -627,7 +618,7 @@ class Map(base.Map):
 
         To remove data points in dicMap where e11 is above 1 or less than -1, use:
 
-        >>> mask = (dicMap.data.e11 > 1) | (dicMap.data.e11 < -1)
+        >>> mask = (dicMap.data.e[0, 0] > 1) | (dicMap.data.e[0, 0] < -1)
 
         To remove data points in dicMap where corrVal is less than 0.4, use:
 
@@ -725,33 +716,6 @@ class Map(base.Map):
         bseImage = self.crop(bseImage, binned=False)
 
         plot = MapPlot.create(self, bseImage, **plotParams)
-
-        return plot
-
-    def plotMap(self, component, **kwargs):
-        """Plot a map from the DIC data.
-
-        Parameters
-        ----------
-        component
-            Map component to plot i.e. e11, f11, max_shear.
-        kwargs
-            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
-
-        Returns
-        -------
-        defdap.plotting.MapPlot
-            Plot containing map.
-
-        """
-        # Set default plot parameters then update with any input
-        plotParams = {
-            'plotColourBar': True,
-            'clabel': component
-        }
-        plotParams.update(kwargs)
-
-        plot = MapPlot.create(self, self.crop(self.data[component]), **plotParams)
 
         return plot
 

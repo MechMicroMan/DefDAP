@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import numpy as np
+from numpy.lib.recfunctions import structured_to_unstructured
 import pandas as pd
 import pathlib
 import re
@@ -42,10 +43,18 @@ class EBSDDataLoader(object):
         self.loadedData = Datastore()
         self.loadedData.add(
             'phase', None, unit='', type='map', dims=0,
-            comment='1-based, 0 is non-indexed points'
+            comment='1-based, 0 is non-indexed points',
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Phase',
+            }
         )
         self.loadedData.add(
-            'euler_angle', None, unit='rad', type='map', dims=1
+            'euler_angle', None, unit='rad', type='map', dims=1,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Euler angle',
+            }
         )
         self.dataFormat = None
 
@@ -183,31 +192,44 @@ class OxfordTextLoader(EBSDDataLoader):
         self.dataFormat = np.dtype(dataFormat)
 
         # now read the data from file
-        binData = np.loadtxt(
+        data = np.loadtxt(
             str(filePath), dtype=self.dataFormat, usecols=loadCols,
             skiprows=numHeaderLines
         )
 
         self.loadedData.add(
-            'band_contrast', np.reshape(binData['BC'], shape),
-            unit='', type='map', dims=0
-        )
-        self.loadedData.add(
-            'band_slope', np.reshape(binData['BS'], shape),
-            unit='', type='map', dims=0
-        )
-        self.loadedData.add(
-            'mean_angular_deviation',
-            np.reshape(binData['MAD'], shape),
-            unit='', type='map', dims=0
-        )
-        self.loadedData.phase = np.reshape(binData['phase'], shape)
+            'band_contrast', data['BC'].reshape(shape),
+            unit='', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'cmap': 'gray',
+                'clabel': 'Band contrast',
+            }
 
-        eulerAngles = np.reshape(binData[['ph1', 'phi', 'ph2']], shape)
-        # flatten the structures so that the Euler angles are stored
-        # into a normal array
-        eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
-        self.loadedData.euler_angle = eulerAngles * np.pi / 180.
+        )
+        self.loadedData.add(
+            'band_slope', data['BS'].reshape(shape),
+            unit='', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'cmap': 'gray',
+                'clabel': 'Band slope',
+            }
+        )
+        self.loadedData.add(
+            'mean_angular_deviation', data['MAD'].reshape(shape),
+            unit='', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Mean angular deviation',
+            }
+        )
+        self.loadedData.phase = data['phase'].reshape(shape)
+
+        euler_angle = structured_to_unstructured(
+            data[['ph1', 'phi', 'ph2']].reshape(shape)).transpose((2, 0, 1))
+        euler_angle *= np.pi / 180
+        self.loadedData.euler_angle = euler_angle
 
         self.checkData()
 
@@ -296,23 +318,34 @@ class EdaxAngLoader(EBSDDataLoader):
         )
 
         self.loadedData.add(
-            'image_quality', np.reshape(data['IQ'], shape),
-            unit='', type='map', dims=0
+            'image_quality', data['IQ'].reshape(shape),
+            unit='', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Image quality',
+            }
         )
         self.loadedData.add(
-            'confidence_index', np.reshape(data['CI'], shape),
-            unit='', type='map', dims=0
+            'confidence_index', data['CI'].reshape(shape),
+            unit='', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Confidence index',
+            }
         )
         self.loadedData.add(
-            'fit_factor', np.reshape(data['FF'], shape),
-            unit='', type='map', dims=0
+            'fit_factor', data['FF'].reshape(shape),
+            unit='', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Fit factor',
+            }
         )
-        self.loadedData.phase = np.reshape(data['phase'], shape) + 1
+        self.loadedData.phase = data['phase'].reshape(shape) + 1
 
-        euler_angle = np.reshape(data[['ph1', 'phi', 'ph2']], shape)
-        # flatten the structures so that the Euler angles are stored
-        # into a normal array
-        euler_angle = np.array(euler_angle.tolist()).transpose((2, 0, 1))
+        # flatten the structured dtype
+        euler_angle = structured_to_unstructured(
+            data[['ph1', 'phi', 'ph2']].reshape(shape)).transpose((2, 0, 1))
         euler_angle[0] -= np.pi / 2
         euler_angle[0, euler_angle[0] < 0.] += 2 * np.pi
         self.loadedData.euler_angle = euler_angle
@@ -451,7 +484,9 @@ class OxfordBinaryLoader(EBSDDataLoader):
         edx_fields = {}
         if 'EDX Windows' in metadata:
             self.loadedMetadata['edx'] = metadata['EDX Windows']
-            for i in range(1, int(self.loadedMetadata['edx']['Count']) + 1):
+            count = int(self.loadedMetadata['edx']['Count'])
+            self.loadedMetadata['edx']['Count'] = count
+            for i in range(1, count + 1):
                 name = self.loadedMetadata['edx'][f"Window{i}"]
                 edx_fields[100+i] = (f'EDX {name}', 'float32')
 
@@ -499,32 +534,44 @@ class OxfordBinaryLoader(EBSDDataLoader):
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
         # load binary data from file
-        binData = np.fromfile(str(filePath), self.dataFormat, count=-1)
+        data = np.fromfile(str(filePath), self.dataFormat, count=-1)
 
         self.loadedData.add(
-            'band_contrast', np.reshape(binData['BC'], shape),
-            unit='', type='map', dims=0
+            'band_contrast', data['BC'].reshape(shape),
+            unit='', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'cmap': 'gray',
+                'clabel': 'Band contrast',
+            }
         )
         self.loadedData.add(
-            'band_slope', np.reshape(binData['BS'], shape),
-            unit='', type='map', dims=0
+            'band_slope', data['BS'].reshape(shape),
+            unit='', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'cmap': 'gray',
+                'clabel': 'Band slope',
+            }
         )
         self.loadedData.add(
             'mean_angular_deviation',
-            np.reshape(binData['MAD'], shape),
-            unit='', type='map', dims=0
+            data['MAD'].reshape(shape),
+            unit='', type='map', dims=0,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Mean angular deviation',
+            }
         )
-        self.loadedData.phase = np.reshape(binData['phase'], shape)
+        self.loadedData.phase = data['phase'].reshape(shape)
 
-        eulerAngles = np.reshape(binData[['ph1', 'phi', 'ph2']], shape)
-        # flatten the structures so that the Euler angles are stored
-        # into a normal array
-        eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
-        self.loadedData.euler_angle = eulerAngles
+        # flatten the structured dtype
+        self.loadedData.euler_angle = structured_to_unstructured(
+            data[['ph1', 'phi', 'ph2']].reshape(shape)).transpose((2, 0, 1))
 
         # TODO: FIX EDX STUFF
         # Load EDX data into a dict
-        # if int(self.loadedMetadata['edx']['Count']) > 0:
+        # if self.loadedMetadata['edx']['Count'] > 0:
         #     EDXFields = [key for key in binData.dtype.fields.keys()
         #                  if key.startswith('EDX')]
         #     self.loadedData['EDXDict'] = dict(
@@ -578,10 +625,20 @@ class DICDataLoader(object):
         }
         # required data
         self.loadedData = Datastore()
-        self.loadedData.add('xc', None, unit='px', type='list', dims=0)
-        self.loadedData.add('yc', None, unit='px', type='list', dims=0)
-        self.loadedData.add('xd', None, unit='px', type='list', dims=0)
-        self.loadedData.add('yd', None, unit='px', type='list', dims=0)
+        self.loadedData.add(
+            'coordinate', None, unit='px', type='map', dims=1,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Coordinate',
+            }
+        )
+        self.loadedData.add(
+            'displacement', None, unit='px', type='map', dims=1,
+            plot_params={
+                'plotColourBar': True,
+                'clabel': 'Displacement',
+            }
+        )
 
     def checkMetadata(self) -> None:
         return
@@ -591,17 +648,18 @@ class DICDataLoader(object):
         values from metadata.
 
         """
-        coords = self.loadedData['xc']
-        xdim = int(
-            (coords.max() - coords.min()) / min(abs(np.diff(coords))) + 1
-        )
+        # check binning
+        binning = self.loadedMetadata['binning']
+        binning_x = min(abs(np.diff(self.loadedData.coordinate[0].flat)))
+        binning_y = max(abs(np.diff(self.loadedData.coordinate[1].flat)))
+        if not (binning_x == binning_y == binning):
+            raise ValueError('Binning of data and header do not match')
 
-        coords = self.loadedData['yc']
-        ydim = int(
-            (coords.max() - coords.min()) / max(abs(np.diff(coords))) + 1
-        )
-
-        if (ydim, xdim) != self.loadedMetadata['shape']:
+        # check shape
+        coord = self.loadedData.coordinate
+        shape = (coord.max(axis=(1, 2)) - coord.min(axis=(1, 2))) / binning + 1
+        shape = tuple(shape[::-1].astype(int))
+        if shape != self.loadedMetadata['shape']:
             raise ValueError('Dimensions of data and header do not match')
 
     def loadDavisMetadata(
@@ -670,13 +728,12 @@ class DICDataLoader(object):
             raise FileNotFoundError("Cannot open file {}".format(filePath))
 
         data = pd.read_table(str(filePath), delimiter='\t', skiprows=1,
-                             header=None)
-        # x and y coordinates
-        self.loadedData.xc = data.values[:, 0]
-        self.loadedData.yc = data.values[:, 1]
-        # x and y displacement
-        self.loadedData.xd = data.values[:, 2]
-        self.loadedData.yd = data.values[:, 3]
+                             header=None).values
+        data = data.reshape(self.loadedMetadata['shape'] + (-1, ))
+        data = data.transpose((2, 0, 1))
+
+        self.loadedData.coordinate = data[:2]
+        self.loadedData.displacement = data[2:]
 
         self.checkData()
 

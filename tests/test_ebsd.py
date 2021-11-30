@@ -5,6 +5,7 @@ from unittest.mock import Mock
 import numpy as np
 import defdap.ebsd as ebsd
 import defdap.crystal as crystal
+from defdap.utils import Datastore
 
 
 DATA_DIR = "tests/data/"
@@ -28,12 +29,12 @@ def good_map_with_quats(good_map):
 
 @pytest.fixture(scope="module")
 def good_quat_array(good_map_with_quats):
-    return good_map_with_quats.quatArray
+    return good_map_with_quats.data.orientation
 
 
 @pytest.fixture(scope="module")
 def good_phase_array(good_map_with_quats):
-    return good_map_with_quats.phaseArray
+    return good_map_with_quats.data.phase
 
 
 class TestMapFindBoundaries:
@@ -46,9 +47,12 @@ class TestMapFindBoundaries:
     def mock_map(good_quat_array, good_phase_array):
         # create stub object
         mock_map = Mock(spec=ebsd.Map)
-        mock_map.quatArray = good_quat_array
-        mock_map.phaseArray = good_phase_array
-        mock_map.yDim, mock_map.xDim = good_quat_array.shape
+        mock_datastore = Mock(spec=Datastore)
+        mock_datastore.orientation = good_quat_array
+        mock_datastore.phase = good_phase_array
+        mock_map.data = mock_datastore
+        mock_map.shape = good_quat_array.shape
+
         mock_phase = Mock(spec=crystal.Phase)
         mock_phase.crystalStructure = crystal.crystalStructures['cubic']
         mock_map.primaryPhase = mock_phase
@@ -63,7 +67,7 @@ class TestMapFindBoundaries:
 
         assert type(result) is np.ndarray
         assert result.dtype is np.dtype(np.int64)
-        assert result.shape == mock_map.quatArray.shape
+        assert result.shape == mock_map.shape
         assert result.max() == 0
         assert result.min() == -1
 
