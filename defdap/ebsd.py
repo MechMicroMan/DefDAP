@@ -246,25 +246,25 @@ class Map(base.Map):
     def scale(self):
         return self.step_size
 
-    # TODO: FIX this?
-    # @reportProgress("rotating EBSD data")
-    # def rotateData(self):
-    #     """Rotate map by 180 degrees and transform quats accordingly.
-    #
-    #     """
-    #     self.eulerAngleArray = self.eulerAngleArray[:, ::-1, ::-1]
-    #     self.bandContrastArray = self.bandContrastArray[::-1, ::-1]
-    #     self.phaseArray = self.phaseArray[::-1, ::-1]
-    #     self.buildQuatArray(force=True)     # Force rebuild quat array
-    #
-    #     # Rotation from old coord system to new
-    #     transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi).conjugate
-    #
-    #     # Perform vectorised multiplication
-    #     quats = Quat.multiplyManyQuats(self.quatArray.flatten(), transformQuat)
-    #     self.quatArray = np.array(quats).reshape(self.shape)
-    #
-    #     yield 1.
+    @reportProgress("rotating EBSD data")
+    def rotateData(self):
+        """Rotate map by 180 degrees and transform quats accordingly.
+
+        """
+        self.data.euler_angle = self.data.euler_angle[:, ::-1, ::-1]
+        self.data.band_contrast = self.data.band_contrast[::-1, ::-1]
+        self.data.band_slope = self.data.band_slope[::-1, ::-1]
+        self.data.phase = self.data.phase[::-1, ::-1]
+        self.buildQuatArray()
+
+        # Rotation from old coord system to new
+        transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi).conjugate
+
+        # Perform vectorised multiplication
+        quats = Quat.multiplyManyQuats(self.data.orientation.flatten(), transformQuat)
+        self.data.orientation = np.array(quats).reshape(self.shape)
+
+        yield 1.
 
     def plotBandContrastMap(self, **kwargs):
         """Plot band contrast map
