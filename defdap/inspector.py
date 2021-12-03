@@ -48,18 +48,19 @@ class GrainInspector:
 
         # Plot window
         self.plot = Plot(ax=None, makeInteractive=True, figsize=(14, 8), title='Grain Inspector')
+        div_frac = 0.7
 
         # Buttons
         self.plot.addButton(
-            'Save\nLine', self.saveLine, (0.73, 0.48, 0.05, 0.04))
+            'Save\nLine', self.saveLine, (div_frac, 0.48, 0.05, 0.04))
         self.plot.addButton(
-            'Previous\nGrain', lambda e, p: self.gotoGrain(self.grainID - 1, p), (0.73, 0.94, 0.05, 0.04))
+            'Previous\nGrain', lambda e, p: self.gotoGrain(self.grainID - 1, p), (div_frac, 0.94, 0.05, 0.04))
         self.plot.addButton(
-            'Next\nGrain', lambda e, p: self.gotoGrain(self.grainID + 1, p), (0.79, 0.94, 0.05, 0.04))
+            'Next\nGrain', lambda e, p: self.gotoGrain(self.grainID + 1, p), (div_frac+0.06, 0.94, 0.05, 0.04))
         self.plot.addButton(
             'Run\nAll STA', self.batchRunSTA, (0.85, 0.07, 0.11, 0.04))
         self.plot.addButton(
-            'Clear\nAll Lines', self.clearAllLines, (0.89, 0.48, 0.05, 0.04))
+            'Clear\nAll Lines', self.clearAllLines, (div_frac+0.2, 0.48, 0.05, 0.04))
         self.plot.addButton(
             'Load\nFile', self.loadFile, (0.85, 0.02, 0.05, 0.04))
         self.plot.addButton(
@@ -68,9 +69,9 @@ class GrainInspector:
         # Text boxes
         self.plot.addTextBox(label='', loc=(0.7, 0.02, 0.13, 0.04),
                              changeHandler=self.updateFilename, initial=self.filename)
-        self.plot.addTextBox(label='Go to \ngrain ID:', loc=(0.9, 0.94, 0.05, 0.04),
+        self.plot.addTextBox(label='Go to \ngrain ID:', loc=(div_frac+0.17, 0.94, 0.05, 0.04),
                              submitHandler=self.gotoGrain)
-        self.plot.addTextBox(label='Remove\nID:', loc=(0.83, 0.48, 0.05, 0.04),
+        self.plot.addTextBox(label='Remove\nID:', loc=(div_frac+0.1, 0.48, 0.05, 0.04),
                              submitHandler=self.removeLine)
         self.RDRGroupBox = self.plot.addTextBox(label='Run RDR only\non group:', loc=(0.78, 0.07, 0.05, 0.04),
                                                 submitHandler=self.runRDRGroup)
@@ -79,9 +80,9 @@ class GrainInspector:
         self.maxShearAx = self.plot.addAxes((0.05, 0.4, 0.65, 0.55))
         self.slipTraceAx = self.plot.addAxes((0.2, 0.05, 0.6, 0.3))
         self.unitCellAx = self.plot.addAxes((0.05, 0.055, 0.15, 0.3), proj='3d')
-        self.grainInfoAx = self.plot.addAxes((0.73, 0.86, 0.25, 0.06))
-        self.lineInfoAx = self.plot.addAxes((0.73, 0.55, 0.25, 0.3))
-        self.groupsInfoAx = self.plot.addAxes((0.73, 0.15, 0.25, 0.3))
+        self.grainInfoAx = self.plot.addAxes((div_frac, 0.86, 0.25, 0.06))
+        self.lineInfoAx = self.plot.addAxes((div_frac, 0.55, 0.25, 0.3))
+        self.groupsInfoAx = self.plot.addAxes((div_frac, 0.15, 0.25, 0.3))
         self.grainPlot = self.currMap[self.grainID].plotMaxShear(fig=self.plot.fig, ax=self.maxShearAx,
                                                                  vmax=self.vmax, plotScaleBar=True, plotColourBar=True)
         self.plot.ax.axis('off')
@@ -237,11 +238,12 @@ class GrainInspector:
         self.grainInfoAx.clear()
         self.grainInfoAx.axis('off')
         grainInfoText = 'Grain ID: {0} / {1}\n'.format(self.grainID, len(self.currMap.grainList) - 1)
-        grainInfoText += 'Min: {0:.1f} %     Mean:{1:.1f} %     Max: {2:.1f} %'.format(
+        grainInfoText += 'Min: {0:.2f} %     Mean:{1:.2f} %     Max: {2:.2f} %'.format(
             np.min(self.currDICGrain.maxShearList) * 100,
             np.mean(self.currDICGrain.maxShearList) * 100,
             np.max(self.currDICGrain.maxShearList) * 100)
-        self.plot.addText(self.grainInfoAx, 0, 1, grainInfoText, va='top', ha='left', fontsize=10)
+        self.plot.addText(self.grainInfoAx, 0, 1, grainInfoText, va='top', ha='left',
+                          fontsize=10, fontfamily='monospace')
 
         # Detect lines
         self.plot.addEventHandler('button_press_event', lambda e, p: self.grainPlot.lineSlice(e, p))
@@ -255,33 +257,39 @@ class GrainInspector:
 
         """
         # Write lines text and draw lines
-        linesTxt = 'List of lines\n\nLineID  x0     y0     x1     y1     Angle  Group\n'
-
-        if self.currDICGrain.pointsList != []:
+        titleTxt = 'List of lines'
+        linesTxt = 'ID  x0    y0    x1    y1    Angle   Group\n' \
+                   '-----------------------------------------\n'
+        if self.currDICGrain.pointsList:
             for idx, points in enumerate(self.currDICGrain.pointsList):
-                linesTxt += '{0}          {1:.1f}   {2:.1f}    {3:.1f}   {4:.1f}   {5:.1f}   {6}\n'.format(idx,
-                                                                                                           points[0][0],
-                                                                                                           points[0][1],
-                                                                                                           points[0][2],
-                                                                                                           points[0][3],
-                                                                                                           points[1],
-                                                                                                           points[2])
+                linesTxt += '{0:<3} {1:<5.0f} {2:<5.0f} {3:<5.0f} {4:<5.0f} {5:<7.1f} {6:<5}\n'.format(idx, *points[0],
+                                                                                                points[1], points[2])
                 self.grainPlot.addArrow(startEnd=points[0], clearPrev=False, persistent=True, label=idx)
 
         self.lineInfoAx.clear()
         self.lineInfoAx.axis('off')
-        self.plot.addText(self.lineInfoAx, 0, 1, linesTxt, va='top', fontsize=10)
+        self.plot.addText(self.lineInfoAx, 0, 1, titleTxt, va='top', fontsize=10, fontfamily='monospace', weight='bold')
+        self.plot.addText(self.lineInfoAx, 0, 0.9, linesTxt, va='top', fontsize=10, fontfamily='monospace')
 
         # Write groups info text
-        groupsTxt = 'List of groups\n\nGroupID    Angle      System      Dev     RDR\n'
-        if self.currDICGrain.groupsList != []:
+        titleTxt = 'List of groups'
+
+        groupsTxt = 'ID  Av. Angle  System  Dev          RDR\n' \
+                    '----------------------------------------\n'
+        if self.currDICGrain.groupsList:
             for idx, group in enumerate(self.currDICGrain.groupsList):
-                groupsTxt += '{0}                {1:.1f}      {2}      {3}      {4:.2f}\n'.format(
-                    idx, group[1], group[2], np.round(group[3], 3), group[4])
+                groupsTxt += '{0:<3} {1:<10.1f} {2:<7} {3:<12} {4:.2f}\n'.format(
+                    idx,
+                    group[1],
+                    ','.join([str(np.round(i, 1)) for i in group[2]]),
+                    ','.join([str(np.round(i, 1)) for i in group[3]]),
+                    group[4])
 
         self.groupsInfoAx.clear()
         self.groupsInfoAx.axis('off')
-        self.plot.addText(self.groupsInfoAx, 0, 1, groupsTxt, va='top', fontsize=10)
+        self.plot.addText(self.groupsInfoAx, 0, 1, titleTxt, va='top', fontsize=10, fontfamily='monospace',
+                          weight='bold')
+        self.plot.addText(self.groupsInfoAx, 0, 0.9, groupsTxt, va='top', fontsize=10, fontfamily='monospace')
 
         # Draw slip traces
         self.slipTraceAx.clear()
@@ -361,6 +369,7 @@ class GrainInspector:
         # Get all lines belonging to group
         pointArray = np.array(grain.pointsList, dtype=object)
         points = list(pointArray[:, 0][pointArray[:, 2] == group])
+        angle = grain.groupsList[group][1]
 
         # For each slip trace line
         for point in points:
@@ -491,7 +500,7 @@ class GrainInspector:
         for idx, (ssGroup, sfGroup, slipTraceAngle) in enumerate(
                 zip(ebsdGrain.phase.slipSystems, ebsdGrain.averageSchmidFactors,
                     np.rad2deg(ebsdGrain.slipTraceAngles))):
-            text = "{0:s}    {1:.1f}\n".format(ssGroup[0].slipPlaneLabel, slipTraceAngle)
+            text = "Plane: {0:s}    Angle: {1:.1f}\n".format(ssGroup[0].slipPlaneLabel, slipTraceAngle)
             tempRDRs = [];
             for ss, sf in zip(ssGroup, sfGroup):
                 slipDirSample = ebsdGrain.refOri.conjugate.transformVector(ss.slipDir)
