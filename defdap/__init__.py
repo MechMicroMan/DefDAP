@@ -14,6 +14,6 @@ defaults = {
     'slip_system_file': {
         'FCC': 'cubic_fcc',
         'BCC': 'cubic_bcc',
-        'HCP': 'hexagonal_noca',
+        'HCP': 'hexagonal_withca',
     },
 }

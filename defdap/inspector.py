@@ -14,15 +14,14 @@
 # limitations under the License.
 
 import numpy as np
-import pandas as pd
 from scipy.stats import linregress
-
+from skimage.draw import line as skimage_line
 import ast
-
-from typing import List
 
 from defdap.plotting import Plot, GrainPlot
 from defdap import hrdic
+
+from typing import List
 
 
 class GrainInspector:
@@ -338,7 +337,7 @@ class GrainInspector:
                 grain: int,
                 group: int,
                 showPlot: bool = True,
-                length: float = 2.5):
+                length: float = 3.5):
         """ Calculates the relative displacement ratio for a given grain and group.
 
         Parameters
@@ -360,67 +359,45 @@ class GrainInspector:
         allylist = []
 
         # Get all lines belonging to group
-        points = []
-        for point in grain.pointsList:
-            if point[2] == group:
-                points.append(point[0])
+        pointArray = np.array(grain.pointsList, dtype=object)
+        points = list(pointArray[:, 0][pointArray[:, 2] == group])
 
+        # For each slip trace line
         for point in points:
-            x0 = point[0]
-            y0 = point[1]
-            x1 = point[2]
-            y1 = point[3]
-            grad = (y1 - y0) / (x1 - x0)
+            x0, y0, x1, y1 = point
+            try:
+                grad = (y1 - y0) / (x1 - x0)
+            except ZeroDivisionError:
+                grad = 0.00001
             invgrad = -1 / grad
-            profile_length = np.sqrt((y1 - y0) ** 2 + (x1 - x0) ** 2)
-            num = np.round(profile_length * 2)
 
-            # Calculate positions for each point along slip trace line (x,y)
-            x, y = np.round(np.linspace(x0, x1, int(num))), np.round(np.linspace(y0, y1, int(num)))
-            df = pd.DataFrame({'x': x, 'y': y}).drop_duplicates()
-            x, y = df['x'].values.tolist(), df['y'].values.tolist()
+            # Calculate positions for each pixel along slip trace line
+            x, y = skimage_line(int(x0), int(y0), int(x1), int(y1))
 
-            # Calculate deviation from (0,0) for points along line with angle perpendicular to slip line (xnew,ynew)
+            # Calculate deviation from (0,0) for points along line perpendicular to slip line (xnew,ynew)
             x0new = np.sqrt(length / (invgrad ** 2 + 1)) * np.sign(grad)
             y0new = -np.sqrt(length / (1 / invgrad ** 2 + 1))
             x1new = -np.sqrt(length / (invgrad ** 2 + 1)) * np.sign(grad)
             y1new = np.sqrt(length / (1 / invgrad ** 2 + 1))
-            profile_length = np.sqrt((y1new - y0new) ** 2 + (x1new - x0new) ** 2)
-            num = np.round(profile_length)
-            xnew, ynew = np.linspace(x0new, x1new, int(num)), np.linspace(y0new, y1new, int(num))
-            xnew, ynew = np.around(xnew).astype(int), np.around(ynew).astype(int)
-            df = pd.DataFrame({'x': xnew, 'y': ynew}).drop_duplicates()
-            xnew, ynew = df['x'].values.tolist(), df['y'].values.tolist()
+            xnew, ynew = skimage_line(int(x0new), int(y0new), int(x1new), int(y1new))
 
-            for x, y in zip(x, y):
-                xperp = []
-                yperp = []
-                for xdiff, ydiff in zip(xnew, ynew):
-                    xperp.append(int(x + xdiff))
-                    yperp.append(int(y + ydiff))
-                allxlist.append(xperp)
-                allylist.append(yperp)
+            # Get x and y coordinates for points to be samples for RDR
+            xmap = np.array(x).T[:, None] + xnew + self.currDICGrain.extremeCoords[0]
+            ymap = np.array(y).T[:, None] + ynew + self.currDICGrain.extremeCoords[1]
 
-                xmap = self.currDICGrain.extremeCoords[0] + xperp
-                ymap = self.currDICGrain.extremeCoords[1] + yperp
+            allxlist.extend(xmap - self.currDICGrain.extremeCoords[0])
+            allylist.extend(ymap - self.currDICGrain.extremeCoords[1])
 
-                # For all points, append u and v to list
-                u = []
-                v = []
-                for xmap, ymap in zip(xmap, ymap):
-                    u.append((self.currMap.crop(self.currMap.data.displacement[0]))[ymap, xmap])
-                    v.append((self.currMap.crop(self.currMap.data.displacement[1]))[ymap, xmap])
+            # Get u and v values at each coordinate
+            u = self.currMap.crop(self.currMap.data.displacement[0])[ymap, xmap]
+            v = self.currMap.crop(self.currMap.data.displacement[1])[ymap, xmap]
 
-                # Take away mean
-                u = u - np.mean(u)
-                v = v - np.mean(v)
-
-                # Append to main lists (ulist,vlist)
-                ulist.extend(u)
-                vlist.extend(v)
+            # Subtract mean u and v value for each row
+            ulist.extend(u - np.mean(u, axis=1)[:, None])
+            vlist.extend(v - np.mean(v, axis=1)[:, None])
 
         # Linear regression of ucentered against vcentered
-        linRegResults = linregress(x=vlist, y=ulist)
+        linRegResults = linregress(x=np.array(vlist).flatten(), y=np.array(ulist).flatten())
 
         # Save measured RDR
         grain.groupsList[group][4] = linRegResults.slope
