@@ -34,7 +34,8 @@ class GrainInspector:
     def __init__(self,
                  currMap: 'hrdic.Map',
                  vmax: float,
-                 corrAngle: float):
+                 corrAngle: float,
+                 RDRlength: int):
 
         # Initialise some values
         self.grainID = 0
@@ -44,11 +45,15 @@ class GrainInspector:
         self.currEBSDGrain = self.currDICGrain.ebsdGrain
         self.vmax = vmax
         self.corrAngle = corrAngle
+        self.RDRlength = RDRlength
         self.filename = str(self.currMap.retrieveName()) + '_RDR.txt'
 
         # Plot window
-        self.plot = Plot(ax=None, makeInteractive=True, figsize=(14, 8), title='Grain Inspector')
+        self.plot = Plot(ax=None, makeInteractive=True, figsize=(13, 8), title='Grain Inspector')
         div_frac = 0.7
+
+        # Remove key bindings for figure to supress errors
+        self.plot.fig.canvas.mpl_disconnect(self.plot.fig.canvas.manager.key_press_handler_id)
 
         # Buttons
         self.plot.addButton(
@@ -58,7 +63,7 @@ class GrainInspector:
         self.plot.addButton(
             'Next\nGrain', lambda e, p: self.gotoGrain(self.grainID + 1, p), (div_frac+0.06, 0.94, 0.05, 0.04))
         self.plot.addButton(
-            'Run\nAll STA', self.batchRunSTA, (0.85, 0.07, 0.11, 0.04))
+            'Run All STA', self.batchRunSTA, (0.85, 0.07, 0.11, 0.04))
         self.plot.addButton(
             'Clear\nAll Lines', self.clearAllLines, (div_frac+0.2, 0.48, 0.05, 0.04))
         self.plot.addButton(
@@ -78,8 +83,8 @@ class GrainInspector:
 
         # Axes
         self.maxShearAx = self.plot.addAxes((0.05, 0.4, 0.65, 0.55))
-        self.slipTraceAx = self.plot.addAxes((0.2, 0.05, 0.6, 0.3))
-        self.unitCellAx = self.plot.addAxes((0.05, 0.055, 0.15, 0.3), proj='3d')
+        self.slipTraceAx = self.plot.addAxes((0.25, 0.05, 0.5, 0.3))
+        self.unitCellAx = self.plot.addAxes((0.05, 0.055, 0.2, 0.3), proj='3d')
         self.grainInfoAx = self.plot.addAxes((div_frac, 0.86, 0.25, 0.06))
         self.lineInfoAx = self.plot.addAxes((div_frac, 0.55, 0.25, 0.3))
         self.groupsInfoAx = self.plot.addAxes((div_frac, 0.15, 0.25, 0.3))
@@ -344,8 +349,7 @@ class GrainInspector:
     def calcRDR(self,
                 grain: int,
                 group: int,
-                showPlot: bool = True,
-                length: float = 3.5):
+                showPlot: bool = True):
         """ Calculates the relative displacement ratio for a given grain and group.
 
         Parameters
@@ -356,43 +360,35 @@ class GrainInspector:
             group ID to run RDR on.
         showPlot
             if True, show plot window.
-        length
-            length of perpendicular lines used for RDR.
 
         """
 
-        ulist = []
-        vlist = []
-        allxlist = []
-        allylist = []
+        ulist, vlist, allxlist, allylist = [], [], [], []
 
         # Get all lines belonging to group
         pointArray = np.array(grain.pointsList, dtype=object)
         points = list(pointArray[:, 0][pointArray[:, 2] == group])
         angle = grain.groupsList[group][1]
 
+        # Lookup deviation from (0,0) for 3 points along line perpendicular to slip line (xnew,ynew)
+        xnew = np.array([[-1, 0, 1], [1, 0, -1], [0, 0, 0], [1, 0, -1], [-1, 0, 1]])[int(np.round(angle / 45, 0))]
+        ynew = np.array([[0, 0, 0], [-1, 0, 1], [-1, 0, 1], [1, 0, -1], [0, 0, 0]])[int(np.round(angle / 45, 0))]
+        tuples = list(zip(xnew, ynew))
+
+        # Allow increasing line length from default 3 to any odd number
+        num = np.arange(0, int((self.RDRlength - 1) / 2)) + 1
+        coordinateOffsets = np.unique(np.array([np.array(tuples)*i for i in num]).reshape(-1, 2), axis=0)
+
         # For each slip trace line
         for point in points:
             x0, y0, x1, y1 = point
-            try:
-                grad = (y1 - y0) / (x1 - x0)
-            except ZeroDivisionError:
-                grad = 0.00001
-            invgrad = -1 / grad
 
             # Calculate positions for each pixel along slip trace line
             x, y = skimage_line(int(x0), int(y0), int(x1), int(y1))
 
-            # Calculate deviation from (0,0) for points along line perpendicular to slip line (xnew,ynew)
-            x0new = np.sqrt(length / (invgrad ** 2 + 1)) * np.sign(grad)
-            y0new = -np.sqrt(length / (1 / invgrad ** 2 + 1))
-            x1new = -np.sqrt(length / (invgrad ** 2 + 1)) * np.sign(grad)
-            y1new = np.sqrt(length / (1 / invgrad ** 2 + 1))
-            xnew, ynew = skimage_line(int(x0new), int(y0new), int(x1new), int(y1new))
-
             # Get x and y coordinates for points to be samples for RDR
-            xmap = np.array(x).T[:, None] + xnew + self.currDICGrain.extremeCoords[0]
-            ymap = np.array(y).T[:, None] + ynew + self.currDICGrain.extremeCoords[1]
+            xmap = np.array(x).T[:, None] + coordinateOffsets[:,0] + self.currDICGrain.extremeCoords[0]
+            ymap = np.array(y).T[:, None] + coordinateOffsets[:,1] + self.currDICGrain.extremeCoords[1]
 
             allxlist.extend(xmap - self.currDICGrain.extremeCoords[0])
             allylist.extend(ymap - self.currDICGrain.extremeCoords[1])
@@ -446,14 +442,14 @@ class GrainInspector:
         """
 
         # Draw window and axes
-        self.rdrPlot = Plot(ax=None, makeInteractive=True, title='RDR Calculation', figsize=(21, 7))
+        self.rdrPlot = Plot(ax=None, makeInteractive=True, title='RDR Calculation', figsize=(15, 8))
         self.rdrPlot.ax.axis('off')
-        self.rdrPlot.grainAx = self.rdrPlot.addAxes((0.05, 0.07, 0.20, 0.85))
-        self.rdrPlot.textAx = self.rdrPlot.addAxes((0.27, 0.07, 0.20, 0.85))
+        self.rdrPlot.grainAx = self.rdrPlot.addAxes((0.05, 0.5, 0.3, 0.45))
+        self.rdrPlot.textAx = self.rdrPlot.addAxes((0.37, 0.05, 0.3, 0.85))
         self.rdrPlot.textAx.axis('off')
-        self.rdrPlot.numLineAx = self.rdrPlot.addAxes((0.48, 0.07, 0.2, 0.85))
+        self.rdrPlot.numLineAx = self.rdrPlot.addAxes((0.64, 0.05, 0.3, 0.83))
         self.rdrPlot.numLineAx.axis('off')
-        self.rdrPlot.plotAx = self.rdrPlot.addAxes((0.75, 0.07, 0.2, 0.85))
+        self.rdrPlot.plotAx = self.rdrPlot.addAxes((0.05, 0.1, 0.3, 0.35))
 
         # Draw grain plot
         self.rdrPlot.grainPlot = self.currDICGrain.plotMaxShear(fig=self.rdrPlot.fig, ax=self.rdrPlot.grainAx,
@@ -492,7 +488,7 @@ class GrainInspector:
         text = 'Average angle: {0:.2f}\n'.format(grain.groupsList[group][1])
         text += 'Eulers: {0:.1f}    {1:.1f}    {2:.1f}\n\n'.format(eulers[0], eulers[1], eulers[2])
 
-        self.rdrPlot.addText(self.rdrPlot.textAx, 0.15, 1, text, fontsize=10, va='top')
+        self.rdrPlot.addText(self.rdrPlot.textAx, 0.15, 1, text, fontsize=10, va='top', fontfamily='monospace')
 
         # Write slip system info
         RDRs = []
@@ -511,10 +507,11 @@ class GrainInspector:
             RDRs.append(tempRDRs)
 
             if idx in grain.groupsList[group][2]:
-                self.rdrPlot.addText(self.rdrPlot.textAx, 0.15, 0.9 - offset, text, weight='bold', fontsize=10,
-                                     va='top')
+                self.rdrPlot.addText(self.rdrPlot.textAx, 0.15, 0.9 - offset, text, va='top',
+                                     weight='bold', fontsize=10)
             else:
-                self.rdrPlot.addText(self.rdrPlot.textAx, 0.15, 0.9 - offset, text, fontsize=10, va='top')
+                self.rdrPlot.addText(self.rdrPlot.textAx, 0.15, 0.9 - offset, text, va='top',
+                                     fontsize=10)
 
             offset += 0.0275 * text.count('\n')
 
@@ -524,21 +521,24 @@ class GrainInspector:
         self.rdrPlot.numLineAx.axvline(x=0, ymin=-20, ymax=20, c='k')
         self.rdrPlot.numLineAx.plot(np.zeros(len(uniqueRDRs)), list(uniqueRDRs), 'bo', label='Theroretical RDR values')
         self.rdrPlot.numLineAx.plot([0], slope, 'ro', label='Measured RDR value')
-        self.rdrPlot.addText(self.rdrPlot.numLineAx, -0.009, slope - 0.01, '{0:.3f}'.format(float(slope)))
+        self.rdrPlot.addText(self.rdrPlot.numLineAx, -0.009, slope - 0.01, '{0:.3f}'.format(float(slope)),
+                             fontfamily='monospace')
         self.rdrPlot.numLineAx.legend(bbox_to_anchor=(1.15, 1.05))
 
         # Label RDRs by slip system on number line 
         for RDR in list(uniqueRDRs):
-            self.rdrPlot.addText(self.rdrPlot.numLineAx, -0.009, RDR - 0.01, '{0:.3f}'.format(float(RDR)))
-            txt = ''
-            for idx, ssGroup in enumerate(RDRs):
-                for idx2, rdr in enumerate(ssGroup):
-                    if rdr == RDR:
-                        txt += str('{0} {1}  '.format(ebsdGrain.phase.slipSystems[idx][idx2].slipPlaneLabel,
-                                                      ebsdGrain.phase.slipSystems[idx][idx2].slipDirLabel))
-            self.rdrPlot.addText(self.rdrPlot.numLineAx, 0.002, RDR - 0.01, txt)
+            if (RDR > slope - 1.5) & (RDR < slope + 1.5):
+                self.rdrPlot.addText(self.rdrPlot.numLineAx, -0.009, RDR - 0.01, '{0:.3f}'.format(float(RDR)))
+                txt = ''
+                for idx, ssGroup in enumerate(RDRs):
+                    for idx2, rdr in enumerate(ssGroup):
+                        if rdr == RDR:
+                            txt += str('{0} {1}  '.format(ebsdGrain.phase.slipSystems[idx][idx2].slipPlaneLabel,
+                                                          ebsdGrain.phase.slipSystems[idx][idx2].slipDirLabel))
 
-        self.rdrPlot.numLineAx.set_ylim(slope - 1, slope + 1)
+                    self.rdrPlot.addText(self.rdrPlot.numLineAx, 0.002, RDR - 0.01, txt)
+
+        self.rdrPlot.numLineAx.set_ylim(slope - 1.5, slope + 1.5)
         self.rdrPlot.numLineAx.set_xlim(-0.01, 0.05)
 
     def updateFilename(self,

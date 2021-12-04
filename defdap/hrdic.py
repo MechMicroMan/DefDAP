@@ -960,7 +960,7 @@ class Map(base.Map):
 
         return currentGrain
 
-    def runGrainInspector(self, vmax=0.1, corrAngle=0):
+    def runGrainInspector(self, vmax=0.1, corrAngle=0, RDRlength=3):
         """Run the grain inspector interactive tool.
 
         Parameters
@@ -971,9 +971,11 @@ class Map(base.Map):
             Correction angle in degrees to subtract from measured angles to account
             for small rotation between DIC and EBSD frames. Approximately the rotation
             component of affine transform.
+        RDRlength: int
+            Length of lines perpendicular to slip trace used to calculate RDR.
 
         """
-        GrainInspector(currMap=self, vmax=vmax, corrAngle=corrAngle)
+        GrainInspector(currMap=self, vmax=vmax, corrAngle=corrAngle, RDRlength=RDRlength)
 
 
 class Grain(base.Grain):
