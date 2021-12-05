@@ -169,10 +169,6 @@ class Map(base.Map):
 
         self.data.update(dataLoader.loadedData)
 
-        # TODO: FIX EDX STUFF
-        # if metadataDict['EDX Windows']['Count'] > 0:
-        #     self.EDX = dataDict['EDXDict']
-
         # write final status
         yield "Loaded EBSD data (dimensions: {:} x {:} pixels, step " \
               "size: {:} um)".format(self.xDim, self.yDim, self.step_size)

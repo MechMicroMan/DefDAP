@@ -569,15 +569,18 @@ class OxfordBinaryLoader(EBSDDataLoader):
         self.loadedData.euler_angle = structured_to_unstructured(
             data[['ph1', 'phi', 'ph2']].reshape(shape)).transpose((2, 0, 1))
 
-        # TODO: FIX EDX STUFF
-        # Load EDX data into a dict
-        # if self.loadedMetadata['edx']['Count'] > 0:
-        #     EDXFields = [key for key in binData.dtype.fields.keys()
-        #                  if key.startswith('EDX')]
-        #     self.loadedData['EDXDict'] = dict(
-        #         [(field[4:], np.reshape(binData[field], shape))
-        #          for field in EDXFields]
-        #     )
+        if self.loadedMetadata['edx']['Count'] > 0:
+            EDXFields = [key for key in data.dtype.fields.keys() if key.startswith('EDX')]
+            for field in EDXFields:
+                self.loadedData.add(
+                    field,
+                    data[field].reshape(shape),
+                    unit='counts', type='map', order=0,
+                    plot_params={
+                        'plotColourBar': True,
+                        'clabel': field + ' counts',
+                    }
+            )
 
         self.checkData()
 
