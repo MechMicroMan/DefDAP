@@ -1,12 +1,26 @@
 # Change Log
 
+
 ## Current
 
 ### Added
+- Each grain is assigned a phase and slip systems are automatically loaded 
+  for a given phase based on crystal structure 
+  - This means that unit cells and slip traces plot correctly for grains
+  in a multi-phase EBSD map
+- Add reader for EDAX .ang EBSD files
+- Add slip system file for FCC but in same order as DAMASK
 
 ### Changed
+- Overhaul of data storage in the Map classes
+- RDR calculation `calcRDR` in grain inspector is faster and more robust
+- Improve formatting of grain inspector and RDR plot window
+- Refactor boundary lines calculations
 
 ### Fixed
+- Fix bug in grain inspector (None passed to corrAngle inadvertently)
+- Fix EBSD grain linker
+- Remove `IPython` and `jupyter` as requirements
 
 
 ## 0.93.3 (23-08-2021)
