@@ -1031,7 +1031,7 @@ class Quat(object):
             # symmetric equivalents per orientation
             trialPoles = np.logical_and(beta >= 0, beta <= np.pi / 4)
 
-            # if less than 3 left need to expand search slighly to
+            # if less than 3 left need to expand search slightly to
             # catch edge cases
             if np.any(np.sum(trialPoles, axis=0) < 3):
                 deltaBeta = 1e-8
@@ -1048,7 +1048,7 @@ class Quat(object):
             # first beta should be between 0 and 30 deg leaving 1
             # symmetric equivalent per orientation
             trialPoles = np.logical_and(beta >= 0, beta <= np.pi / 6)
-            # if less than 1 left need to expand search slighly to
+            # if less than 1 left need to expand search slightly to
             # catch edge cases
             if np.any(np.sum(trialPoles, axis=0) < 1):
                 deltaBeta = 1e-8

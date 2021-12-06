@@ -517,10 +517,10 @@ class Map(base.Map):
             quatComps[i, 3] = (quatComps[0, 0] * sym[3] + quatComps[0, 3] * sym[0] -
                                quatComps[0, 1] * sym[2] + quatComps[0, 2] * sym[1])
 
-            # swap into positve hemisphere if required
+            # swap into positive hemisphere if required
             quatComps[i, :, quatComps[i, 0] < 0] *= -1
 
-        # Arrays to store neigbour misorientation in positive x and y direction
+        # Arrays to store neighbour misorientation in positive x and y direction
         misOrix = np.zeros((numSyms, ) + self.shape)
         misOriy = np.zeros((numSyms, ) + self.shape)
 
@@ -1388,7 +1388,7 @@ class Grain(base.Grain):
         self.misOriList = list(misOriArray)
 
         if calcAxis:
-            # Now for axis calulation
+            # Now for axis calculation
             refOriInv = self.refOri.conjugate
 
             misOriAxis = np.empty((3, minQuatComps.shape[1]))
@@ -1809,7 +1809,7 @@ class Linker(object):
         self.plots = None
 
     def set_origin(self, **kwargs):
-        """Interacive tool to set origin of each EBSD map.
+        """Interactive tool to set origin of each EBSD map.
 
         Parameters
         ----------
@@ -1917,7 +1917,7 @@ class Linker(object):
             if ebsd_map.currGrainId is not None:
                 curr_link.append(ebsd_map.currGrainId)
             else:
-                raise Exception(f"No grain setected in map {i + 1}.")
+                raise Exception(f"No grain selected in map {i + 1}.")
 
         curr_link = tuple(curr_link)
         if curr_link not in self.links:

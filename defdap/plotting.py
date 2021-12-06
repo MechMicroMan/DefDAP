@@ -501,22 +501,22 @@ class MapPlot(Plot):
         # Custom colour map where 0 is transparent white for bg and
         # then a patch for each grain colour
         grainColours.insert(0, 'white')
-        hightlightsCmap = mpl.colors.ListedColormap(grainColours)
-        hightlightsCmap._init()
-        alphaMap = np.full(hightlightsCmap.N + 3, alpha)
+        highlightsCmap = mpl.colors.ListedColormap(grainColours)
+        highlightsCmap._init()
+        alphaMap = np.full(highlightsCmap.N + 3, alpha)
         alphaMap[0] = 0
-        hightlightsCmap._lut[:, -1] = alphaMap
+        highlightsCmap._lut[:, -1] = alphaMap
 
         if self.highlightsLayerID is None or newLayer:
             img = self.ax.imshow(outline, interpolation='none',
-                                 cmap=hightlightsCmap)
+                                 cmap=highlightsCmap)
             if self.highlightsLayerID is None:
                 self.highlightsLayerID = len(self.imgLayers)
             self.imgLayers.append(img)
         else:
             img = self.imgLayers[self.highlightsLayerID]
             img.set_data(outline)
-            img.set_cmap(hightlightsCmap)
+            img.set_cmap(highlightsCmap)
             img.autoscale()
 
         self.draw()
@@ -646,11 +646,11 @@ class MapPlot(Plot):
         plotScaleBar : bool
             If true, plot a scale bar in the map.
         scale : float
-            Size of pizel in microns.
+            Size of pixel in microns.
         highlightGrains : list(int)
             List of grain IDs to highlight.
         highlightColours : str
-            Colour to hightlight grains.
+            Colour to highlight grains.
         highlightAlpha : float
             Alpha (transparency) by which to highlight grains.
         kwargs :

@@ -81,7 +81,7 @@ class Map(object):
         Parameters
         ----------
         raiseExc : bool
-            If True then an expception is raised if grains have not been
+            If True then an exception is raised if grains have not been
             detected.
 
         Returns
@@ -566,7 +566,7 @@ class Map(object):
         for index, value in np.ndenumerate(proxBoundaries):
             if value == -1:
                 indexBoundaries.append(index)
-        # add 0.5 to boundary coordiantes as they are placed on the
+        # add 0.5 to boundary coordinates as they are placed on the
         # bottom right edge pixels of grains
         indexBoundaries = np.array(indexBoundaries) + 0.5
 
@@ -1047,7 +1047,7 @@ class Grain(object):
     def grainMapDataCoarse(self, mapData=None, grainData=None,
                            kernelSize=2, bg=np.nan):
         """
-        Create a coarsed data map of this grain only from the given map
+        Create a coarsened data map of this grain only from the given map
         data. Data is coarsened using a kernel at each pixel in the
         grain using only data in this grain.
 

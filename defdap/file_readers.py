@@ -780,7 +780,7 @@ def readUntilString(
     exact: bool = False
 ) -> List[Any]:
     """Read lines in a file until a line starting with the `termString`
-    is encounted. The file position is returned before the line starting
+    is encountered. The file position is returned before the line starting
     with the `termString` when found. Comment and empty lines are ignored.
 
     Parameters

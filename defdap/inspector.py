@@ -52,7 +52,7 @@ class GrainInspector:
         self.plot = Plot(ax=None, makeInteractive=True, figsize=(13, 8), title='Grain Inspector')
         div_frac = 0.7
 
-        # Remove key bindings for figure to supress errors
+        # Remove key bindings for figure to suppress errors
         self.plot.fig.canvas.mpl_disconnect(self.plot.fig.canvas.manager.key_press_handler_id)
 
         # Buttons
@@ -92,7 +92,7 @@ class GrainInspector:
                                                                  vmax=self.vmax, plotScaleBar=True, plotColourBar=True)
         self.plot.ax.axis('off')
 
-        # Draw the stuff that will need to be redrawn often in a seperate function
+        # Draw the stuff that will need to be redrawn often in a separate function
         self.redraw()
 
     def gotoGrain(self,
@@ -175,7 +175,7 @@ class GrainInspector:
                     nextGroup = 1
                 else:  # If there is more that one angle
                     if np.any(np.abs(np.array([x[1] for x in grain.groupsList]) - angle) < 10):
-                        # If within +- 5 degrees of exisitng group, set that as the group
+                        # If within +- 5 degrees of existing group, set that as the group
                         group = np.argmin(np.abs(np.array([x[1] for x in grain.groupsList]) - angle))
                         grain.pointsList[i][2] = group
                         newAv = float('{0:.2f}'.format(np.average([x[1] for x in grain.pointsList if x[2] == group])))
@@ -519,7 +519,7 @@ class GrainInspector:
         uniqueRDRs = set()
         for x in [item for sublist in RDRs for item in sublist]: uniqueRDRs.add(x)
         self.rdrPlot.numLineAx.axvline(x=0, ymin=-20, ymax=20, c='k')
-        self.rdrPlot.numLineAx.plot(np.zeros(len(uniqueRDRs)), list(uniqueRDRs), 'bo', label='Theroretical RDR values')
+        self.rdrPlot.numLineAx.plot(np.zeros(len(uniqueRDRs)), list(uniqueRDRs), 'bo', label='Theoretical RDR values')
         self.rdrPlot.numLineAx.plot([0], slope, 'ro', label='Measured RDR value')
         self.rdrPlot.addText(self.rdrPlot.numLineAx, -0.009, slope - 0.01, '{0:.3f}'.format(float(slope)),
                              fontfamily='monospace')

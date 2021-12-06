@@ -75,7 +75,7 @@ class Datastore(object):
     Attributes
     ----------
     _store : dict of dict
-        Staorage for data and metadata, keyed by data name. Each item is
+        Storage for data and metadata, keyed by data name. Each item is
         a dict with at least a `data` key, all other items are metadata,
         possibly including:
             type : str
@@ -86,7 +86,7 @@ class Datastore(object):
             unit : str
                 Measurement unit the data is stored in
             plot_params : dict
-                Dictionary of the default paramenters used to plot
+                Dictionary of the default parameters used to plot
     _generators: dict
         Methods to generate derived data, keyed by tuple of data names
         that the method produces.
