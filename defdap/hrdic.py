@@ -289,7 +289,7 @@ class Map(base.Map):
         percentiles : list of float
             list of percentiles to print i.e. 0, 50, 99.
         components : list of str
-            list of map components to print i.e. e11, f11, max_shear.
+            list of map components to print i.e. e, f, max_shear.
 
         """
 
@@ -314,9 +314,10 @@ class Map(base.Map):
         # Print table
         strFormat = '{:10} ' + '{:12.4f}' * len(percentiles)
         for c in components:
-            # Get the values and print in table
-            per = [np.nanpercentile(self.crop(self.data[c]), p) for p in percentiles]
-            print(strFormat.format(c, *per))
+            # Iterate over tensor components (i.e. e11, e22, e12)
+            for i in np.ndindex(self.data[c].shape[:len(np.shape(self.data[c]))-2]):
+                per = [np.nanpercentile(self.crop(self.data[c][i]), p) for p in percentiles]
+                print(strFormat.format(c+''.join([str(t+1) for t in i]), *per))
 
     def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
         """Set a crop for the DIC map.
@@ -725,7 +726,7 @@ class Map(base.Map):
         Parameters
         ----------
         kwargs
-            All arguments are passed to :func:`defdap.hrdic.plotMap`.
+            All arguments are passed to :func:`defdap.plotting.MapPlot`.
 
         Returns
         -------
@@ -739,7 +740,7 @@ class Map(base.Map):
         }
         params.update(kwargs)
 
-        plot = self.plotMap('max_shear', **params)
+        plot = MapPlot.create(self, self.crop(self.data.max_shear), **params)
 
         return plot
 
