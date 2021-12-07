@@ -28,6 +28,7 @@ Contents
    :maxdepth: 1
    
    installation
+   howtouse
    contributing
    papers
    license

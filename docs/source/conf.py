@@ -14,7 +14,17 @@
 #
 import os
 import sys
+import shutil
 sys.path.insert(0, os.path.abspath('../../')) 	# Reference the root directory so autodocs can find the python modules
+
+# Copy the example notebook, change %matplotlib to inline and change directory so that paths still work
+shutil.copyfile('../../example_notebook.ipynb', 'howtouse.ipynb')
+with open('howtouse.ipynb') as f:
+    newText=f.read().replace('%matplotlib tk', r'%matplotlib inline\n%cd -q ../../')
+newText=newText.replace('DefDAP Example notebook', r'How to use')
+newText=newText.replace('This notebook', r'These pages')
+with open('howtouse.ipynb', "w") as f:
+    f.write(newText)
 
 # -- Project information -----------------------------------------------------
 
@@ -55,8 +65,20 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'sphinx_autodoc_typehints',
-    'sphinx_rtd_theme'
+    'sphinx_rtd_theme',
+    'nbsphinx'
 ]
+
+nbsphinx_allow_errors = True
+nbsphinx_execute = 'always'
+nbsphinx_prolog = """
+This page was built from the example_notebook Jupyter notebook available on `Github <https://github.com/MechMicroMan/DefDAP>`_
+
+.. image:: https://mybinder.org/badge_logo.svg
+   :target: https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb
+
+----
+"""
 
 napoleon_use_param = True
 #set_type_checking_flag = True
