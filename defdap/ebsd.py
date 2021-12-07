@@ -264,31 +264,6 @@ class Map(base.Map):
 
         yield 1.
 
-    def plotBandContrastMap(self, **kwargs):
-        """Plot band contrast map
-
-        kwargs
-            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
-
-        Returns
-        -------
-        defdap.plotting.MapPlot
-
-        """
-        self.checkDataLoaded()
-
-        # Set default plot parameters then update with any input
-        plotParams = {
-            'plotColourBar': True,
-            'cmap': 'gray',
-            'clabel': "Band contrast"
-        }
-        plotParams.update(kwargs)
-
-        plot = MapPlot.create(self, self.data.band_contrast, **plotParams)
-
-        return plot
-
     def calc_euler_colour(self, map_data, phases=None, bg_colour=None):
         if phases is None:
             phases = self.phases
@@ -354,8 +329,6 @@ class Map(base.Map):
         defdap.plotting.MapPlot
 
         """
-        self.checkDataLoaded()
-
         # Set default plot parameters then update with any input
         plot_params = {}
         plot_params.update(kwargs)
@@ -475,33 +448,6 @@ class Map(base.Map):
 
         yield 1.
         return 2 * np.arccos(kam)
-
-    def plotKamMap(self, **kwargs):
-        """Plot Kernel Average Misorientaion (KAM) for the EBSD map.
-
-        Parameters
-        ----------
-        kwargs
-            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
-
-        Returns
-        -------
-        defdap.plotting.MapPlot
-
-        """
-        # Set default plot parameters then update with any input
-        plotParams = {
-            'plotColourBar': True,
-            'clabel': "Kernel average misorientation (KAM) ($^\circ$)"
-        }
-        plotParams.update(kwargs)
-
-        # Convert to degrees and plot
-        kam = self.data.KAM * 180 / np.pi
-
-        plot = MapPlot.create(self, kam, **plotParams)
-
-        return plot
 
     @reportProgress("calculating Nye tensor")
     def calc_nye(self):
@@ -623,50 +569,11 @@ class Map(base.Map):
         yield 1.
         return alpha_total9, alpha
 
-    def plotGNDMap(self, **kwargs):
-        """Plots a map of geometrically necessary dislocation (GND) density
-
-        Parameters
-        ----------
-        kwargs
-            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
-
-        Returns
-        -------
-        defdap.plotting.MapPlot
-
-        """
-        # Set default plot parameters then update with any input
-        plotParams = {
-            'plotColourBar': True,
-            'clabel': "Geometrically necessary dislocation (GND) content"
-        }
-        plotParams.update(kwargs)
-
-        plot = MapPlot.create(self, np.log10(self.data.GND), **plotParams)
-
-        return plot
-
-    def checkDataLoaded(self):
-        """ Checks if EBSD data is loaded
-
-        Returns
-        -------
-        bool
-            True if data loaded
-
-        """
-        if 'euler_angle' not in self.data:
-            raise Exception("Data not loaded")
-        return True
-
     @reportProgress("building quaternion array")
     def buildQuatArray(self):
         """Build quaternion array
 
         """
-        self.checkDataLoaded()
-
         # create the array of quat objects
         quats = Quat.createManyQuats(self.data.euler_angle)
 
