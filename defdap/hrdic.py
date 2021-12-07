@@ -64,17 +64,10 @@ class Map(base.Map):
         Transform from DIC to EBSD coordinates.
     ebsdGrainIds : list
         EBSD grain IDs corresponding to DIC map grain IDs.
-    patternImPath : str
-        Path to BSE image of map.
-    plotHomog :
-        Map to use for defining homologous points (defaults to plotMaxShear).
     highlightAlpha : float
         Alpha (transparency) of grain highlight.
     bseScale : float
         Size of a pixel in the correlated images.
-    patScale : float
-        Size of pixel in loaded pattern relative to pixel size of dic data i.e 1 means they
-        are the same size and 2 means the pixels in the pattern are half the size of the dic data.
     path : str
         File path.
     fname : str
@@ -126,27 +119,20 @@ class Map(base.Map):
         self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
         self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
         self.ebsdGrainIds = None
-        self.patternImPath = None           # Path to BSE image of map
-        self.plotHomog = self.plotMaxShear  # Use max shear map for defining homologous points
         self.highlightAlpha = 0.6
         self.bseScale = None                # size of a pixel in the correlated images
-        self.patScale = None                # size of pixel in loaded
-        # pattern relative to pixel size of dic data i.e 1 means they
-        # are the same size and 2 means the pixels in the pattern are
-        # half the size of the dic data.
         self.path = path                    # file path
         self.fname = fname                  # file name
 
         self.loadData(path, fname, dataType=dataType)
 
         # Deformation gradient
-        f = np.gradient(self.data.displacement, self.binning,
-                               axis=(1, 2))
+        f = np.gradient(self.data.displacement, self.binning, axis=(1, 2))
         f = np.array(f).transpose((1, 0, 2, 3))[:, ::-1]
         f[0, 0] += 1
         f[1, 1] += 1
         self.data.add(
-            'f', f, unit='', type='map', order=2,
+            'f', f, unit='', type='map', order=2, default_component=(0, 0),
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Deformation gradient',
@@ -158,7 +144,7 @@ class Map(base.Map):
         e[0, 0] -= 0.5
         e[1, 1] -= 0.5
         self.data.add(
-            'e', e, unit='', type='map', order=2,
+            'e', e, unit='', type='map', order=2, default_component=(0, 0),
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Green strain',
@@ -175,11 +161,27 @@ class Map(base.Map):
             }
         )
 
+        # pattern image
+        self.data.add_generator(
+            'pattern', self.load_pattern, unit='', type='map', order=0,
+            save=False,
+            plot_params={
+                'cmap': 'gray'
+            }
+        )
+
         # crop distances (default all zeros)
         self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
 
-        self.plotDefault = lambda *args, **kwargs: self.plotMaxShear(plotGBs=True, *args, **kwargs)
-    
+        self.plotDefault = lambda *args, **kwargs: self.plotMaxShear(
+            plotGBs=True, *args, **kwargs
+        )
+        self.homog_map_name = 'max_shear'
+
+    @property
+    def original_shape(self):
+        return (self.ydim, self.xdim)
+
     @property
     def crystalSym(self):
         return self.ebsdMap.crystalSym
@@ -363,7 +365,7 @@ class Map(base.Map):
         yDim = self.ydim - self.cropDists[1, 0] - self.cropDists[1, 1]
         self.shape = (yDim, xDim)
 
-    def crop(self, mapData, binned=True):
+    def crop(self, mapData, binning=None):
         """ Crop given data using crop parameters stored in map
         i.e. cropped_data = DicMap.crop(DicMap.data_to_crop).
 
@@ -374,49 +376,15 @@ class Map(base.Map):
         binned : bool
             True if mapData is binned i.e. binned BSE pattern.
         """
-        if binned:
-            multiplier = 1
-        else:
-            multiplier = self.patScale
+        binning = 1 if binning is None else binning
 
-        minY = int(self.cropDists[1, 0] * multiplier)
-        maxY = int((self.ydim - self.cropDists[1, 1]) * multiplier)
+        minY = int(self.cropDists[1, 0] * binning)
+        maxY = int((self.ydim - self.cropDists[1, 1]) * binning)
 
-        minX = int(self.cropDists[0, 0] * multiplier)
-        maxX = int((self.xdim - self.cropDists[0, 1]) * multiplier)
+        minX = int(self.cropDists[0, 0] * binning)
+        maxX = int((self.xdim - self.cropDists[0, 1]) * binning)
 
         return mapData[..., minY:maxY, minX:maxX]
-
-    def setHomogPoint(self, points=None, display=None, **kwargs):
-        """Set homologous points. Uses interactive GUI if points is None.
-
-        Parameters
-        ----------
-
-        points : list, optional
-            homologous points to set.
-        display : string, optional
-            Use max shear map if set to 'maxshear' or pattern if set to 'pattern'.
-
-        """        
-        if points is not None:
-            self.homogPoints = points
-            
-        if points is None:
-            if display is None:
-                display = "maxshear"
-
-            # Set plot dafault to display selected image
-            display = display.lower().replace(" ", "")
-            if display == "bse" or display == "pattern":
-                self.plotHomog = self.plotPattern
-                binSize = self.patScale
-            else:
-                self.plotHomog = self.plotMaxShear
-                binSize = 1
-
-            # Call set homog points from base class setting the bin size
-            super(type(self), self).setHomogPoint(binSize=binSize, points=points, **kwargs)
 
     def linkEbsdMap(self, ebsdMap, transformType="affine", **kwargs):
         """Calculates the transformation required to align EBSD dataset to DIC.
@@ -670,55 +638,38 @@ class Map(base.Map):
             # self.data[comp] = np.where(self.mask == True, np.nan, self.data[comp])
             self.data[comp][self.mask] = np.nan
 
-    def setPatternPath(self, filePath, windowSize):
+    def set_pattern(self, img_path, window_size):
         """Set the path to the image of the pattern.
 
         Parameters
         ----------
-        filePath : str
+        path : str
             Path to image.
-        windowSize : float
+        window_size : int
             Size of pixel in pattern image relative to pixel size of DIC data
             i.e 1 means they  are the same size and 2 means the pixels in
             the pattern are half the size of the dic data.
 
         """
-        self.patternImPath = self.path + filePath
-        self.patScale = windowSize
+        path = self.path + img_path
+        self.data['pattern', 'path'] = path
+        self.data['pattern', 'binning'] = window_size
 
-    def plotPattern(self, **kwargs):
-        """Plot BSE image of Map. For use with setting homog points.
+    def load_pattern(self):
+        print('Loading img')
+        path = self.data.get_metadata('pattern', 'path')
+        binning = self.data.get_metadata('pattern', 'binning', 1)
+        if path is None:
+            raise FileNotFoundError("First set path to pattern image.")
 
-        Parameters
-        ----------
-        kwargs
-            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
-
-        Returns
-        -------
-        defdap.plotting.MapPlot
-
-        """
-        # Set default plot parameters then update with any input
-        plotParams = {
-            'cmap': 'gray'
-        }
-        try:
-            plotParams['scale'] = self.scale / self.patScale * 1e-6
-        except(ValueError):
-            pass
-        plotParams.update(kwargs)
-
-        # Check image path is set
-        if self.patternImPath is None:
-            raise Exception("First set path to pattern image.")
-
-        bseImage = imread(self.patternImPath)
-        bseImage = self.crop(bseImage, binned=False)
-
-        plot = MapPlot.create(self, bseImage, **plotParams)
-
-        return plot
+        img = imread(path)
+        exp_shape = tuple(v * binning for v in self.original_shape)
+        if img.shape != exp_shape:
+            raise ValueError(
+                f'Incorrect size of pattern image. For binning of {binning} '
+                f'expected size {exp_shape[::-1]} but got {img.shape[::-1]}'
+            )
+        return img
 
     def plotMaxShear(self, **kwargs):
         """Plot a map of maximum shear strain.
@@ -1015,9 +966,7 @@ class Grain(base.Grain):
         self.pointsList = []            # Lines drawn for STA
         self.groupsList = []            # Unique angles drawn for STA
 
-    @property
-    def plotDefault(self):
-        return lambda *args, **kwargs: self.plotMaxShear(
+        self.plotDefault = lambda *args, **kwargs: self.plotMaxShear(
             plotColourBar=True, plotScaleBar=True, plotSlipTraces=True,
             plotSlipBands=True, *args, **kwargs
         )

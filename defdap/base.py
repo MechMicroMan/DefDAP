@@ -72,7 +72,7 @@ class Map(object):
     def yDim(self):
         return self.shape[0]
 
-    def crop(self, map_data):
+    def crop(self, map_data, **kwargs):
         return map_data
 
     def checkGrainsDetected(self, raiseExc=True):
@@ -248,42 +248,48 @@ class Map(object):
         self.profilePlot.ax.set_ylabel('Intensity')
         self.profilePlot.draw()
 
-    def setHomogPoint(self, binSize=1, points=None, **kwargs):
+    def setHomogPoint(self, map_name=None, points=None, **kwargs):
         """
         Interactive tool to set homologous points. Right-click on a point
         then click 'save point' to append to the homologous points list.
 
         Parameters
         ----------
-        binSize : int, optional
-            Binning applied to image, if applicable.
+        map_name : str, optional
+            Map data to plot for selecting points.
         points : numpy.ndarray, optional
             Array of (x,y) homologous points to set explicitly.
         kwargs : dict, optional
             Keyword arguments passed to :func:`defdap.base.Map.plotHomog`
 
         """
-        if points is None:
-            plot = self.plotHomog(makeInteractive=True, **kwargs)
-            # Plot stored homogo points if there are any
-            if len(self.homogPoints) > 0:
-                homogPoints = np.array(self.homogPoints) * binSize
-                plot.addPoints(homogPoints[:, 0], homogPoints[:, 1],
-                               c='y', s=60)
-            else:
-                # add empty points layer to update later
-                plot.addPoints([None], [None], c='y', s=60)
-
-            # add empty points layer for current selected point
-            plot.addPoints([None], [None], c='w', s=60, marker='x')
-
-            plot.addEventHandler('button_press_event', self.clickHomog)
-            plot.addEventHandler('key_press_event', self.keyHomog)
-            plot.addButton("Save point",
-                           lambda e, p: self.clickSaveHomog(e, p, binSize),
-                           color="0.85", hovercolor="blue")
-        else:
+        if points is not None:
             self.homogPoints = points
+            return
+
+        if map_name is None:
+            map_name = self.homog_map_name
+
+        binning = self.data.get_metadata(map_name, 'binning', 1)
+        plot = self.plot_map(map_name, makeInteractive=True, **kwargs)
+
+        # Plot stored homog points if there are any
+        if len(self.homogPoints) > 0:
+            homogPoints = np.array(self.homogPoints) * binning
+            plot.addPoints(homogPoints[:, 0], homogPoints[:, 1],
+                           c='y', s=60)
+        else:
+            # add empty points layer to update later
+            plot.addPoints([None], [None], c='y', s=60)
+
+        # add empty points layer for current selected point
+        plot.addPoints([None], [None], c='w', s=60, marker='x')
+
+        plot.addEventHandler('button_press_event', self.clickHomog)
+        plot.addEventHandler('key_press_event', self.keyHomog)
+        plot.addButton("Save point",
+                       lambda e, p: self.clickSaveHomog(e, p, binning),
+                       color="0.85", hovercolor="blue")
 
     def clickHomog(self, event, plot):
         """Event handler for capturing position when clicking on a map.
@@ -343,7 +349,7 @@ class Map(object):
 
                 plot.addPoints([selPoint[0]], [selPoint[1]], updateLayer=1)
 
-    def clickSaveHomog(self, event, plot, binSize):
+    def clickSaveHomog(self, event, plot, binning):
         """Append the selected point on the map to homogPoints.
 
         Parameters
@@ -352,7 +358,7 @@ class Map(object):
             Button click event.
         plot : defdap.plotting.MapPlot
             Plot to monitor.
-        binSize : int, optional
+        binning : int, optional
             Binning applied to image, if applicable.
 
         """
@@ -366,11 +372,11 @@ class Map(object):
             plot.addPoints([None], [None], updateLayer=1)
 
             # then scale and add to homog points list
-            selPoint = tuple((selPoint / binSize).round().astype(int))
+            selPoint = tuple((selPoint / binning).round().astype(int))
             self.homogPoints.append(selPoint)
 
             # update the plotted homog points
-            homogPoints = np.array(self.homogPoints) * binSize
+            homogPoints = np.array(self.homogPoints) * binning
             plot.addPoints(homogPoints[:, 0], homogPoints[:, 1], updateLayer=0)
 
     def updateHomogPoint(self, homogID, newPoint=None, delta=None):
@@ -603,39 +609,113 @@ class Map(object):
         trialDistances = None
 
     def _validate_map(self, map_name):
+        """Check the name exists and is a map data.
+
+        Parameters
+        ----------
+        map_name : str
+
+        """
         if map_name not in self.data:
             raise ValueError(f'`{map_name}` does not exist.')
         if (self.data.get_metadata(map_name, 'type') != 'map' or
                 self.data.get_metadata(map_name, 'order') is None):
             raise ValueError(f'`{map_name}` is not a valid map.')
 
-        return map_name
+    def _validate_component(self, map_name, comp):
+        """
 
-    def _validate_comp(self, map_name, comp):
+        Parameters
+        ----------
+        map_name : str
+        comp : int or tuple of int or str
+            Component of the map data. This is either the
+            tensor component (tuple of ints) or the name of a calculation
+            to be applied e.g. 'norm', 'all_euler' or 'IPF_x'.
+
+        Returns
+        -------
+        tuple of int or str
+
+        """
         order = self.data[map_name, 'order']
+        if comp is None:
+            comp = self.data.get_metadata(map_name, 'default_component')
+            if comp is not None:
+                print(f'Using default componetnt: `{comp}`')
+
         if comp is None:
             if order != 0:
                 raise ValueError('`comp` must be specified.')
             else:
                 return comp
+
         if isinstance(comp, int):
             comp = (comp,)
-        if len(comp) != self.data[map_name, 'order']:
+        if isinstance(comp, tuple) and len(comp) != order:
             raise ValueError(f'Component length does not match data, expected '
                              f'{self.data[map_name, "order"]} values but got '
                              f'{len(comp)}.')
 
         return comp
 
-    def plot_map(self, map_name, comp=None, **kwargs):
+    def _extract_component(self, map_data, comp):
+        """Extract a component from the data.
+
+        Parameters
+        ----------
+        map_data : numpy.ndarray
+            Map data to extract from.
+        comp : tuple of int or str
+            Component of the map data to extract. This is either the
+            tensor component (tuple of ints) or the name of a calculation
+            to be applied e.g. 'norm', 'all_euler' or 'IPF_x'.
+
+        Returns
+        -------
+        numpy.ndarray
+
+        """
+        if comp is None:
+            return map_data
+        if isinstance(comp, tuple):
+            return map_data[comp]
+        if isinstance(comp, str):
+            if comp == 'norm':
+                if len(map_data.shape) == 3:
+                    axis = 0
+                elif len(map_data.shape) == 4:
+                    axis = (0, 1)
+                else:
+                    raise ValueError('Unsupported data for norm.')
+
+                return np.linalg.norm(map_data, axis=axis)
+
+            if comp == 'all_euler':
+                return self.calc_euler_colour(map_data)
+
+            if comp.lower().startswith('ipf'):
+                direction = comp.split('_')[1].lower()
+                direction = {
+                    'x': np.array([1, 0, 0]),
+                    'y': np.array([0, 1, 0]),
+                    'z': np.array([0, 0, 1]),
+                }[direction]
+                return self.calc_ipf_colour(map_data, direction)
+
+        raise ValueError(f'Invalid component `{comp}`')
+
+    def plot_map(self, map_name, component=None, **kwargs):
         """Plot a map from the DIC data.
 
         Parameters
         ----------
         map_name : str
-            Map component to plot i.e. e11, f11, max_shear.
-        comp : tuple
-
+            Map data name to plot i.e. e, max_shear, euler_angle, orientation.
+        component : int or tuple of int or str
+            Component of the map data to plot. This is either the tensor
+            component (int or tuple of ints) or the name of a calculation
+            to be applied e.g. 'norm', 'all_euler' or 'IPF_x'.
         kwargs
             All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
 
@@ -645,20 +725,22 @@ class Map(object):
             Plot containing map.
 
         """
-        map_name = self._validate_map(map_name)
-        comp = self._validate_comp(map_name, comp)
+        self._validate_map(map_name)
+        comp = self._validate_component(map_name, component)
 
         # Set default plot parameters then update with any input
         plot_params = {}   # should load default plotting params
-        plot_params.update(self.data.get_metadata(map_name, 'plot_params'))
+        plot_params.update(self.data.get_metadata(map_name, 'plot_params', {}))
 
         # Add extra info to label
         clabel = plot_params.get('clabel')
         if clabel is not None:
             # tensor component
-            if comp is not None:
+            if isinstance(comp, tuple):
                 comp_fmt = ' (' + '{}' * len(comp) + ')'
                 clabel += comp_fmt.format(*(i+1 for i in comp))
+            elif isinstance(comp, str):
+                clabel += f' ({comp.replace("_", " ")})'
             # unit
             unit = self.data.get_metadata(map_name, 'unit')
             if unit is not None and unit != '':
@@ -666,13 +748,16 @@ class Map(object):
 
             plot_params['clabel'] = clabel
 
+        binning = self.data.get_metadata(map_name, 'binning', 1)
+        if self.scale is not None:
+            plot_params['scale'] = self.scale / binning
+
         plot_params.update(kwargs)
 
-        map_data = self.data[map_name]
-        if comp is not None:
-            map_data = map_data[comp]
+        map_data = self._extract_component(self.data[map_name], comp)
+        map_data = self.crop(map_data, binning=binning)
 
-        return MapPlot.create(self, self.crop(map_data), **plot_params)
+        return MapPlot.create(self, map_data, **plot_params)
 
     def calcGrainAv(self, mapData, grainIds=-1):
         """Calculate grain average of any DIC map data.

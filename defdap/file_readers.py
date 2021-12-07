@@ -51,10 +51,7 @@ class EBSDDataLoader(object):
         )
         self.loadedData.add(
             'euler_angle', None, unit='rad', type='map', order=1,
-            plot_params={
-                'plotColourBar': True,
-                'clabel': 'Euler angle',
-            }
+            default_component='all_euler'
         )
         self.dataFormat = None
 
@@ -368,7 +365,7 @@ class EdaxAngLoader(EBSDDataLoader):
                     space_group = 229
                 elif point_group == '6/mmm':
                     # hex high
-                    laue_group = 11
+                    laue_group = 9
                     space_group = None
                 else:
                     raise ValueError(f'Unknown crystal symmetry {point_group}')
@@ -630,6 +627,7 @@ class DICDataLoader(object):
         self.loadedData = Datastore()
         self.loadedData.add(
             'coordinate', None, unit='px', type='map', order=1,
+            default_component='magnitude',
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Coordinate',
@@ -637,6 +635,7 @@ class DICDataLoader(object):
         )
         self.loadedData.add(
             'displacement', None, unit='px', type='map', order=1,
+            default_component='magnitude',
             plot_params={
                 'plotColourBar': True,
                 'clabel': 'Displacement',

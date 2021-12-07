@@ -389,8 +389,8 @@ class MapPlot(Plot):
 
         """
         if scale is None:
-            scale = self.callingMap.scale * 1e-6
-        self.ax.add_artist(ScaleBar(scale))
+            scale = self.callingMap.scale
+        self.ax.add_artist(ScaleBar(scale * 1e-6))
 
     def addGrainBoundaries(self, kind="pixel", boundaries=None, colour=None, 
                            dilate=False, draw=True, **kwargs):

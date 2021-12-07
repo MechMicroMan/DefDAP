@@ -142,7 +142,7 @@ class Datastore(object):
         if attr == 'data' and val is None:
             try:
                 val = self.generate(key)
-            except ValueError:
+            except DataGenerationError:
                 # No generator found
                 pass
 
@@ -284,8 +284,10 @@ class Datastore(object):
                 return datas
 
             if len(keys) != len(datas):
-                raise ValueError('Data generator method did not return '
-                                 'the expected number of values.')
+                raise DataGenerationError(
+                    'Data generator method did not return the expected '
+                    'number of values.'
+                )
             for key_i, data in zip(keys, datas):
                 if self.get_metadata(key_i, 'save', True):
                     self[key_i] = data
@@ -332,3 +334,7 @@ class Datastore(object):
 
         """
         return self._store[key].get(attr, value)
+
+
+class DataGenerationError(Exception):
+    pass

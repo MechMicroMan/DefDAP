@@ -109,14 +109,15 @@ class Map(base.Map):
         self.primaryPhaseID = 0
 
         # Use euler map for defining homologous points
-        self.plotHomog = self.plotEulerMap
         self.plotDefault = self.plotEulerMap
+        self.homog_map_name = 'band_contrast'
         self.highlightAlpha = 1
 
         self.loadData(fileName, dataType=dataType)
 
         self.data.add_generator(
-            'orientation', self.buildQuatArray, unit='', type='map', order=0
+            'orientation', self.buildQuatArray, unit='', type='map',
+            order=0, default_component='IPF_x',
         )
         self.data.add_generator(
             'KAM', self.calc_kam, unit='rad', type='map', order=0,
@@ -140,6 +141,7 @@ class Map(base.Map):
                 'type': 'map',
                 'order': 2,
                 'save': False,
+                'default_component': (0, 0),
                 'plot_params': {
                     'plotColourBar': True,
                     'clabel': 'Nye tensor',
@@ -287,7 +289,57 @@ class Map(base.Map):
 
         return plot
 
-    def plotEulerMap(self, phases=None, **kwargs):
+    def calc_euler_colour(self, map_data, phases=None, bg_colour=None):
+        if phases is None:
+            phases = self.phases
+            phase_ids = range(len(phases))
+        else:
+            phase_ids = phases
+            phases = [self.phases[i] for i in phase_ids]
+
+        if bg_colour is None:
+            bg_colour = np.array([0., 0., 0.])
+
+        map_colours = np.tile(bg_colour, self.shape + (1,))
+
+        for phase, phase_id in zip(phases, phase_ids):
+            if phase.crystalStructure.name == 'cubic':
+                norm = np.array([2 * np.pi, np.pi / 2, np.pi / 2])
+            elif phase.crystalStructure.name == 'hexagonal':
+                norm = np.array([np.pi, np.pi, np.pi / 3])
+            else:
+                ValueError("Only hexagonal and cubic symGroup supported")
+
+            # Apply normalisation for each phase
+            phase_mask = self.data.phase == phase_id + 1
+            map_colours[phase_mask] = map_data[:, phase_mask].T / norm
+
+        return map_colours
+
+    def calc_ipf_colour(self, map_data, direction, phases=None,
+                        bg_colour=None):
+        if phases is None:
+            phases = self.phases
+            phase_ids = range(len(phases))
+        else:
+            phase_ids = phases
+            phases = [self.phases[i] for i in phase_ids]
+
+        if bg_colour is None:
+            bg_colour = np.array([0., 0., 0.])
+
+        map_colours = np.tile(bg_colour, self.shape + (1,))
+
+        for phase, phase_id in zip(phases, phase_ids):
+            # calculate IPF colours for phase
+            phase_mask = self.data.phase == phase_id + 1
+            map_colours[phase_mask] = Quat.calcIPFcolours(
+                map_data[phase_mask], direction, phase.crystalStructure.name
+            ).T
+
+        return map_colours
+
+    def plotEulerMap(self, phases=None, bg_colour=None, **kwargs):
         """Plot an orientation map in Euler colouring
 
         Parameters
@@ -308,31 +360,13 @@ class Map(base.Map):
         plot_params = {}
         plot_params.update(kwargs)
 
-        if phases is None:
-            phases = self.phases
-            phase_ids = range(len(phases))
-        else:
-            phase_ids = phases
-            phases = [self.phases[i] for i in phase_ids]
-
-        map_colours = np.zeros(self.shape + (3,))
-
-        for phase, phase_id in zip(phases, phase_ids):
-            if phase.crystalStructure.name == 'cubic':
-                norm = np.array([2 * np.pi, np.pi / 2, np.pi / 2])
-            elif phase.crystalStructure.name == 'hexagonal':
-                norm = np.array([np.pi, np.pi, np.pi / 3])
-            else:
-                ValueError("Only hexagonal and cubic symGroup supported")
-
-            # Apply normalisation for each phase
-            phase_mask = self.data.phase == phase_id + 1
-            map_colours[phase_mask] = self.data.euler_angle[:, phase_mask].T / norm
+        map_colours = self.calc_euler_colour(
+            self.data.euler_angle, phases=phases, bg_colour=bg_colour
+        )
 
         return MapPlot.create(self, map_colours, **plot_params)
 
-    def plotIPFMap(self, direction, backgroundColour=None, phases=None,
-                   **kwargs):
+    def plotIPFMap(self, direction, bg_colour=None, phases=None, **kwargs):
         """
         Plot a map with points coloured in IPF colouring,
         with respect to a given sample direction.
@@ -341,7 +375,7 @@ class Map(base.Map):
         ----------
         direction : np.array len 3
             Sample directiom.
-        backgroundColour : np.array len 3
+        bg_colour : np.array len 3
             Colour of background (i.e. for phases not plotted).
         phases : list of int
             Which phases to plot IPF data for.
@@ -357,26 +391,10 @@ class Map(base.Map):
         plot_params = {}
         plot_params.update(kwargs)
 
-        if phases is None:
-            phases = self.phases
-            phase_ids = range(len(phases))
-        else:
-            phase_ids = phases
-            phases = [self.phases[i] for i in phase_ids]
-
-        if backgroundColour is None:
-            backgroundColour = [0., 0., 0.]
-
-        map_colours = np.tile(np.array(backgroundColour), self.shape + (1,))
-
-        for phase, phase_id in zip(phases, phase_ids):
-            # calculate IPF colours for phase
-            phase_mask = self.data.phase == phase_id + 1
-            map_colours[phase_mask] = Quat.calcIPFcolours(
-                self.data.orientation[phase_mask],
-                direction,
-                phase.crystalStructure.name
-            ).T
+        map_colours = self.calc_ipf_colour(
+            self.data.orientation, direction, phases=phases,
+            bg_colour=bg_colour
+        )
 
         return MapPlot.create(self, map_colours, **plot_params)
 
@@ -1335,11 +1353,7 @@ class Grain(base.Grain):
         self.slipTraceAngles = None             # list of slip trace angles
         self.slipTraceInclinations = None
 
-    @property
-    def plotDefault(self):
-        return lambda *args, **kwargs: self.plotUnitCell(
-            *args, **kwargs
-        )
+        self.plotDefault = self.plotUnitCell
 
     @property
     def crystalSym(self):
