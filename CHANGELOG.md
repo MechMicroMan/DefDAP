@@ -10,15 +10,17 @@
   in a multi-phase EBSD map
 - Add reader for EDAX .ang EBSD files
 - Add slip system file for FCC but in same order as DAMASK
+- Use example_notebook to generate a 'How To Use' page in the documentation
 
 ### Changed
 - Overhaul of data storage in the Map classes
 - RDR calculation `calcRDR` in grain inspector is faster and more robust
 - Improve formatting of grain inspector and RDR plot window
 - Refactor boundary lines calculations
+- Use GitHub actions to run `pytest` on commit push or pull request
 
 ### Fixed
-- Fix bug in grain inspector (None passed to corrAngle inadvertently)
+- Fix bug in grain inspector (`None` passed to `corrAngle` inadvertently)
 - Fix EBSD grain linker
 - Remove `IPython` and `jupyter` as requirements
 
