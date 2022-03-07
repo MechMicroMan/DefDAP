@@ -112,6 +112,7 @@ class OxfordTextLoader(EBSDDataLoader):
             phase = Phase(
                 lineSplit[2],
                 int(lineSplit[3]),
+                int(lineSplit[4]),
                 latticeParams
             )
             return phase
@@ -300,6 +301,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
             self.loadedMetadata['phases'].append(Phase(
                 phaseMetadata['StructureName'],
                 int(phaseMetadata['LaueGroup']),
+                int(phaseMetadata['SpaceGroup']),
                 (
                     round(float(phaseMetadata['a']), 3),
                     round(float(phaseMetadata['b']), 3),
@@ -324,6 +326,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
         self.checkMetadata()
 
         # Construct binary data format from listed fields
+        unknown_field_count = 0
         dataFormat = [('phase', 'uint8')]
         fieldLookup = {
             3: ('ph1', 'float32'),
@@ -342,7 +345,10 @@ class OxfordBinaryLoader(EBSDDataLoader):
                 fieldID = int(metadata['Fields']['Field{:}'.format(i + 1)])
                 dataFormat.append(fieldLookup[fieldID])
         except KeyError:
-            raise TypeError("Unknown data in EBSD file.")
+            print(f'\nUnknown field in file with key {fieldID}. '
+                  f'Assumming float32 data.')
+            unknown_field_count += 1
+            dataFormat.append((f'unknown_{unknown_field_count}', 'float32'))
 
         self.dataFormat = np.dtype(dataFormat)
 

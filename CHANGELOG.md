@@ -9,6 +9,20 @@
 ### Fixed
 
 
+## 0.93.4 (07-03-2022)
+
+### Changed
+- Update BCC slip system file and add a separate FCC file with same ordering as in DAMASK
+- Refactor boundary lines in `ebsd.map` class and add methods for warping lines to a DIC map
+- Refactor `linkEbsdMap` method and pass all arguments to transform estimate method
+- Remove IPython and jupyter as requirements
+- Move slip systems to `Phase` class and load automatically based on crystal stucture
+- Make Oxford bonary loader tolerate of unknown data fields
+
+### Fixed
+- Fix ebsd grain linker so it works again
+
+
 ## 0.93.3 (23-08-2021)
 
 ### Added

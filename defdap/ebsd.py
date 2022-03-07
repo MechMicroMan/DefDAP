@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import numpy as np
-from matplotlib.widgets import Button
 from skimage import morphology as mph
 import networkx as nx
 
@@ -51,8 +50,6 @@ class Map(base.Map):
         Band contrast for each point of map. Shape (yDim, xDim).
     quatArray : numpy.ndarray of defdap.quat.Quat
         Quaterions for each point of map. Shape (yDim, xDim).
-    numPhases : int
-        Number of phases.
     phaseArray : numpy.ndarray
         Map of phase ids. 1-based, 0 is non-indexed points
     phases : list of defdap.crystal.Phase
@@ -71,12 +68,8 @@ class Map(base.Map):
         Map of misorientation axis components.
     kam : numpy.ndarray
         Map of KAM.
-    slipSystems : list of list of defdap.crystal.SlipSystem
-        Slip systems grouped by slip plane.
-    slipTraceColours list(str)
-        Colours used when plotting slip traces.
     origin : tuple(int)
-        Map origin (y, x). Used by linker class where origin is a
+        Map origin (x, y). Used by linker class where origin is a
         homologue point of the maps.
     GND : numpy.ndarray
         GND scalar map.
@@ -84,7 +77,6 @@ class Map(base.Map):
         3x3 Nye tensor at each point.
 
     """
-
     def __init__(self, fileName, dataType=None):
         """
         Initialise class and load EBSD data.
@@ -123,8 +115,6 @@ class Map(base.Map):
         self.origin = (0, 0)
         self.GND = None
         self.Nye = None
-        self.slipSystems = None
-        self.slipTraceColours = None
 
         # Phase used for the maps crystal structure and cOverA. So old
         # functions still work for the 'main' phase in the map. 0-based
@@ -328,7 +318,8 @@ class Map(base.Map):
 
         return MapPlot.create(self, map_colours, **plot_params)
 
-    def plotIPFMap(self, direction, backgroundColour = [0., 0., 0.], phases=None, **kwargs):
+    def plotIPFMap(self, direction, backgroundColour=None, phases=None,
+                   **kwargs):
         """
         Plot a map with points coloured in IPF colouring,
         with respect to a given sample direction.
@@ -359,6 +350,9 @@ class Map(base.Map):
         else:
             phase_ids = phases
             phases = [self.phases[i] for i in phase_ids]
+
+        if backgroundColour is None:
+            backgroundColour = [0., 0., 0.]
 
         map_colours = np.tile(np.array(backgroundColour), self.shape + (1,))
 
@@ -628,21 +622,18 @@ class Map(base.Map):
         return True
 
     @reportProgress("building quaternion array")
-    def buildQuatArray(self, force = False):
+    def buildQuatArray(self, force=False):
         """Build quaternion array
 
         Parameters
         ----------
-        force, optional
+        force : bool, optional
             If true, re-build quaternion array
         """
         self.checkDataLoaded()
 
-        if force == False:
-            if self.quatArray is None:
-                # create the array of quat objects
-                self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
-        if force == True:
+        if force or self.quatArray is None:
+            # create the array of quat objects
             self.quatArray = Quat.createManyQuats(self.eulerAngleArray)
 
         yield 1.
@@ -817,47 +808,17 @@ class Map(base.Map):
         self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
         self.boundaries = -self.boundaries.astype(int)
 
-        _, _, self.boundaryLines = Map.create_boundary_lines(
-            boundaries_x=self.boundariesX,
-            boundaries_y=self.boundariesY
+        _, _, self.boundaryLines = BoundarySegment.boundary_points_to_lines(
+            boundary_points_x=zip(*self.boundariesX.transpose().nonzero()),
+            boundary_points_y=zip(*self.boundariesY.transpose().nonzero())
         )
-        _, _, self.phaseBoundaryLines = Map.create_boundary_lines(
-            boundaries_x=self.phaseBoundariesX,
-            boundaries_y=self.phaseBoundariesY
+
+        _, _, self.phaseBoundaryLines = BoundarySegment.boundary_points_to_lines(
+            boundary_points_x=zip(*self.phaseBoundariesX.transpose().nonzero()),
+            boundary_points_y=zip(*self.phaseBoundariesY.transpose().nonzero())
         )
 
         yield 1.
-
-    @staticmethod
-    def create_boundary_lines(*, boundaries_x=None, boundaries_y=None):
-        boundary_data = {}
-        if boundaries_x is not None:
-            boundary_data['x'] = boundaries_x
-        if boundaries_y is not None:
-            boundary_data['y'] = boundaries_y
-        if not boundary_data:
-            raise ValueError("No boundaries provided.")
-
-        deltas = {
-            'x': (0.5, -0.5, 0.5, 0.5),
-            'y': (-0.5, 0.5, 0.5, 0.5)
-        }
-        all_lines = []
-        for mode, boundaries in boundary_data.items():
-            points = np.where(boundaries)
-            lines = []
-            for i, j in zip(*points):
-                lines.append((
-                    (j + deltas[mode][0], i + deltas[mode][1]),
-                    (j + deltas[mode][2], i + deltas[mode][3])
-                ))
-            all_lines.append(lines)
-
-        if len(all_lines) == 2:
-            all_lines.append(all_lines[0] + all_lines[1])
-            return tuple(all_lines)
-        else:
-            return all_lines[0]
 
     @reportProgress("constructing neighbour network")
     def buildNeighbourNetwork(self):
@@ -907,7 +868,6 @@ class Map(base.Map):
         self.neighbourNetwork = nn
 
     @reportProgress("finding phase boundaries")
-
     def plotPhaseBoundaryMap(self, dilate=False, **kwargs):
         """Plot phase boundary map.
 
@@ -973,7 +933,6 @@ class Map(base.Map):
             Minimum grain area in pixels.
 
         """
-        # TODO: grains need to be assigned a phase
         # Initialise the grain map
         # TODO: Look at grain map compared to boundary map
         # self.grains = np.copy(self.boundaries)
@@ -1222,38 +1181,6 @@ class Map(base.Map):
 
         return plot
 
-    def loadSlipSystems(self, name):
-        """Load slip system definitions from file.
-
-        Parameters
-        ----------
-        name : str
-            name of the slip system file (without file extension)
-            stored in the defdap install dir or path to a file.
-
-        """
-        # TODO: should be loaded into the phases of the map
-        self.slipSystems, self.slipTraceColours = SlipSystem.loadSlipSystems(
-            name, self.crystalSym, cOverA=self.cOverA
-        )
-
-        if self.checkGrainsDetected(raiseExc=False):
-            for grain in self:
-                grain.slipSystems = self.slipSystems
-
-    def printSlipSystems(self):
-        """Print a list of slip planes (with colours) and slip directions.
-
-        """
-        # TODO: this should be moved to static method of the SlipSystem class
-        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems,
-                                                  self.slipTraceColours)):
-            print('Plane {0}: {1}\tColour: {2}'.format(
-                i, ssGroup[0].slipPlaneLabel, colour
-            ))
-            for j, ss in enumerate(ssGroup):
-                print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
-
     @reportProgress("calculating grain average Schmid factors")
     def calcAverageGrainSchmidFactors(self, loadVector, slipSystems=None):
         """
@@ -1265,8 +1192,8 @@ class Map(base.Map):
         loadVector :
             Loading vector, e.g. [1, 0, 0].
         slipSystems : list, optional
-            Slip planes to calculate Schmid factor for,
-            maximum of all planes calculated if not given.
+            Slip planes to calculate Schmid factor for, maximum of all
+            planes calculated if not given.
 
         """
         # Check that grains have been detected in the map
@@ -1350,14 +1277,14 @@ class Grain(base.Grain):
 
     Attributes
     ----------
-    crystalSym : str
-        Symmetry of material e.g. "cubic", "hexagonal"
-    slipSystems : list(list(defdap.crystal.SlipSystem))
-        Slip systems
     ebsdMap : defdap.ebsd.Map
         EBSD map this grain is a member of.
     ownerMap : defdap.ebsd.Map
         EBSD map this grain is a member of.
+    phaseID : int
+
+    phase : defdap.crystal.Phase
+
     quatList : list
         List of quats.
     misOriList : list
@@ -1376,15 +1303,10 @@ class Grain(base.Grain):
          Angle between slip plane and screen plane.
 
     """
-
-    # TODO: each grain should be assigned a phase and slip systems
-    # slip systems accessed from the phase
     def __init__(self, grainID, ebsdMap):
         # Call base class constructor
         super(Grain, self).__init__(grainID, ebsdMap)
 
-        self.crystalSym = ebsdMap.crystalSym    # symmetry of material e.g. "cubic", "hexagonal"
-        self.slipSystems = ebsdMap.slipSystems
         self.ebsdMap = self.ownerMap            # ebsd map this grain is a member of
         self.quatList = []                      # list of quats
         self.misOriList = None                  # list of misOri at each point in grain
@@ -1401,6 +1323,11 @@ class Grain(base.Grain):
         return lambda *args, **kwargs: self.plotUnitCell(
             *args, **kwargs
         )
+
+    @property
+    def crystalSym(self):
+        """Temporary"""
+        return self.phase.crystalStructure.name
 
     def addPoint(self, coord, quat):
         """Append a coordinate and a quat to a grain.
@@ -1592,7 +1519,7 @@ class Grain(base.Grain):
 
         """
         if slipSystems is None:
-            slipSystems = self.slipSystems
+            slipSystems = self.phase.slipSystems
         if self.refOri is None:
             self.calcAverageOri()
 
@@ -1636,14 +1563,17 @@ class Grain(base.Grain):
         """Print a list of slip planes (with colours) and slip directions
 
         """
-
         self.calcSlipTraces()
 
         if self.averageSchmidFactors is None:
             raise Exception("Run 'calcAverageGrainSchmidFactors' on the EBSD map first")
 
-        for ssGroup, colour, sfGroup, slipTrace in zip(self.slipSystems, self.ebsdMap.slipTraceColours,
-                                                       self.averageSchmidFactors, self.slipTraces):
+        for ssGroup, colour, sfGroup, slipTrace in zip(
+            self.phase.slipSystems,
+            self.phase.slipTraceColours,
+            self.averageSchmidFactors,
+            self.slipTraces
+        ):
             print('{0}\tColour: {1}\tAngle: {2:.2f}'.format(ssGroup[0].slipPlaneLabel, colour, slipTrace * 180 / np.pi))
             for ss, sf in zip(ssGroup, sfGroup):
                 print('  {0}   SF: {1:.3f}'.format(ss.slipDirLabel, sf))
@@ -1657,7 +1587,7 @@ class Grain(base.Grain):
 
         """
         if slipSystems is None:
-            slipSystems = self.slipSystems
+            slipSystems = self.phase.slipSystems
         if self.refOri is None:
             self.calcAverageOri()
 
@@ -1774,6 +1704,15 @@ class BoundarySegment(object):
         """
         return self.boundaryPointPairs(1)
 
+    @property
+    def boundaryLines(self):
+        """Return line points along this boundary segment"""
+        _, _, lines = self.boundary_points_to_lines(
+            boundary_points_x=self.boundaryPointsX,
+            boundary_points_y=self.boundaryPointsY
+        )
+        return lines
+
     def misorientation(self):
         misOri, minSymm = self.grain1.refOri.misOri(
             self.grain2.refOri, self.ebsdMap.crystalSym, returnQuat=2
@@ -1793,126 +1732,182 @@ class BoundarySegment(object):
         #                                                      compVector))))
         # print(deviation * 180 / np.pi)
 
+    @staticmethod
+    def boundary_points_to_lines(*, boundary_points_x=None,
+                                 boundary_points_y=None):
+        boundary_data = {}
+        if boundary_points_x is not None:
+            boundary_data['x'] = boundary_points_x
+        if boundary_points_y is not None:
+            boundary_data['y'] = boundary_points_y
+        if not boundary_data:
+            raise ValueError("No boundaries provided.")
+
+        deltas = {
+            'x': (0.5, -0.5, 0.5, 0.5),
+            'y': (-0.5, 0.5, 0.5, 0.5)
+        }
+        all_lines = []
+        for mode, points in boundary_data.items():
+            lines = []
+            for i, j in points:
+                lines.append((
+                    (i + deltas[mode][0], j + deltas[mode][1]),
+                    (i + deltas[mode][2], j + deltas[mode][3])
+                ))
+            all_lines.append(lines)
+
+        if len(all_lines) == 2:
+            all_lines.append(all_lines[0] + all_lines[1])
+            return tuple(all_lines)
+        else:
+            return all_lines[0]
+
 
 class Linker(object):
     """Class for linking multiple EBSD maps of the same region for analysis of deformation.
 
-    Parameters
+    Attributes
     ----------
-    ebsdMaps : list(ebsd.Map)
-        List of ebsd.Map objects that are linked.
-    links : list
+    ebsd_maps : list(ebsd.Map)
+        List of `ebsd.Map` objects that are linked.
+    links : list(tuple(int))
         List of grain link. Each link is stored as a tuple of
         grain IDs (one from each map stored in same order of maps).
-    numMaps : int
-        Number of linked maps.
+    plots : list(plotting.MapPlot)
+        List of last opened plot of each map.
 
     """
+    def __init__(self, ebsd_maps):
+        """Initialise linker and set ebsd maps
 
-    def __init__(self, maps):
-        self.ebsdMaps = maps
-        self.numMaps = len(maps)
-        self.links = []
-        return
-
-    def setOrigin(self):
-        """Interacive tool to set origin of each EBSD map.
+        Parameters
+        ----------
+        ebsd_maps : list(ebsd.Map)
+            List of `ebsd.Map` objects that are linked.
 
         """
-        for ebsdMap in self.ebsdMaps:
-            ebsdMap.locateGrainID(clickEvent=self.clickSetOrigin)
+        self.ebsd_maps = ebsd_maps
+        self.links = []
+        self.plots = None
 
-    def clickSetOrigin(self, event, currentEbsdMap):
+    def set_origin(self, **kwargs):
+        """Interacive tool to set origin of each EBSD map.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments passed to :func:`defdap.ebsd.Map.plotDefault`
+
+        """
+        self.plots = []
+        for ebsd_map in self.ebsd_maps:
+            plot = ebsd_map.plotDefault(makeInteractive=True, **kwargs)
+            plot.addEventHandler('button_press_event', self.click_set_origin)
+            plot.addPoints([ebsd_map.origin[0]], [ebsd_map.origin[1]],
+                           c='w', s=60, marker='x')
+            self.plots.append(plot)
+
+    def click_set_origin(self, event, plot):
         """Event handler for clicking to set origin of map.
 
         Parameters
         ----------
         event
             Click event.
-        currentEbsdMap : defdap.ebsd.Map
-            EBSD map to set origin for.
+        plot : defdap.plotting.MapPlot
+            Plot to capture clicks from.
 
         """
-        currentEbsdMap.origin = (int(event.ydata), int(event.xdata))
-        print("Origin set to ({:}, {:})".format(currentEbsdMap.origin[0], currentEbsdMap.origin[1]))
+        # check if click was on the map
+        if event.inaxes is not plot.ax:
+            return
 
-    def startLinking(self):
+        origin = (int(event.xdata), int(event.ydata))
+        plot.callingMap.origin = origin
+        plot.addPoints([origin[0]], [origin[1]], updateLayer=0)
+        print(f"Origin set to ({origin[0]}, {origin[1]})")
+
+    def start_linking(self):
         """Start interactive grain linking process of each EBSD map.
 
         """
-        for ebsdMap in self.ebsdMaps:
-            ebsdMap.locateGrainID(clickEvent=self.clickGrainGuess)
+        self.plots = []
+        for ebsd_map in self.ebsd_maps:
+            plot = ebsd_map.locateGrainID(clickEvent=self.click_grain_guess)
 
             # Add make link button to axes
-            btnAx = ebsdMap.fig.add_axes([0.8, 0.0, 0.1, 0.07])
-            Button(btnAx, 'Make link', color='0.85', hovercolor='0.95')
+            plot.addButton('Make link', self.make_link,
+                           color='0.85', hovercolor='0.95')
 
-    def clickGrainGuess(self, event, currentEbsdMap):
+            self.plots.append(plot)
+
+    def click_grain_guess(self, event, plot):
         """Guesses grain position in other maps, given click on one.
 
         Parameters
         ----------
         event
             Click handler.
-        currentEbsdMap : defdap.ebsd.Map
-            EBSD map that is clicked on.
+        plot : defdap.plotting.Plot
+            Plot to capture clicks from.
 
         """
-        # self is current linker instance even if run as click event handler from map class
-        if event.inaxes is currentEbsdMap.fig.axes[0]:
-            # axis 0 then is a click on the map
+        # check if click was on the map
+        if event.inaxes is not plot.ax:
+            return
 
-            if currentEbsdMap is self.ebsdMaps[0]:
-                # clicked on 'master' map so highlight and guess grain on other maps
-                for ebsdMap in self.ebsdMaps:
-                    if ebsdMap is currentEbsdMap:
-                        # set current grain in ebsd map that clicked
-                        ebsdMap.clickGrainID(event)
-                    else:
-                        # Guess at grain in other maps
-                        # Calculated position relative to set origin of the map, scaled from step size of maps
-                        y0m = currentEbsdMap.origin[0]
-                        x0m = currentEbsdMap.origin[1]
-                        y0 = ebsdMap.origin[0]
-                        x0 = ebsdMap.origin[1]
-                        scaling = currentEbsdMap.stepSize / ebsdMap.stepSize
+        curr_ebsd_map = plot.callingMap
 
-                        x = int((event.xdata - x0m) * scaling + x0)
-                        y = int((event.ydata - y0m) * scaling + y0)
+        if curr_ebsd_map is self.ebsd_maps[0]:
+            # clicked on 'master' map so highlight and guess grain on others
 
-                        ebsdMap.currGrainId = int(ebsdMap.grains[y, x]) - 1
-                        print(ebsdMap.currGrainId)
+            # set current grain in 'master' ebsd map
+            self.ebsd_maps[0].clickGrainID(event, plot, False)
 
-                        # clear current axis and redraw euler map with highlighted grain overlay
-                        ebsdMap.ax.clear()
-                        ebsdMap.plotEulerMap(updateCurrent=True, highlightGrains=[ebsdMap.currGrainId])
-                        ebsdMap.fig.canvas.draw()
-            else:
-                # clicked on other map so correct guessed selected grain
-                currentEbsdMap.clickGrainID(event)
+            # guess at grain in other maps
+            for ebsd_map, plot in zip(self.ebsd_maps[1:], self.plots[1:]):
+                # calculated position relative to set origin of the
+                # map, scaled from step size of maps
+                x0m = curr_ebsd_map.origin[0]
+                y0m = curr_ebsd_map.origin[1]
+                x0 = ebsd_map.origin[0]
+                y0 = ebsd_map.origin[1]
+                scaling = curr_ebsd_map.stepSize / ebsd_map.stepSize
 
-        elif event.inaxes is currentEbsdMap.fig.axes[1]:
-            # axis 1 then is a click on the button
-            self.makeLink()
+                x = int((event.xdata - x0m) * scaling + x0)
+                y = int((event.ydata - y0m) * scaling + y0)
 
-    def makeLink(self):
+                ebsd_map.currGrainId = int(ebsd_map.grains[y, x]) - 1
+                print(ebsd_map.currGrainId)
+
+                # update the grain highlights layer in the plot
+                plot.addGrainHighlights([ebsd_map.currGrainId],
+                                        alpha=ebsd_map.highlightAlpha)
+
+        else:
+            # clicked on other map so correct guessed selected grain
+            curr_ebsd_map.clickGrainID(event, plot, False)
+
+    def make_link(self, event, plot):
         """Make a link between the EBSD maps after clicking.
 
         """
         # create empty list for link
-        currLink = []
+        curr_link = []
 
-        for i, ebsdMap in enumerate(self.ebsdMaps):
-            if ebsdMap.currGrainId is not None:
-                currLink.append(ebsdMap.currGrainId)
+        for i, ebsd_map in enumerate(self.ebsd_maps):
+            if ebsd_map.currGrainId is not None:
+                curr_link.append(ebsd_map.currGrainId)
             else:
-                raise Exception("No grain setected in map {:d}.".format(i + 1))
+                raise Exception(f"No grain setected in map {i + 1}.")
 
-        self.links.append(tuple(currLink))
+        curr_link = tuple(curr_link)
+        if curr_link not in self.links:
+            self.links.append(curr_link)
+            print("Link added " + str(curr_link))
 
-        print("Link added " + str(tuple(currLink)))
-
-    def resetLinks(self):
+    def reset_links(self):
         """Reset links.
 
         """
@@ -1920,30 +1915,26 @@ class Linker(object):
 
 #   Analysis routines
 
-    def setAvOriFromInitial(self):
+    def set_ref_ori_from_master(self):
         """Loop over each map (not first/reference) and each link.
         Sets refOri of linked grains to refOri of grain in first map.
 
         """
-        masterMap = self.ebsdMaps[0]
-
-        for i, ebsdMap in enumerate(self.ebsdMaps[1:], start=1):
+        for i, ebsd_map in enumerate(self.ebsd_maps[1:], start=1):
             for link in self.links:
-                ebsdMap.grainList[link[i]].refOri = copy.deepcopy(masterMap.grainList[link[0]].refOri)
+                ebsd_map.grainList[link[i]].refOri = copy.deepcopy(
+                    self.ebsd_maps[0].grainList[link[0]].refOri
+                )
 
-        return
-
-    def updateMisOri(self, calcAxis=False):
+    def update_misori(self, calc_axis=False):
         """Recalculate misorientation for linked grain (not for first map)
 
         Parameters
         ----------
-        calcAxis : bool
+        calc_axis : bool
             Calculate the misorientation axis if True.
 
         """
-        for i, ebsdMap in enumerate(self.ebsdMaps[1:], start=1):
+        for i, ebsdMap in enumerate(self.ebsd_maps[1:], start=1):
             for link in self.links:
-                ebsdMap.grainList[link[i]].buildMisOriList(calcAxis=calcAxis)
-
-        return
+                ebsdMap.grainList[link[i]].buildMisOriList(calcAxis=calc_axis)

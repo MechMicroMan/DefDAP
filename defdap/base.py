@@ -105,8 +105,8 @@ class Map(object):
             Set to true to dilate boundaries.
         ax : matplotlib.axes.Axes, optional
             axis to plot on, if not provided the current active axis is used.
-        kwargs : dict
-            Keyword arguments to pass to matplotlib.
+        kwargs : dict, optional
+            Keyword arguments passed to :func:`defdap.plotting.MapPlot.addGrainNumbers`
 
         Returns
         -------
@@ -129,6 +129,8 @@ class Map(object):
             Click handler to use.
         displaySelected : bool, optional
             If true, plot slip traces for grain selected by click.
+        kwargs : dict, optional
+            Keyword arguments passed to :func:`defdap.base.Map.plotDefault`
 
         """
         # Check that grains have been detected in the map
@@ -157,32 +159,40 @@ class Map(object):
         ----------
         event :
             Click event.
-        plot : defdap.plotting.Plot
+        plot : defdap.plotting.MapPlot
             Plot to capture clicks from.
         displaySelected : bool
             If true, plot the selected grain alone in pop-out window.
 
         """
-        if event.inaxes is plot.ax:
-            # grain id of selected grain
-            self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
-            print("Grain ID: {}".format(self.currGrainId))
+        # check if click was on the map
+        if event.inaxes is not plot.ax:
+            return
 
-            # update the grain highlights layer in the plot
-            plot.addGrainHighlights([self.currGrainId], alpha=self.highlightAlpha)
+        # grain id of selected grain
+        self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
+        print("Grain ID: {}".format(self.currGrainId))
 
-            if displaySelected:
-                currGrain = self[self.currGrainId]
-                if self.grainPlot is None or not self.grainPlot.exists:
-                    self.grainPlot = currGrain.plotDefault(makeInteractive=True)
-                else:
-                    self.grainPlot.clear()
-                    self.grainPlot.callingGrain = currGrain
-                    currGrain.plotDefault(plot=self.grainPlot)
-                    self.grainPlot.draw()
+        # update the grain highlights layer in the plot
+        plot.addGrainHighlights([self.currGrainId], alpha=self.highlightAlpha)
+
+        if displaySelected:
+            currGrain = self[self.currGrainId]
+            if self.grainPlot is None or not self.grainPlot.exists:
+                self.grainPlot = currGrain.plotDefault(makeInteractive=True)
+            else:
+                self.grainPlot.clear()
+                self.grainPlot.callingGrain = currGrain
+                currGrain.plotDefault(plot=self.grainPlot)
+                self.grainPlot.draw()
 
     def drawLineProfile(self, **kwargs):
         """Interactive plot for drawing a line profile of data.
+
+        Parameters
+        ----------
+        kwargs : dict, optional
+            Keyword arguments passed to :func:`defdap.base.Map.plotDefault`
 
         """
         plot = self.plotDefault(makeInteractive=True, **kwargs)
@@ -198,21 +208,25 @@ class Map(object):
 
         Parameters
         ----------
-        plot : defdap.plotting.Plot
+        plot : defdap.plotting.MapPlot
             Plot to calculate the line profile for.
         startEnd : array_like
             Selected points (x0, y0, x1, y1).
+        kwargs : dict, optional
+            Keyword arguments passed to :func:`matplotlib.pyplot.plot`
 
         """
-
         x0, y0 = startEnd[0:2]
         x1, y1 = startEnd[2:4]
         profile_length = np.sqrt((y1 - y0) ** 2 + (x1 - x0) ** 2)
 
         # Extract the values along the line
-        zi = profile_line(plot.imgLayers[0].get_array(),
-                          (startEnd[1], startEnd[0]), (startEnd[3], startEnd[2]),
-                          mode='nearest', **kwargs)
+        zi = profile_line(
+            plot.imgLayers[0].get_array(),
+            (startEnd[1], startEnd[0]),
+            (startEnd[3], startEnd[2]),
+            mode='nearest'
+        )
         xi = np.linspace(0, profile_length, len(zi))
 
         if self.profilePlot is None or not self.profilePlot.exists:
@@ -237,7 +251,7 @@ class Map(object):
         points : numpy.ndarray, optional
             Array of (x,y) homologous points to set explicitly.
         kwargs : dict, optional
-            Keyword arguments for matplotlib.
+            Keyword arguments passed to :func:`defdap.base.Map.plotHomog`
 
         """
         if points is None:
@@ -269,17 +283,20 @@ class Map(object):
         ----------
         event :
             Click event.
-        plot : defdap.plotting.Plot
+        plot : defdap.plotting.MapPlot
             Plot to monitor.
 
         """
-        if event.inaxes is plot.ax:
-            # right mouse click or shift + left mouse click
-            # shift click doesn't work in osx backend
-            if (event.button == 3 or
-                    (event.button == 1 and event.key == 'shift')):
-                plot.addPoints([int(event.xdata)], [int(event.ydata)],
-                               updateLayer=1)
+        # check if click was on the map
+        if event.inaxes is not plot.ax:
+            return
+
+        # right mouse click or shift + left mouse click
+        # shift click doesn't work in osx backend
+        if (event.button == 3 or
+                (event.button == 1 and event.key == 'shift')):
+            plot.addPoints([int(event.xdata)], [int(event.ydata)],
+                           updateLayer=1)
 
     def keyHomog(self, event, plot):
         """Event handler for moving position using keyboard after clicking on a map.
@@ -288,7 +305,7 @@ class Map(object):
         ----------
         event :
             Keypress event.
-        plot : defdap.plotting.Plot
+        plot : defdap.plotting.MapPlot
             Plot to monitor.
 
         """
@@ -324,7 +341,7 @@ class Map(object):
         ----------
         event :
             Button click event.
-        plot : defdap.plotting.Plot
+        plot : defdap.plotting.MapPlot
             Plot to monitor.
         binSize : int, optional
             Binning applied to image, if applicable.
@@ -457,41 +474,43 @@ class Map(object):
         ----------
         event :
             Click event.
-        plot : defdap.plotting.Plot
+        plot : defdap.plotting.MapPlot
             Plot to monitor.
 
         """
-        if event.inaxes is plot.ax:
-            # grain id of selected grain
-            grainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
-            if grainId < 0:
-                return
-            self.currGrainId = grainId
-            grain = self[grainId]
+        # check if click was on the map
+        if event.inaxes is not plot.ax:
+            return
 
-            # find first and second nearest neighbours
-            firstNeighbours = list(self.neighbourNetwork.neighbors(grain))
-            highlightGrains = [grain] + firstNeighbours
+        # grain id of selected grain
+        grainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
+        if grainId < 0:
+            return
+        self.currGrainId = grainId
+        grain = self[grainId]
 
-            secondNeighbours = []
-            for firstNeighbour in firstNeighbours:
-                trialSecondNeighbours = list(
-                    self.neighbourNetwork.neighbors(firstNeighbour)
-                )
-                for secondNeighbour in trialSecondNeighbours:
-                    if (secondNeighbour not in highlightGrains and
-                            secondNeighbour not in secondNeighbours):
-                        secondNeighbours.append(secondNeighbour)
-            highlightGrains.extend(secondNeighbours)
+        # find first and second nearest neighbours
+        firstNeighbours = list(self.neighbourNetwork.neighbors(grain))
+        highlightGrains = [grain] + firstNeighbours
 
-            highlightGrains = [grain.grainID for grain in highlightGrains]
-            highlightColours = ['white']
-            highlightColours.extend(['yellow'] * len(firstNeighbours))
-            highlightColours.append('green')
+        secondNeighbours = []
+        for firstNeighbour in firstNeighbours:
+            trialSecondNeighbours = list(
+                self.neighbourNetwork.neighbors(firstNeighbour)
+            )
+            for secondNeighbour in trialSecondNeighbours:
+                if (secondNeighbour not in highlightGrains and
+                        secondNeighbour not in secondNeighbours):
+                    secondNeighbours.append(secondNeighbour)
+        highlightGrains.extend(secondNeighbours)
 
-            # update the grain highlights layer in the plot
-            plot.addGrainHighlights(highlightGrains,
-                                    grainColours=highlightColours)
+        highlightGrains = [grain.grainID for grain in highlightGrains]
+        highlightColours = ['white']
+        highlightColours.extend(['yellow'] * len(firstNeighbours))
+        highlightColours.append('green')
+
+        # update the grain highlights layer in the plot
+        plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
 
     @property
     def proxigram(self):
@@ -673,8 +692,8 @@ class Map(object):
             IDs of grains to plot for. Use -1 for all grains in the map.
         bg: int or real, optional
             Value to fill the background with.
-        kwargs:
-            Other parameters are passed to :func:`defdap.plotting.MapPlot.create`
+        kwargs : dict, optional
+            Keyword arguments passed to :func:`defdap.plotting.MapPlot.create`
 
         Returns
         -------
@@ -710,18 +729,18 @@ class Map(object):
 
         Parameters
         ----------
-        mapData : numpy.ndarray
-            Array of map data to grain average. This must be cropped!
         direction : numpy.ndarray
             Vector of reference direction for the IPF.
-        plotColourBar : bool, optional
-            Set to False to exclude the colour bar from the plot.
-        vmin : float, optional
-            Minimum value of colour scale.
-        vmax : float, optional
-            Maximum value for colour scale.
-        cLabel : str, optional
-            Colour bar label text.
+        mapData : numpy.ndarray
+            Array of map data. This must be cropped! Either mapData or
+            grainData must be supplied.
+        grainData : list or np.array, optional
+            Grain values. This an be a single value per grain or RGB
+            values. You must supply either mapData or grainData.
+        grainIds: list of int or int, optional
+            IDs of grains to plot for. Use -1 for all grains in the map.
+        kwargs : dict, optional
+            Keyword arguments passed to :func:`defdap.quat.Quat.plotIPF`
 
         """
         # Set default plot parameters then update with any input
@@ -759,6 +778,16 @@ class Map(object):
 class Grain(object):
     """
     Base class for a grain.
+
+    Attributes
+    ----------
+    grainID : int
+
+    ownerMap : defdap.base.Map
+
+    coordList : list of tuples
+
+
     """
     def __init__(self, grainID, ownerMap):
         # list of coords stored as tuples (x, y). These are coords in a
@@ -861,7 +890,7 @@ class Grain(object):
         plotScaleBar : bool
             plots the scale bar on the grain if true.
         kwargs : dict
-            keyword arguments to pass to :func:`defdap.plotting.GrainPlot.addMap`.
+            keyword arguments passed to :func:`defdap.plotting.GrainPlot.addMap`
 
         Returns
         -------
@@ -1014,14 +1043,8 @@ class Grain(object):
         grainData : numpy.ndarray
             List of data at each point in the grain. Either this or
             'mapData' must be supplied and 'grainData' takes precedence.
-        vmin : float, optional
-            Minimum value of colour scale.
-        vmax : float, optional
-            Minimum value of colour scale.
-        cLabel : str, optional
-            Colour bar label text.
-        cmap : str, optional
-            Colour map to use, default is viridis.
+        kwargs : dict, optional
+            Keyword arguments passed to :func:`defdap.plotting.GrainPlot.create`
 
         """
         # Set default plot parameters then update with any input

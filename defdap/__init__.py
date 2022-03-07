@@ -11,4 +11,9 @@ defaults = {
     'find_grain_report_freq': 100,
     # How to find grain in a HRDIC map, either 'floodfill' or 'warp'
     'hrdic_grain_finding_method': 'floodfill',
+    'slip_system_file': {
+        'FCC': 'cubic_fcc',
+        'BCC': 'cubic_bcc',
+        'HCP': 'hexagonal_noca',
+    },
 }

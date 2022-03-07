@@ -22,24 +22,25 @@ from defdap.quat import Quat
 
 
 class Phase(object):
-    def __init__(self, name, laueGroup, latticeParams,
-                 slipSystems=None):
+    def __init__(self, name, laueGroup, spaceGroup, latticeParams):
         """
         Parameters
         ----------
         name : str
             Name of the phase
+        laueGroup : int
+            Laue group
+        spaceGroup : int
+            Space group
         latticeParams : tuple
             Lattice parameters in order (a,b,c,alpha,beta,gamma)
-        crystalStructure : defdap.crystal.CrystalStructure
-            Crystal structure of this phase
-        slipSystems : collection of defdap.crystal.SlipSystem
-            Slip systems available in the phase
+
         """
         self.name = name
         self.laueGroup = laueGroup
+        self.spaceGroup = spaceGroup
         self.latticeParams = latticeParams
-        self.slipSystems = slipSystems
+
         try:
             self.crystalStructure = {
                 9: crystalStructures['hexagonal'],
@@ -48,18 +49,51 @@ class Phase(object):
         except KeyError:
             raise ValueError(f"Unknown Laue group key: {laueGroup}")
 
+        if self.crystalStructure is crystalStructures['hexagonal']:
+            self.ss_file = defaults['slip_system_file']['HCP']
+        else:
+            try:
+                self.ss_file = defaults['slip_system_file'][
+                    {225: 'FCC', 229: 'BCC'}[spaceGroup]
+                ]
+            except KeyError:
+                self.ss_file = None
+
+        if self.ss_file is None:
+            self.slipSystems = None
+            self.slipTraceColours = None
+        else:
+            self.slipSystems, self.slipTraceColours = SlipSystem.load(
+                self.ss_file, self.crystalStructure, cOverA=self.cOverA
+            )
+
     def __str__(self):
-        text = "Phase: {:}\n  Crystal structure: {:}\n  Lattice params: " \
-               "({:.2f}, {:.2f}, {:.2f}, {:.0f}, {:.0f}, {:.0f})"
+        text = ("Phase: {:}\n  Crystal structure: {:}\n  Lattice params: "
+                "({:.2f}, {:.2f}, {:.2f}, {:.0f}, {:.0f}, {:.0f})\n"
+                "  Slip systems: {:}")
         return text.format(self.name, self.crystalStructure.name,
                            *self.latticeParams[:3],
-                           *np.array(self.latticeParams[3:])*180/np.pi)
+                           *np.array(self.latticeParams[3:])*180/np.pi,
+                           self.ss_file)
 
     @property
     def cOverA(self):
         if self.crystalStructure is crystalStructures['hexagonal']:
             return self.latticeParams[2] / self.latticeParams[0]
         return None
+
+    def printSlipSystems(self):
+        """Print a list of slip planes (with colours) and slip directions.
+
+        """
+        # TODO: this should be moved to static method of the SlipSystem class
+        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems,
+                                                  self.slipTraceColours)):
+            print('Plane {0}: {1}\tColour: {2}'.format(
+                i, ssGroup[0].slipPlaneLabel, colour
+            ))
+            for j, ss in enumerate(ssGroup):
+                print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
 
 
 class CrystalStructure(object):
@@ -256,7 +290,7 @@ class SlipSystem(object):
     """Class used for defining and performing operations on a slip system.
 
     """
-    def __init__(self, slipPlane, slipDir, crystalSym, cOverA=None):
+    def __init__(self, slipPlane, slipDir, crystalStructure, cOverA=None):
         """Initialise a slip system object.
 
         Parameters
@@ -265,24 +299,24 @@ class SlipSystem(object):
             Slip plane.
         slipDir: numpy.ndarray
             Slip direction.
-        crystalSym : str
-            The crystal symmetry ("cubic" or "hexagonal").
+        crystalStructure : defdap.crystal.CrystalStructure
+            Crystal structure of the slip system.
         cOverA : float, optional
             C over a ratio for hexagonal crystals.
 
         """
-        self.crystalSym = crystalSym    # symmetry of material
+        self.crystalStructure = crystalStructure
 
         # Stored as Miller indices (Miller-Bravais for hexagonal)
         self.planeIdc = tuple(slipPlane)
         self.dirIdc = tuple(slipDir)
 
         # Stored as vectors in a cartesian basis
-        if crystalSym == "cubic":
+        if self.crystalStructure.name == "cubic":
             self.slipPlane = slipPlane / norm(slipPlane)
             self.slipDir = slipDir / norm(slipDir)
             self.cOverA = None
-        elif crystalSym == "hexagonal":
+        elif self.crystalStructure.name == "hexagonal":
             if cOverA is None:
                 raise Exception("No c over a ratio given")
             self.cOverA = cOverA
@@ -318,8 +352,9 @@ class SlipSystem(object):
         return self.slipPlaneLabel + self.slipDirLabel
 
     def __repr__(self):
-        return f"SlipSystem(slipPlane={self.slipPlaneLabel}, " \
-               f"slipDir={self.slipDirLabel}, crystalSym={self.crystalSym})"
+        return (f"SlipSystem(slipPlane={self.slipPlaneLabel}, "
+                f"slipDir={self.slipDirLabel}, "
+                f"symmetry={self.crystalStructure.name})")
 
     @property
     def slipPlaneLabel(self):
@@ -355,14 +390,14 @@ class SlipSystem(object):
 
         """
         #
-        symms = Quat.symEqv(self.crystalSym)
+        symms = self.crystalStructure.symmetries
 
         ss_family = set()  # will not preserve order
 
         plane = self.planeIdc
         dir = self.dirIdc
 
-        if self.crystalSym == 'hexagonal':
+        if self.crystalStructure.name == 'hexagonal':
             # Transformation from crystal to orthonormal coords
             lMatrix = CrystalStructure.lMatrix(
                 1, 1, self.cOverA, np.pi / 2, np.pi / 2, np.pi * 2 / 3
@@ -380,7 +415,7 @@ class SlipSystem(object):
             plane_symm = symm.transformVector(plane)
             dir_symm = symm.transformVector(dir)
 
-            if self.crystalSym == 'hexagonal':
+            if self.crystalStructure.name == 'hexagonal':
                 # qMatrix inverse is equal to lMatrix transposed and vice-versa
                 plane_symm = reduceIdc(convertIdc(
                     'm', plane=safeIntCast(np.matmul(lMatrix.T, plane_symm))
@@ -392,13 +427,13 @@ class SlipSystem(object):
             ss_family.add(SlipSystem(
                 posIdc(safeIntCast(plane_symm)),
                 posIdc(safeIntCast(dir_symm)),
-                self.crystalSym, cOverA=self.cOverA
+                self.crystalStructure, cOverA=self.cOverA
             ))
 
         return ss_family
 
     @staticmethod
-    def loadSlipSystems(name, crystalSym, cOverA=None, groupBy='plane'):
+    def load(name, crystalStructure, cOverA=None, groupBy='plane'):
         """
         Load in slip systems from file. 3 integers for slip plane
         normal and 3 for slip direction. Returns a list of list of slip
@@ -409,8 +444,8 @@ class SlipSystem(object):
         name : str
             Name of the slip system file (without file extension)
             stored in the defdap install dir or path to a file.
-        crystalSym : str
-            The crystal symmetry ("cubic" or "hexagonal").
+        crystalStructure : defdap.crystal.CrystalStructure
+            Crystal structure of the slip systems.
         cOverA : float, optional
             C over a ratio for hexagonal crystals.
         groupBy : str, optional
@@ -450,7 +485,7 @@ class SlipSystem(object):
         slipTraceColours = slipSystemFile.readline().strip().split(',')
         slipSystemFile.close()
 
-        if crystalSym == "hexagonal":
+        if crystalStructure.name == "hexagonal":
             vectSize = 4
         else:
             vectSize = 3
@@ -465,17 +500,17 @@ class SlipSystem(object):
         for row in ssData:
             slipSystems.append(SlipSystem(
                 row[0:vectSize], row[vectSize:2 * vectSize],
-                crystalSym, cOverA=cOverA
+                crystalStructure, cOverA=cOverA
             ))
 
         # Group slip systems is required
         if groupBy is not None:
-            slipSystems = SlipSystem.groupSlipSystems(slipSystems, groupBy)
+            slipSystems = SlipSystem.group(slipSystems, groupBy)
 
         return slipSystems, slipTraceColours
 
     @staticmethod
-    def groupSlipSystems(slipSystems, groupBy):
+    def group(slipSystems, groupBy):
         """
         Groups slip systems by their slip plane.
 
