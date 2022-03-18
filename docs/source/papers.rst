@@ -3,6 +3,16 @@ Papers
 
 Here is a list of papers which have use the DefDAP Python library.
 
+2022
+------
+
+* `C.Dichtl, D.Lunt, M.Atkinson, R.Thomas, A.Plowman, B.Barzdajn, R.Sandala, J.Quinta da Fonseca, M.Preuss. Slip activity during low-stress cold creep deformation in a near-α titanium alloy. Acta Materialia. Volume 229. May 2022. 117691. <https://doi.org/10.1016/j.actamat.2022.117691>`_
+
+2021
+------
+
+* `R.Thomas, D.Lunt, M.D.Atkinson, J.Quinta da Fonseca, M.Preuss, F.Barton, J.O’Hanlon,P. Frankel. SThe Effect of Loading Direction on Slip and Twinning in an Irradiated Zirconium Alloy. Zirconium in the Nuclear Industry: 19th International Symposium. ASTM International. Pages 233–261. <https://doi.org/10.1520/STP162220190027>`_
+
 2020
 ------
 
