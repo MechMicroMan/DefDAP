@@ -536,8 +536,8 @@ class Map(base.Map):
         boundaries = boundaries > 0.1
 
         boundaries = mph.skeletonize(boundaries)
-        mph.remove_small_objects(boundaries, min_size=10, in_place=True,
-                                 connectivity=2)
+        mph.remove_small_objects(boundaries, min_size=10, connectivity=2,
+                                 out=boundaries)  # remove in-place
 
         # crop image if it is a simple affine transform
         if type(self.ebsdTransform) is tf.AffineTransform:
