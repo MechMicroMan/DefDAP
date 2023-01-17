@@ -9,6 +9,15 @@
 ### Fixed
 
 
+## 0.93.5 (07-03-2022)
+
+### Added
+- Add equality check for Quat
+
+### Fixed
+- Fix bug in boundary line warping
+
+
 ## 0.93.4 (07-03-2022)
 
 ### Changed
