@@ -5,7 +5,7 @@
 [![Supported python versions](https://img.shields.io/pypi/pyversions/defdap "Supported python versions")](https://pypi.org/project/defdap)
 [![License](https://img.shields.io/github/license/mechmicroman/defdap "License")](https://github.com/MechMicroMan/DefDAP/blob/master/LICENSE)
 [![Documentation status](https://readthedocs.org/projects/defdap/badge/?version=latest "Documentation status")](https://defdap.readthedocs.io/en/latest/?badge=latest)
-[![Binder](https://mybinder.org/badge_logo.svg "Try on binder")](https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg "Try on binder")](https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=notebooks/example_notebook.ipynb)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3688096.svg "DOI")](https://doi.org/10.5281/zenodo.3688096)
 
 [How to install](#how-to-install "How to install") •
