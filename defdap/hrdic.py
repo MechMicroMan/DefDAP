@@ -561,7 +561,7 @@ class Map(base.Map):
         # Flatten to coord list
         lines = np.array(lines).reshape(-1, 2)
         # Transform & reshape back
-        lines = self.ebsdTransformInv(lines_list).reshape(-1, 2, 2)
+        lines = self.ebsdTransformInv(lines).reshape(-1, 2, 2)
         # Round to nearest
         lines = np.round(lines - 0.5) + 0.5
         lines = [(tuple(l[0]), tuple(l[1])) for l in lines]
