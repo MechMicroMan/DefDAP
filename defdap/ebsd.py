@@ -1098,7 +1098,7 @@ class Map(base.Map):
                     self.misOri[coord[1], coord[0]] = misOriAxis[component - 1]
 
             misOri = self.misOri * 180 / np.pi
-            clabel = "Rotation around {:} axis ($^\circ$)".format(
+            clabel = r"Rotation around {:} axis ($^\circ$)".format(
                 ['X', 'Y', 'Z'][component-1]
             )
         else:
@@ -1110,7 +1110,7 @@ class Map(base.Map):
                     self.misOri[coord[1], coord[0]] = misOri
 
             misOri = np.arccos(self.misOri) * 360 / np.pi
-            clabel = "Grain reference orienation deviation (GROD) ($^\circ$)"
+            clabel = r"Grain reference orienation deviation (GROD) ($^\circ$)"
 
         # Set default plot parameters then update with any input
         plotParams = {
@@ -1424,13 +1424,13 @@ class Grain(base.Grain):
         }
         if component == 0:
             if self.misOriList is None: self.buildMisOriList()
-            plotParams['clabel'] = "Grain reference orientation " \
-                                   "deviation (GROD) ($^\circ$)"
+            plotParams['clabel'] = r"Grain reference orientation " \
+                                   r"deviation (GROD) ($^\circ$)"
             plotData = np.rad2deg(2 * np.arccos(self.misOriList))
 
         elif 0 < component < 4:
             if self.misOriAxisList is None: self.buildMisOriList(calcAxis=True)
-            plotParams['clabel'] = "Rotation around {:} ($^\circ$)".format(
+            plotParams['clabel'] = r"Rotation around {:} ($^\circ$)".format(
                 ['X', 'Y', 'Z'][component-1]
             )
             plotData = np.rad2deg(np.array(self.misOriAxisList)[:, component-1])

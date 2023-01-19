@@ -423,7 +423,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
         # hierarchical dict
 
         metadata = dict()
-        groupPat = re.compile("\[(.+)\]")
+        groupPat = re.compile(r"\[(.+)\]")
 
         def parseLine(line: str, groupDict: Dict) -> None:
             try:
