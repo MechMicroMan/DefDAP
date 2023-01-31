@@ -20,6 +20,7 @@ import networkx as nx
 import copy
 from warnings import warn
 
+from defdap.utils import Datastore
 from defdap.file_readers import EBSDDataLoader
 from defdap.file_writers import EBSDDataWriter
 from defdap.quat import Quat
@@ -41,14 +42,6 @@ class Map(base.Map):
         Step size in micron.
     phases : list of defdap.crystal.Phase
         List of phases.
-    boundaries : numpy.ndarray
-        Map of boundaries. -1 for a boundary, 0 otherwise.
-    phaseBoundaries : numpy.ndarray
-        Map of phase boundaries. -1 for boundary, 0 otherwise.
-    grains : numpy.ndarray
-        Map of grains. Grain numbers start at 1 here but everywhere else
-        grainID starts at 0. Regions that are smaller than the minimum
-        grain size are given value -2. Remnant boundary points are -1.
     misOri : numpy.ndarray
         Map of misorientation.
     misOriAxis : list of numpy.ndarray
@@ -66,6 +59,12 @@ class Map(base.Map):
         Derived data:
             orientation : numpy.ndarray of defdap.quat.Quat
                 Quaterion for each point of map. Shape (yDim, xDim).
+            grain_boundaries : BoundarySet
+            phase_boundaries : BoundarySet
+            grains : numpy.ndarray of int
+                Map of grains. Grain numbers start at 1 here but everywhere else
+                grainID starts at 0. Regions that are smaller than the minimum
+                grain size are given value -2. Remnant boundary points are -1.
             KAM : numpy.ndarray
                 Kernal average misorientaion map.
             GND : numpy.ndarray
@@ -91,15 +90,7 @@ class Map(base.Map):
 
         self.step_size = None
         self.phases = []
-        self.boundaries = None
-        self.boundariesX = None
-        self.boundariesY = None
-        self.boundaryLines = None
-        self.phaseBoundaries = None
-        self.phaseBoundariesX = None
-        self.phaseBoundariesY = None
-        self.phaseBoundaryLines = None
-        self.grains = None
+
         self.misOri = None
         self.misOriAxis = None
         self.origin = (0, 0)
@@ -120,25 +111,29 @@ class Map(base.Map):
             order=0, default_component='IPF_x',
         )
         self.data.add_generator(
+            ('phase_boundaries', 'grain_boundaries'), self.find_boundaries,
+            type='boundaries',
+        )
+        self.data.add_generator(
+            'grains', self.find_grains, unit='', type='map', order=0
+        )
+        self.data.add_generator(
             'KAM', self.calc_kam, unit='rad', type='map', order=0,
             plot_params={
                 'plotColourBar': True,
-                'clabel': 'Kernel average misorientation (KAM)',
+                'clabel': 'KAM',
             }
         )
         self.data.add_generator(
             ('GND', 'Nye_tensor'), self.calc_nye,
+            unit='', type='map',
             metadatas=({
-                'unit': '',
-                'type': 'map',
                 'order': 0,
                 'plot_params': {
                     'plotColourBar': True,
-                    'clabel': 'Geometrically necessary dislocation (GND) content',
+                    'clabel': 'GND content',
                 }
             }, {
-                'unit': '',
-                'type': 'map',
                 'order': 2,
                 'save': False,
                 'default_component': (0, 0),
@@ -663,153 +658,139 @@ class Map(base.Map):
         return quats
 
     @reportProgress("finding grain boundaries")
-    def findBoundaries(self, boundDef=10):
+    def find_boundaries(self, misori_tol=10):
         """Find grain and phase boundaries
 
         Parameters
         ----------
-        boundDef : float
-            Critical misorientation.
+        misori_tol : float
+            Critical misorientation in degrees.
 
         """
         # TODO: what happens with non-indexed points
         # TODO: grain boundaries should be calculated per crystal structure
+        misori_tol *= np.pi / 180
         syms = self.primaryPhase.crystalStructure.symmetries
-        numSyms = len(syms)
+        num_syms = len(syms)
 
         # array to store quat components of initial and symmetric equivalents
-        quatComps = np.empty((numSyms, 4) + self.shape)
+        quat_comps = np.empty((num_syms, 4) + self.shape)
 
         # populate with initial quat components
         for i, row in enumerate(self.data.orientation):
             for j, quat in enumerate(row):
-                quatComps[0, :, i, j] = quat.quatCoef
+                quat_comps[0, :, i, j] = quat.quatCoef
 
         # loop of over symmetries and apply to initial quat components
         # (excluding first symmetry as this is the identity transformation)
         for i, sym in enumerate(syms[1:], start=1):
             # sym[i] * quat for all points (* is quaternion product)
-            quatComps[i, 0] = (quatComps[0, 0] * sym[0] - quatComps[0, 1] * sym[1] -
-                               quatComps[0, 2] * sym[2] - quatComps[0, 3] * sym[3])
-            quatComps[i, 1] = (quatComps[0, 0] * sym[1] + quatComps[0, 1] * sym[0] -
-                               quatComps[0, 2] * sym[3] + quatComps[0, 3] * sym[2])
-            quatComps[i, 2] = (quatComps[0, 0] * sym[2] + quatComps[0, 2] * sym[0] -
-                               quatComps[0, 3] * sym[1] + quatComps[0, 1] * sym[3])
-            quatComps[i, 3] = (quatComps[0, 0] * sym[3] + quatComps[0, 3] * sym[0] -
-                               quatComps[0, 1] * sym[2] + quatComps[0, 2] * sym[1])
-
+            quat_comps[i, 0] = (
+                quat_comps[0, 0]*sym[0] - quat_comps[0, 1]*sym[1] -
+                quat_comps[0, 2]*sym[2] - quat_comps[0, 3]*sym[3]
+            )
+            quat_comps[i, 1] = (
+                quat_comps[0, 0]*sym[1] + quat_comps[0, 1]*sym[0] -
+                quat_comps[0, 2]*sym[3] + quat_comps[0, 3]*sym[2]
+            )
+            quat_comps[i, 2] = (
+                quat_comps[0, 0]*sym[2] + quat_comps[0, 2]*sym[0] -
+                quat_comps[0, 3]*sym[1] + quat_comps[0, 1]*sym[3]
+            )
+            quat_comps[i, 3] = (
+                quat_comps[0, 0]*sym[3] + quat_comps[0, 3]*sym[0] -
+                quat_comps[0, 1]*sym[2] + quat_comps[0, 2]*sym[1]
+            )
             # swap into positive hemisphere if required
-            quatComps[i, :, quatComps[i, 0] < 0] *= -1
+            quat_comps[i, :, quat_comps[i, 0] < 0] *= -1
 
         # Arrays to store neighbour misorientation in positive x and y
         # directions
-        misOriX = np.ones((numSyms, ) + self.shape)
-        misOriY = np.ones((numSyms, ) + self.shape)
+        misori_x = np.ones((num_syms, ) + self.shape)
+        misori_y = np.ones((num_syms, ) + self.shape)
 
         # loop over symmetries calculating misorientation to initial
-        for i in range(numSyms):
+        for i in range(num_syms):
             for j in range(self.shape[1] - 1):
-                misOriX[i, :, j] = abs(
-                    np.einsum("ij,ij->j", quatComps[0, :, :, j], quatComps[i, :, :, j + 1]))
+                misori_x[i, :, j] = abs(np.einsum(
+                    "ij,ij->j", quat_comps[0, :, :, j], quat_comps[i, :, :, j+1]
+                ))
 
             for j in range(self.shape[0] - 1):
-                misOriY[i, j] = abs(np.einsum("ij,ij->j", quatComps[0, :, j], quatComps[i, :, j + 1]))
+                misori_y[i, j] = abs(np.einsum(
+                    "ij,ij->j", quat_comps[0, :, j], quat_comps[i, :, j+1]
+                ))
 
-        misOriX[misOriX > 1] = 1
-        misOriY[misOriY > 1] = 1
+        misori_x[misori_x > 1] = 1
+        misori_y[misori_y > 1] = 1
 
-        # find min misorientation (max here as misorientaion is cos of this)
-        misOriX = np.max(misOriX, axis=0)
-        misOriY = np.max(misOriY, axis=0)
-
-        # convert to misorientation in degrees
-        misOriX = 2 * np.arccos(misOriX) * 180 / np.pi
-        misOriY = 2 * np.arccos(misOriY) * 180 / np.pi
-
-        # GRAIN boundary POINTS where misOriX or misOriY are greater
-        # than set value
-        self.boundariesX = misOriX > boundDef
-        self.boundariesY = misOriY > boundDef
+        # find max dot product and then convert to misorientation angle
+        misori_x = 2 * np.arccos(np.max(misori_x, axis=0))
+        misori_y = 2 * np.arccos(np.max(misori_y, axis=0))
 
         # PHASE boundary POINTS
-        self.phaseBoundariesX = np.not_equal(
-            self.data.phase, np.roll(self.data.phase, -1, axis=1))
-        self.phaseBoundariesX[:, -1] = False
+        phase_im = self.data.phase
+        pb_im_x = np.not_equal(phase_im, np.roll(phase_im, -1, axis=1))
+        pb_im_x[:, -1] = False
+        pb_im_y = np.not_equal(phase_im, np.roll(phase_im, -1, axis=0))
+        pb_im_y[-1] = False
 
-        self.phaseBoundariesY = np.not_equal(
-            self.data.phase, np.roll(self.data.phase, -1, axis=0))
-        self.phaseBoundariesY[-1, :] = False
-
-        self.phaseBoundaries = np.logical_or(
-            self.phaseBoundariesX, self.phaseBoundariesY)
-        self.phaseBoundaries = -self.phaseBoundaries.astype(int)
-
-        # add PHASE boundary POINTS to GRAIN boundary POINTS
-        self.boundariesX = np.logical_or(self.boundariesX, self.phaseBoundariesX)
-        self.boundariesY = np.logical_or(self.boundariesY, self.phaseBoundariesY)
-        self.boundaries = np.logical_or(self.boundariesX, self.boundariesY)
-        self.boundaries = -self.boundaries.astype(int)
-
-        _, _, self.boundaryLines = BoundarySegment.boundary_points_to_lines(
-            boundary_points_x=zip(*self.boundariesX.transpose().nonzero()),
-            boundary_points_y=zip(*self.boundariesY.transpose().nonzero())
-        )
-
-        _, _, self.phaseBoundaryLines = BoundarySegment.boundary_points_to_lines(
-            boundary_points_x=zip(*self.phaseBoundariesX.transpose().nonzero()),
-            boundary_points_y=zip(*self.phaseBoundariesY.transpose().nonzero())
+        phase_boundaries = BoundarySet.from_image(self, pb_im_x, pb_im_y)
+        grain_boundaries = BoundarySet.from_image(
+            self,
+            (misori_x > misori_tol) | pb_im_x,
+            (misori_y > misori_tol) | pb_im_y
         )
 
         yield 1.
+        return phase_boundaries, grain_boundaries
 
     @reportProgress("constructing neighbour network")
-    def buildNeighbourNetwork(self):
+    def build_neighbour_network(self):
         # create network
         nn = nx.Graph()
-        nn.add_nodes_from(self.grainList)
+        nn.add_nodes_from(self.grains)
 
-        for i, boundaries in enumerate((self.boundariesX, self.boundariesY)):
-            yLocs, xLocs = np.nonzero(boundaries)
-            totalPoints = len(xLocs)
+        points_x = self.data.grain_boundaries.points_x
+        points_y = self.data.grain_boundaries.points_y
+        total_points_x = len(points_x)
+        total_points = total_points_x + len(points_y)
 
-            for iPoint, (x, y) in enumerate(zip(xLocs, yLocs)):
-                # report progress, assumes roughly equal number of x and
-                # y boundary points
-                yield 0.5 * (i + iPoint / totalPoints)
+        for i, points in enumerate((points_x, points_y)):
+            for i_point, (x, y) in enumerate(points):
+                # report progress
+                yield (i_point + i * total_points_x) / total_points
 
-                if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
-                        y == self.grains.shape[0] - 1):
+                if (x == 0 or y == 0 or x == self.shape[1] - 1 or
+                        y == self.shape[0] - 1):
                     # exclude boundary pixels of map
                     continue
 
-                grainID = self.grains[y, x] - 1
-                neiGrainID = self.grains[y + i, x - i + 1] - 1
-
-                if neiGrainID == grainID:
+                grain_id = self.data.grains[y, x] - 1
+                nei_grain_id = self.data.grains[y + i, x - i + 1] - 1
+                if nei_grain_id == grain_id:
                     # ignore if neighbour is same as grain
                     continue
-                if neiGrainID < 0 or grainID < 0:
+                if nei_grain_id < 0 or grain_id < 0:
                     # ignore if not a grain (boundary points -1 and
                     # points in small grains -2)
                     continue
 
-                grain = self[grainID]
-                neiGrain = self[neiGrainID]
-
+                grain = self[grain_id]
+                nei_grain = self[nei_grain_id]
                 try:
                     # look up boundary segment if it exists
-                    bSeg = nn[grain][neiGrain]['boundary']
+                    b_seg = nn[grain][nei_grain]['boundary']
                 except KeyError:
                     # neighbour relation doesn't exist so add it
-                    bSeg = BoundarySegment(self, grain, neiGrain)
-                    nn.add_edge(grain, neiGrain, boundary=bSeg)
+                    b_seg = BoundarySegment(self, grain, nei_grain)
+                    nn.add_edge(grain, nei_grain, boundary=b_seg)
 
                 # add the boundary point
-                bSeg.addBoundaryPoint((x, y), i, grain)
+                b_seg.addBoundaryPoint((x, y), i, grain)
 
-        self.neighbourNetwork = nn
+        self.neighbour_network = nn
 
-    @reportProgress("finding phase boundaries")
     def plotPhaseBoundaryMap(self, dilate=False, **kwargs):
         """Plot phase boundary map.
 
@@ -833,7 +814,7 @@ class Map(base.Map):
         }
         plotParams.update(kwargs)
 
-        boundariesImage = -self.phaseBoundaries
+        boundariesImage = self.data.phase_boundaries.image.astype(int)
         if dilate:
             boundariesImage = mph.binary_dilation(boundariesImage)
 
@@ -866,21 +847,22 @@ class Map(base.Map):
         return plot
 
     @reportProgress("finding grains")
-    def findGrains(self, minGrainSize=10):
+    def find_grains(self, min_grain_size=10):
         """Find grains and assign IDs.
 
         Parameters
         ----------
-        minGrainSize : int
+        min_grain_size : int
             Minimum grain area in pixels.
 
         """
         # Initialise the grain map
         # TODO: Look at grain map compared to boundary map
-        # self.grains = np.copy(self.boundaries)
-        self.grains = np.zeros_like(self.boundaries)
+        grains = np.zeros(self.shape, dtype=int)
+        grain_list = []
 
-        self.grainList = []
+        boundary_im_x = self.data.grain_boundaries.image_x
+        boundary_im_y = self.data.grain_boundaries.image_y
 
         # List of points where no grain has be set yet
         points_left = self.data.phase != 0
@@ -889,26 +871,29 @@ class Map(base.Map):
         next_point = points_left.tobytes().find(b'\x01')
 
         # Start counter for grains
-        grainIndex = 1
+        grain_index = 1
+        group_id = Datastore.generate_id()
 
         # Loop until all points (except boundaries) have been assigned
         # to a grain or ignored
         i = 0
         while found_point >= 0:
             # Flood fill first unknown point and return grain object
-            idx = np.unravel_index(next_point, self.grains.shape)
-            currentGrain = self.floodFill(idx[1], idx[0], grainIndex,
-                                          points_left)
+            seed = np.unravel_index(next_point, self.shape)
+            grain = self.flood_fill(
+                (seed[1], seed[0]), grain_index, points_left, grains,
+                boundary_im_x, boundary_im_y, group_id
+            )
 
-            if len(currentGrain) < minGrainSize:
+            if len(grain) < min_grain_size:
                 # if grain size less than minimum, ignore grain and set
                 # values in grain map to -2
-                for coord in currentGrain.coordList:
-                    self.grains[coord[1], coord[0]] = -2
+                for point in grain.data.point:
+                    grains[point[1], point[0]] = -2
             else:
                 # add grain to list and increment grain index
-                self.grainList.append(currentGrain)
-                grainIndex += 1
+                grain_list.append(grain)
+                grain_index += 1
 
             # find next search point
             points_left_sub = points_left.reshape(-1)[next_point + 1:]
@@ -922,19 +907,33 @@ class Map(base.Map):
                 i = 0
 
         # Assign phase to each grain
-        for grain in self:
-            phaseVals = grain.grainData(self.data.phase)
-            if np.max(phaseVals) != np.min(phaseVals):
+        for grain in grain_list:
+            phase_vals = grain.grainData(self.data.phase)
+            if np.max(phase_vals) != np.min(phase_vals):
                 warn(f"Grain {grain.grainID} could not be assigned a "
                      f"phase, phase vals not constant.")
                 continue
-            phaseID = phaseVals[0] - 1
-            if not (0 <= phaseID < self.numPhases):
+            phase_id = phase_vals[0] - 1
+            if not (0 <= phase_id < self.numPhases):
                 warn(f"Grain {grain.grainID} could not be assigned a "
-                     f"phase, invalid phase {phaseID}.")
+                     f"phase, invalid phase {phase_id}.")
                 continue
-            grain.phaseID = phaseID
-            grain.phase = self.phases[phaseID]
+            grain.phaseID = phase_id
+            grain.phase = self.phases[phase_id]
+
+        ## TODO: this will get duplicated if find grains called again
+        self.data.add_derivative(
+            grain_list[0].data, self.grain_data_to_map, pass_ref=True,
+            in_props={
+                'type': 'list'
+            },
+            out_props={
+                'type': 'map'
+            }
+        )
+
+        self._grains = grain_list
+        return grains
 
     def plotGrainMap(self, **kwargs):
         """Plot a map with grains coloured.
@@ -959,35 +958,35 @@ class Map(base.Map):
 
         return plot
 
-    def floodFill(self, x, y, grainIndex, points_left):
+    def flood_fill(self, seed, index, points_left, grains, boundary_im_x,
+                   boundary_im_y, group_id):
         """Flood fill algorithm that uses the x and y boundary arrays to
         fill a connected area around the seed point. The points are inserted
         into a grain object and the grain map array is updated.
 
         Parameters
         ----------
-        x : int
+        seed : tuple of 2 int
             Seed point x for flood fill
-        y : int
-            Seed point y for flood fill
-        grainIndex : int
+        index : int
             Value to fill in grain map
         points_left : numpy.ndarray
             Boolean map of the points that have not been assigned a grain yet
 
         Returns
         -------
-        currentGrain : defdap.ebsd.Grain
+        grain : defdap.ebsd.Grain
             New grain object with points added
         """
         # create new grain
-        currentGrain = Grain(grainIndex - 1, self)
+        grain = Grain(index - 1, self, group_id)
 
         # add first point to the grain
-        currentGrain.addPoint((x, y), self.data.orientation[y, x])
-        self.grains[y, x] = grainIndex
+        x, y = seed
+        grain.addPoint(seed, self.data.orientation[y, x])
+        grains[y, x] = index
         points_left[y, x] = False
-        edge = [(x, y)]
+        edge = [seed]
 
         while edge:
             x, y = edge.pop(0)
@@ -996,43 +995,43 @@ class Map(base.Map):
             # get rid of any that go out of the map area
             if x <= 0:
                 moves.pop(1)
-            elif x >= self.xDim - 1:
+            elif x >= self.shape[1] - 1:
                 moves.pop(0)
             if y <= 0:
                 moves.pop(-1)
-            elif y >= self.yDim - 1:
+            elif y >= self.shape[0] - 1:
                 moves.pop(-2)
 
             for (s, t) in moves:
-                if self.grains[t, s] > 0:
+                if grains[t, s] > 0:
                     continue
 
-                addPoint = False
+                add_point = False
 
                 if t == y:
                     # moving horizontally
                     if s > x:
                         # moving right
-                        addPoint = not self.boundariesX[y, x]
+                        add_point = not boundary_im_x[y, x]
                     else:
                         # moving left
-                        addPoint = not self.boundariesX[t, s]
+                        add_point = not boundary_im_x[t, s]
                 else:
                     # moving vertically
                     if t > y:
                         # moving down
-                        addPoint = not self.boundariesY[y, x]
+                        add_point = not boundary_im_y[y, x]
                     else:
                         # moving up
-                        addPoint = not self.boundariesY[t, s]
+                        add_point = not boundary_im_y[t, s]
 
-                if addPoint:
-                    currentGrain.addPoint((s, t), self.data.orientation[t, s])
-                    self.grains[t, s] = grainIndex
+                if add_point:
+                    grain.addPoint((s, t), self.data.orientation[t, s])
+                    grains[t, s] = index
                     points_left[t, s] = False
                     edge.append((s, t))
 
-        return currentGrain
+        return grain
 
     @reportProgress("calculating grain mean orientations")
     def calcGrainAvOris(self):
@@ -1087,27 +1086,27 @@ class Map(base.Map):
         # Check that grains have been detected in the map
         self.checkGrainsDetected()
 
-        self.misOri = np.ones(self.shape)
-
         if component in [1, 2, 3]:
+            self.misOri = np.zeros(self.shape)
             # Calculate misorientation axis if not calculated
-            if np.any([grain.misOriAxisList is None for grain in self.grainList]):
-                self.calcGrainMisOri(calcAxis = True)
-            for grain in self.grainList:
-                for coord, misOriAxis in zip(grain.coordList, np.array(grain.misOriAxisList)):
-                    self.misOri[coord[1], coord[0]] = misOriAxis[component - 1]
+            if np.any([grain.misOriAxisList is None for grain in self]):
+                self.calcGrainMisOri(calcAxis=True)
+            for grain in self:
+                for point, misOriAxis in zip(grain.data.point, np.array(grain.misOriAxisList)):
+                    self.misOri[point[1], point[0]] = misOriAxis[component - 1]
 
             misOri = self.misOri * 180 / np.pi
             clabel = r"Rotation around {:} axis ($^\circ$)".format(
                 ['X', 'Y', 'Z'][component-1]
             )
         else:
+            self.misOri = np.ones(self.shape)
             # Calculate misorientation if not calculated
-            if np.any([grain.misOriList is None for grain in self.grainList]):
-                self.calcGrainMisOri(calcAxis = False)
-            for grain in self.grainList:
-                for coord, misOri in zip(grain.coordList, grain.misOriList):
-                    self.misOri[coord[1], coord[0]] = misOri
+            if np.any([grain.misOriList is None for grain in self]):
+                self.calcGrainMisOri(calcAxis=False)
+            for grain in self:
+                for point, misOri in zip(grain.data.point, grain.misOriList):
+                    self.misOri[point[1], point[0]] = misOri
 
             misOri = np.arccos(self.misOri) * 360 / np.pi
             clabel = r"Grain reference orienation deviation (GROD) ($^\circ$)"
@@ -1142,7 +1141,7 @@ class Map(base.Map):
         self.checkGrainsDetected()
 
         numGrains = len(self)
-        for iGrain, grain in enumerate(self.grainList):
+        for iGrain, grain in enumerate(self):
             grain.calcAverageSchmidFactors(loadVector, slipSystems=slipSystems)
 
             # report progress
@@ -1185,7 +1184,7 @@ class Map(base.Map):
             raise Exception("Run 'calcAverageGrainSchmidFactors' first")
 
         grains_sf = []
-        for grain in self.grainList:
+        for grain in self:
             current_sf = []
 
             if planes is not None:
@@ -1227,8 +1226,19 @@ class Grain(base.Grain):
 
     phase : defdap.crystal.Phase
 
-    quatList : list
-        List of quats.
+    data : defdap.utils.Datastore
+        Must contain after creating:
+            point : list of tuples
+                1-based, 0 is non-indexed points
+        Generated data:
+            GROD : numpy.ndarray
+
+            GROD_axis : numpy.ndarray
+
+        Derived data:
+            Map data to list data from the map the grain is part of
+
+
     misOriList : list
         MisOri at each point in grain.
     misOriAxisList : list
@@ -1245,12 +1255,11 @@ class Grain(base.Grain):
          Angle between slip plane and screen plane.
 
     """
-    def __init__(self, grainID, ebsdMap):
+    def __init__(self, grainID, ebsdMap, group_id):
         # Call base class constructor
-        super(Grain, self).__init__(grainID, ebsdMap)
+        super(Grain, self).__init__(grainID, ebsdMap, group_id)
 
         self.ebsdMap = self.ownerMap            # ebsd map this grain is a member of
-        self.quatList = []                      # list of quats
         self.misOriList = None                  # list of misOri at each point in grain
         self.misOriAxisList = None              # list of misOri axes at each point in grain
         self.refOri = None                      # (quat) average ori of grain
@@ -1262,30 +1271,50 @@ class Grain(base.Grain):
 
         self.plotDefault = self.plotUnitCell
 
+        self.data.add_generator(
+            ('GROD', 'GROD_axis'), self.calc_grod,
+            type='list',
+            metadatas=({
+                'unit': 'rad',
+                'order': 0,
+                'plot_params': {
+                    'plotColourBar': True,
+                    'clabel': 'GROD',
+                }
+            }, {
+                'unit': '',
+                'order': 1,
+                'default_component': 0,
+                'plot_params': {
+                    'plotColourBar': True,
+                    'clabel': 'GROD axis',
+                }
+            })
+        )
+
     @property
     def crystalSym(self):
         """Temporary"""
         return self.phase.crystalStructure.name
 
-    def addPoint(self, coord, quat):
+    def addPoint(self, point, quat):
         """Append a coordinate and a quat to a grain.
 
         Parameters
         ----------
-        coord : tuple
+        point : tuple
             (x,y) coordinate to append
         quat : defdap.quat.Quat
             Quaternion to append.
 
         """
-        self.coordList.append(coord)
-        self.quatList.append(quat)
+        self.data.point.append(point)
 
     def calcAverageOri(self):
         """Calculate the average orientation of a grain.
 
         """
-        quatCompsSym = Quat.calcSymEqvs(self.quatList, self.crystalSym)
+        quatCompsSym = Quat.calcSymEqvs(self.data.orientation, self.crystalSym)
 
         self.refOri = Quat.calcAverageOri(quatCompsSym)
 
@@ -1298,7 +1327,7 @@ class Grain(base.Grain):
             Calculate the misorientation axis if True.
 
         """
-        quatCompsSym = Quat.calcSymEqvs(self.quatList, self.crystalSym)
+        quatCompsSym = Quat.calcSymEqvs(self.data.orientation, self.crystalSym)
 
         if self.refOri is None:
             self.refOri = Quat.calcAverageOri(quatCompsSym)
@@ -1340,6 +1369,32 @@ class Grain(base.Grain):
             for row in misOriAxis.transpose():
                 self.misOriAxisList.append(row)
 
+    def calc_grod(self):
+        quat_comps = Quat.calcSymEqvs(self.data.orientation, self.crystalSym)
+
+        if self.refOri is None:
+            self.refOri = Quat.calcAverageOri(quat_comps)
+
+        misori, quat_comps = Quat.calcMisOri(quat_comps, self.refOri)
+        misori = 2 * np.arccos(misori)
+
+        ref_ori_inv = self.refOri.conjugate
+        dq = np.empty((4, len(self)))
+        # ref_ori_inv * quat_comps for all points
+        # change to quat_comps * ref_ori_inv
+        dq[0] = (ref_ori_inv[0]*quat_comps[0] - ref_ori_inv[1]*quat_comps[1] -
+                 ref_ori_inv[2]*quat_comps[2] - ref_ori_inv[3]*quat_comps[3])
+        dq[1] = (ref_ori_inv[1]*quat_comps[0] + ref_ori_inv[0]*quat_comps[1] +
+                 ref_ori_inv[3]*quat_comps[2] - ref_ori_inv[2]*quat_comps[3])
+        dq[2] = (ref_ori_inv[2]*quat_comps[0] + ref_ori_inv[0]*quat_comps[2] +
+                 ref_ori_inv[1]*quat_comps[3] - ref_ori_inv[3]*quat_comps[1])
+        dq[3] = (ref_ori_inv[3]*quat_comps[0] + ref_ori_inv[0]*quat_comps[3] +
+                 ref_ori_inv[2]*quat_comps[1] - ref_ori_inv[1]*quat_comps[2])
+        dq[:, dq[0] < 0] *= -1
+        misori_axis = (2 * dq[1:4] * np.arccos(dq[0])) / np.sqrt(1 - dq[0]**2)
+
+        return misori, misori_axis
+
     def plotRefOri(self, direction=np.array([0, 0, 1]), **kwargs):
         """Plot the average grain orientation on an IPF.
 
@@ -1377,7 +1432,7 @@ class Grain(base.Grain):
         """
         plotParams = {'marker': '.'}
         plotParams.update(kwargs)
-        return Quat.plotIPF(self.quatList, direction, self.crystalSym,
+        return Quat.plotIPF(self.data.orientation, direction, self.crystalSym,
                             **plotParams)
 
     def plotUnitCell(self, fig=None, ax=None, plot=None, **kwargs):
@@ -1565,6 +1620,56 @@ class Grain(base.Grain):
             # Append to list
             self.slipTraceAngles.append(traceAngle)
             self.slipTraceInclinations.append(inclination)
+
+
+class BoundarySet(object):
+    # boundaries : numpy.ndarray
+    #     Map of boundaries. -1 for a boundary, 0 otherwise.
+    # phaseBoundaries : numpy.ndarray
+    #     Map of phase boundaries. -1 for boundary, 0 otherwise.
+    def __init__(self, ebsd_map, points_x, points_y):
+        self.ebsd_map = ebsd_map
+        self.points_x = set(points_x)
+        self.points_y = set(points_y)
+
+    @classmethod
+    def from_image(cls, ebsd_map, image_x, image_y):
+        return cls(
+            ebsd_map,
+            zip(*image_x.transpose().nonzero()),
+            zip(*image_y.transpose().nonzero())
+        )
+
+    @property
+    def points(self):
+        return self.points_x.union(self.points_y)
+
+    def _image(self, points):
+        image = np.zeros(self.ebsd_map.shape, dtype=bool)
+        image[tuple(zip(*points))[::-1]] = True
+        return image
+
+    @property
+    def image_x(self):
+        return self._image(self.points_x)
+
+    @property
+    def image_y(self):
+        return self._image(self.points_y)
+
+    @property
+    def image(self):
+        return self._image(self.points)
+
+    @property
+    def lines(self):
+        _, _, lines = BoundarySegment.boundary_points_to_lines(
+            boundary_points_x=self.points_x,
+            boundary_points_y=self.points_y
+        )
+        return lines
+
+
 
 
 class BoundarySegment(object):
@@ -1860,8 +1965,8 @@ class Linker(object):
         """
         for i, ebsd_map in enumerate(self.ebsd_maps[1:], start=1):
             for link in self.links:
-                ebsd_map.grainList[link[i]].refOri = copy.deepcopy(
-                    self.ebsd_maps[0].grainList[link[0]].refOri
+                ebsd_map[link[i]].refOri = copy.deepcopy(
+                    self.ebsd_maps[0][link[0]].refOri
                 )
 
     def update_misori(self, calc_axis=False):
@@ -1875,4 +1980,4 @@ class Linker(object):
         """
         for i, ebsdMap in enumerate(self.ebsd_maps[1:], start=1):
             for link in self.links:
-                ebsdMap.grainList[link[i]].buildMisOriList(calcAxis=calc_axis)
+                ebsdMap[link[i]].buildMisOriList(calcAxis=calc_axis)

@@ -44,25 +44,32 @@ class Map(object):
 
         self.shape = (0, 0)
 
-        self.grainList = None
+        self._grains = None
+
         self.currGrainId = None  # ID of last selected grain
         self.homogPoints = []
 
         self.proxigramArr = None
-        self.neighbourNetwork = None
+        self.neighbour_network = None
 
         self.grainPlot = None
         self.profilePlot = None
 
     def __len__(self):
-        return len(self.grainList)
+        return len(self.grains)
 
     # allow array like getting of grains
     def __getitem__(self, key):
         # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        # self.checkGrainsDetected()
 
-        return self.grainList[key]
+        return self.grains[key]
+
+    @property
+    def grains(self):
+        # try to access grains image to generate grains if necessary
+        self.data.grains
+        return self._grains
 
     @property
     def xDim(self):
@@ -96,9 +103,9 @@ class Map(object):
 
         """
 
-        if (self.grainList is None or
-                type(self.grainList) is not list or
-                len(self.grainList) < 1):
+        if (self._grains is None or
+                type(self._grains) is not list or
+                len(self._grains) < 1):
             if raiseExc:
                 raise Exception("No grains detected.")
             else:
@@ -422,10 +429,11 @@ class Map(object):
             self.homogPoints[homogID] = newPoint
 
     @reportProgress("constructing neighbour network")
-    def buildNeighbourNetwork(self):
+    def build_neighbour_network(self):
         """Construct a list of neighbours
 
         """
+        ## TODO: fix HRDIC NN
         # create network
         nn = nx.Graph()
         nn.add_nodes_from(self.grainList)
@@ -553,6 +561,7 @@ class Map(object):
             Force calculation even is proxigramArr is populated.
 
         """
+        ## TODO: fix proxigram
         if self.proxigramArr is not None and not forceCalc:
             return
 
@@ -681,6 +690,7 @@ class Map(object):
         if isinstance(comp, tuple):
             return map_data[comp]
         if isinstance(comp, str):
+            comp = comp.lower()
             if comp == 'norm':
                 if len(map_data.shape) == 3:
                     axis = 0
@@ -694,8 +704,8 @@ class Map(object):
             if comp == 'all_euler':
                 return self.calc_euler_colour(map_data)
 
-            if comp.lower().startswith('ipf'):
-                direction = comp.split('_')[1].lower()
+            if comp.startswith('ipf'):
+                direction = comp.split('_')[1]
                 direction = {
                     'x': np.array([1, 0, 0]),
                     'y': np.array([0, 1, 0]),
@@ -791,6 +801,14 @@ class Map(object):
 
         return grainAvData
 
+    def grain_data_to_map(self, name):
+        map_data = np.zeros(self[0].data[name].shape[:-1] + self.shape)
+        for grain in self:
+            for i, point in enumerate(grain.data.point):
+                map_data[..., point[1], point[0]] = grain.data[name][..., i]
+
+        return map_data
+
     def grainDataToMapData(self, grainData, grainIds=-1, bg=0):
         """Create a map array with each grain filled with the given
         values.
@@ -834,8 +852,8 @@ class Map(object):
 
         grainMap = np.full(mapShape, bg, dtype=grainData.dtype)
         for grainId, grainValue in zip(grainIds, grainData):
-            for coord in self[grainId].coordList:
-                grainMap[coord[1], coord[0]] = grainValue
+            for point in self[grainId].data.point:
+                grainMap[point[1], point[0]] = grainValue
 
         return grainMap
 
@@ -951,19 +969,34 @@ class Grain(object):
 
     ownerMap : defdap.base.Map
 
-    coordList : list of tuples
+    # coordList : list of tuples
 
 
     """
-    def __init__(self, grainID, ownerMap):
+    def __init__(self, grainID, ownerMap, group_id):
+        self.data = Datastore(group_id=group_id)
+        self.data.add_derivative(
+            ownerMap.data, self.grainData,
+            in_props={
+                'type': 'map'
+            },
+            out_props={
+                'type': 'list'
+            }
+        )
+        self.data.add(
+            'point', [],
+            unit='', type='list', order=1
+        )
+
         # list of coords stored as tuples (x, y). These are coords in a
         # cropped image if crop exists.
         self.grainID = grainID
         self.ownerMap = ownerMap
-        self.coordList = []
+        # self.coordList = []
 
     def __len__(self):
-        return len(self.coordList)
+        return len(self.data.point)
 
     def __str__(self):
         return f"Grain(ID={self.grainID})"
@@ -978,10 +1011,10 @@ class Grain(object):
             minimum x, minimum y, maximum x, maximum y.
 
         """
-        coords = np.array(self.coordList, dtype=int)
+        points = np.array(self.data.point, dtype=int)
 
-        x0, y0 = coords.min(axis=0)
-        xmax, ymax = coords.max(axis=0)
+        x0, y0 = points.min(axis=0)
+        xmax, ymax = points.max(axis=0)
 
         return x0, y0, xmax, ymax
 
@@ -1010,7 +1043,7 @@ class Grain(object):
             xCentre = round((xmax + x0) / 2)
             yCentre = round((ymax + y0) / 2)
         elif centreType == "com":
-            xCentre, yCentre = np.array(self.coordList).mean(axis=0).round()
+            xCentre, yCentre = np.array(self.data.point).mean(axis=0).round()
         else:
             raise ValueError("centreType must be box or com")
 
@@ -1041,7 +1074,7 @@ class Grain(object):
         # initialise array with nans so area not in grain displays white
         outline = np.full((ymax - y0 + 1, xmax - x0 + 1), bg, dtype=int)
 
-        for coord in self.coordList:
+        for coord in self.data.point:
             outline[coord[1] - y0, coord[0] - x0] = fg
 
         return outline
@@ -1087,7 +1120,7 @@ class Grain(object):
         """
         grainData = np.zeros(len(self), dtype=mapData.dtype)
 
-        for i, coord in enumerate(self.coordList):
+        for i, coord in enumerate(self.data.point):
             grainData[i] = mapData[coord[1], coord[0]]
 
         return grainData
@@ -1124,7 +1157,7 @@ class Grain(object):
         grainMapData = np.full((ymax - y0 + 1, xmax - x0 + 1), bg,
                                dtype=type(grainData[0]))
 
-        for coord, data in zip(self.coordList, grainData):
+        for coord, data in zip(self.data.point, grainData):
             grainMapData[coord[1] - y0, coord[0] - x0] = data
 
         return grainMapData

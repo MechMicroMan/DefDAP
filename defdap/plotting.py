@@ -401,11 +401,9 @@ class MapPlot(Plot):
         kind : str, {"pixel", "line"}
             Type of boundaries to plot, either a boundary image or a
             collection of line segments.
-        boundaries : various, optional
-            Boundaries to plot, either a boundary image or a list of pairs
-            of coordinates representing the start and end of each boundary 
-            segment. If not provided the boundaries are loaded from the 
-            calling map.
+        boundaries : various, defdap.ebsd.BoundarySet
+            Boundaries to plot. If not provided the boundaries are loaded from
+            the calling map.
         colour : str
             Colour of grain boundaries.
         dilate : bool
@@ -421,24 +419,19 @@ class MapPlot(Plot):
         if colour is None:
             colour = "white"
 
+        if boundaries is None:
+            boundaries = self.callingMap.data.grain_boundaries
+
         if kind == "line":
-            boundaryLines = boundaries
-            if boundaryLines is None:
-                boundaryLines = self.callingMap.boundaryLines
-
-            lc = LineCollection(boundaryLines,
+            lc = LineCollection(boundaries.lines,
                                 colors=mpl.colors.to_rgba(colour), **kwargs)
-
             self.ax.add_collection(lc)
             # ax.autoscale()
 
             if draw:
                 self.draw()
         else:
-            boundariesImage = boundaries
-            if boundariesImage is None:
-                boundariesImage = self.callingMap.boundaries
-            boundariesImage = -boundariesImage
+            boundariesImage = boundaries.image.astype(int)
 
             if dilate:
                 boundariesImage = mph.binary_dilation(boundariesImage)
