@@ -466,7 +466,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
             self.loadedMetadata['phases'].append(Phase(
                 phaseMetadata['StructureName'],
                 int(phaseMetadata['LaueGroup']),
-                int(phaseMetadata['SpaceGroup']),
+                int(phaseMetadata.get('SpaceGroup', 0)),
                 (
                     round(float(phaseMetadata['a']), 3),
                     round(float(phaseMetadata['b']), 3),
