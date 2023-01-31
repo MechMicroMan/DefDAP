@@ -15,6 +15,7 @@
 
 import functools
 from datetime import datetime
+from uuid import uuid4
 
 
 def reportProgress(message: str = ""):
@@ -92,25 +93,39 @@ class Datastore(object):
         that the method produces.
 
     """
-    __slots__ = ['_store', '_generators']
+    __slots__ = ['_store', '_generators', '_derivatives', '_group_id']
+    _base_caller = None
 
-    def __init__(self):
+    @staticmethod
+    def generate_id():
+        return uuid4()
+
+    def __init__(self, group_id=None):
         self._store = {}
         self._generators = {}
+        self._derivatives = []
+        self._group_id = self.generate_id() if group_id is None else group_id
 
     def __len__(self):
         """Number of data in the store, including data not yet generated."""
-        return len(self._store)
+        return len(self.keys())
 
     def __str__(self):
         text = 'Datastore'
         for key, val in self._store.items():
-            text += f'\n  {key}: {val["data"].__repr__()}'
+            # text += f'\n  {key}: {val["data"].__repr__()}'
+            text += f'\n  {key}'
+        text2 = ''
+        for derivative in self._derivatives:
+            for key in self.lookup_derivative_keys(derivative):
+                text2 += f'\n    {key}'
+        if text2 != '':
+            text += '\n  Derived data:' + text2
 
         return text
 
     def __contains__(self, key):
-        return key in self._store
+        return key in self.keys()
 
     def __getitem__(self, key):
         """Get data or metadata
@@ -132,9 +147,11 @@ class Datastore(object):
             attr = 'data'
 
         if key not in self:
-            raise ValueError(f'Data with name `{key}` does not exist.')
+            raise KeyError(f'Data with name `{key}` does not exist.')
+        if key not in self._store:
+            return self._get_derived_item(key, attr)
         if attr not in self._store[key]:
-            raise ValueError(f'Metadata `{attr}` does not exist for `{key}`.')
+            raise KeyError(f'Metadata `{attr}` does not exist for `{key}`.')
 
         val = self._store[key][attr]
 
@@ -168,6 +185,7 @@ class Datastore(object):
         if key not in self:
             raise ValueError(f'Data with name `{key}` does not exist.')
 
+        ## TODO: fix derived data
         self._store[key][attr] = val
 
     def __getattr__(self, key):
@@ -180,7 +198,7 @@ class Datastore(object):
         """Set data of item that already exists.
 
         """
-        if key in ('_store', '_generators'):
+        if key in ('_store', '_generators', '_derivatives', '_group_id'):
             super().__setattr__(key, val)
         else:
             self[key] = val
@@ -198,7 +216,56 @@ class Datastore(object):
         to get key-value pairs, imitating functionality of a dictionary.
 
         """
-        return self._store.keys()
+        keys = list(self._store.keys())
+        for derivative in self._derivatives:
+            keys += self.lookup_derivative_keys(derivative)
+        return keys
+
+    def lookup_derivative_keys(self, derivative):
+        set_base = False
+        if Datastore._base_caller is None:
+            set_base = True
+            Datastore._base_caller = self
+
+        source = derivative['source']
+        matched_keys = []
+        if source._group_id == Datastore._base_caller._group_id:
+            return matched_keys
+        for key in source:
+            for meta_key in derivative['in_props']:
+                if source.get_metadata(key, meta_key) != derivative['in_props'][meta_key]:
+                    break
+            else:
+                matched_keys.append(key)
+
+        if set_base:
+            Datastore._base_caller = None
+
+        return matched_keys
+
+    def _get_derived_item(self, key, attr):
+        for derivative in self._derivatives:
+            if key in self.lookup_derivative_keys(derivative):
+                break
+            else:
+                raise KeyError(f'Data with name `{key}` does not exist.')
+        source = derivative['source']
+
+        ## TODO: fix derived metadata
+        # if attr not in source._store[key]:
+        #     raise KeyError(f'Metadata `{attr}` does not exist for `{key}`.')
+
+        if attr in derivative['out_props']:
+            return derivative['out_props'][attr]
+
+        if derivative['pass_ref'] and attr == 'data':
+            return derivative['func'](key)
+
+        val = derivative['source'][(key, attr)]
+        if attr == 'data':
+            val = derivative['func'](val)
+
+        return val
 
     # def values(self):
     #     return self._store.values()
@@ -259,7 +326,21 @@ class Datastore(object):
             self.add(key, None, **metadata)
         self._generators[keys] = func
 
-    def generate(self, key):
+    def add_derivative(self, datastore, derive_method, in_props=None,
+                       out_props=None, pass_ref=False):
+        if in_props is None:
+            in_props = {}
+        if out_props is None:
+            out_props = {}
+        self._derivatives.append({
+            'source': datastore,
+            'func': derive_method,
+            'in_props': in_props,
+            'out_props': out_props,
+            'pass_ref': pass_ref,
+        })
+
+    def generate(self, key, **kwargs):
         """Generate data from the associated data generation method and
         store if metadata `save` is not set to False.
 
@@ -277,7 +358,7 @@ class Datastore(object):
             if key not in keys:
                 continue
 
-            datas = generator()
+            datas = generator(**kwargs)
             if len(keys) == 1:
                 if self.get_metadata(key, 'save', True):
                     self[key] = datas
@@ -333,7 +414,13 @@ class Datastore(object):
         Metadata value or the default value.
 
         """
-        return self._store[key].get(attr, value)
+        if key in self._store:
+            return self._store[key].get(attr, value)
+
+        try:
+            return self._get_derived_item(key, attr)
+        except KeyError:
+            return value
 
 
 class DataGenerationError(Exception):
