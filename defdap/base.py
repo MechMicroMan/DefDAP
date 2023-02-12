@@ -16,6 +16,7 @@
 import numpy as np
 import networkx as nx
 
+import defdap
 from defdap.quat import Quat
 from defdap import plotting
 from defdap.plotting import Plot, MapPlot, GrainPlot
@@ -23,6 +24,7 @@ from defdap.plotting import Plot, MapPlot, GrainPlot
 from skimage.measure import profile_line
 
 from defdap.utils import reportProgress, Datastore
+from defdap.experiment import Frame
 
 
 class Map(object):
@@ -38,16 +40,22 @@ class Map(object):
         ID of last selected grain.
 
     """
-    def __init__(self):
+    def __init__(self, experiment=None, increment=None, frame=None):
 
-        self.data = Datastore()
+        self.data = Datastore(crop_func=self.crop)
+        self.frame = frame if frame is not None else Frame()
+        if experiment is None:
+            self.experiment = defdap.anonymous_experiment
+            self.increment = self.experiment.add_increment()
+        else:
+            self.experiment = experiment
+            self.increment = experiment.add_increment() if increment is None else increment
 
         self.shape = (0, 0)
 
         self._grains = None
 
         self.currGrainId = None  # ID of last selected grain
-        self.homogPoints = []
 
         self.proxigramArr = None
         self.neighbour_network = None
@@ -254,179 +262,6 @@ class Map(object):
         self.profilePlot.ax.set_xlabel('Distance (pixels)')
         self.profilePlot.ax.set_ylabel('Intensity')
         self.profilePlot.draw()
-
-    def setHomogPoint(self, map_name=None, points=None, **kwargs):
-        """
-        Interactive tool to set homologous points. Right-click on a point
-        then click 'save point' to append to the homologous points list.
-
-        Parameters
-        ----------
-        map_name : str, optional
-            Map data to plot for selecting points.
-        points : numpy.ndarray, optional
-            Array of (x,y) homologous points to set explicitly.
-        kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.base.Map.plotHomog`
-
-        """
-        if points is not None:
-            self.homogPoints = points
-            return
-
-        if map_name is None:
-            map_name = self.homog_map_name
-
-        binning = self.data.get_metadata(map_name, 'binning', 1)
-        plot = self.plot_map(map_name, makeInteractive=True, **kwargs)
-
-        # Plot stored homog points if there are any
-        if len(self.homogPoints) > 0:
-            homogPoints = np.array(self.homogPoints) * binning
-            plot.addPoints(homogPoints[:, 0], homogPoints[:, 1],
-                           c='y', s=60)
-        else:
-            # add empty points layer to update later
-            plot.addPoints([None], [None], c='y', s=60)
-
-        # add empty points layer for current selected point
-        plot.addPoints([None], [None], c='w', s=60, marker='x')
-
-        plot.addEventHandler('button_press_event', self.clickHomog)
-        plot.addEventHandler('key_press_event', self.keyHomog)
-        plot.addButton("Save point",
-                       lambda e, p: self.clickSaveHomog(e, p, binning),
-                       color="0.85", hovercolor="blue")
-
-    def clickHomog(self, event, plot):
-        """Event handler for capturing position when clicking on a map.
-
-        Parameters
-        ----------
-        event :
-            Click event.
-        plot : defdap.plotting.MapPlot
-            Plot to monitor.
-
-        """
-        # check if click was on the map
-        if event.inaxes is not plot.ax:
-            return
-
-        # right mouse click or shift + left mouse click
-        # shift click doesn't work in osx backend
-        if (event.button == 3 or
-                (event.button == 1 and event.key == 'shift')):
-            plot.addPoints([int(event.xdata)], [int(event.ydata)],
-                           updateLayer=1)
-
-    def keyHomog(self, event, plot):
-        """Event handler for moving position using keyboard after clicking on a map.
-
-        Parameters
-        ----------
-        event :
-            Keypress event.
-        plot : defdap.plotting.MapPlot
-            Plot to monitor.
-
-        """
-        keys = ['left', 'right', 'up', 'down']
-        key = event.key.split('+')
-        if key[-1] in keys:
-            # get the selected point
-            points = plot.imgLayers[plot.pointsLayerIDs[1]]
-            selPoint = points.get_offsets()[0]
-
-            # check if a point is selected
-            if selPoint[0] is not None and selPoint[1] is not None:
-                # print(event.key)
-                move = 1
-                if len(key) == 2 and key[0] == 'shift':
-                    move = 10
-
-                if key[-1] == keys[0]:
-                    selPoint[0] -= move
-                elif key[-1] == keys[1]:
-                    selPoint[0] += move
-                elif key[-1] == keys[2]:
-                    selPoint[1] -= move
-                elif key[-1] == keys[3]:
-                    selPoint[1] += move
-
-                plot.addPoints([selPoint[0]], [selPoint[1]], updateLayer=1)
-
-    def clickSaveHomog(self, event, plot, binning):
-        """Append the selected point on the map to homogPoints.
-
-        Parameters
-        ----------
-        event :
-            Button click event.
-        plot : defdap.plotting.MapPlot
-            Plot to monitor.
-        binning : int, optional
-            Binning applied to image, if applicable.
-
-        """
-        # get the selected point
-        points = plot.imgLayers[plot.pointsLayerIDs[1]]
-        selPoint = points.get_offsets()[0]
-
-        # Check if a point is selected
-        if selPoint[0] is not None and selPoint[1] is not None:
-            # remove selected point from plot
-            plot.addPoints([None], [None], updateLayer=1)
-
-            # then scale and add to homog points list
-            selPoint = tuple((selPoint / binning).round().astype(int))
-            self.homogPoints.append(selPoint)
-
-            # update the plotted homog points
-            homogPoints = np.array(self.homogPoints) * binning
-            plot.addPoints(homogPoints[:, 0], homogPoints[:, 1], updateLayer=0)
-
-    def updateHomogPoint(self, homogID, newPoint=None, delta=None):
-        """
-        Update a homog point by either over writing it with a new point or
-        incrementing the current values.
-
-        Parameters
-        ----------
-        homogID : int
-            ID (place in list) of point to update or -1 for all.
-        newPoint : tuple, optional
-            (x, y) coordinates of new point.
-        delta : tuple, optional
-            Increments to current point (dx, dy).
-
-        """
-        if type(homogID) is not int:
-            raise Exception("homogID must be an integer.")
-        if homogID >= len(self.homogPoints):
-            raise Exception("homogID is out of range.")
-
-        # Update all points
-        if homogID < 0:
-            for i in range(len(self.homogPoints)):
-                self.updateHomogPoint(homogID=i, delta=delta)
-        # Update a single point
-        else:
-            # overwrite point
-            if newPoint is not None:
-                if type(newPoint) is not tuple and len(newPoint) != 2:
-                    raise Exception("newPoint must be a 2 component tuple")
-
-            # increment current point
-            elif delta is not None:
-                if type(delta) is not tuple and len(delta) != 2:
-                    raise Exception("delta must be a 2 component tuple")
-                newPoint = list(self.homogPoints[homogID])
-                newPoint[0] += delta[0]
-                newPoint[1] += delta[1]
-                newPoint = tuple(newPoint)
-
-            self.homogPoints[homogID] = newPoint
 
     @reportProgress("constructing neighbour network")
     def build_neighbour_network(self):
@@ -758,14 +593,13 @@ class Map(object):
 
             plot_params['clabel'] = clabel
 
-        binning = self.data.get_metadata(map_name, 'binning', 1)
         if self.scale is not None:
+            binning = self.data.get_metadata(map_name, 'binning', 1)
             plot_params['scale'] = self.scale / binning
 
         plot_params.update(kwargs)
 
         map_data = self._extract_component(self.data[map_name], comp)
-        map_data = self.crop(map_data, binning=binning)
 
         return MapPlot.create(self, map_data, **plot_params)
 
@@ -969,9 +803,6 @@ class Grain(object):
 
     ownerMap : defdap.base.Map
 
-    # coordList : list of tuples
-
-
     """
     def __init__(self, grainID, ownerMap, group_id):
         self.data = Datastore(group_id=group_id)
@@ -993,13 +824,23 @@ class Grain(object):
         # cropped image if crop exists.
         self.grainID = grainID
         self.ownerMap = ownerMap
-        # self.coordList = []
 
     def __len__(self):
         return len(self.data.point)
 
     def __str__(self):
         return f"Grain(ID={self.grainID})"
+
+    def addPoint(self, point):
+        """Append a coordinate and a quat to a grain.
+
+        Parameters
+        ----------
+        point : tuple
+            (x,y) coordinate to append
+
+        """
+        self.data.point.append(point)
 
     @property
     def extremeCoords(self):

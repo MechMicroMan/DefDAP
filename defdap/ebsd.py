@@ -56,7 +56,7 @@ class Map(base.Map):
                 1-based, 0 is non-indexed points
             euler_angle : numpy.ndarray
                 stored as (3, yDim, xDim) in radians
-        Derived data:
+        Generated data:
             orientation : numpy.ndarray of defdap.quat.Quat
                 Quaterion for each point of map. Shape (yDim, xDim).
             grain_boundaries : BoundarySet
@@ -71,9 +71,11 @@ class Map(base.Map):
                 GND scalar map.
             Nye_tensor : numpy.ndarray
                 3x3 Nye tensor at each point.
+        Derived data:
+            Grain list data to map data from all grains
 
     """
-    def __init__(self, fileName, dataType=None):
+    def __init__(self, fileName, dataType=None, **kwargs):
         """
         Initialise class and load EBSD data.
 
@@ -86,7 +88,8 @@ class Map(base.Map):
 
         """
         # Call base class constructor
-        super(Map, self).__init__()
+        super(Map, self).__init__(**kwargs)
+        self.increment.add_map('ebsd', self)
 
         self.step_size = None
         self.phases = []
@@ -334,7 +337,7 @@ class Map(base.Map):
 
         return MapPlot.create(self, map_colours, **plot_params)
 
-    def plotIPFMap(self, direction, bg_colour=None, phases=None, **kwargs):
+    def plotIPFMap(self, direction, phases=None, bg_colour=None, **kwargs):
         """
         Plot a map with points coloured in IPF colouring,
         with respect to a given sample direction.
@@ -343,10 +346,10 @@ class Map(base.Map):
         ----------
         direction : np.array len 3
             Sample directiom.
-        bg_colour : np.array len 3
-            Colour of background (i.e. for phases not plotted).
         phases : list of int
             Which phases to plot IPF data for.
+        bg_colour : np.array len 3
+            Colour of background (i.e. for phases not plotted).
         kwargs
             Other arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
@@ -983,7 +986,7 @@ class Map(base.Map):
 
         # add first point to the grain
         x, y = seed
-        grain.addPoint(seed, self.data.orientation[y, x])
+        grain.addPoint(seed)
         grains[y, x] = index
         points_left[y, x] = False
         edge = [seed]
@@ -1026,7 +1029,7 @@ class Map(base.Map):
                         add_point = not boundary_im_y[t, s]
 
                 if add_point:
-                    grain.addPoint((s, t), self.data.orientation[t, s])
+                    grain.addPoint((s, t))
                     grains[t, s] = index
                     points_left[t, s] = False
                     edge.append((s, t))
@@ -1229,7 +1232,7 @@ class Grain(base.Grain):
     data : defdap.utils.Datastore
         Must contain after creating:
             point : list of tuples
-                1-based, 0 is non-indexed points
+                (x, y)
         Generated data:
             GROD : numpy.ndarray
 
@@ -1296,19 +1299,6 @@ class Grain(base.Grain):
     def crystalSym(self):
         """Temporary"""
         return self.phase.crystalStructure.name
-
-    def addPoint(self, point, quat):
-        """Append a coordinate and a quat to a grain.
-
-        Parameters
-        ----------
-        point : tuple
-            (x,y) coordinate to append
-        quat : defdap.quat.Quat
-            Quaternion to append.
-
-        """
-        self.data.point.append(point)
 
     def calcAverageOri(self):
         """Calculate the average orientation of a grain.
@@ -1663,13 +1653,42 @@ class BoundarySet(object):
 
     @property
     def lines(self):
-        _, _, lines = BoundarySegment.boundary_points_to_lines(
+        _, _, lines = self.boundary_points_to_lines(
             boundary_points_x=self.points_x,
             boundary_points_y=self.points_y
         )
         return lines
 
+    @staticmethod
+    def boundary_points_to_lines(*, boundary_points_x=None,
+                                 boundary_points_y=None):
+        boundary_data = {}
+        if boundary_points_x is not None:
+            boundary_data['x'] = boundary_points_x
+        if boundary_points_y is not None:
+            boundary_data['y'] = boundary_points_y
+        if not boundary_data:
+            raise ValueError("No boundaries provided.")
 
+        deltas = {
+            'x': (0.5, -0.5, 0.5, 0.5),
+            'y': (-0.5, 0.5, 0.5, 0.5)
+        }
+        all_lines = []
+        for mode, points in boundary_data.items():
+            lines = []
+            for i, j in points:
+                lines.append((
+                    (i + deltas[mode][0], j + deltas[mode][1]),
+                    (i + deltas[mode][2], j + deltas[mode][3])
+                ))
+            all_lines.append(lines)
+
+        if len(all_lines) == 2:
+            all_lines.append(all_lines[0] + all_lines[1])
+            return tuple(all_lines)
+        else:
+            return all_lines[0]
 
 
 class BoundarySegment(object):
@@ -1750,7 +1769,7 @@ class BoundarySegment(object):
     @property
     def boundaryLines(self):
         """Return line points along this boundary segment"""
-        _, _, lines = self.boundary_points_to_lines(
+        _, _, lines = BoundarySet.boundary_points_to_lines(
             boundary_points_x=self.boundaryPointsX,
             boundary_points_y=self.boundaryPointsY
         )
@@ -1774,37 +1793,6 @@ class BoundarySegment(object):
         #     (np.sqrt(np.dot(misOriAxis, misOriAxis) * np.dot(compVector,
         #                                                      compVector))))
         # print(deviation * 180 / np.pi)
-
-    @staticmethod
-    def boundary_points_to_lines(*, boundary_points_x=None,
-                                 boundary_points_y=None):
-        boundary_data = {}
-        if boundary_points_x is not None:
-            boundary_data['x'] = boundary_points_x
-        if boundary_points_y is not None:
-            boundary_data['y'] = boundary_points_y
-        if not boundary_data:
-            raise ValueError("No boundaries provided.")
-
-        deltas = {
-            'x': (0.5, -0.5, 0.5, 0.5),
-            'y': (-0.5, 0.5, 0.5, 0.5)
-        }
-        all_lines = []
-        for mode, points in boundary_data.items():
-            lines = []
-            for i, j in points:
-                lines.append((
-                    (i + deltas[mode][0], j + deltas[mode][1]),
-                    (i + deltas[mode][2], j + deltas[mode][3])
-                ))
-            all_lines.append(lines)
-
-        if len(all_lines) == 2:
-            all_lines.append(all_lines[0] + all_lines[1])
-            return tuple(all_lines)
-        else:
-            return all_lines[0]
 
 
 class Linker(object):

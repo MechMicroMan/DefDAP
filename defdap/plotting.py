@@ -566,10 +566,10 @@ class MapPlot(Plot):
 
         Parameters
         ----------
-        x : float
-            x coordinate.
-        y : float
-            y coordinate.
+        x : list of float
+            x coordinates
+        y : list of float
+            y coordinates
         updateLayer : int, optional
             Layer to place points on
         kwargs

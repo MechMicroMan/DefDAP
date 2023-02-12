@@ -45,8 +45,7 @@ class EBSDDataLoader(object):
             'phase', None, unit='', type='map', order=0,
             comment='1-based, 0 is non-indexed points',
             plot_params={
-                'plotColourBar': True,
-                'clabel': 'Phase',
+                'vmin': 0,
             }
         )
         self.loadedData.add(
@@ -144,6 +143,7 @@ class OxfordTextLoader(EBSDDataLoader):
                     acqEulers[2] = float(line.split()[-1])
                 elif 'Phases' in line:
                     numPhases = int(line.split()[-1])
+                    self.loadedData['phase', 'plot_params']['vmax'] = numPhases
                     for j in range(numPhases):
                         line = next(ctfFile)
                         self.loadedMetadata['phases'].append(parsePhase())
@@ -339,6 +339,7 @@ class EdaxAngLoader(EBSDDataLoader):
             }
         )
         self.loadedData.phase = data['phase'].reshape(shape) + 1
+        self.loadedData['phase', 'plot_params']['vmax'] = len(self.loadedMetadata['phases'])
 
         # flatten the structured dtype
         euler_angle = structured_to_unstructured(
@@ -476,6 +477,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
                     round(float(phaseMetadata['gamma']), 3) * np.pi / 180
                 )
             ))
+        self.loadedData['phase', 'plot_params']['vmax'] = numPhases
 
         # Deal with EDX data
         edx_fields = {}
@@ -608,6 +610,7 @@ class PythonDictLoader(EBSDDataLoader):
             unit='', type='map', order=0
         )
         self.loadedData.phase = dataDict['phase']
+        self.loadedData['phase', 'plot_params']['vmax'] = len(self.loadedMetadata['phases'])
         self.loadedData.euler_angle = dataDict['euler_angle']
         self.checkData()
 

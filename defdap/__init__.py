@@ -1,3 +1,5 @@
+from defdap.experiment import Experiment
+
 defaults = {
     # Convention to use when attaching an orthonormal frame to a crystal
     # structure. 'hkl' or 'tsl'
@@ -17,3 +19,5 @@ defaults = {
         'HCP': 'hexagonal_withca',
     },
 }
+
+anonymous_experiment = Experiment()

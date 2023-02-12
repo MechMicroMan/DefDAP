@@ -18,16 +18,15 @@ from matplotlib.pyplot import imread
 import inspect
 
 from skimage import transform as tf
-from skimage import morphology as mph
 
 from scipy.stats import mode
 from scipy.ndimage import binary_dilation
 
 import peakutils
 
+from defdap.utils import Datastore
 from defdap.file_readers import DICDataLoader
 from defdap import base
-from defdap.quat import Quat
 
 from defdap import defaults
 from defdap.plotting import MapPlot, GrainPlot
@@ -56,14 +55,8 @@ class Map(base.Map):
         Size of map (after cropping, like *Dim).
     corrVal : numpy.ndarray
         Correlation value.
-    ebsdMap : defdap.ebsd.Map
+    ebsd_map : defdap.ebsd.Map
         EBSD map linked to DIC map.
-    ebsdTransform : various
-        Transform from EBSD to DIC coordinates.
-    ebsdTransformInv : various
-        Transform from DIC to EBSD coordinates.
-    ebsdGrainIds : list
-        EBSD grain IDs corresponding to DIC map grain IDs.
     highlightAlpha : float
         Alpha (transparency) of grain highlight.
     bseScale : float
@@ -72,7 +65,7 @@ class Map(base.Map):
         File path.
     fname : str
         File name.
-    cropDists : numpy.ndarray
+    crop_dists : numpy.ndarray
         Crop distances (default all zeros).
 
     data : defdap.utils.Datastore
@@ -81,16 +74,18 @@ class Map(base.Map):
                 X and Y coordinates
             displacement : numpy.ndarray
                 X and Y displacements
-        Derived data:
+        Generated data:
             f : numpy.ndarray
                 Components of the deformation gradient (0=x, 1=y).
             e : numpy.ndarray
                 Components of the green strain (0=x, 1=y).
             max_shear : numpy.ndarray
                 Max shear component np.sqrt(((e11 - e22) / 2.)**2 + e12**2).
+        Derived data:
+            Grain list data to map data from all grains
 
     """
-    def __init__(self, path, fname, dataType=None):
+    def __init__(self, path, fname, dataType=None, **kwargs):
         """Initialise class and import DIC data from file.
 
         Parameters
@@ -104,7 +99,8 @@ class Map(base.Map):
 
         """
         # Call base class constructor
-        super(Map, self).__init__()
+        super(Map, self).__init__(**kwargs)
+        self.increment.add_map('dic', self)
 
         # Initialise variables
         self.format = None      # Software name
@@ -115,16 +111,18 @@ class Map(base.Map):
 
         self.corrVal = None     # correlation value
 
-        self.ebsdMap = None                 # EBSD map linked to DIC map
-        self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
-        self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
-        self.ebsdGrainIds = None
+        self.ebsd_map = None                 # EBSD map linked to DIC map
         self.highlightAlpha = 0.6
-        self.bseScale = None                # size of a pixel in the correlated images
+        self.bseScale = None                # size of pixels in pattern images
         self.path = path                    # file path
         self.fname = fname                  # file name
+        self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
 
         self.loadData(path, fname, dataType=dataType)
+
+        ## TODO: cropping, have metadata to state if saved data is cropped, if
+        ## not cropped then crop on accesss. Maybe mark cropped data as invalid
+        ## if crop distances change
 
         # Deformation gradient
         f = np.gradient(self.data.displacement, self.binning, axis=(1, 2))
@@ -170,8 +168,10 @@ class Map(base.Map):
             }
         )
 
-        # crop distances (default all zeros)
-        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
+        self.data.add_generator(
+            'grains', self.find_grains, unit='', type='map', order=0,
+            cropped=True
+        )
 
         self.plotDefault = lambda *args, **kwargs: self.plotMaxShear(
             plotGBs=True, *args, **kwargs
@@ -180,11 +180,11 @@ class Map(base.Map):
 
     @property
     def original_shape(self):
-        return (self.ydim, self.xdim)
+        return self.ydim, self.xdim
 
     @property
     def crystalSym(self):
-        return self.ebsdMap.crystalSym
+        return self.ebsd_map.crystalSym
 
     @reportProgress("loading HRDIC data")
     def loadData(self, fileDir, fileName, dataType=None):
@@ -212,6 +212,7 @@ class Map(base.Map):
         self.format = metadataDict['format']      # Software name
         self.version = metadataDict['version']    # Software version
         self.binning = metadataDict['binning']    # Sub-window width in pixels
+        # *dim are full size of data. shape (old *Dim) are size after cropping
         # *dim are full size of data. shape (old *Dim) are size after cropping
         self.shape = metadataDict['shape']
         self.xdim = metadataDict['shape'][1]      # size of map along x (from header)
@@ -258,7 +259,7 @@ class Map(base.Map):
 
         """
         for fi in reversed(inspect.stack()):
-            names = [var_name for var_name, var_val in fi.frame.f_locals.items() if var_val is self]
+            names = [key for key, val in fi.frame.f_locals.items() if val is self]
             if len(names) > 0:
                 return names[0]
 
@@ -279,7 +280,8 @@ class Map(base.Map):
 
         """
         if self.bseScale is None:
-            raise ValueError("Map scale not set. Set with setScale()")
+            # raise ValueError("Map scale not set. Set with setScale()")
+            return None
 
         return self.bseScale * self.binning
 
@@ -318,23 +320,24 @@ class Map(base.Map):
         for c in components:
             # Iterate over tensor components (i.e. e11, e22, e12)
             for i in np.ndindex(self.data[c].shape[:len(np.shape(self.data[c]))-2]):
-                per = [np.nanpercentile(self.crop(self.data[c][i]), p) for p in percentiles]
+                per = [np.nanpercentile(self.data[c][i], p) for p in percentiles]
                 print(strFormat.format(c+''.join([str(t+1) for t in i]), *per))
 
-    def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
+    def set_crop(self, *, left=None, right=None, top=None, bottom=None,
+                 update_homog_points=False):
         """Set a crop for the DIC map.
 
         Parameters
         ----------
-        xMin : int
-            Distance to crop from left in pixels.
-        xMax : int
-            Distance to crop from right in pixels.
-        yMin : int
-            Distance to crop from top in pixels.
-        yMax : int
-            Distance to crop from bottom in pixels.
-        updateHomogPoints : bool, optional
+        left : int
+            Distance to crop from left in pixels (formally `xMin`)
+        right : int
+            Distance to crop from right in pixels (formally `xMax`)
+        top : int
+            Distance to crop from top in pixels (formally `yMin`)
+        bottom : int
+            Distance to crop from bottom in pixels (formally `yMax`)
+        update_homog_points : bool, optional
             If true, change homologous points to reflect crop.
 
         """
@@ -343,93 +346,76 @@ class Map(base.Map):
         dy = 0
 
         # update crop distances
-        if xMin is not None:
-            if updateHomogPoints:
-                dx = self.cropDists[0, 0] - int(xMin)
-            self.cropDists[0, 0] = int(xMin)
-        if xMax is not None:
-            self.cropDists[0, 1] = int(xMax)
-        if yMin is not None:
-            if updateHomogPoints:
-                dy = self.cropDists[1, 0] - int(yMin)
-            self.cropDists[1, 0] = int(yMin)
-        if yMax is not None:
-            self.cropDists[1, 1] = int(yMax)
+        if left is not None:
+            left = int(left)
+            dx = self.crop_dists[0, 0] - left
+            self.crop_dists[0, 0] = left
+        if right is not None:
+            self.crop_dists[0, 1] = int(right)
+        if top is not None:
+            top = int(top)
+            dy = self.crop_dists[1, 0] - top
+            self.crop_dists[1, 0] = top
+        if bottom is not None:
+            self.crop_dists[1, 1] = int(bottom)
 
         # update homogo points if required
-        if updateHomogPoints and (dx != 0 or dy != 0):
-            self.updateHomogPoint(homogID=-1, delta=(dx, dy))
+        if update_homog_points and (dx != 0 or dy != 0):
+            self.frame.update_homog_points(homog_idx=-1, delta=(dx, dy))
 
         # set new cropped dimensions
-        xDim = self.xdim - self.cropDists[0, 0] - self.cropDists[0, 1]
-        yDim = self.ydim - self.cropDists[1, 0] - self.cropDists[1, 1]
+        xDim = self.xdim - self.crop_dists[0, 0] - self.crop_dists[0, 1]
+        yDim = self.ydim - self.crop_dists[1, 0] - self.crop_dists[1, 1]
         self.shape = (yDim, xDim)
 
-    def crop(self, mapData, binning=None):
+    def crop(self, map_data, binning=None):
         """ Crop given data using crop parameters stored in map
         i.e. cropped_data = DicMap.crop(DicMap.data_to_crop).
 
         Parameters
         ----------
-        mapData : numpy.ndarray
+        map_data : numpy.ndarray
             Bap data to crop.
-        binned : bool
+        binning : int
             True if mapData is binned i.e. binned BSE pattern.
         """
         binning = 1 if binning is None else binning
 
-        minY = int(self.cropDists[1, 0] * binning)
-        maxY = int((self.ydim - self.cropDists[1, 1]) * binning)
+        minY = int(self.crop_dists[1, 0] * binning)
+        maxY = int((self.ydim - self.crop_dists[1, 1]) * binning)
 
-        minX = int(self.cropDists[0, 0] * binning)
-        maxX = int((self.xdim - self.cropDists[0, 1]) * binning)
+        minX = int(self.crop_dists[0, 0] * binning)
+        maxX = int((self.xdim - self.crop_dists[0, 1]) * binning)
 
-        return mapData[..., minY:maxY, minX:maxX]
+        return map_data[..., minY:maxY, minX:maxX]
 
-    def linkEbsdMap(self, ebsdMap, transformType="affine", **kwargs):
+    def link_ebsd_map(self, ebsd_map, transform_type="affine", **kwargs):
         """Calculates the transformation required to align EBSD dataset to DIC.
 
         Parameters
         ----------
-        ebsdMap : defdap.ebsd.Map
+        ebsd_map : defdap.ebsd.Map
             EBSD map object to link.
-        transformType : str, optional
+        transform_type : str, optional
             affine, piecewiseAffine or polynomial.
         kwargs
             All arguments are passed to `estimate` method of the transform.
 
         """
-        self.ebsdMap = ebsdMap
-        calc_inv = False
-        if transformType.lower() == "piecewiseaffine":
-            self.ebsdTransform = tf.PiecewiseAffineTransform()
-        elif transformType.lower() == "projective":
-            self.ebsdTransform = tf.ProjectiveTransform()
-        elif transformType.lower() == "polynomial":
-            calc_inv = True
-            self.ebsdTransform = tf.PolynomialTransform()
-            self.ebsdTransformInv = tf.PolynomialTransform()
-        else:
-            # default to using affine
-            self.ebsdTransform = tf.AffineTransform()
-
-        # calculate transform from EBSD to DIC frame
-        self.ebsdTransform.estimate(
-            np.array(self.homogPoints),
-            np.array(self.ebsdMap.homogPoints),
-            **kwargs
+        self.ebsd_map = ebsd_map
+        kwargs.update({'type': transform_type.lower()})
+        self.experiment.link_frames(self.frame, ebsd_map.frame, kwargs)
+        self.data.add_derivative(
+            self.ebsd_map.data,
+            lambda boundaries: BoundarySet.from_ebsd_boundaries(
+                self, boundaries
+            ),
+            in_props={
+                'type': 'boundaries'
+            }
         )
-        # Calculate inverse if required
-        if calc_inv:
-            self.ebsdTransformInv.estimate(
-                np.array(self.ebsdMap.homogPoints),
-                np.array(self.homogPoints),
-                **kwargs
-            )
-        else:
-            self.ebsdTransformInv = self.ebsdTransform.inverse
 
-    def checkEbsdLinked(self):
+    def check_ebsd_linked(self):
         """Check if an EBSD map has been linked.
 
         Returns
@@ -443,23 +429,19 @@ class Map(base.Map):
             If EBSD map not linked.
 
         """
-        if self.ebsdMap is None:
+        if self.ebsd_map is None:
             raise Exception("No EBSD map linked.")
         return True
 
-    def warpToDicFrame(self, mapData, cropImage=True, order=1, preserve_range=False):
+    def warp_to_dic_frame(self, map_data, **kwargs):
         """Warps a map to the DIC frame.
 
         Parameters
         ----------
-        mapData : numpy.ndarray
+        map_data : numpy.ndarray
             Data to warp.
-        cropImage : bool, optional
-            Crop to size of DIC map if true.
-        order : int, optional
-            Order of interpolation (0: Nearest-neighbor, 1: Bi-linear...).
-        preserve_range: bool, optional
-            Keep the original range of values.
+        kwargs
+            All other arguments passed to :func:`defdap.experiment.Experiment.warp_map`.
 
         Returns
         ----------
@@ -468,100 +450,11 @@ class Map(base.Map):
 
         """
         # Check a EBSD map is linked
-        self.checkEbsdLinked()
-
-        if (cropImage or type(self.ebsdTransform) is not tf.AffineTransform):
-            # warp the map. Crop to size of DIC map
-            warpedMap = tf.warp(
-                mapData, self.ebsdTransform,
-                output_shape=self.shape,
-                order=order, preserve_range=preserve_range
-            )
-        else:
-            # copy ebsd transform and change translation to give an extra
-            # 5% border to show the entire image after rotation/shearing
-            tempEbsdTransform = tf.AffineTransform(matrix=np.copy(self.ebsdTransform.params))
-            tempEbsdTransform.params[0:2, 2] = -0.05 * np.array(mapData.shape)
-
-            # output the entire warped image with 5% border (add some
-            # extra to fix a bug)
-            outputShape = np.array(mapData.shape) * 1.4 / tempEbsdTransform.scale
-
-            # warp the map
-            warpedMap = tf.warp(
-                mapData, tempEbsdTransform,
-                output_shape=outputShape.astype(int),
-                order=order, preserve_range=preserve_range
-            )
-
-        return warpedMap
-
-    def warp_lines_to_dic_frame(self, lines):
-        """Warp a set of lines to the DIC reference frame.
-
-        Parameters
-        ----------
-        lines : list of tuples
-            Lines to warp. Each line is represented as a tuple of start
-            and end coordinates (x, y).
-
-        Returns
-        -------
-        list of tuples
-            List of warped lines with same representation as input.
-
-        """
-        # Flatten to coord list
-        lines = np.array(lines).reshape(-1, 2)
-        # Transform & reshape back
-        lines = self.ebsdTransformInv(lines).reshape(-1, 2, 2)
-        # Round to nearest
-        lines = np.round(lines - 0.5) + 0.5
-        lines = [(tuple(l[0]), tuple(l[1])) for l in lines]
-
-        return lines
-
-    @property
-    def boundaries(self):
-        """Returns EBSD map grain boundaries warped to DIC frame.
-
-        """
-        # Check a EBSD map is linked
-        self.checkEbsdLinked()
-
-        # image is returned cropped if a piecewise transform is being used
-        boundaries = self.ebsdMap.boundaries
-        boundaries = self.warpToDicFrame(-boundaries.astype(float),
-                                         cropImage=False)
-        boundaries = boundaries > 0.1
-
-        boundaries = mph.skeletonize(boundaries)
-        mph.remove_small_objects(boundaries, min_size=10, connectivity=2,
-                                 out=boundaries)  # remove in-place
-
-        # crop image if it is a simple affine transform
-        if type(self.ebsdTransform) is tf.AffineTransform:
-            # need to apply the translation of ebsd transform and
-            # remove 5% border
-            crop = np.copy(self.ebsdTransform.params[0:2, 2])
-            crop += 0.05 * np.array(self.ebsdMap.boundaries.shape)
-            # the crop is defined in EBSD coords so need to transform it
-            transformMatrix = np.copy(self.ebsdTransform.params[0:2, 0:2])
-            crop = np.matmul(np.linalg.inv(transformMatrix), crop)
-            crop = crop.round().astype(int)
-
-            boundaries = boundaries[crop[1]:crop[1] + self.yDim,
-                                    crop[0]:crop[0] + self.xDim]
-
-        return -boundaries.astype(int)
-
-    @property
-    def boundaryLines(self):
-        return self.warp_lines_to_dic_frame(self.ebsdMap.boundaryLines)
-
-    @property
-    def phaseBoundaryLines(self):
-        return self.warp_lines_to_dic_frame(self.ebsdMap.phaseBoundaryLines)
+        self.check_ebsd_linked()
+        return self.experiment.warp_image(
+            map_data, self.ebsd_map.frame, self.frame, output_shape=self.shape,
+            **kwargs
+        )
 
     # TODO: fix component stuff
     def generateThresholdMask(self, mask, dilation=0, preview=True):
@@ -671,30 +564,6 @@ class Map(base.Map):
             )
         return img
 
-    def plotMaxShear(self, **kwargs):
-        """Plot a map of maximum shear strain.
-
-        Parameters
-        ----------
-        kwargs
-            All arguments are passed to :func:`defdap.plotting.MapPlot`.
-
-        Returns
-        -------
-        defdap.plotting.MapPlot
-            Plot containing map.
-
-        """
-
-        params = {
-            'clabel': 'Effective Shear Strain'
-        }
-        params.update(kwargs)
-
-        plot = MapPlot.create(self, self.crop(self.data.max_shear), **params)
-
-        return plot
-
     def plotGrainAvMaxShear(self, **kwargs):
         """Plot grain map with grains filled with average value of max shear.
         This uses the max shear values stored in grain objects, to plot other data
@@ -713,98 +582,95 @@ class Map(base.Map):
         plotParams.update(kwargs)
 
         plot = self.plotGrainDataMap(
-            mapData=self.crop(self.data.max_shear), **plotParams
+            mapData=self.data.max_shear, **plotParams
         )
 
         return plot
 
     @reportProgress("finding grains")
-    def findGrains(self, algorithm=None, minGrainSize=10):
+    def find_grains(self, algorithm=None, min_grain_size=10):
         """Finds grains in the DIC map.
 
         Parameters
         ----------
         algorithm : str {'warp', 'floodfill'}
             Use floodfill or warp algorithm.
-        minGrainSize : int
+        min_grain_size : int
             Minimum grain area in pixels for floodfill algorithm.
         """
         # Check a EBSD map is linked
-        self.checkEbsdLinked()
+        self.check_ebsd_linked()
 
         if algorithm is None:
             algorithm = defaults['hrdic_grain_finding_method']
+        algorithm = algorithm.lower()
+
+        grain_list = []
+        group_id = Datastore.generate_id()
 
         if algorithm == 'warp':
             # Warp EBSD grain map to DIC frame
-            self.grains = self.warpToDicFrame(self.ebsdMap.grains, cropImage=True,
-                                              order=0, preserve_range=True)
+            grains = self.warp_to_dic_frame(
+                self.ebsd_map.data.grains, order=0, preserve_range=True
+            )
 
             # Find all unique values (these are the EBSD grain IDs in the DIC area, sorted)
-            self.ebsdGrainIds = np.array([int(i) for i in np.unique(self.grains) if i>0])
-
-            # Make a new list of sequential IDs of same length as number of grains
-            dicGrainIds = np.arange(1, len(self.ebsdGrainIds)+1)
+            ebsd_grain_ids = np.unique(grains)
+            neg_vals = ebsd_grain_ids[ebsd_grain_ids <= 0]
+            ebsd_grain_ids = ebsd_grain_ids[ebsd_grain_ids > 0]
 
             # Map the EBSD IDs to the DIC IDs (keep the same mapping for values <= 0)
-            negVals = np.array([i for i in np.unique(self.grains) if i<=0])
-            old = np.concatenate((negVals, self.ebsdGrainIds))
-            new = np.concatenate((negVals, dicGrainIds))
-            index = np.digitize(self.grains.ravel(), old, right=True)
-            self.grains = new[index].reshape(self.grains.shape)
+            old = np.concatenate((neg_vals, ebsd_grain_ids))
+            new = np.concatenate((neg_vals, np.arange(1, len(ebsd_grain_ids) + 1)))
+            index = np.digitize(grains.ravel(), old, right=True)
+            grains = new[index].reshape(self.shape)
 
-            self.grainList = []
-            for i, (dicGrainId, ebsdGrainId) in enumerate(zip(dicGrainIds, self.ebsdGrainIds)):
-                yield i / len(dicGrainIds)          # Report progress
+            for dic_grain_id, ebsd_grain_id in enumerate(ebsd_grain_ids):
+                yield dic_grain_id / len(ebsd_grain_ids)
 
                 # Make grain object
-                currentGrain = Grain(grainID=dicGrainId, dicMap=self)
+                grain = Grain(dic_grain_id, self, group_id)
 
                 # Find (x,y) coordinates and corresponding max shears of grain
-                coords = np.argwhere(self.grains == dicGrainId)       # (y,x)
-                currentGrain.coordList = np.flip(coords, axis=1)      # (x,y)
-                currentGrain.maxShearList = self.data.max_shear[coords[:,0]+ self.cropDists[1, 0],
-                                                                coords[:,1]+ self.cropDists[0, 0]]
+                coords = np.argwhere(grains == dic_grain_id + 1)  # (y,x)
+                grain.data.point = [(x, y) for y, x in coords]
 
                 # Assign EBSD grain ID to DIC grain and increment grain list
-                currentGrain.ebsdGrainId = ebsdGrainId - 1
-                currentGrain.ebsdGrain = self.ebsdMap.grainList[ebsdGrainId - 1]
-                currentGrain.ebsdMap = self.ebsdMap
-                self.grainList.append(currentGrain)
+                grain.ebsd_grain = self.ebsd_map[ebsd_grain_id - 1]
+                grain.ebsd_map = self.ebsd_map
+                grain_list.append(grain)
 
         elif algorithm == 'floodfill':
             # Initialise the grain map
-            self.grains = np.copy(self.boundaries)
-
-            self.grainList = []
+            grains = -np.copy(self.data.grain_boundaries.image.astype(int))
 
             # List of points where no grain has been set yet
-            points_left = self.grains == 0
+            points_left = grains == 0
             total_points = points_left.sum()
             found_point = 0
             next_point = points_left.tobytes().find(b'\x01')
 
             # Start counter for grains
-            grainIndex = 1
-
+            grain_index = 1
             # Loop until all points (except boundaries) have been assigned
             # to a grain or ignored
             i = 0
             while found_point >= 0:
                 # Flood fill first unknown point and return grain object
-                idx = np.unravel_index(next_point, self.grains.shape)
-                currentGrain = self.floodFill(idx[1], idx[0], grainIndex,
-                                              points_left)
+                seed = np.unravel_index(next_point, self.shape)
+                grain = self.flood_fill(
+                    (seed[1], seed[0]), grain_index, points_left, grains, group_id
+                )
 
-                if len(currentGrain) < minGrainSize:
+                if len(grain) < min_grain_size:
                     # if grain size less than minimum, ignore grain and set
                     # values in grain map to -2
-                    for coord in currentGrain.coordList:
-                        self.grains[coord[1], coord[0]] = -2
+                    for point in grain.data.point:
+                        grains[point[1], point[0]] = -2
                 else:
                     # add grain to list and increment grain index
-                    self.grainList.append(currentGrain)
-                    grainIndex += 1
+                    grain_list.append(grain)
+                    grain_index += 1
 
                 # find next search point
                 points_left_sub = points_left.reshape(-1)[next_point + 1:]
@@ -819,63 +685,64 @@ class Map(base.Map):
 
             # Now link grains to those in ebsd Map
             # Warp DIC grain map to EBSD frame
-            dicGrains = self.grains
-            warpedDicGrains = tf.warp(
-                np.ascontiguousarray(dicGrains.astype(float)),
-                self.ebsdTransformInv,
-                output_shape=self.ebsdMap.shape,
-                order=0
+            warped_dic_grains = self.experiment.warp_image(
+                grains.astype(float), self.frame, self.ebsd_map.frame,
+                output_shape=self.ebsd_map.shape, order=0
             ).astype(int)
-
-            # Initialise list to store ID of corresponding grain in EBSD map.
-            # Also stored in grain objects
-            self.ebsdGrainIds = []
-
-            for i in range(len(self)):
+            for i, grain in enumerate(grain_list):
                 # Find grain by masking the native ebsd grain image with
                 # selected grain from the warped dic grain image. The modal
                 # value is the EBSD grain label.
-                modeId, _ = mode(self.ebsdMap.grains[warpedDicGrains == i + 1])
-                ebsd_grain_idx = modeId[0] - 1
-                self.ebsdGrainIds.append(ebsd_grain_idx)
-                self[i].ebsdGrainId = ebsd_grain_idx
-                self[i].ebsdGrain = self.ebsdMap[ebsd_grain_idx]
-                self[i].ebsdMap = self.ebsdMap
+                mode_id, _ = mode(self.ebsd_map.data.grains[warped_dic_grains == i+1])
+                grain.ebsd_grain = self.ebsd_map[mode_id[0] - 1]
+                grain.ebsd_map = self.ebsd_map
 
         else:
             raise ValueError(f"Unknown grain finding algorithm '{algorithm}'.")
 
-    def floodFill(self, x, y, grainIndex, points_left):
-        """Flood fill algorithm that uses the combined x and y boundary array 
+        ## TODO: this will get duplicated if find grains called again
+        self.data.add_derivative(
+            grain_list[0].data, self.grain_data_to_map, pass_ref=True,
+            in_props={
+                'type': 'list'
+            },
+            out_props={
+                'type': 'map'
+            }
+        )
+
+        self._grains = grain_list
+        return grains
+
+    def flood_fill(self, seed, index, points_left, grains, group_id):
+        """Flood fill algorithm that uses the combined x and y boundary array
         to fill a connected area around the seed point. The points are inserted
         into a grain object and the grain map array is updated.
 
         Parameters
         ----------
-        x : int
+        seed : tuple of 2 int
             Seed point x for flood fill
-        y : int
-            Seed point y for flood fill
-        grainIndex : int
+        index : int
             Value to fill in grain map
         points_left : numpy.ndarray
             Boolean map of the points that have not been assigned a grain yet
 
         Returns
         -------
-        currentGrain : defdap.hrdic.Grain
+        grain : defdap.hrdic.Grain
             New grain object with points added
 
         """
         # create new grain
-        currentGrain = Grain(grainIndex - 1, self)
+        grain = Grain(index - 1, self, group_id)
 
         # add first point to the grain
-        currentGrain.addPoint((x, y), self.data.max_shear[y + self.cropDists[1, 0],
-                                                          x + self.cropDists[0, 0]])
-        self.grains[y, x] = grainIndex
+        x, y = seed
+        grain.addPoint(seed)
+        grains[y, x] = index
         points_left[y, x] = False
-        edge = [(x, y)]
+        edge = [seed]
 
         while edge:
             x, y = edge.pop(0)
@@ -884,33 +751,29 @@ class Map(base.Map):
             # get rid of any that go out of the map area
             if x <= 0:
                 moves.pop(1)
-            elif x >= self.xDim - 1:
+            elif x >= self.shape[1] - 1:
                 moves.pop(0)
             if y <= 0:
                 moves.pop(-1)
-            elif y >= self.yDim - 1:
+            elif y >= self.shape[0] - 1:
                 moves.pop(-2)
 
             for (s, t) in moves:
-                addPoint = False
+                add_point = False
 
-                if self.grains[t, s] == 0:
-                    addPoint = True
+                if grains[t, s] == 0:
+                    add_point = True
                     edge.append((s, t))
 
-                elif self.grains[t, s] == -1 and (s > x or t > y):
-                    addPoint = True
+                elif grains[t, s] == -1 and (s > x or t > y):
+                    add_point = True
 
-                if addPoint:
-                    currentGrain.addPoint(
-                        (s, t),
-                        self.data.max_shear[t + self.cropDists[1, 0],
-                                            s + self.cropDists[0, 0]]
-                    )
-                    self.grains[t, s] = grainIndex
+                if add_point:
+                    grain.addPoint((s, t))
+                    grains[t, s] = index
                     points_left[t, s] = False
 
-        return currentGrain
+        return grain
 
     def runGrainInspector(self, vmax=0.1, corrAngle=0, RDRlength=3):
         """Run the grain inspector interactive tool.
@@ -927,7 +790,8 @@ class Map(base.Map):
             Length of lines perpendicular to slip trace used to calculate RDR.
 
         """
-        GrainInspector(currMap=self, vmax=vmax, corrAngle=corrAngle, RDRlength=RDRlength)
+        GrainInspector(currMap=self, vmax=vmax, corrAngle=corrAngle,
+                       RDRlength=RDRlength)
 
 
 class Grain(base.Grain):
@@ -943,9 +807,9 @@ class Grain(base.Grain):
         DIC map this grain is a member of
     maxShearList : list
         List of maximum shear values for grain.
-    ebsdGrain : defdap.ebsd.Grain
+    ebsd_grain : defdap.ebsd.Grain
         EBSD grain ID that this DIC grain corresponds to.
-    ebsdMap : defdap.ebsd.Map
+    ebsd_map : defdap.ebsd.Map
         EBSD map that this DIC grain belongs to.
     pointsList : numpy.ndarray
         Start and end points for lines drawn using defdap.inspector.GrainInspector.
@@ -953,15 +817,23 @@ class Grain(base.Grain):
         Groups, angles and slip systems detected for
         lines drawn using defdap.inspector.GrainInspector.
 
+    data : defdap.utils.Datastore
+        Must contain after creating:
+            point : list of tuples
+                (x, y) in cropped map
+        Generated data:
+
+        Derived data:
+            Map data to list data from the map the grain is part of
+
     """
-    def __init__(self, grainID, dicMap):
+    def __init__(self, grainID, dicMap, group_id):
         # Call base class constructor
-        super(Grain, self).__init__(grainID, dicMap)
+        super(Grain, self).__init__(grainID, dicMap, group_id)
 
         self.dicMap = self.ownerMap     # DIC map this grain is a member of
-        self.maxShearList = []
-        self.ebsdGrain = None
-        self.ebsdMap = None
+        self.ebsd_grain = None
+        self.ebsd_map = None
 
         self.pointsList = []            # Lines drawn for STA
         self.groupsList = []            # Unique angles drawn for STA
@@ -970,11 +842,6 @@ class Grain(base.Grain):
             plotColourBar=True, plotScaleBar=True, plotSlipTraces=True,
             plotSlipBands=True, *args, **kwargs
         )
-
-    # coord is a tuple (x, y)
-    def addPoint(self, coord, maxShear):
-        self.coordList.append(coord)
-        self.maxShearList.append(maxShear)
 
     def plotMaxShear(self, **kwargs):
         """Plot a maximum shear map for a grain.
@@ -996,7 +863,7 @@ class Grain(base.Grain):
         }
         plotParams.update(kwargs)
 
-        plot = self.plotGrainData(grainData=self.maxShearList, **plotParams)
+        plot = self.plotGrainData(grainData=self.data.max_shear, **plotParams)
 
         return plot
 
@@ -1009,7 +876,7 @@ class Grain(base.Grain):
         defdap.quat.Quat
 
         """
-        return self.ebsdGrain.refOri
+        return self.ebsd_grain.refOri
 
     @property
     def slipTraces(self):
@@ -1020,7 +887,7 @@ class Grain(base.Grain):
         list
 
         """
-        return self.ebsdGrain.slipTraces
+        return self.ebsd_grain.slipTraces
 
     def calcSlipTraces(self, slipSystems=None):
         """Calculates list of slip trace angles based on EBSD grain orientation.
@@ -1030,7 +897,7 @@ class Grain(base.Grain):
         slipSystems : defdap.crystal.SlipSystem, optional
 
         """
-        self.ebsdGrain.calcSlipTraces(slipSystems=slipSystems)
+        self.ebsd_grain.calcSlipTraces(slipSystems=slipSystems)
 
     def calcSlipBands(self, grainMapData, thres=None, min_dist=None):
         """Use Radon transform to detect slip band angles.
@@ -1060,24 +927,28 @@ class Grain(base.Grain):
             print("Negative values in data, taking absolute value.")
             # grainMapData = grainMapData**2
             grainMapData = np.abs(grainMapData)
-        suppGMD = np.zeros(grainMapData.shape) #array to hold shape / support of grain
+        # array to hold shape / support of grain
+        suppGMD = np.zeros(grainMapData.shape)
         suppGMD[grainMapData!=0]=1
         sin_map = tf.radon(grainMapData, circle=False)
         #profile = np.max(sin_map, axis=0) # old method
         supp_map = tf.radon(suppGMD, circle=False)
         supp_1 = np.zeros(supp_map.shape)
         supp_1[supp_map>0]=1
-        mindiam = np.min(np.sum(supp_1, axis=0), axis=0) # minimum diameter of grain
+        # minimum diameter of grain
+        mindiam = np.min(np.sum(supp_1, axis=0), axis=0)
         crop_map = np.zeros(sin_map.shape)
-        # only consider radon rays that cut grain with mindiam*2/3 or more, and scale by length of the cut
-        crop_map[supp_map>mindiam*2/3] = sin_map[supp_map>mindiam*2/3]/supp_map[supp_map>mindiam*2/3] 
+        # only consider radon rays that cut grain with mindiam*2/3 or more, 
+        # and scale by length of the cut
+        selection = supp_map > mindiam * 2 / 3
+        crop_map[selection] = sin_map[selection] / supp_map[selection] 
         supp_crop = np.zeros(crop_map.shape)
         supp_crop[crop_map>0] = 1
-        profile = np.sum(crop_map**4, axis=0) / np.sum(supp_crop, axis=0) # raise to power to accentuate local peaks
+        # raise to power to accentuate local peaks
+        profile = np.sum(crop_map**4, axis=0) / np.sum(supp_crop, axis=0)
 
         x = np.arange(180)
 
-        # indexes = peakutils.indexes(profile, thres=thres, min_dist=min_dist, thres_abs=False)
         indexes = peakutils.indexes(profile, thres=thres, min_dist=min_dist)
         peaks = x[indexes]
         # peaks = peakutils.interpolate(x, profile, ind=indexes)
@@ -1086,3 +957,34 @@ class Grain(base.Grain):
         slipBandAngles = peaks
         slipBandAngles = slipBandAngles * np.pi / 180
         return slipBandAngles
+
+
+class BoundarySet(object):
+    def __init__(self, dic_map, points, lines):
+        self.dic_map = dic_map
+        self.points = set(points)
+        self.lines = lines
+
+    @classmethod
+    def from_ebsd_boundaries(cls, dic_map, ebsd_boundaries):
+        if len(ebsd_boundaries.points) == 0:
+            return cls(dic_map, [], [])
+
+        points = dic_map.experiment.warp_points(
+            ebsd_boundaries.image.astype(float),
+            dic_map.ebsd_map.frame, dic_map.frame,
+            output_shape=dic_map.shape
+        )
+        lines = dic_map.experiment.warp_lines(
+            ebsd_boundaries.lines, dic_map.ebsd_map.frame, dic_map.frame
+        )
+        return cls(dic_map, points, lines)
+
+    def _image(self, points):
+        image = np.zeros(self.dic_map.shape, dtype=bool)
+        image[tuple(zip(*points))[::-1]] = True
+        return image
+
+    @property
+    def image(self):
+        return self._image(self.points)

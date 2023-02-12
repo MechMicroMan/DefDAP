@@ -93,18 +93,25 @@ class Datastore(object):
         that the method produces.
 
     """
-    __slots__ = ['_store', '_generators', '_derivatives', '_group_id']
-    _base_caller = None
+    __slots__ = [
+        '_store',
+        '_generators',
+        '_derivatives',
+        '_group_id',
+        '_crop_func',
+    ]
+    _been_to = None
 
     @staticmethod
     def generate_id():
         return uuid4()
 
-    def __init__(self, group_id=None):
+    def __init__(self, group_id=None, crop_func=None):
         self._store = {}
         self._generators = {}
         self._derivatives = []
         self._group_id = self.generate_id() if group_id is None else group_id
+        self._crop_func = (lambda x, **kwargs: x) if crop_func is None else crop_func
 
     def __len__(self):
         """Number of data in the store, including data not yet generated."""
@@ -146,9 +153,10 @@ class Datastore(object):
         else:
             attr = 'data'
 
-        if key not in self:
-            raise KeyError(f'Data with name `{key}` does not exist.')
+        # Avoid looking up all keys over derivatives
         if key not in self._store:
+            if key not in self:
+                raise KeyError(f'Data with name `{key}` does not exist.')
             return self._get_derived_item(key, attr)
         if attr not in self._store[key]:
             raise KeyError(f'Metadata `{attr}` does not exist for `{key}`.')
@@ -162,6 +170,11 @@ class Datastore(object):
             except DataGenerationError:
                 # No generator found
                 pass
+
+        if (attr == 'data' and self.get_metadata(key, 'type') == 'map' and
+                not self.get_metadata(key, 'cropped', False)):
+            binning = self.get_metadata(key, 'binning', 1)
+            val = self._crop_func(val, binning=binning)
 
         return val
 
@@ -198,7 +211,7 @@ class Datastore(object):
         """Set data of item that already exists.
 
         """
-        if key in ('_store', '_generators', '_derivatives', '_group_id'):
+        if key in self.__slots__:
             super().__setattr__(key, val)
         else:
             self[key] = val
@@ -222,14 +235,15 @@ class Datastore(object):
         return keys
 
     def lookup_derivative_keys(self, derivative):
-        set_base = False
-        if Datastore._base_caller is None:
-            set_base = True
-            Datastore._base_caller = self
+        root_call = False
+        if Datastore._been_to is None:
+            root_call = True
+            Datastore._been_to = set()
+        Datastore._been_to.add(self._group_id)
 
         source = derivative['source']
         matched_keys = []
-        if source._group_id == Datastore._base_caller._group_id:
+        if source._group_id in Datastore._been_to:
             return matched_keys
         for key in source:
             for meta_key in derivative['in_props']:
@@ -238,8 +252,8 @@ class Datastore(object):
             else:
                 matched_keys.append(key)
 
-        if set_base:
-            Datastore._base_caller = None
+        if root_call:
+            Datastore._been_to = None
 
         return matched_keys
 
@@ -326,7 +340,7 @@ class Datastore(object):
             self.add(key, None, **metadata)
         self._generators[keys] = func
 
-    def add_derivative(self, datastore, derive_method, in_props=None,
+    def add_derivative(self, datastore, derive_func, in_props=None,
                        out_props=None, pass_ref=False):
         if in_props is None:
             in_props = {}
@@ -334,7 +348,7 @@ class Datastore(object):
             out_props = {}
         self._derivatives.append({
             'source': datastore,
-            'func': derive_method,
+            'func': derive_func,
             'in_props': in_props,
             'out_props': out_props,
             'pass_ref': pass_ref,
