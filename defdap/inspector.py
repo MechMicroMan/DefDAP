@@ -503,7 +503,7 @@ class GrainInspector:
         ## Write slip system info
         RDRs = []; offset = 0; 
         for idx, (ssGroup, sfGroup, slipTraceAngle) in enumerate(
-                zip(grain.ebsdMap.slipSystems, ebsdGrain.averageSchmidFactors, np.rad2deg(ebsdGrain.slipTraceAngles))):
+                zip(ebsdGrain.phase.slipSystems, ebsdGrain.averageSchmidFactors, np.rad2deg(ebsdGrain.slipTraceAngles))):
             text = "{0:s}    {1:.1f}\n".format(ssGroup[0].slipPlaneLabel, slipTraceAngle)
             tempRDRs = [];
             for ss, sf in zip(ssGroup, sfGroup):
@@ -537,8 +537,8 @@ class GrainInspector:
             for idx, ssGroup in enumerate(RDRs):
                 for idx2, rdr in enumerate(ssGroup):
                     if rdr == RDR:
-                        txt += str('{0} {1}  '.format(self.currEBSDMap.slipSystems[idx][idx2].slipPlaneLabel, 
-                                                      self.currEBSDMap.slipSystems[idx][idx2].slipDirLabel))
+                        txt += str('{0} {1}  '.format(ebsdGrain.phase.slipSystems[idx][idx2].slipPlaneLabel,
+                                                      ebsdGrain.phase.slipSystems[idx][idx2].slipDirLabel))
             self.rdrPlot.addText(self.rdrPlot.numLineAx,0.002, RDR-0.01, txt)
 
         self.rdrPlot.numLineAx.set_ylim(slope-1, slope+1)
