@@ -110,7 +110,7 @@ class Map(base.Map):
         self.loadData(fileName, dataType=dataType)
 
         self.data.add_generator(
-            'orientation', self.buildQuatArray, unit='', type='map',
+            'orientation', self.calc_quat_array, unit='', type='map',
             order=0, default_component='IPF_x',
         )
         self.data.add_generator(
@@ -170,8 +170,8 @@ class Map(base.Map):
         self.data.update(dataLoader.loadedData)
 
         # write final status
-        yield "Loaded EBSD data (dimensions: {:} x {:} pixels, step " \
-              "size: {:} um)".format(self.xDim, self.yDim, self.step_size)
+        yield (f"Loaded EBSD data (dimensions: {self.xDim} x {self.yDim} "
+               f"pixels, step size: {self.step_size} um)")
 
     def save(self, file_name, data_type=None, file_dir=""):
         """Save EBSD map to file.
@@ -247,11 +247,12 @@ class Map(base.Map):
         """Rotate map by 180 degrees and transform quats accordingly.
 
         """
+
         self.data.euler_angle = self.data.euler_angle[:, ::-1, ::-1]
         self.data.band_contrast = self.data.band_contrast[::-1, ::-1]
         self.data.band_slope = self.data.band_slope[::-1, ::-1]
         self.data.phase = self.data.phase[::-1, ::-1]
-        self.buildQuatArray()
+        self.calc_quat_array()
 
         # Rotation from old coord system to new
         transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi).conjugate
@@ -568,7 +569,7 @@ class Map(base.Map):
         return alpha_total9, alpha
 
     @reportProgress("building quaternion array")
-    def buildQuatArray(self):
+    def calc_quat_array(self):
         """Build quaternion array
 
         """
@@ -957,7 +958,7 @@ class Map(base.Map):
         }
         plotParams.update(kwargs)
 
-        plot = MapPlot.create(self, self.grains, **plotParams)
+        plot = MapPlot.create(self, self.data.grains, **plotParams)
 
         return plot
 
@@ -1865,7 +1866,7 @@ class Linker(object):
         """
         self.plots = []
         for ebsd_map in self.ebsd_maps:
-            plot = ebsd_map.locateGrainID(clickEvent=self.click_grain_guess)
+            plot = ebsd_map.locate_grain(click_event=self.click_grain_guess)
 
             # Add make link button to axes
             plot.addButton('Make link', self.make_link,
@@ -1909,11 +1910,13 @@ class Linker(object):
                 x = int((event.xdata - x0m) * scaling + x0)
                 y = int((event.ydata - y0m) * scaling + y0)
 
-                ebsd_map.currGrainId = int(ebsd_map.grains[y, x]) - 1
-                print(ebsd_map.currGrainId)
+                grain_id = int(ebsd_map.data.grains[y, x]) - 1
+                grain = self[grain_id]
+                ebsd_map.sel_grain = grain
+                print(grain_id)
 
                 # update the grain highlights layer in the plot
-                plot.addGrainHighlights([ebsd_map.currGrainId],
+                plot.addGrainHighlights([grain_id],
                                         alpha=ebsd_map.highlightAlpha)
 
         else:
@@ -1928,8 +1931,8 @@ class Linker(object):
         curr_link = []
 
         for i, ebsd_map in enumerate(self.ebsd_maps):
-            if ebsd_map.currGrainId is not None:
-                curr_link.append(ebsd_map.currGrainId)
+            if ebsd_map.sel_grain is not None:
+                curr_link.append(ebsd_map.sel_grain.grainID)
             else:
                 raise Exception(f"No grain selected in map {i + 1}.")
 

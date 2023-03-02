@@ -22,7 +22,7 @@ def good_map():
 
 @pytest.fixture(scope="module")
 def good_map_with_quats(good_map):
-    good_map.buildQuatArray()
+    good_map.calc_quat_array()
 
     return good_map
 

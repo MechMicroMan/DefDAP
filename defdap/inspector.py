@@ -242,7 +242,7 @@ class GrainInspector:
         # Write grain info text
         self.grainInfoAx.clear()
         self.grainInfoAx.axis('off')
-        grainInfoText = 'Grain ID: {0} / {1}\n'.format(self.grainID, len(self.currMap.grainList) - 1)
+        grainInfoText = 'Grain ID: {0} / {1}\n'.format(self.grainID, len(self.currMap.grains) - 1)
         grainInfoText += 'Min: {0:.2f} %     Mean:{1:.2f} %     Max: {2:.2f} %'.format(
             np.min(self.currDICGrain.maxShearList) * 100,
             np.mean(self.currDICGrain.maxShearList) * 100,

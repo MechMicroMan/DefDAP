@@ -484,7 +484,7 @@ class MapPlot(Plot):
                 i = len(grainColours)
 
             # outline of highlighted grain
-            grain = self.callingMap.grainList[grainId]
+            grain = self.callingMap.grains[grainId]
             grainOutline = grain.grainOutline(bg=0, fg=i)
             x0, y0, xmax, ymax = grain.extremeCoords
 

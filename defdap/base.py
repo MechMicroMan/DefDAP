@@ -34,10 +34,10 @@ class Map(object):
     Attributes
     ----------
 
-    grainList : list of defdap.base.Grain
+    _grains : list of defdap.base.Grain
         List of grains.
-    currGrainId : int
-        ID of last selected grain.
+    sel_grain : defdap.base.grain
+        The last selected grain
 
     """
     def __init__(self, experiment=None, increment=None, frame=None):
@@ -55,7 +55,7 @@ class Map(object):
 
         self._grains = None
 
-        self.currGrainId = None  # ID of last selected grain
+        self.sel_grain = None
 
         self.proxigramArr = None
         self.neighbour_network = None
@@ -89,6 +89,9 @@ class Map(object):
 
     def crop(self, map_data, **kwargs):
         return map_data
+
+    def set_homog_point(self, **kwargs):
+        self.frame.set_homog_point(self, **kwargs)
 
     def checkGrainsDetected(self, raiseExc=True):
         """Check if grains have been detected.
@@ -144,14 +147,14 @@ class Map(object):
 
         return plot
 
-    def locateGrainID(self, clickEvent=None, displaySelected=False, **kwargs):
+    def locate_grain(self, click_event=None, display_grain=False, **kwargs):
         """Interactive plot for identifying grains.
 
         Parameters
         ----------
-        clickEvent : optional
+        click_event : optional
             Click handler to use.
-        displaySelected : bool, optional
+        display_grain : bool, optional
             If true, plot slip traces for grain selected by click.
         kwargs : dict, optional
             Keyword arguments passed to :func:`defdap.base.Map.plotDefault`
@@ -161,18 +164,17 @@ class Map(object):
         self.checkGrainsDetected()
 
         # reset current selected grain and plot euler map with click handler
-        self.currGrainId = None
         plot = self.plotDefault(makeInteractive=True, **kwargs)
-        if clickEvent is None:
+        if click_event is None:
             # default click handler which highlights grain and prints id
             plot.addEventHandler(
                 'button_press_event',
-                lambda e, p: self.clickGrainID(e, p, displaySelected)
+                lambda e, p: self.clickGrainID(e, p, display_grain)
             )
         else:
             # click handler loaded in as parameter. Pass current map
             # object to it.
-            plot.addEventHandler('button_press_event', clickEvent)
+            plot.addEventHandler('button_press_event', click_event)
 
         return plot
 
@@ -194,20 +196,23 @@ class Map(object):
             return
 
         # grain id of selected grain
-        self.currGrainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
-        print("Grain ID: {}".format(self.currGrainId))
+        grain_id = self.data.grains[int(event.ydata), int(event.xdata)] - 1
+        if grain_id < 0:
+            return
+        grain = self[grain_id]
+        self.sel_grain = grain
+        print("Grain ID: {}".format(grain_id))
 
         # update the grain highlights layer in the plot
-        plot.addGrainHighlights([self.currGrainId], alpha=self.highlightAlpha)
+        plot.addGrainHighlights([grain_id], alpha=self.highlightAlpha)
 
         if displaySelected:
-            currGrain = self[self.currGrainId]
             if self.grainPlot is None or not self.grainPlot.exists:
-                self.grainPlot = currGrain.plotDefault(makeInteractive=True)
+                self.grainPlot = grain.plotDefault(makeInteractive=True)
             else:
                 self.grainPlot.clear()
-                self.grainPlot.callingGrain = currGrain
-                currGrain.plotDefault(plot=self.grainPlot)
+                self.grainPlot.callingGrain = grain
+                grain.plotDefault(plot=self.grainPlot)
                 self.grainPlot.draw()
 
     def drawLineProfile(self, **kwargs):
@@ -271,7 +276,7 @@ class Map(object):
         ## TODO: fix HRDIC NN
         # create network
         nn = nx.Graph()
-        nn.add_nodes_from(self.grainList)
+        nn.add_nodes_from(self.grains)
 
         yLocs, xLocs = np.nonzero(self.boundaries)
         totalPoints = len(xLocs)
@@ -280,8 +285,8 @@ class Map(object):
             # report progress
             yield iPoint / totalPoints
 
-            if (x == 0 or y == 0 or x == self.grains.shape[1] - 1 or
-                    y == self.grains.shape[0] - 1):
+            if (x == 0 or y == 0 or x == self.data.grains.shape[1] - 1 or
+                    y == self.data.grains.shape[0] - 1):
                 # exclude boundary pixels of map
                 continue
 
@@ -291,10 +296,10 @@ class Map(object):
             # use sets as they do not allow duplicate elements
             # minus 1 on all as the grain image starts labeling at 1
             neighbours = {
-                self.grains[y + 1, x] - 1,
-                self.grains[y - 1, x] - 1,
-                self.grains[y, x + 1] - 1,
-                self.grains[y, x - 1] - 1
+                self.data.grains[y + 1, x] - 1,
+                self.data.grains[y - 1, x] - 1,
+                self.data.grains[y, x + 1] - 1,
+                self.data.grains[y, x - 1] - 1
             }
             # neighbours = set(neighbours)
             # remove boundary points (-2) and points in small
@@ -321,8 +326,8 @@ class Map(object):
         self.neighbourNetwork = nn
 
     def displayNeighbours(self, **kwargs):
-        return self.locateGrainID(
-            clickEvent=self.clickGrainNeighbours, **kwargs
+        return self.locate_grain(
+            click_event=self.clickGrainNeighbours, **kwargs
         )
 
     def clickGrainNeighbours(self, event, plot):
@@ -340,12 +345,13 @@ class Map(object):
         if event.inaxes is not plot.ax:
             return
 
+
         # grain id of selected grain
-        grainId = int(self.grains[int(event.ydata), int(event.xdata)] - 1)
-        if grainId < 0:
+        grain_id = self.data.grains[int(event.ydata), int(event.xdata)] - 1
+        if grain_id < 0:
             return
-        self.currGrainId = grainId
-        grain = self[grainId]
+        grain = self[grain_id]
+        self.sel_grain = grain
 
         # find first and second nearest neighbours
         firstNeighbours = list(self.neighbourNetwork.neighbors(grain))
@@ -486,7 +492,7 @@ class Map(object):
         if comp is None:
             comp = self.data.get_metadata(map_name, 'default_component')
             if comp is not None:
-                print(f'Using default componetnt: `{comp}`')
+                print(f'Using default component: `{comp}`')
 
         if comp is None:
             if order != 0:

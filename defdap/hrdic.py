@@ -113,7 +113,7 @@ class Map(base.Map):
 
         self.ebsd_map = None                 # EBSD map linked to DIC map
         self.highlightAlpha = 0.6
-        self.bseScale = None                # size of pixels in pattern images
+        self.bse_scale = None                # size of pixels in pattern images
         self.path = path                    # file path
         self.fname = fname                  # file name
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
@@ -257,27 +257,27 @@ class Map(base.Map):
             if len(names) > 0:
                 return names[0]
 
-    def setScale(self, micrometrePerPixel):
+    def set_scale(self, scale):
         """Sets the scale of the map.
 
         Parameters
         ----------
-        micrometrePerPixel : float
+        scale : float
             Length of pixel in original BSE image in micrometres.
 
         """
-        self.bseScale = micrometrePerPixel
+        self.bse_scale = scale
 
     @property
     def scale(self):
         """Returns the number of micrometers per pixel in the DIC map.
 
         """
-        if self.bseScale is None:
+        if self.bse_scale is None:
             # raise ValueError("Map scale not set. Set with setScale()")
             return None
 
-        return self.bseScale * self.binning
+        return self.bse_scale * self.binning
 
     def printStatsTable(self, percentiles, components):
         """Print out a statistics table for a DIC map
