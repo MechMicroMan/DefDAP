@@ -59,13 +59,14 @@ class EBSDDataLoader(object):
         if dataType is None:
             dataType = "OxfordBinary"
 
-        if dataType == "OxfordBinary":
+        dataType = dataType.lower()
+        if dataType == "oxfordbinary":
             return OxfordBinaryLoader()
-        elif dataType == "OxfordText":
+        elif dataType == "oxfordtext":
             return OxfordTextLoader()
-        elif dataType == "EdaxAng":
+        elif dataType == "edaxang":
             return EdaxAngLoader()
-        elif dataType == "PythonDict":
+        elif dataType == "pythondict":
             return PythonDictLoader()
         else:
             raise ValueError(f"No loader for EBSD data of type {dataType}.")
@@ -645,6 +646,19 @@ class DICDataLoader(object):
             }
         )
 
+    @staticmethod
+    def getLoader(dataType: str) -> 'Type[DICDataLoader]':
+        if dataType is None:
+            dataType = "Davis"
+
+        dataType = dataType.lower()
+        if dataType == "davis":
+            return DavisLoader()
+        elif dataType == "openpiv":
+            return OpenPivLoader()
+        else:
+            raise ValueError(f"No loader for EBSD data of type {dataType}.")
+
     def checkMetadata(self) -> None:
         return
 
@@ -658,21 +672,29 @@ class DICDataLoader(object):
         binning_x = min(abs(np.diff(self.loadedData.coordinate[0].flat)))
         binning_y = max(abs(np.diff(self.loadedData.coordinate[1].flat)))
         if not (binning_x == binning_y == binning):
-            raise ValueError('Binning of data and header do not match')
+            raise ValueError(
+                f'Binning of data and header do not match `{binning_x}`, '
+                f'`{binning_y}`, `{binning}`'
+            )
 
         # check shape
         coord = self.loadedData.coordinate
         shape = (coord.max(axis=(1, 2)) - coord.min(axis=(1, 2))) / binning + 1
         shape = tuple(shape[::-1].astype(int))
         if shape != self.loadedMetadata['shape']:
-            raise ValueError('Dimensions of data and header do not match')
+            raise ValueError(
+                f'Dimensions of data and header do not match `{shape}, '
+                f'`{self.loadedMetadata["shape"]}`'
+            )
 
-    def loadDavisMetadata(
+
+class DavisLoader(DICDataLoader):
+    def load(
         self,
         fileName: str,
         fileDir: str = ""
-    ) -> Dict[str, Any]:
-        """ Load DaVis metadata from Davis .txt file.
+    ) -> None:
+        """ Load from Davis .txt file.
 
         Parameters
         ----------
@@ -680,11 +702,6 @@ class DICDataLoader(object):
             File name.
         fileDir
             Path to file.
-
-        Returns
-        -------
-        dict
-            Davis metadata.
 
         """
         filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
@@ -705,33 +722,6 @@ class DICDataLoader(object):
 
         self.checkMetadata()
 
-        return self.loadedMetadata
-
-    def loadDavisData(
-        self,
-        fileName: str,
-        fileDir: str = ""
-    ) -> Dict[str, Any]:
-        """Load displacement data from Davis .txt file containing x and
-        y coordinates and x and y displacements for each coordinate.
-
-        Parameters
-        ----------
-        fileName
-            File name.
-        fileDir
-            Path to file.
-
-        Returns
-        -------
-        dict
-            Coordinates and displacements.
-
-        """
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
-
         data = pd.read_table(str(filePath), delimiter='\t', skiprows=1,
                              header=None).values
         data = data.reshape(self.loadedMetadata['shape'] + (-1, ))
@@ -741,8 +731,6 @@ class DICDataLoader(object):
         self.loadedData.displacement = data[2:]
 
         self.checkData()
-
-        return self.loadedData
 
     @staticmethod
     def loadDavisImageData(fileName: str, fileDir: str = "") -> np.ndarray:
@@ -772,6 +760,63 @@ class DICDataLoader(object):
         loadedData = np.array(data)
 
         return loadedData
+
+
+class OpenPivLoader(DICDataLoader):
+    def load(
+            self,
+            fileName: str,
+            fileDir: str = ""
+    ) -> None:
+        """ Load from Open PIV .txt file.
+
+        Parameters
+        ----------
+        fileName
+            File name.
+        fileDir
+            Path to file.
+
+        """
+        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
+        if not filePath.is_file():
+            raise FileNotFoundError(f"Cannot open file {filePath}")
+
+        with open(str(filePath), 'r') as f:
+            header = f.readline()[1:].split()
+            data = np.loadtxt(f)
+        col = {
+            'x': 0,
+            'y': 1,
+            'u': 2,
+            'v': 3,
+        }
+
+        # Software name and version
+        self.loadedMetadata['format'] = 'OpenPIV'
+        self.loadedMetadata['version'] = 'n/a'
+
+        # Sub-window width in pixels
+        binning_x = int(np.min(np.abs(np.diff(data[:, col['x']]))))
+        binning_y = int(np.max(np.abs(np.diff(data[:, col['y']]))))
+        assert binning_x == binning_y
+        binning = binning_x
+        self.loadedMetadata['binning'] = binning
+
+        # shape of map (from header)
+        shape = data[:, [col['y'], col['x']]].max(axis=0) + binning / 2
+        assert np.allclose(shape % binning, 0.)
+        shape = tuple((shape / binning).astype(int).tolist())
+        self.loadedMetadata['shape'] = shape
+
+        self.checkMetadata()
+
+        data = data.reshape(shape + (-1,))[::-1].transpose((2, 0, 1))
+
+        self.loadedData.coordinate = data[[col['x'], col['y']]]
+        self.loadedData.displacement = data[[col['u'], col['v']]]
+
+        self.checkData()
 
 
 def readUntilString(

@@ -200,15 +200,10 @@ class Map(base.Map):
             Type of data file.
 
         """
-        dataType = "DavisText" if dataType is None else dataType
+        dataLoader = DICDataLoader.getLoader(dataType)
+        dataLoader.load(fileName, fileDir)
 
-        dataLoader = DICDataLoader()
-        if dataType == "DavisText":
-            metadataDict = dataLoader.loadDavisMetadata(fileName, fileDir)
-            dataDict = dataLoader.loadDavisData(fileName, fileDir)
-        else:
-            raise ValueError("No loader found for this DIC data.")
-
+        metadataDict = dataLoader.loadedMetadata
         self.format = metadataDict['format']      # Software name
         self.version = metadataDict['version']    # Software version
         self.binning = metadataDict['binning']    # Sub-window width in pixels
@@ -218,14 +213,13 @@ class Map(base.Map):
         self.xdim = metadataDict['shape'][1]      # size of map along x (from header)
         self.ydim = metadataDict['shape'][0]      # size of map along y (from header)
 
-        self.data.update(dataDict)
+        self.data.update(dataLoader.loadedData)
 
         # write final status
-        yield "Loaded {0} {1} data (dimensions: {2} x {3} pixels, " \
-              "sub-window size: {4} x {4} pixels)".format(
-            self.format, self.version, self.xdim, self.ydim, self.binning
-        )
-        
+        yield (f"Loaded {self.format} {self.version} data "
+               f"(dimensions: {self.xdim} x {self.xdim} pixels, "
+               f"sub-window size: {self.binning} x {self.binning} pixels)")
+
     def loadCorrValData(self, fileDir, fileName, dataType=None):
         """Load correlation value for DIC data
 
