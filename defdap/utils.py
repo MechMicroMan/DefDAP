@@ -166,7 +166,7 @@ class Datastore(object):
         # Generate data if needed
         if attr == 'data' and val is None:
             try:
-                val = self.generate(key)
+                val = self.generate(key, return_val=True)
             except DataGenerationError:
                 # No generator found
                 pass
@@ -346,15 +346,23 @@ class Datastore(object):
             in_props = {}
         if out_props is None:
             out_props = {}
-        self._derivatives.append({
+        new_derivative = {
             'source': datastore,
             'func': derive_func,
             'in_props': in_props,
             'out_props': out_props,
             'pass_ref': pass_ref,
-        })
+        }
+        # check if exists and update
+        for derivative in self._derivatives:
+            if derivative['func'] == derive_func:
+                derivative.update(new_derivative)
+                break
+        # or add new
+        else:
+            self._derivatives.append(new_derivative)
 
-    def generate(self, key, **kwargs):
+    def generate(self, key, return_val=False, **kwargs):
         """Generate data from the associated data generation method and
         store if metadata `save` is not set to False.
 
@@ -376,10 +384,10 @@ class Datastore(object):
             if len(keys) == 1:
                 if self.get_metadata(key, 'save', True):
                     self[key] = datas
-                return datas
+                return datas if return_val else None
 
             if len(keys) != len(datas):
-                raise DataGenerationError(
+                raise ValueError(
                     'Data generator method did not return the expected '
                     'number of values.'
                 )
@@ -388,10 +396,10 @@ class Datastore(object):
                     self[key_i] = data
                 if key_i == key:
                     rtn_val = data
-            return rtn_val
+            return rtn_val if return_val else None
 
         else:
-            ValueError(f'Generator not found for data `{key}`')
+            raise DataGenerationError(f'Generator not found for data `{key}`')
 
     def update(self, other, priority=None):
         """Update with data items stored in `other`.
