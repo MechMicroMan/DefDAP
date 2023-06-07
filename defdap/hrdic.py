@@ -18,6 +18,7 @@ from matplotlib.pyplot import imread
 import inspect
 
 from skimage import transform as tf
+from skimage import measure
 
 from scipy.stats import mode
 from scipy.ndimage import binary_dilation
@@ -618,6 +619,8 @@ class Map(base.Map):
             new = np.concatenate((neg_vals, np.arange(1, len(ebsd_grain_ids) + 1)))
             index = np.digitize(grains.ravel(), old, right=True)
             grains = new[index].reshape(self.shape)
+            grainprops = measure.regionprops(grains)
+            props_dict = {prop.label: prop for prop in grainprops}
 
             for dic_grain_id, ebsd_grain_id in enumerate(ebsd_grain_ids):
                 yield dic_grain_id / len(ebsd_grain_ids)
@@ -626,8 +629,10 @@ class Map(base.Map):
                 grain = Grain(dic_grain_id, self, group_id)
 
                 # Find (x,y) coordinates and corresponding max shears of grain
-                coords = np.argwhere(grains == dic_grain_id + 1)  # (y,x)
-                grain.data.point = [(x, y) for y, x in coords]
+                # coords = np.argwhere(grains == dic_grain_id + 1)  # (y,x)
+                coords = props_dict[dic_grain_id + 1].coords  # (r, c)
+                # grain.data.point = [(x, y) for y, x in coords]
+                grain.data.point = np.flip(coords, axis=1)  # (x, y)
 
                 # Assign EBSD grain ID to DIC grain and increment grain list
                 grain.ebsd_grain = self.ebsd_map[ebsd_grain_id - 1]
