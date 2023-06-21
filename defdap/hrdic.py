@@ -25,6 +25,7 @@ from scipy.ndimage import binary_dilation
 
 import peakutils
 
+from defdap._accelerated import flood_fill_dic
 from defdap.utils import Datastore
 from defdap.file_readers import DICDataLoader
 from defdap import base
@@ -645,6 +646,9 @@ class Map(base.Map):
 
             # List of points where no grain has been set yet
             points_left = grains == 0
+            added_coords_buffer = np.zeros(
+                    (points_left.size, 2), dtype=np.intp
+                    )
             total_points = points_left.sum()
             found_point = 0
             next_point = points_left.tobytes().find(b'\x01')
@@ -658,7 +662,8 @@ class Map(base.Map):
                 # Flood fill first unknown point and return grain object
                 seed = np.unravel_index(next_point, self.shape)
                 grain = self.flood_fill(
-                    (seed[1], seed[0]), grain_index, points_left, grains, group_id
+                    (seed[1], seed[0]), grain_index, points_left, grains,
+                    group_id, added_coords_buffer,
                 )
 
                 if len(grain) < min_grain_size:
@@ -716,7 +721,8 @@ class Map(base.Map):
         self._grains = grain_list
         return grains
 
-    def flood_fill(self, seed, index, points_left, grains, group_id):
+    def flood_fill(self, seed, index, points_left, grains, group_id,
+                   added_coords_buffer=None):
         """Flood fill algorithm that uses the combined x and y boundary array
         to fill a connected area around the seed point. The points are inserted
         into a grain object and the grain map array is updated.
@@ -739,41 +745,10 @@ class Map(base.Map):
         # create new grain
         grain = Grain(index - 1, self, group_id)
 
-        # add first point to the grain
-        x, y = seed
-        grain.add_point(seed)
-        grains[y, x] = index
-        points_left[y, x] = False
-        edge = [seed]
+        added_coords = flood_fill_dic(seed, index, points_left, grains,
+                                      added_coords_buffer)
 
-        while edge:
-            x, y = edge.pop(0)
-
-            moves = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
-            # get rid of any that go out of the map area
-            if x <= 0:
-                moves.pop(1)
-            elif x >= self.shape[1] - 1:
-                moves.pop(0)
-            if y <= 0:
-                moves.pop(-1)
-            elif y >= self.shape[0] - 1:
-                moves.pop(-2)
-
-            for (s, t) in moves:
-                add_point = False
-
-                if grains[t, s] == 0:
-                    add_point = True
-                    edge.append((s, t))
-
-                elif grains[t, s] == -1 and (s > x or t > y):
-                    add_point = True
-
-                if add_point:
-                    grain.add_point((s, t))
-                    grains[t, s] = index
-                    points_left[t, s] = False
+        grain.data.point = list(added_coords)
 
         return grain
 

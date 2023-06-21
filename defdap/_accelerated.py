@@ -62,3 +62,45 @@ def flood_fill(seed, index, points_remaining, grains, boundary_x, boundary_y,
                 edge.append((s, t))
 
     return added_coords[:npoints]
+
+
+@njit
+def flood_fill_dic(seed, index, points_remaining, grains, added_coords):
+    # add first point to the grain
+    x, y = seed
+    grains[y, x] = index
+    points_remaining[y, x] = False
+    edge = [seed]
+    npoints = 1
+
+    while edge:
+        x, y = edge.pop()
+
+        moves = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
+        # get rid of any that go out of the map area
+        if x <= 0:
+            moves.pop(1)
+        elif x >= grains.shape[1] - 1:
+            moves.pop(0)
+        if y <= 0:
+            moves.pop(-1)
+        elif y >= grains.shape[0] - 1:
+            moves.pop(-2)
+
+        for (s, t) in moves:
+            add_point = False
+
+            if grains[t, s] == 0:
+                add_point = True
+                edge.append((s, t))
+
+            elif grains[t, s] == -1 and (s > x or t > y):
+                add_point = True
+
+            if add_point:
+                added_coords[npoints] = (s, t)
+                grains[t, s] = index
+                points_remaining[t, s] = False
+                npoints += 1
+
+    return added_coords[:npoints]
