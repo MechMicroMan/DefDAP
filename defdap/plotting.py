@@ -406,11 +406,17 @@ class MapPlot(Plot):
             of coordinates representing the start and end of each boundary 
             segment. If not provided the boundaries are loaded from the 
             calling map.
-        colour : str
-            Colour of grain boundaries.
+        colour : various
+            One of:
+              - Colour of all boundaries as a string (only option pixel kind)
+              - Colour of all boundaries as RGBA tuple
+              - List of values to represent colour of each line relative to a
+                `norm` and `cmap`
         dilate : bool
             If true, dilate the grain boundaries.
-        kind
+        kwargs
+            If line kind then other arguments are passed to 
+            :func:`matplotlib.collections.LineCollection`.
 
         Returns
         -------
@@ -422,18 +428,30 @@ class MapPlot(Plot):
             colour = "white"
 
         if kind == "line":
-            boundaryLines = boundaries
-            if boundaryLines is None:
-                boundaryLines = self.callingMap.boundaryLines
+            if isinstance(colour, str):
+                colour = mpl.colors.to_rgba(colour)
 
-            lc = LineCollection(boundaryLines,
-                                colors=mpl.colors.to_rgba(colour), **kwargs)
+            boundary_lines = boundaries
+            if boundary_lines is None:
+                boundary_lines = self.callingMap.boundaryLines
+            
+            if len(colour) == len(boundary_lines):
+                colour_array = colour
+                colour_lc = None
+            elif len(colour) == 4:
+                colour_array = None
+                colour_lc = colour
+            else:
+                ValueError('Issue with passed colour')
+                
+            boundary_lines = boundaries
+            if boundary_lines is None:
+                boundary_lines = self.callingMap.boundaryLines
 
-            self.ax.add_collection(lc)
-            # ax.autoscale()
+            lc = LineCollection(boundary_lines, colors=colour_lc, **kwargs)
+            lc.set_array(colour_array)
+            img = self.ax.add_collection(lc)
 
-            if draw:
-                self.draw()
         else:
             boundariesImage = boundaries
             if boundariesImage is None:
@@ -453,12 +471,11 @@ class MapPlot(Plot):
 
             img = self.ax.imshow(boundariesImage, cmap=boundariesCmap,
                                  interpolation='None', vmin=0, vmax=1)
-            if draw:
-                self.draw()
 
-            self.imgLayers.append(img)
-
-            return img
+        if draw:
+            self.draw()
+        self.imgLayers.append(img)
+        return img
 
     def addGrainHighlights(self, grainIds, grainColours=None, alpha=None,
                            newLayer=False):
