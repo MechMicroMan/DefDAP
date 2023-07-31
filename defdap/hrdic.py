@@ -578,13 +578,14 @@ class Map(base.Map):
 
         # image is returned cropped if a piecewise transform is being used
         boundaries = self.ebsdMap.boundaries
-        boundaries = self.warpToDicFrame(-boundaries.astype(float),
-                                         cropImage=False)
+        boundaries = self.warpToDicFrame(
+            -boundaries.astype(float), cropImage=False
+        )
         boundaries = boundaries > 0.1
-
         boundaries = mph.skeletonize(boundaries)
-        mph.remove_small_objects(boundaries, min_size=10, in_place=True,
-                                 connectivity=2)
+        boundaries = mph.remove_small_objects(
+            boundaries, min_size=10, connectivity=2
+        )
 
         # crop image if it is a simple affine transform
         if type(self.ebsdTransform) is tf.AffineTransform:

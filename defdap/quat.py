@@ -680,7 +680,7 @@ class Quat(object):
     def calcSymEqvs(
         quats: np.ndarray,
         symGroup: str,
-        dtype: Optional[type] = np.float
+        dtype: Optional[type] = float
     ) -> np.ndarray:
         """Calculate all symmetrically equivalent quaternions of given quaternions.
 
@@ -691,7 +691,7 @@ class Quat(object):
         symGroup
             Crystal type (cubic, hexagonal).
         dtype
-            Data type used for calculation, defaults to np.float.
+            Data type used for calculation, defaults to `float`.
 
         Returns
         -------
@@ -948,7 +948,7 @@ class Quat(object):
         quats: np.ndarray,
         direction: np.ndarray,
         symGroup: str,
-        dtype: Optional[type] = np.float
+        dtype: Optional[type] = float
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Transform the sample direction to crystal coords based on the quats
