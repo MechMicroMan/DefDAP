@@ -3,18 +3,39 @@ Papers
 
 Here is a list of papers which have use the DefDAP Python library.
 
+2023
+------
+
+* `R.Thomas, D.Bowden, D.Lunt, D.Stewart, M.Preuss. High compressive loading performance of a complex multi-phase hard-facing alloy explained through a highly elastic silicide phase. Materialia. Volume 30. Aug 2023. 101815. <https://doi.org/10.1016/j.mtla.2023.101815>`_
+
+* `D. Lunt, R. Thomas, D. Bowden, M.T.P. Rigby-Bell, S. de Moraes Shubeita, C. Andrews, T. Lapauw, J. Vleugels, J. Quinta da Fonseca, K. Lambrinou, P. Frankel. Detecting irradiation-induced strain localisation on the microstructural level by means of high-resolution digital image correlation. Journal of Nuclear Materials. Volume 580. Jul 2023. 154410. <https://doi.org/10.1016/j.jnucmat.2023.154410>`_
+
+* `C.Liu, X.Xu, T.Sun, R.Thomas, J.Quinta da Fonseca, M.Preuss. Microstructural effects on fatigue crack initiation mechanisms in a near-alpha titanium alloy. Acta Materialia. Volume 253. Jul 2023. 118957. <https://doi.org/10.1016/j.actamat.2023.118957>`_
+
 2022
 ------
+
+* `C.Hardie, R.Thomas, Y. Liu, P.Frankel, F.Dunne. Simulation of crystal plasticity in irradiated metals: A case study on Zircaloy-4. Acta Materialia. Volume 241. Dec 2022. 118361. <https://doi.org/10.1016/j.actamat.2022.118361>`_
+
+* `A.E. Davis, X. Zeng, R. Thomas, J.R. Kennedy 1, J. Donoghue, A. Gholinia, P.B. Prangnell, J. Quinta Da Fonseca. Optimising large-area crystal orientation mapping of nanoscale β phase in α + β titanium alloys using EBSD. Materials Characterization. Volume 194. Dec 2022. 112371. <https://doi.org/10.1016/j.matchar.2022.112371>`_
+
+* `S.Cao, L.Meng, H.Liu, Y.Zou, A.Smith, X.Wu, J.Donoghue, R.Thomas, M.Preuss, D.Lunt. Role of microstructure heterogeneity on deformation behaviour in additive manufactured Ti-6Al-4V. Materialia. Volume 26. Dec 2022. 101636. <https://doi.org/10.1016/j.mtla.2022.101636>`_
+
+* `C.Liu, R.Thomas, T.Sun, J.Donoghue, X.Zhang, T.L.Burnett, J.Quinta da Fonseca, M.Preuss. Multi-dimensional study of the effect of early slip activity on fatigue crack initiation in a near-α titanium alloy. Acta Materialia. Volume 223. Jul 2022. 117967. <https://doi.org/10.1016/j.actamat.2022.117967>`_
 
 * `C.Dichtl, D.Lunt, M.Atkinson, R.Thomas, A.Plowman, B.Barzdajn, R.Sandala, J.Quinta da Fonseca, M.Preuss. Slip activity during low-stress cold creep deformation in a near-α titanium alloy. Acta Materialia. Volume 229. May 2022. 117691. <https://doi.org/10.1016/j.actamat.2022.117691>`_
 
 2021
 ------
 
-* `R.Thomas, D.Lunt, M.D.Atkinson, J.Quinta da Fonseca, M.Preuss, F.Barton, J.O’Hanlon,P. Frankel. SThe Effect of Loading Direction on Slip and Twinning in an Irradiated Zirconium Alloy. Zirconium in the Nuclear Industry: 19th International Symposium. ASTM International. Pages 233–261. <https://doi.org/10.1520/STP162220190027>`_
+* `R.Thomas, D.Lunt, M.D.Atkinson, J.Quinta da Fonseca, M.Preuss, F.Barton, J.O’Hanlon,P. Frankel. The Effect of Loading Direction on Slip and Twinning in an Irradiated Zirconium Alloy. Zirconium in the Nuclear Industry: 19th International Symposium. ASTM International. Pages 233–261. <https://doi.org/10.1520/STP162220190027>`_
+
+* `D.Lunt, R.Thomas, M.D.Atkinson, A. Smith, R.Sandala, J.Quinta da Fonseca, M. Preuss. Understanding the role of local texture variation on slip activity in a two-phase titanium alloy. Acta Materialia. Volume 216. Sept 2021. 117111. <https://doi.org/10.1016/j.actamat.2021.117111>`_
 
 2020
 ------
+
+* `M.D.Atkinson, J.M.Donoghue, J.Quinta da Fonseca. Measurement of local plastic strain during uniaxial reversed loading of nickel alloy 625. Materials Characterization. Volume 168, October 2020, 110561. <https://doi.org/10.1016/j.matchar.2020.110561>`_
 
 * `R.Sperry, A.Harte, J.Quinta da Fonseca, E.R.Homer, R.H.Wagoner, D.T.Fullwood. Slip band characteristics in the presence of grain boundaries in nickel-based superalloy. Acta Materialia. Volume 193, July 2020, Pages 229-238. <https://www.sciencedirect.com/science/article/abs/pii/S1359645420303025>`_
 
