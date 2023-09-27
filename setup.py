@@ -65,7 +65,7 @@ setup(
     extras_require={
         'testing': ['pytest', 'coverage', 'pytest-cov', 'pytest_cases'],
         'docs': ['sphinx==5.0.2', 'sphinx_rtd_theme==0.5.0', 'sphinx_autodoc_typehints==1.11.1',
-                 'nbsphinx==0.9.3', 'ipykernel==6.19.2', 'pandoc', 'ipympl']
+                 'nbsphinx==0.9.3', 'ipykernel', 'pandoc', 'ipympl']
     }
 
 )
