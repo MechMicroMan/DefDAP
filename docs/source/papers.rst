@@ -6,6 +6,10 @@ Here is a list of papers which have use the DefDAP Python library.
 2023
 ------
 
+* `R.Thomas, D.Lunt, M.D.Atkinson, J.Quinta da Fonseca, M.Preuss, P.Honniball, P.Frankel. The role of hydrides and precipitates on the strain localisation behaviour in a zirconium alloy. Acta Materialia. 119327. <https://doi.org/10.1016/j.actamat.2023.119327>`_
+
+* `M.Maric, R,Thomas, A.Davis, D.Lunt, J.Donoghue, A.Gholinia, M.De Graef, T.Ungar, P.Barberis, F.Bourlier, P.Frankel, P.Shanthraj, M.Preuss. Identification, classification and characterisation of hydrides in Zr alloys. Scripta Materialia. Volume 238. Aug 2023. 115768. <https://doi.org/10.1016/j.scriptamat.2023.115768>`_
+
 * `R.Thomas, D.Bowden, D.Lunt, D.Stewart, M.Preuss. High compressive loading performance of a complex multi-phase hard-facing alloy explained through a highly elastic silicide phase. Materialia. Volume 30. Aug 2023. 101815. <https://doi.org/10.1016/j.mtla.2023.101815>`_
 
 * `D. Lunt, R. Thomas, D. Bowden, M.T.P. Rigby-Bell, S. de Moraes Shubeita, C. Andrews, T. Lapauw, J. Vleugels, J. Quinta da Fonseca, K. Lambrinou, P. Frankel. Detecting irradiation-induced strain localisation on the microstructural level by means of high-resolution digital image correlation. Journal of Nuclear Materials. Volume 580. Jul 2023. 154410. <https://doi.org/10.1016/j.jnucmat.2023.154410>`_
