@@ -14,7 +14,17 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../')) 	# Reference the root directory so autodocs can find the python modules
+import shutil
+sys.path.insert(0, os.path.abspath('../../'))   # Reference the root directory so autodocs can find the python modules
+
+# Copy the example notebook, change %matplotlib to inline and change directory so that paths still work
+shutil.copyfile('../../notebooks/example_notebook.ipynb', 'howtouse.ipynb')
+with open('howtouse.ipynb') as f:
+    newText=f.read().replace('%matplotlib tk', r'%matplotlib inline\n%cd -q ../')
+newText=newText.replace('DefDAP Example notebook', r'How to use')
+newText=newText.replace('This notebook', r'These pages')
+with open('howtouse.ipynb', "w") as f:
+    f.write(newText)
 
 # -- Project information -----------------------------------------------------
 
@@ -55,8 +65,20 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'sphinx_autodoc_typehints',
-    'sphinx_rtd_theme'
+    'sphinx_rtd_theme',
+    'nbsphinx'
 ]
+
+nbsphinx_allow_errors = True
+nbsphinx_execute = 'always'
+nbsphinx_prolog = """
+This page was built from the example_notebook Jupyter notebook available on `Github <https://github.com/MechMicroMan/DefDAP>`_
+
+.. image:: https://mybinder.org/badge_logo.svg
+   :target: https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb
+
+----
+"""
 
 napoleon_use_param = True
 #set_type_checking_flag = True
@@ -81,7 +103,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -157,76 +179,6 @@ def run_apidoc(_):
 def setup(app):
     if ON_RTD:
         app.connect('builder-inited', run_apidoc)
-
-
-# -- Options for LaTeX output ------------------------------------------------
-
-#latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    #
-    # 'papersize': 'letterpaper',
-
-    # The font size ('10pt', '11pt' or '12pt').
-    #
-    # 'pointsize': '10pt',
-
-    # Additional stuff for the LaTeX preamble.
-    #
-    # 'preamble': '',
-
-    # Latex figure (float) alignment
-    #
-    # 'figure_align': 'htbp',
-#}
-
-# Grouping the document tree into LaTeX files. List of tuples
-# (source start file, target name, title,
-#  author, documentclass [howto, manual, or own class]).
-#latex_documents = [
-#    (master_doc, 'DefDAP.tex', 'DefDAP Documentation',
-#     'Michael Atkinson', 'manual'),
-#]
-
-
-# -- Options for manual page output ------------------------------------------
-
-# One entry per manual page. List of tuples
-# (source start file, name, description, authors, manual section).
-#man_pages = [
-#    (master_doc, 'defdap', 'DefDAP Documentation',
-#     [author], 1)
-#]
-
-
-# -- Options for Texinfo output ----------------------------------------------
-
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
-#texinfo_documents = [
-#    (master_doc, 'DefDAP', 'DefDAP Documentation',
-#     author, 'DefDAP', 'One line description of project.',
-#     'Miscellaneous'),
-#]
-
-
-# -- Options for Epub output -------------------------------------------------
-
-# Bibliographic Dublin Core info.
-#epub_title = project
-
-# The unique identifier of the text. This can be a ISBN number
-# or the project homepage.
-#
-# epub_identifier = ''
-
-# A unique identification for the text.
-#
-# epub_uid = ''
-
-# A list of files that should not be packed into the epub file.
-#epub_exclude_files = ['search.html']
-
 
 # -- Extension configuration -------------------------------------------------
 
