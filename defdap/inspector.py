@@ -40,9 +40,9 @@ class GrainInspector:
         # Initialise some values
         self.grainID = 0
         self.currMap = currMap
-        self.currEBSDMap = self.currMap.ebsdMap
+        self.currEBSDMap = self.currMap.ebsd_map
         self.currDICGrain = self.currMap[self.grainID]
-        self.currEBSDGrain = self.currDICGrain.ebsdGrain
+        self.currEBSDGrain = self.currDICGrain.ebsd_grain
         self.vmax = vmax
         self.corrAngle = corrAngle
         self.RDRlength = RDRlength
@@ -110,7 +110,7 @@ class GrainInspector:
         self.grainID = int(event)
         self.grainPlot.arrow = None
         self.currDICGrain = self.currMap[self.grainID]
-        self.currEBSDGrain = self.currDICGrain.ebsdGrain
+        self.currEBSDGrain = self.currDICGrain.ebsd_grain
         self.redraw()
 
     def saveLine(self,
@@ -191,7 +191,7 @@ class GrainInspector:
                 activePlanes = []
                 deviation = []
                 experimentalAngle = group[1]
-                for idx, theoreticalAngle in enumerate(np.rad2deg(grain.ebsdGrain.slipTraceAngles)):
+                for idx, theoreticalAngle in enumerate(np.rad2deg(grain.ebsd_grain.slipTraceAngles)):
                     if theoreticalAngle - 5 < experimentalAngle < theoreticalAngle + 5:
                         activePlanes.append(idx)
                         deviation.append(float('{0:.2f}'.format(experimentalAngle - theoreticalAngle)))
@@ -244,9 +244,9 @@ class GrainInspector:
         self.grainInfoAx.axis('off')
         grainInfoText = 'Grain ID: {0} / {1}\n'.format(self.grainID, len(self.currMap.grains) - 1)
         grainInfoText += 'Min: {0:.2f} %     Mean:{1:.2f} %     Max: {2:.2f} %'.format(
-            np.min(self.currDICGrain.maxShearList) * 100,
-            np.mean(self.currDICGrain.maxShearList) * 100,
-            np.max(self.currDICGrain.maxShearList) * 100)
+            np.min(self.currDICGrain.data.max_shear) * 100,
+            np.mean(self.currDICGrain.data.max_shear) * 100,
+            np.max(self.currDICGrain.data.max_shear) * 100)
         self.plot.addText(self.grainInfoAx, 0, 1, grainInfoText, va='top', ha='left',
                           fontsize=10, fontfamily='monospace')
 
@@ -338,7 +338,7 @@ class GrainInspector:
         for idx, grain in enumerate(self.currMap):
             if grain.pointsList != []:
                 for group in grain.groupsList:
-                    maxSF = np.max([item for sublist in grain.ebsdGrain.averageSchmidFactors for item in sublist])
+                    maxSF = np.max([item for sublist in grain.ebsd_grain.averageSchmidFactors for item in sublist])
                     eulers = self.currEBSDGrain.refOri.eulerAngles() * 180 / np.pi
                     text = '{0}\t{1:.1f}\t{2:.1f}\t{3:.1f}\t{4:.3f}\t'.format(
                         idx, eulers[0], eulers[1], eulers[2], maxSF)
@@ -347,7 +347,7 @@ class GrainInspector:
                     print(text)
 
     def calcRDR(self,
-                grain: int,
+                grain,
                 group: int,
                 showPlot: bool = True):
         """ Calculates the relative displacement ratio for a given grain and group.
@@ -355,7 +355,7 @@ class GrainInspector:
         Parameters
         ----------
         grain
-            DIC grain ID to run RDR on.
+            DIC grain to run RDR on.
         group
             group ID to run RDR on.
         showPlot
@@ -411,7 +411,7 @@ class GrainInspector:
             self.plotRDR(grain, group, ulist, vlist, allxlist, allylist, linRegResults)
 
     def plotRDR(self,
-                grain: int,
+                grain,
                 group: int,
                 ulist: List[float],
                 vlist: List[float],
@@ -452,8 +452,12 @@ class GrainInspector:
         self.rdrPlot.plotAx = self.rdrPlot.addAxes((0.05, 0.1, 0.3, 0.35))
 
         # Draw grain plot
-        self.rdrPlot.grainPlot = self.currDICGrain.plotMaxShear(fig=self.rdrPlot.fig, ax=self.rdrPlot.grainAx,
-                                                                plotColourBar=False, plotScaleBar=True)
+        self.rdrPlot.grainPlot = self.currDICGrain.plotGrainData(grainData=self.currDICGrain.data.max_shear, 
+            fig=self.rdrPlot.fig, 
+            ax=self.rdrPlot.grainAx,
+            plotColourBar=False, 
+            plotScaleBar=True)
+
         self.rdrPlot.grainPlot.addColourBar(label='Effective Shear Strain', fraction=0.046, pad=0.04)
 
         # Draw all points
@@ -477,7 +481,7 @@ class GrainInspector:
                              transform=self.rdrPlot.plotAx.transAxes, fontsize=10);
 
         # Write grain info
-        ebsdGrain = grain.ebsdGrain
+        ebsdGrain = grain.ebsd_grain
         ebsdGrain.calcSlipTraces()
 
         if ebsdGrain.averageSchmidFactors is None:

@@ -173,7 +173,7 @@ class Map(base.Map):
             cropped=True
         )
 
-        self.plotDefault = lambda *args, **kwargs: self.plotMaxShear(
+        self.plotDefault = lambda *args, **kwargs: self.plot_map(map_name='max_shear',
             plotGBs=True, *args, **kwargs
         )
         self.homog_map_name = 'max_shear'

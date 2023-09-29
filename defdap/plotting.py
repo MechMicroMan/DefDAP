@@ -238,7 +238,7 @@ class Plot(object):
             Title to set.
 
         """
-        self.fig.canvas.set_window_title(txt)
+        self.fig.canvas.manager.set_window_title(txt)
 
     def lineSlice(self, event, plot, action=None):
         """ Catch click and drag then draw an arrow.
@@ -820,7 +820,7 @@ class GrainPlot(Plot):
         """
 
         if colours is None:
-            colours = self.callingGrain.ebsdGrain.phase.slipTraceColours
+            colours = self.callingGrain.ebsd_grain.phase.slipTraceColours
         slipTraceAngles = self.callingGrain.slipTraces
 
         self.addTraces(slipTraceAngles, colours, topOnly, pos=pos, **kwargs)
