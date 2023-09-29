@@ -238,7 +238,8 @@ class Plot(object):
             Title to set.
 
         """
-        self.fig.canvas.set_window_title(txt)
+        if self.fig.canvas.manager is not None:
+            self.fig.canvas.manager.set_window_title(txt)
 
     def lineSlice(self, event, plot, action=None):
         """ Catch click and drag then draw an arrow.
