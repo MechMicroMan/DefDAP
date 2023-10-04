@@ -1242,7 +1242,7 @@ class Map(base.Map):
         if self[0].averageSchmidFactors is None:
             raise Exception("Run 'calcAverageGrainSchmidFactors' first")
 
-        grains_sf = []
+        grains_sf_max = []
         for grain in self.grainList:
             current_sf = []
 
@@ -1259,10 +1259,7 @@ class Map(base.Map):
                 for sf_group in grain.averageSchmidFactors:
                     current_sf += sf_group
 
-            grains_sf.append(current_sf)
-
-        grains_sf = np.array(grains_sf)
-        grains_sf_max = np.max(grains_sf, axis=1)
+            grains_sf_max.append(max(current_sf))
 
         plot = self.plotGrainDataMap(grainData=grains_sf_max, bg=0.5,
                                      **plot_params)
