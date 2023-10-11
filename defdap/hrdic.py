@@ -31,7 +31,7 @@ from defdap import base
 from defdap import defaults
 from defdap.plotting import MapPlot, GrainPlot
 from defdap.inspector import GrainInspector
-from defdap.utils import reportProgress
+from defdap.utils import report_progress
 
 
 class Map(base.Map):
@@ -132,7 +132,7 @@ class Map(base.Map):
         self.data.add(
             'f', f, unit='', type='map', order=2, default_component=(0, 0),
             plot_params={
-                'plotColourBar': True,
+                'plot_colour_bar': True,
                 'clabel': 'Deformation gradient',
             }
         )
@@ -144,7 +144,7 @@ class Map(base.Map):
         self.data.add(
             'e', e, unit='', type='map', order=2, default_component=(0, 0),
             plot_params={
-                'plotColourBar': True,
+                'plot_colour_bar': True,
                 'clabel': 'Green strain',
             }
         )
@@ -154,7 +154,7 @@ class Map(base.Map):
         self.data.add(
             'max_shear', max_shear, unit='', type='map', order=0,
             plot_params={
-                'plotColourBar': True,
+                'plot_colour_bar': True,
                 'clabel': 'Effective shear strain',
             }
         )
@@ -184,9 +184,9 @@ class Map(base.Map):
 
     @property
     def crystalSym(self):
-        return self.ebsd_map.crystalSym
+        return self.ebsd_map.crystal_sym
 
-    @reportProgress("loading HRDIC data")
+    @report_progress("loading HRDIC data")
     def loadData(self, fileDir, fileName, dataType=None):
         """Load DIC data from file.
 
@@ -200,10 +200,10 @@ class Map(base.Map):
             Type of data file.
 
         """
-        dataLoader = DICDataLoader.getLoader(dataType)
+        dataLoader = DICDataLoader.get_loader(dataType)
         dataLoader.load(fileName, fileDir)
 
-        metadataDict = dataLoader.loadedMetadata
+        metadataDict = dataLoader.loaded_metadata
         self.format = metadataDict['format']      # Software name
         self.version = metadataDict['version']    # Software version
         self.binning = metadataDict['binning']    # Sub-window width in pixels
@@ -213,7 +213,7 @@ class Map(base.Map):
         self.xdim = metadataDict['shape'][1]      # size of map along x (from header)
         self.ydim = metadataDict['shape'][0]      # size of map along y (from header)
 
-        self.data.update(dataLoader.loadedData)
+        self.data.update(dataLoader.loaded_data)
 
         # write final status
         yield (f"Loaded {self.format} {self.version} data "
@@ -237,11 +237,11 @@ class Map(base.Map):
 
         dataLoader = DICDataLoader()
         if dataType == "DavisImage":
-            loadedData = dataLoader.loadDavisImageData(fileName, fileDir)
+            loaded_data = dataLoader.loadDavisImageData(fileName, fileDir)
         else:
             raise Exception("No loader found for this DIC data.")
             
-        self.corrVal = loadedData
+        self.corrVal = loaded_data
         
         assert self.xdim == self.corrVal.shape[1], \
             "Dimensions of imported data and dic data do not match"
@@ -503,14 +503,14 @@ class Map(base.Map):
 
         if preview == True:
             plot1 = MapPlot.create(self, self.crop(self.mask), cmap='binary')
-            plot1.setTitle('Removed datapoints in black')
+            plot1.set_title('Removed datapoints in black')
             plot2 = MapPlot.create(self,
                                    self.crop(
                                        np.where(self.mask == True, np.nan,
                                                 self.data.max_shear)),
-                                   plotColourBar='True',
+                                   plot_colour_bar='True',
                                    clabel="Effective shear strain")
-            plot2.setTitle('Effective shear strain preview')
+            plot2.set_title('Effective shear strain preview')
         print(
             'Use applyThresholdMask function to apply this filtering to data')
 
@@ -566,7 +566,7 @@ class Map(base.Map):
         Parameters
         ----------
         kwargs
-            All arguments are passed to :func:`defdap.base.Map.plotGrainDataMap`.
+            All arguments are passed to :func:`defdap.base.Map.plot_grain_data_map`.
 
         """
         # Set default plot parameters then update with any input
@@ -575,13 +575,13 @@ class Map(base.Map):
         }
         plotParams.update(kwargs)
 
-        plot = self.plotGrainDataMap(
-            mapData=self.data.max_shear, **plotParams
+        plot = self.plot_grain_data_map(
+            map_data=self.data.max_shear, **plotParams
         )
 
         return plot
 
-    @reportProgress("finding grains")
+    @report_progress("finding grains")
     def find_grains(self, algorithm=None, min_grain_size=10):
         """Finds grains in the DIC map.
 
@@ -769,7 +769,7 @@ class Map(base.Map):
 
         return grain
 
-    def runGrainInspector(self, vmax=0.1, corrAngle=0, RDRlength=3):
+    def grain_inspector(self, vmax=0.1, corrAngle=0, RDRlength=3):
         """Run the grain inspector interactive tool.
 
         Parameters
@@ -784,8 +784,8 @@ class Map(base.Map):
             Length of lines perpendicular to slip trace used to calculate RDR.
 
         """
-        GrainInspector(currMap=self, vmax=vmax, corrAngle=corrAngle,
-                       RDRlength=RDRlength)
+        GrainInspector(selected_dic_map=self, vmax=vmax, correction_angle=corrAngle,
+                       rdr_line_length=RDRlength)
 
 
 class Grain(base.Grain):
@@ -805,9 +805,9 @@ class Grain(base.Grain):
         EBSD grain ID that this DIC grain corresponds to.
     ebsd_map : defdap.ebsd.Map
         EBSD map that this DIC grain belongs to.
-    pointsList : numpy.ndarray
+    points_list : numpy.ndarray
         Start and end points for lines drawn using defdap.inspector.GrainInspector.
-    groupsList :
+    groups_list :
         Groups, angles and slip systems detected for
         lines drawn using defdap.inspector.GrainInspector.
 
@@ -829,21 +829,21 @@ class Grain(base.Grain):
         self.ebsd_grain = None
         self.ebsd_map = None
 
-        self.pointsList = []            # Lines drawn for STA
-        self.groupsList = []            # Unique angles drawn for STA
+        self.points_list = []            # Lines drawn for STA
+        self.groups_list = []            # Unique angles drawn for STA
 
-        self.plotDefault = lambda *args, **kwargs: self.plotMaxShear(
-            plotColourBar=True, plotScaleBar=True, plotSlipTraces=True,
+        self.plotDefault = lambda *args, **kwargs: self.plot_max_shear(
+            plot_colour_bar=True, plot_scale_bar=True, plotSlipTraces=True,
             plotSlipBands=True, *args, **kwargs
         )
 
-    def plotMaxShear(self, **kwargs):
+    def plot_max_shear(self, **kwargs):
         """Plot a maximum shear map for a grain.
 
         Parameters
         ----------
         kwargs
-            All arguments are passed to :func:`defdap.base.plotGrainData`.
+            All arguments are passed to :func:`defdap.base.plot_grain_data`.
 
         Returns
         -------
@@ -852,12 +852,12 @@ class Grain(base.Grain):
         """
         # Set default plot parameters then update with any input
         plotParams = {
-            'plotColourBar': True,
+            'plot_colour_bar': True,
             'clabel': "Effective shear strain"
         }
         plotParams.update(kwargs)
 
-        plot = self.plotGrainData(grainData=self.data.max_shear, **plotParams)
+        plot = self.plot_grain_data(grain_data=self.data.max_shear, **plotParams)
 
         return plot
 
@@ -891,7 +891,7 @@ class Grain(base.Grain):
         slipSystems : defdap.crystal.SlipSystem, optional
 
         """
-        self.ebsd_grain.calcSlipTraces(slipSystems=slipSystems)
+        self.ebsd_grain.calc_slip_traces(slipSystems=slipSystems)
 
     def calcSlipBands(self, grainMapData, thres=None, min_dist=None):
         """Use Radon transform to detect slip band angles.

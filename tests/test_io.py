@@ -20,45 +20,45 @@ class TestEBSDDataLoader:
     @staticmethod
     @pytest.fixture
     def metadata_loaded_oxford_binary(data_loader_oxford_binary):
-        data_loader_oxford_binary.loadOxfordCPR(EXAMPLE_EBSD)
+        data_loader_oxford_binary.load_oxford_cpr(EXAMPLE_EBSD)
         return data_loader_oxford_binary
 
     @staticmethod
     def test_init(data_loader_oxford_binary):
-        assert isinstance(data_loader_oxford_binary.loadedMetadata, dict)
-        assert isinstance(data_loader_oxford_binary.loadedData, Datastore)
+        assert isinstance(data_loader_oxford_binary.loaded_metadata, dict)
+        assert isinstance(data_loader_oxford_binary.loaded_data, Datastore)
 
     @staticmethod
     def test_check_metadata_good(data_loader_oxford_binary):
         """The check_metadata method should pass silently if each phase
         is of `Phase` type."""
         lattice_params = (1., 1., 1., np.pi / 2, np.pi / 2, 2 * np.pi / 3)
-        data_loader_oxford_binary.loadedMetadata["phases"] = [
+        data_loader_oxford_binary.loaded_metadata["phases"] = [
             Phase("test", 9, None, lattice_params),  # hex phase needs lattice params
             Phase("tester", 11, 225, ()),
             Phase("testist", 11, 225, ()),
         ]
-        assert data_loader_oxford_binary.checkMetadata() is None
+        assert data_loader_oxford_binary.check_metadata() is None
 
     @staticmethod
     def test_check_metadata_bad(data_loader_oxford_binary):
         """The check_metadata method should fail if a phase is is not of
         `Phase` type."""
-        data_loader_oxford_binary.loadedMetadata["phases"] = [
+        data_loader_oxford_binary.loaded_metadata["phases"] = [
             Phase("test", 11, 225, ()),
             "2"
         ]
         with pytest.raises(AssertionError):
-            data_loader_oxford_binary.checkMetadata()
+            data_loader_oxford_binary.check_metadata()
 
     @staticmethod
     def test_load_oxford_cpr_good_file(data_loader_oxford_binary):
-        data_loader_oxford_binary.loadOxfordCPR(EXAMPLE_EBSD)
-        metadata = data_loader_oxford_binary.loadedMetadata
+        data_loader_oxford_binary.load_oxford_cpr(EXAMPLE_EBSD)
+        metadata = data_loader_oxford_binary.loaded_metadata
         assert metadata["shape"] == (243, 359)
         # Testing for floating point equality so use approx
         assert metadata["step_size"] == pytest.approx(0.12)
-        assert metadata["acquisition_rotation"].quatCoef == \
+        assert metadata["acquisition_rotation"].quat_coef == \
                pytest.approx((1., 0., 0., 0.))
 
         assert isinstance(metadata['edx'], dict)
@@ -75,34 +75,34 @@ class TestEBSDDataLoader:
     @staticmethod
     def test_load_oxford_cpr_bad_file(data_loader_oxford_binary):
         with pytest.raises(FileNotFoundError):
-            data_loader_oxford_binary.loadOxfordCPR("badger")
+            data_loader_oxford_binary.load_oxford_cpr("badger")
 
     @staticmethod
     def test_load_oxford_crc_good_file(metadata_loaded_oxford_binary):
-        metadata_loaded_oxford_binary.loadOxfordCRC(EXAMPLE_EBSD)
-        shape = metadata_loaded_oxford_binary.loadedMetadata["shape"]
+        metadata_loaded_oxford_binary.load_oxford_crc(EXAMPLE_EBSD)
+        shape = metadata_loaded_oxford_binary.loaded_metadata["shape"]
 
-        data = metadata_loaded_oxford_binary.loadedData['phase']
+        data = metadata_loaded_oxford_binary.loaded_data['phase']
         assert isinstance(data, np.ndarray)
         assert data.shape == shape
         assert isinstance(data[0, 0], np.uint8)
 
-        data = metadata_loaded_oxford_binary.loadedData['euler_angle']
+        data = metadata_loaded_oxford_binary.loaded_data['euler_angle']
         assert isinstance(data, np.ndarray)
         assert data.shape == (3, ) + shape
         assert isinstance(data[0, 0, 0], np.float32)
 
-        data = metadata_loaded_oxford_binary.loadedData['band_contrast']
+        data = metadata_loaded_oxford_binary.loaded_data['band_contrast']
         assert isinstance(data, np.ndarray)
         assert data.shape == shape
         assert isinstance(data[0, 0], np.uint8)
 
-        data = metadata_loaded_oxford_binary.loadedData['band_slope']
+        data = metadata_loaded_oxford_binary.loaded_data['band_slope']
         assert isinstance(data, np.ndarray)
         assert data.shape == shape
         assert isinstance(data[0, 0], np.uint8)
 
-        data = metadata_loaded_oxford_binary.loadedData['mean_angular_deviation']
+        data = metadata_loaded_oxford_binary.loaded_data['mean_angular_deviation']
         assert isinstance(data, np.ndarray)
         assert data.shape == shape
         assert isinstance(data[0, 0], np.float32)
@@ -110,7 +110,7 @@ class TestEBSDDataLoader:
     @staticmethod
     def test_load_oxford_crc_bad(metadata_loaded_oxford_binary):
         with pytest.raises(FileNotFoundError):
-            metadata_loaded_oxford_binary.loadOxfordCRC("badger")
+            metadata_loaded_oxford_binary.load_oxford_crc("badger")
 
 
 class TestDICDataLoader:
@@ -134,13 +134,13 @@ class TestDICDataLoader:
 
     @staticmethod
     def test_init(dic_loader):
-        assert isinstance(dic_loader.loadedMetadata, dict)
-        assert isinstance(dic_loader.loadedData, Datastore)
+        assert isinstance(dic_loader.loaded_metadata, dict)
+        assert isinstance(dic_loader.loaded_data, Datastore)
 
     @staticmethod
     def test_load_davis_metadata(dic_loader):
         dic_loader.loadDavisMetadata(EXAMPLE_DIC)
-        metadata = dic_loader.loadedMetadata
+        metadata = dic_loader.loaded_metadata
         assert metadata['format'] == "DaVis"
         assert metadata['version'] == "8.4.0"
         assert metadata['binning'] == 12
@@ -154,14 +154,14 @@ class TestDICDataLoader:
     @staticmethod
     def test_load_davis_data(dic_metadata_loaded):
         dic_metadata_loaded.loadDavisData(EXAMPLE_DIC)
-        shape = dic_metadata_loaded.loadedMetadata["shape"]
+        shape = dic_metadata_loaded.loaded_metadata["shape"]
 
-        data = dic_metadata_loaded.loadedData['coordinate']
+        data = dic_metadata_loaded.loaded_data['coordinate']
         assert isinstance(data, np.ndarray)
         assert data.shape == (2, ) + shape
         assert isinstance(data[0, 0, 0], np.float64)
 
-        data = dic_metadata_loaded.loadedData['displacement']
+        data = dic_metadata_loaded.loaded_data['displacement']
         assert isinstance(data, np.ndarray)
         assert data.shape == (2, ) + shape
         assert isinstance(data[0, 0, 0], np.float64)
@@ -173,10 +173,10 @@ class TestDICDataLoader:
 
     @staticmethod
     def test_check_davis_data(dic_data_loaded):
-        assert dic_data_loaded.checkData() is None
+        assert dic_data_loaded.check_data() is None
 
     @staticmethod
     def test_check__bad_davis_data(dic_data_loaded):
-        dic_data_loaded.loadedMetadata['shape'] = (42, 20)
+        dic_data_loaded.loaded_metadata['shape'] = (42, 20)
         with pytest.raises(ValueError):
-            dic_data_loaded.checkData()
+            dic_data_loaded.check_data()

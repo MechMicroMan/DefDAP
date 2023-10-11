@@ -28,7 +28,7 @@ from defdap import base
 
 from defdap import defaults
 from defdap.plotting import MapPlot
-from defdap.utils import reportProgress
+from defdap.utils import report_progress
 
 
 class Map(base.Map):
@@ -123,7 +123,7 @@ class Map(base.Map):
         self.data.add_generator(
             'KAM', self.calc_kam, unit='rad', type='map', order=0,
             plot_params={
-                'plotColourBar': True,
+                'plot_colour_bar': True,
                 'clabel': 'KAM',
             }
         )
@@ -133,7 +133,7 @@ class Map(base.Map):
             metadatas=({
                 'order': 0,
                 'plot_params': {
-                    'plotColourBar': True,
+                    'plot_colour_bar': True,
                     'clabel': 'GND content',
                 }
             }, {
@@ -141,13 +141,13 @@ class Map(base.Map):
                 'save': False,
                 'default_component': (0, 0),
                 'plot_params': {
-                    'plotColourBar': True,
+                    'plot_colour_bar': True,
                     'clabel': 'Nye tensor',
                 }
             })
         )
 
-    @reportProgress("loading EBSD data")
+    @report_progress("loading EBSD data")
     def loadData(self, fileName, dataType=None):
         """Load in EBSD data from file.
 
@@ -159,15 +159,15 @@ class Map(base.Map):
             Format of EBSD data file.
 
         """
-        dataLoader = EBSDDataLoader.getLoader(dataType)
+        dataLoader = EBSDDataLoader.get_loader(dataType)
         dataLoader.load(fileName)
 
-        metadataDict = dataLoader.loadedMetadata
+        metadataDict = dataLoader.loaded_metadata
         self.shape = metadataDict['shape']
         self.step_size = metadataDict['step_size']
         self.phases = metadataDict['phases']
 
-        self.data.update(dataLoader.loadedData)
+        self.data.update(dataLoader.loaded_data)
 
         # write final status
         yield (f"Loaded EBSD data (dimensions: {self.xDim} x {self.yDim} "
@@ -242,7 +242,7 @@ class Map(base.Map):
     def scale(self):
         return self.step_size
 
-    @reportProgress("rotating EBSD data")
+    @report_progress("rotating EBSD data")
     def rotateData(self):
         """Rotate map by 180 degrees and transform quats accordingly.
 
@@ -255,7 +255,7 @@ class Map(base.Map):
         self.calc_quat_array()
 
         # Rotation from old coord system to new
-        transformQuat = Quat.fromAxisAngle(np.array([0, 0, 1]), np.pi).conjugate
+        transformQuat = Quat.from_axis_angle(np.array([0, 0, 1]), np.pi).conjugate
 
         # Perform vectorised multiplication
         quats = Quat.multiplyManyQuats(self.data.orientation.flatten(), transformQuat)
@@ -399,7 +399,7 @@ class Map(base.Map):
 
         return plot
 
-    @reportProgress("calculating KAM")
+    @report_progress("calculating KAM")
     def calc_kam(self):
         """
         Calculates Kernel Average Misorientaion (KAM) for the EBSD map,
@@ -411,7 +411,7 @@ class Map(base.Map):
 
         for i, row in enumerate(self.data.orientation):
             for j, quat in enumerate(row):
-                quatComps[:, i, j] = quat.quatCoef
+                quatComps[:, i, j] = quat.quat_coef
 
         kam = np.empty(self.shape)
 
@@ -448,7 +448,7 @@ class Map(base.Map):
         yield 1.
         return 2 * np.arccos(kam)
 
-    @reportProgress("calculating Nye tensor")
+    @report_progress("calculating Nye tensor")
     def calc_nye(self):
         """
         Calculates Nye tensor and related GND density for the EBSD map.
@@ -465,7 +465,7 @@ class Map(base.Map):
         # populate with initial quat components
         for i, row in enumerate(self.data.orientation):
             for j, quat in enumerate(row):
-                quatComps[0, :, i, j] = quat.quatCoef
+                quatComps[0, :, i, j] = quat.quat_coef
 
         # loop of over symmetries and apply to initial quat components
         # (excluding first symmetry as this is the identity transformation)
@@ -521,7 +521,7 @@ class Map(base.Map):
                            quatComps[argmisOrix[j, i], 3, j, i + 1])
                 misoquatx = qix.conjugate * q0x
                 # change stepsize to meters
-                betaderx[:, :, j, i] = (Quat.rotMatrix(misoquatx) - np.eye(3)) / self.step_size / 1e-6
+                betaderx[:, :, j, i] = (Quat.rot_matrix(misoquatx) - np.eye(3)) / self.step_size / 1e-6
                 q0y = Quat(quatComps[0, 0, j, i], quatComps[0, 1, j, i],
                            quatComps[0, 2, j, i], quatComps[0, 3, j, i])
                 qiy = Quat(quatComps[argmisOriy[j, i], 0, j + 1, i],
@@ -530,7 +530,7 @@ class Map(base.Map):
                            quatComps[argmisOriy[j, i], 3, j + 1, i])
                 misoquaty = qiy.conjugate * q0y
                 # change stepsize to meters
-                betadery[:, :, j, i] = (Quat.rotMatrix(misoquaty) - np.eye(3)) / self.step_size / 1e-6
+                betadery[:, :, j, i] = (Quat.rot_matrix(misoquaty) - np.eye(3)) / self.step_size / 1e-6
 
         # Calculate the Nye Tensor
         alpha = np.empty((3, 3) + self.shape)
@@ -568,7 +568,7 @@ class Map(base.Map):
         yield 1.
         return alpha_total9, alpha
 
-    @reportProgress("building quaternion array")
+    @report_progress("building quaternion array")
     def calc_quat_array(self):
         """Build quaternion array
 
@@ -588,7 +588,7 @@ class Map(base.Map):
         # store quat components in array
         quatComps = np.empty((4,) + self.shape)
         for idx in np.ndindex(self.shape):
-            quatComps[(slice(None),) + idx] = self.data.orientation[idx].quatCoef
+            quatComps[(slice(None),) + idx] = self.data.orientation[idx].quat_coef
 
         # misorientation in each quadrant surrounding a point
         misOris = np.zeros((8,) + self.shape)
@@ -661,7 +661,7 @@ class Map(base.Map):
 
         return quats
 
-    @reportProgress("finding grain boundaries")
+    @report_progress("finding grain boundaries")
     def find_boundaries(self, misori_tol=10):
         """Find grain and phase boundaries
 
@@ -683,7 +683,7 @@ class Map(base.Map):
         # populate with initial quat components
         for i, row in enumerate(self.data.orientation):
             for j, quat in enumerate(row):
-                quat_comps[0, :, i, j] = quat.quatCoef
+                quat_comps[0, :, i, j] = quat.quat_coef
 
         # loop of over symmetries and apply to initial quat components
         # (excluding first symmetry as this is the identity transformation)
@@ -749,7 +749,7 @@ class Map(base.Map):
         yield 1.
         return phase_boundaries, grain_boundaries
 
-    @reportProgress("constructing neighbour network")
+    @report_progress("constructing neighbour network")
     def build_neighbour_network(self):
         # create network
         nn = nx.Graph()
@@ -813,7 +813,7 @@ class Map(base.Map):
         # Set default plot parameters then update with any input
         plotParams = {
             'vmax': 1,
-            'plotColourBar': True,
+            'plot_colour_bar': True,
             'cmap': 'gray'
         }
         plotParams.update(kwargs)
@@ -850,7 +850,7 @@ class Map(base.Map):
 
         return plot
 
-    @reportProgress("finding grains")
+    @report_progress("finding grains")
     def find_grains(self, min_grain_size=10):
         """Find grains and assign IDs.
 
@@ -1037,13 +1037,13 @@ class Map(base.Map):
 
         return grain
 
-    @reportProgress("calculating grain mean orientations")
+    @report_progress("calculating grain mean orientations")
     def calcGrainAvOris(self):
         """Calculate the average orientation of grains.
 
         """
         # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        self.check_grains_detected()
 
         numGrains = len(self)
         for iGrain, grain in enumerate(self):
@@ -1052,7 +1052,7 @@ class Map(base.Map):
             # report progress
             yield (iGrain + 1) / numGrains
 
-    @reportProgress("calculating grain misorientations")
+    @report_progress("calculating grain misorientations")
     def calcGrainMisOri(self, calcAxis=False):
         """Calculate the misorientation within grains.
 
@@ -1063,7 +1063,7 @@ class Map(base.Map):
 
         """
         # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        self.check_grains_detected()
 
         numGrains = len(self)
         for iGrain, grain in enumerate(self):
@@ -1088,7 +1088,7 @@ class Map(base.Map):
 
         """
         # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        self.check_grains_detected()
 
         if component in [1, 2, 3]:
             self.misOri = np.zeros(self.shape)
@@ -1117,7 +1117,7 @@ class Map(base.Map):
 
         # Set default plot parameters then update with any input
         plotParams = {
-            'plotColourBar': True,
+            'plot_colour_bar': True,
             'clabel': clabel
         }
         plotParams.update(kwargs)
@@ -1126,7 +1126,7 @@ class Map(base.Map):
 
         return plot
 
-    @reportProgress("calculating grain average Schmid factors")
+    @report_progress("calculating grain average Schmid factors")
     def calcAverageGrainSchmidFactors(self, loadVector, slipSystems=None):
         """
         Calculates Schmid factors for all slip systems, for all grains,
@@ -1142,7 +1142,7 @@ class Map(base.Map):
 
         """
         # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        self.check_grains_detected()
 
         numGrains = len(self)
         for iGrain, grain in enumerate(self):
@@ -1176,15 +1176,15 @@ class Map(base.Map):
             'vmin': 0,
             'vmax': 0.5,
             'cmap': 'gray',
-            'plotColourBar': True,
+            'plot_colour_bar': True,
             'clabel': "Schmid factor"
         }
         plot_params.update(kwargs)
 
         # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        self.check_grains_detected()
 
-        if self[0].averageSchmidFactors is None:
+        if self[0].average_schmid_factors is None:
             raise Exception("Run 'calcAverageGrainSchmidFactors' first")
 
         grains_sf = []
@@ -1196,12 +1196,12 @@ class Map(base.Map):
                     if directions is not None:
                         for direction in directions:
                             current_sf.append(
-                                grain.averageSchmidFactors[plane][direction]
+                                grain.average_schmid_factors[plane][direction]
                             )
                     else:
-                        current_sf += grain.averageSchmidFactors[plane]
+                        current_sf += grain.average_schmid_factors[plane]
             else:
-                for sf_group in grain.averageSchmidFactors:
+                for sf_group in grain.average_schmid_factors:
                     current_sf += sf_group
 
             grains_sf.append(current_sf)
@@ -1209,8 +1209,8 @@ class Map(base.Map):
         grains_sf = np.array(grains_sf)
         grains_sf_max = np.max(grains_sf, axis=1)
 
-        plot = self.plotGrainDataMap(grainData=grains_sf_max, bg=0.5,
-                                     **plot_params)
+        plot = self.plot_grain_data_map(grain_data=grains_sf_max, bg=0.5,
+                                        **plot_params)
 
         return plot
 
@@ -1251,9 +1251,9 @@ class Grain(base.Grain):
         Average ori of grain
     averageMisOri
         Average misOri of grain.
-    averageSchmidFactors : list
+    average_schmid_factors : list
         List of list Schmid factors (grouped by slip plane).
-    slipTraceAngles : list
+    slip_trace_angles : list
         Slip trace angles in screen plane.
     slipTraceInclinations : list
          Angle between slip plane and screen plane.
@@ -1269,11 +1269,11 @@ class Grain(base.Grain):
         self.refOri = None                      # (quat) average ori of grain
         self.averageMisOri = None               # average misOri of grain
 
-        self.averageSchmidFactors = None        # list of list Schmid factors (grouped by slip plane)
-        self.slipTraceAngles = None             # list of slip trace angles
+        self.average_schmid_factors = None        # list of list Schmid factors (grouped by slip plane)
+        self.slip_trace_angles = None             # list of slip trace angles
         self.slipTraceInclinations = None
 
-        self.plotDefault = self.plotUnitCell
+        self.plotDefault = self.plot_unit_cell
 
         self.data.add_generator(
             ('GROD', 'GROD_axis'), self.calc_grod,
@@ -1282,7 +1282,7 @@ class Grain(base.Grain):
                 'unit': 'rad',
                 'order': 0,
                 'plot_params': {
-                    'plotColourBar': True,
+                    'plot_colour_bar': True,
                     'clabel': 'GROD',
                 }
             }, {
@@ -1290,7 +1290,7 @@ class Grain(base.Grain):
                 'order': 1,
                 'default_component': 0,
                 'plot_params': {
-                    'plotColourBar': True,
+                    'plot_colour_bar': True,
                     'clabel': 'GROD axis',
                 }
             })
@@ -1426,7 +1426,7 @@ class Grain(base.Grain):
         return Quat.plotIPF(self.data.orientation, direction, self.crystalSym,
                             **plotParams)
 
-    def plotUnitCell(self, fig=None, ax=None, plot=None, **kwargs):
+    def plot_unit_cell(self, fig=None, ax=None, plot=None, **kwargs):
         """Plot an unit cell of the average grain orientation.
 
         Parameters
@@ -1438,11 +1438,11 @@ class Grain(base.Grain):
         plot : defdap.plotting.PolePlot
             defdap plot to plot the figure to.
         kwargs
-            All other arguments are passed to :func:`defdap.quat.Quat.plotUnitCell`.
+            All other arguments are passed to :func:`defdap.quat.Quat.plot_unit_cell`.
 
         """
         crystalStructure = self.ebsdMap.phases[self.phaseID].crystalStructure
-        plot = Quat.plotUnitCell(self.refOri, fig=fig, ax=ax, plot=plot,
+        plot = Quat.plot_unit_cell(self.refOri, fig=fig, ax=ax, plot=plot,
                           crystalStructure=crystalStructure, **kwargs)
 
         return plot
@@ -1455,7 +1455,7 @@ class Grain(base.Grain):
         component : int, {0, 1, 2, 3}
             0 gives misorientation, 1, 2, 3 gives rotation about x, y, z.
         kwargs
-            All other arguments are passed to :func:`defdap.ebsd.plotGrainData`.
+            All other arguments are passed to :func:`defdap.ebsd.plot_grain_data`.
 
         Returns
         -------
@@ -1466,7 +1466,7 @@ class Grain(base.Grain):
 
         # Set default plot parameters then update with any input
         plotParams = {
-            'plotColourBar': True
+            'plot_colour_bar': True
         }
         if component == 0:
             if self.misOriList is None: self.buildMisOriList()
@@ -1485,7 +1485,7 @@ class Grain(base.Grain):
             raise ValueError("Component must between 0 and 3")
         plotParams.update(kwargs)
 
-        plot = self.plotGrainData(grainData=plotData, **plotParams)
+        plot = self.plot_grain_data(grain_data=plotData, **plotParams)
 
         return plot
 
@@ -1503,7 +1503,7 @@ class Grain(base.Grain):
 
         """
         if slipSystems is None:
-            slipSystems = self.phase.slipSystems
+            slipSystems = self.phase.slip_systems
         if self.refOri is None:
             self.calcAverageOri()
 
@@ -1511,20 +1511,20 @@ class Grain(base.Grain):
         grainAvOri = self.refOri
 
         # Transform the load vector into crystal coordinates
-        loadVectorCrystal = grainAvOri.transformVector(loadVector)
+        loadVectorCrystal = grainAvOri.transform_vector(loadVector)
 
-        self.averageSchmidFactors = []
+        self.average_schmid_factors = []
         # flatten list of lists
         # slipSystems = chain.from_iterable(slipSystems)
 
         # Loop over groups of slip systems with same slip plane
         for i, slipSystemGroup in enumerate(slipSystems):
-            self.averageSchmidFactors.append([])
+            self.average_schmid_factors.append([])
             # Then loop over individual slip systems
             for slipSystem in slipSystemGroup:
                 schmidFactor = abs(np.dot(loadVectorCrystal, slipSystem.slipPlane) *
                                    np.dot(loadVectorCrystal, slipSystem.slipDir))
-                self.averageSchmidFactors[i].append(schmidFactor)
+                self.average_schmid_factors[i].append(schmidFactor)
 
         return
 
@@ -1535,34 +1535,34 @@ class Grain(base.Grain):
         Returns
         -------
         list
-            Slip trace angles based on grain orientation in calcSlipTraces.
+            Slip trace angles based on grain orientation in calc_slip_traces.
 
         """
-        if self.slipTraceAngles is None:
-            self.calcSlipTraces()
+        if self.slip_trace_angles is None:
+            self.calc_slip_traces()
 
-        return self.slipTraceAngles
+        return self.slip_trace_angles
 
     def printSlipTraces(self):
         """Print a list of slip planes (with colours) and slip directions
 
         """
-        self.calcSlipTraces()
+        self.calc_slip_traces()
 
-        if self.averageSchmidFactors is None:
+        if self.average_schmid_factors is None:
             raise Exception("Run 'calcAverageGrainSchmidFactors' on the EBSD map first")
 
         for ssGroup, colour, sfGroup, slipTrace in zip(
-            self.phase.slipSystems,
+            self.phase.slip_systems,
             self.phase.slipTraceColours,
-            self.averageSchmidFactors,
+            self.average_schmid_factors,
             self.slipTraces
         ):
-            print('{0}\tColour: {1}\tAngle: {2:.2f}'.format(ssGroup[0].slipPlaneLabel, colour, slipTrace * 180 / np.pi))
+            print('{0}\tColour: {1}\tAngle: {2:.2f}'.format(ssGroup[0].slip_plane_label, colour, slipTrace * 180 / np.pi))
             for ss, sf in zip(ssGroup, sfGroup):
-                print('  {0}   SF: {1:.3f}'.format(ss.slipDirLabel, sf))
+                print('  {0}   SF: {1:.3f}'.format(ss.slip_dir_label, sf))
 
-    def calcSlipTraces(self, slipSystems=None):
+    def calc_slip_traces(self, slipSystems=None):
         """Calculates list of slip trace angles based on grain orientation.
 
         Parameters
@@ -1571,7 +1571,7 @@ class Grain(base.Grain):
 
         """
         if slipSystems is None:
-            slipSystems = self.phase.slipSystems
+            slipSystems = self.phase.slip_systems
         if self.refOri is None:
             self.calcAverageOri()
 
@@ -1579,15 +1579,15 @@ class Grain(base.Grain):
 
         grainAvOri = self.refOri   # orientation of grain
 
-        screenPlaneNormCrystal = grainAvOri.transformVector(screenPlaneNorm)
+        screenPlaneNormCrystal = grainAvOri.transform_vector(screenPlaneNorm)
 
-        self.slipTraceAngles = []
+        self.slip_trace_angles = []
         self.slipTraceInclinations = []
         # Loop over each group of slip systems
         for slipSystemGroup in slipSystems:
             # Take slip plane from first in group
             slipPlaneNorm = slipSystemGroup[0].slipPlane
-            # planeLabel = slipSystemGroup[0].slipPlaneLabel
+            # planeLabel = slipSystemGroup[0].slip_plane_label
 
             # Calculate intersection of slip plane with plane of screen
             intersectionCrystal = np.cross(screenPlaneNormCrystal, slipPlaneNorm)
@@ -1599,7 +1599,7 @@ class Grain(base.Grain):
             # print("{} inclination: {:.1f}".format(planeLabel, inclination * 180 / np.pi))
 
             # Transform intersection back into sample coordinates and normalise
-            intersection = grainAvOri.conjugate.transformVector(intersectionCrystal)
+            intersection = grainAvOri.conjugate.transform_vector(intersectionCrystal)
             intersection = intersection / np.sqrt(np.dot(intersection, intersection))
 
             # Calculate trace angle. Starting vertical and proceeding
@@ -1609,7 +1609,7 @@ class Grain(base.Grain):
             traceAngle = np.arccos(np.dot(intersection, np.array([0, 1.0, 0])))
 
             # Append to list
-            self.slipTraceAngles.append(traceAngle)
+            self.slip_trace_angles.append(traceAngle)
             self.slipTraceInclinations.append(inclination)
 
 
@@ -1778,7 +1778,7 @@ class BoundarySegment(object):
 
     def misorientation(self):
         misOri, minSymm = self.grain1.refOri.misOri(
-            self.grain2.refOri, self.ebsdMap.crystalSym, returnQuat=2
+            self.grain2.refOri, self.ebsdMap.crystal_sym, returnQuat=2
         )
         misOri = 2 * np.arccos(misOri)
         misOriAxis = self.grain1.refOri.misOriAxis(minSymm)
@@ -1834,10 +1834,10 @@ class Linker(object):
         """
         self.plots = []
         for ebsd_map in self.ebsd_maps:
-            plot = ebsd_map.plotDefault(makeInteractive=True, **kwargs)
-            plot.addEventHandler('button_press_event', self.click_set_origin)
-            plot.addPoints([ebsd_map.origin[0]], [ebsd_map.origin[1]],
-                           c='w', s=60, marker='x')
+            plot = ebsd_map.plotDefault(make_interactive=True, **kwargs)
+            plot.add_event_handler('button_press_event', self.click_set_origin)
+            plot.add_points([ebsd_map.origin[0]], [ebsd_map.origin[1]],
+                            c='w', s=60, marker='x')
             self.plots.append(plot)
 
     def click_set_origin(self, event, plot):
@@ -1856,8 +1856,8 @@ class Linker(object):
             return
 
         origin = (int(event.xdata), int(event.ydata))
-        plot.callingMap.origin = origin
-        plot.addPoints([origin[0]], [origin[1]], updateLayer=0)
+        plot.calling_map.origin = origin
+        plot.add_points([origin[0]], [origin[1]], updateLayer=0)
         print(f"Origin set to ({origin[0]}, {origin[1]})")
 
     def start_linking(self):
@@ -1869,8 +1869,8 @@ class Linker(object):
             plot = ebsd_map.locate_grain(click_event=self.click_grain_guess)
 
             # Add make link button to axes
-            plot.addButton('Make link', self.make_link,
-                           color='0.85', hovercolor='0.95')
+            plot.add_button('Make link', self.make_link,
+                            color='0.85', hovercolor='0.95')
 
             self.plots.append(plot)
 
@@ -1895,7 +1895,7 @@ class Linker(object):
             # clicked on 'master' map so highlight and guess grain on others
 
             # set current grain in 'master' ebsd map
-            self.ebsd_maps[0].clickGrainID(event, plot, False)
+            self.ebsd_maps[0].click_grain_id(event, plot, False)
 
             # guess at grain in other maps
             for ebsd_map, plot in zip(self.ebsd_maps[1:], self.plots[1:]):
@@ -1916,12 +1916,12 @@ class Linker(object):
                 print(grain_id)
 
                 # update the grain highlights layer in the plot
-                plot.addGrainHighlights([grain_id],
-                                        alpha=ebsd_map.highlightAlpha)
+                plot.add_grain_highlights([grain_id],
+                                          alpha=ebsd_map.highlightAlpha)
 
         else:
             # clicked on other map so correct guessed selected grain
-            curr_ebsd_map.clickGrainID(event, plot, False)
+            curr_ebsd_map.click_grain_id(event, plot, False)
 
     def make_link(self, event, plot):
         """Make a link between the EBSD maps after clicking.
@@ -1932,7 +1932,7 @@ class Linker(object):
 
         for i, ebsd_map in enumerate(self.ebsd_maps):
             if ebsd_map.sel_grain is not None:
-                curr_link.append(ebsd_map.sel_grain.grainID)
+                curr_link.append(ebsd_map.sel_grain.grain_id)
             else:
                 raise Exception(f"No grain selected in map {i + 1}.")
 

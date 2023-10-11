@@ -73,9 +73,9 @@ class OxfordTextWriter(EBSDDataWriter):
         # convert quats to Euler angles
         out_euler_array = np.zeros(shape + (3,))
         for idx in np.ndindex(shape):
-            out_euler_array[idx] = self.data['quat'][idx].eulerAngles()
+            out_euler_array[idx] = self.data['quat'][idx].euler_angles()
         out_euler_array *= 180 / np.pi
-        acq_rot = self.metadata['acquisition_rotation'].eulerAngles()
+        acq_rot = self.metadata['acquisition_rotation'].euler_angles()
         acq_rot *= 180 / np.pi
 
         # create coordinate grids
@@ -107,7 +107,7 @@ class OxfordTextWriter(EBSDDataWriter):
                 angles = "{:.3f};{:.3f};{:.3f}".format(*angles)
 
                 ctf_file.write(f"{dims}\t{angles}\t{phase.name}"
-                               f"\t{phase.laueGroup}\t0\t\t\t\n")
+                               f"\t{phase.laue_group}\t0\t\t\t\n")
 
             ctf_file.write("Phase\tX\tY\tBands\tError\tEuler1\tEuler2"
                            "\tEuler3\tMAD\tBC\tBS\n")

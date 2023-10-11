@@ -25,7 +25,7 @@ class Quat(object):
     are interpreted in the passive sense.
 
     """
-    __slots__ = ['quatCoef']
+    __slots__ = ['quat_coef']
 
     def __init__(self, *args, allow_southern: Optional[bool] = False) -> None:
         """
@@ -44,11 +44,11 @@ class Quat(object):
         if len(args) == 1:
             if len(args[0]) != 4:
                 raise TypeError("Arrays input must have 4 elements")
-            self.quatCoef = np.array(args[0], dtype=float)
+            self.quat_coef = np.array(args[0], dtype=float)
 
         # construct with quat coefficients
         elif len(args) == 4:
-            self.quatCoef = np.array(args, dtype=float)
+            self.quat_coef = np.array(args, dtype=float)
 
         else:
             raise TypeError("Incorrect argument length. Input should be "
@@ -56,11 +56,11 @@ class Quat(object):
                             "quat coefficients")
 
         # move to northern hemisphere
-        if not allow_southern and self.quatCoef[0] < 0:
-            self.quatCoef = self.quatCoef * -1
+        if not allow_southern and self.quat_coef[0] < 0:
+            self.quat_coef = self.quat_coef * -1
 
     @classmethod
-    def fromEulerAngles(cls, ph1: float, phi: float, ph2: float) -> 'Quat':
+    def from_euler_angles(cls, ph1: float, phi: float, ph2: float) -> 'Quat':
         """Create a quat object from 3 Bunge euler angles.
 
         Parameters
@@ -79,7 +79,7 @@ class Quat(object):
 
         """
         # calculate quat coefficients
-        quatCoef = np.array([
+        quat_coef = np.array([
             np.cos(phi / 2.0) * np.cos((ph1 + ph2) / 2.0),
             -np.sin(phi / 2.0) * np.cos((ph1 - ph2) / 2.0),
             -np.sin(phi / 2.0) * np.sin((ph1 - ph2) / 2.0),
@@ -87,10 +87,10 @@ class Quat(object):
         ], dtype=float)
 
         # call constructor
-        return cls(quatCoef)
+        return cls(quat_coef)
 
     @classmethod
-    def fromAxisAngle(cls, axis: np.ndarray, angle: float) -> 'Quat':
+    def from_axis_angle(cls, axis: np.ndarray, angle: float) -> 'Quat':
         """Create a quat object from a rotation around an axis. This
         creates a quaternion to represent the passive rotation (-ve axis).
 
@@ -111,14 +111,14 @@ class Quat(object):
         axis = np.array(axis)
         axis = axis / np.sqrt(np.dot(axis, axis))
         # calculate quat coefficients
-        quatCoef = np.zeros(4, dtype=float)
-        quatCoef[0] = np.cos(angle / 2)
-        quatCoef[1:4] = -np.sin(angle / 2) * axis
+        quat_coef = np.zeros(4, dtype=float)
+        quat_coef[0] = np.cos(angle / 2)
+        quat_coef[1:4] = -np.sin(angle / 2) * axis
 
         # call constructor
-        return cls(quatCoef)
+        return cls(quat_coef)
 
-    def eulerAngles(self) -> np.ndarray:
+    def euler_angles(self) -> np.ndarray:
         """Calculate the Euler angle representation for this rotation.
 
         Returns
@@ -139,7 +139,7 @@ class Quat(object):
         """
         eulers = np.empty(3, dtype=float)
 
-        q = self.quatCoef
+        q = self.quat_coef
         q03 = q[0]**2 + q[3]**2
         q12 = q[1]**2 + q[2]**2
         chi = np.sqrt(q03 * q12)
@@ -175,12 +175,12 @@ class Quat(object):
 
         return eulers
 
-    def rotMatrix(self) -> np.ndarray:
+    def rot_matrix(self) -> np.ndarray:
         """Calculate the rotation matrix representation for this rotation.
 
         Returns
         -------
-        rotMatrix : numpy.ndarray, shape (3, 3)
+        rot_matrix : numpy.ndarray, shape (3, 3)
             Rotation matrix.
 
         References
@@ -194,28 +194,28 @@ class Quat(object):
             Model. Simul. Mater. Sci. Eng., 23(8)
 
         """
-        rotMatrix = np.empty((3, 3), dtype=float)
+        rot_matrix = np.empty((3, 3), dtype=float)
 
-        q = self.quatCoef
+        q = self.quat_coef
         qbar = q[0]**2 - q[1]**2 - q[2]**2 - q[3]**2
 
-        rotMatrix[0, 0] = qbar + 2 * q[1]**2
-        rotMatrix[0, 1] = 2 * (q[1] * q[2] - q[0] * q[3])
-        rotMatrix[0, 2] = 2 * (q[1] * q[3] + q[0] * q[2])
+        rot_matrix[0, 0] = qbar + 2 * q[1]**2
+        rot_matrix[0, 1] = 2 * (q[1] * q[2] - q[0] * q[3])
+        rot_matrix[0, 2] = 2 * (q[1] * q[3] + q[0] * q[2])
 
-        rotMatrix[1, 0] = 2 * (q[1] * q[2] + q[0] * q[3])
-        rotMatrix[1, 1] = qbar + 2 * q[2]**2
-        rotMatrix[1, 2] = 2 * (q[2] * q[3] - q[0] * q[1])
+        rot_matrix[1, 0] = 2 * (q[1] * q[2] + q[0] * q[3])
+        rot_matrix[1, 1] = qbar + 2 * q[2]**2
+        rot_matrix[1, 2] = 2 * (q[2] * q[3] - q[0] * q[1])
 
-        rotMatrix[2, 0] = 2 * (q[1] * q[3] - q[0] * q[2])
-        rotMatrix[2, 1] = 2 * (q[2] * q[3] + q[0] * q[1])
-        rotMatrix[2, 2] = qbar + 2 * q[3]**2
+        rot_matrix[2, 0] = 2 * (q[1] * q[3] - q[0] * q[2])
+        rot_matrix[2, 1] = 2 * (q[2] * q[3] + q[0] * q[1])
+        rot_matrix[2, 2] = qbar + 2 * q[3]**2
 
-        return rotMatrix
+        return rot_matrix
 
     # show components when the quat is printed
     def __repr__(self) -> str:
-        return "[{:.4f}, {:.4f}, {:.4f}, {:.4f}]".format(*self.quatCoef)
+        return "[{:.4f}, {:.4f}, {:.4f}, {:.4f}]".format(*self.quat_coef)
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -233,13 +233,13 @@ class Quat(object):
         if isinstance(right, type(self)):   # another quat
             newQuatCoef = np.zeros(4, dtype=float)
             newQuatCoef[0] = (
-                    self.quatCoef[0] * right.quatCoef[0] -
-                    np.dot(self.quatCoef[1:4], right.quatCoef[1:4])
+                    self.quat_coef[0] * right.quat_coef[0] -
+                    np.dot(self.quat_coef[1:4], right.quat_coef[1:4])
             )
             newQuatCoef[1:4] = (
-                    self.quatCoef[0] * right.quatCoef[1:4] +
-                    right.quatCoef[0] * self.quatCoef[1:4] +
-                    np.cross(self.quatCoef[1:4], right.quatCoef[1:4])
+                    self.quat_coef[0] * right.quat_coef[1:4] +
+                    right.quat_coef[0] * self.quat_coef[1:4] +
+                    np.cross(self.quat_coef[1:4], right.quat_coef[1:4])
             )
             return Quat(newQuatCoef, allow_southern=allow_southern)
 
@@ -260,28 +260,28 @@ class Quat(object):
 
         """
         if isinstance(right, type(self)):
-            return np.dot(self.quatCoef, right.quatCoef)
+            return np.dot(self.quat_coef, right.quat_coef)
         raise TypeError()
 
     # overload + operator
     def __add__(self, right: 'Quat') -> 'Quat':
         if isinstance(right, type(self)):
-            return Quat(self.quatCoef + right.quatCoef)
+            return Quat(self.quat_coef + right.quat_coef)
         raise TypeError()
 
     # overload += operator
     def __iadd__(self, right: 'Quat') -> 'Quat':
         if isinstance(right, type(self)):
-            self.quatCoef += right.quatCoef
+            self.quat_coef += right.quat_coef
             return self
         raise TypeError()
 
     # allow array like setting/getting of components
     def __getitem__(self, key: int) -> float:
-        return self.quatCoef[key]
+        return self.quat_coef[key]
 
     def __setitem__(self, key: int, value: float) -> None:
-        self.quatCoef[key] = value
+        self.quat_coef[key] = value
 
     def norm(self) -> float:
         """Calculate the norm of the quaternion.
@@ -292,7 +292,7 @@ class Quat(object):
             Norm of the quaternion.
 
         """
-        return np.sqrt(np.dot(self.quatCoef[0:4], self.quatCoef[0:4]))
+        return np.sqrt(np.dot(self.quat_coef[0:4], self.quat_coef[0:4]))
 
     def normalise(self) -> 'Quat':
         """ Normalise the quaternion (turn it into an unit quaternion).
@@ -303,7 +303,7 @@ class Quat(object):
             Normalised quaternion.
 
         """
-        self.quatCoef /= self.norm()
+        self.quat_coef /= self.norm()
         return
 
     # also the inverse if this is a unit quaternion
@@ -319,7 +319,7 @@ class Quat(object):
         """
         return Quat(self[0], -self[1], -self[2], -self[3])
 
-    def transformVector(
+    def transform_vector(
         self,
         vector: Union[Tuple, List, np.ndarray]
     ) -> np.ndarray:
@@ -352,7 +352,7 @@ class Quat(object):
             vectorQuat.__mul__(self.conjugate, allow_southern=True),
             allow_southern=True
         )
-        return vectorQuatTransformed.quatCoef[1:4]
+        return vectorQuatTransformed.quat_coef[1:4]
 
     def misOri(
         self,
@@ -420,7 +420,7 @@ class Quat(object):
         """
         if isinstance(right, type(self)):
             Dq = right * self.conjugate
-            Dq = Dq.quatCoef
+            Dq = Dq.quat_coef
             misOriAxis = 2 * Dq[1:4] * np.arccos(Dq[0]) / np.sqrt(1 - Dq[0]**2)
             return misOriAxis
         raise TypeError("Input must be a quaternion.")
@@ -433,9 +433,9 @@ class Quat(object):
         plot: Optional['plotting.Plot'] = None,
         fig: Optional['matplotlib.figure.Figure'] = None,
         ax: Optional['matplotlib.axes.Axes'] = None,
-        plotColourBar: Optional[bool] = False,
+        plot_colour_bar: Optional[bool] = False,
         clabel: Optional[str] = "",
-        makeInteractive: Optional[bool] = False,
+        make_interactive: Optional[bool] = False,
         markerColour: Optional[Union[List[str], str]] = None,
         markerSize: Optional[float] = 40,
         **kwargs
@@ -460,9 +460,9 @@ class Quat(object):
         ax
             Axis to plot on, if not provided the current
             active axis is used.
-        makeInteractive
+        make_interactive
             If true, make the plot interactive.
-        plotColourBar : bool
+        plot_colour_bar : bool
             If true, plot a colour bar next to the map.
         clabel : str
             Label for the colour bar.
@@ -473,7 +473,7 @@ class Quat(object):
             Size of markers (only used for half and half colouring,
             otherwise use argument s).
         kwargs
-            All other arguments are passed to :func:`defdap.plotting.PolePlot.addPoints`.
+            All other arguments are passed to :func:`defdap.plotting.PolePlot.add_points`.
 
         """
         plotParams = {'marker': '+'}
@@ -490,27 +490,27 @@ class Quat(object):
         if plot is None:
             plot = plotting.PolePlot(
                 "IPF", symGroup, projection=projection,
-                ax=ax, fig=fig, makeInteractive=makeInteractive
+                ax=ax, fig=fig, make_interactive=make_interactive
             )
         plot.addPoints(
             alphaFund, betaFund,
-            markerColour=markerColour, markerSize=markerSize,
+            marker_colour=markerColour, marker_size=markerSize,
             **plotParams
         )
 
-        if plotColourBar:
-            plot.addColourBar(clabel)
+        if plot_colour_bar:
+            plot.add_colour_bar(clabel)
 
         return plot
 
-    def plotUnitCell(
+    def plot_unit_cell(
         self,
         crystalStructure: 'defdap.crystal.CrystalStructure',
         OI: Optional[bool] = True,
         plot: Optional['plotting.CrystalPlot'] = None,
         fig: Optional['matplotlib.figure.Figure'] = None,
         ax: Optional['matplotlib.axes.Axes'] = None,
-        makeInteractive: Optional[bool] = False,
+        make_interactive: Optional[bool] = False,
         **kwargs
     ) -> 'plotting.CrystalPlot':
         """Plots a unit cell.
@@ -527,7 +527,7 @@ class Quat(object):
             Figure to plot on, if not provided the current active axis is used.
         ax
             Axis to plot on, if not provided the current active axis is used.
-        makeInteractive
+        make_interactive
             True to make the plot interactive.
         kwargs
             All other arguments are passed to :func:`defdap.plotting.CrystalPlot.addVerts`.
@@ -547,15 +547,15 @@ class Quat(object):
             szFac = 0.18
             if OI:
                 # Add 30 degrees to phi2 for OI
-                eulerAngles = self.eulerAngles()
+                eulerAngles = self.euler_angles()
                 eulerAngles[2] += np.pi / 6
-                gg = Quat.fromEulerAngles(*eulerAngles).rotMatrix().T
+                gg = Quat.from_euler_angles(*eulerAngles).rot_matrix().T
             else:
-                gg = self.rotMatrix().T
+                gg = self.rot_matrix().T
 
         elif crystalStructure.name == 'cubic':
             szFac = 0.25
-            gg = self.rotMatrix().T
+            gg = self.rot_matrix().T
 
         # Rotate the lattice cell points
         pts = np.matmul(gg, vert.T).T * szFac
@@ -567,7 +567,7 @@ class Quat(object):
 
         if plot is None:
             plot = plotting.CrystalPlot(
-                ax=ax, fig=fig, makeInteractive=makeInteractive
+                ax=ax, fig=fig, make_interactive=make_interactive
             )
 
         plot.ax.set_xlim3d(-0.15, 0.15)
@@ -632,15 +632,15 @@ class Quat(object):
         list(defdap.quat.Quat)
 
         """
-        quatArray = np.array([q.quatCoef for q in quats])
+        quatArray = np.array([q.quat_coef for q in quats])
 
         tempArray = np.zeros((len(quatArray),4), dtype=float)
-        tempArray[...,0] = ((quatArray[...,0] * right.quatCoef[0]) -
-                             np.dot(quatArray[...,1:4], right.quatCoef[1:4]))
+        tempArray[...,0] = ((quatArray[...,0] * right.quat_coef[0]) -
+                            np.dot(quatArray[...,1:4], right.quat_coef[1:4]))
 
-        tempArray[...,1:4] = ((quatArray[...,0,None] * right.quatCoef[None,1:4]) +
-                              (right.quatCoef[0] * quatArray[...,1:4]) +
-                              np.cross(quatArray[...,1:4], right.quatCoef[1:4]))
+        tempArray[...,1:4] = ((quatArray[...,0,None] * right.quat_coef[None, 1:4]) +
+                              (right.quat_coef[0] * quatArray[..., 1:4]) +
+                              np.cross(quatArray[...,1:4], right.quat_coef[1:4]))
 
         return [Quat(coefs) for coefs in tempArray]
 
@@ -665,7 +665,7 @@ class Quat(object):
         quats = np.array(quats)
         quat_comps = np.empty((4,) + quats.shape)
         for idx in np.ndindex(quats.shape):
-            quat_comps[(slice(None),) + idx] = quats[idx].quatCoef
+            quat_comps[(slice(None),) + idx] = quats[idx].quat_coef
 
         return quat_comps
 
@@ -784,7 +784,7 @@ class Quat(object):
         misOris = np.empty((quatComps.shape[0], quatComps.shape[2]))
 
         # Dot product of each quat in quatComps with refOri
-        misOris[:, :] = abs(np.einsum("ijk,j->ik", quatComps, refOri.quatCoef))
+        misOris[:, :] = abs(np.einsum("ijk,j->ik", quatComps, refOri.quat_coef))
 
         maxIdxs0 = np.argmax(misOris, axis=0)
         maxIdxs1 = np.arange(misOris.shape[1])

@@ -175,24 +175,24 @@ class Frame(object):
             map_name = map_obj.homog_map_name
 
         binning = map_obj.data.get_metadata(map_name, 'binning', 1)
-        plot = map_obj.plot_map(map_name, makeInteractive=True, **kwargs)
+        plot = map_obj.plot_map(map_name, make_interactive=True, **kwargs)
 
         # Plot stored homog points if there are any
         if len(self.homog_points) > 0:
             homog_points = np.array(self.homog_points) * binning
-            plot.addPoints(homog_points[:, 0], homog_points[:, 1], c='y', s=60)
+            plot.add_points(homog_points[:, 0], homog_points[:, 1], c='y', s=60)
         else:
             # add empty points layer to update later
-            plot.addPoints([None], [None], c='y', s=60)
+            plot.add_points([None], [None], c='y', s=60)
 
         # add empty points layer for current selected point
-        plot.addPoints([None], [None], c='w', s=60, marker='x')
+        plot.add_points([None], [None], c='w', s=60, marker='x')
 
-        plot.addEventHandler('button_press_event', self.homog_click)
-        plot.addEventHandler('key_press_event', self.homog_key)
-        plot.addButton("Save point",
-                       lambda e, p: self.homog_click_save(e, p, binning),
-                       color="0.85", hovercolor="blue")
+        plot.add_event_handler('button_press_event', self.homog_click)
+        plot.add_event_handler('key_press_event', self.homog_key)
+        plot.add_button("Save point",
+                        lambda e, p: self.homog_click_save(e, p, binning),
+                        color="0.85", hovercolor="blue")
 
         return plot
 
@@ -215,7 +215,7 @@ class Frame(object):
         # right mouse click or shift + left mouse click
         # shift click doesn't work in osx backend
         if event.button == 3 or (event.button == 1 and event.key == 'shift'):
-            plot.addPoints([int(event.xdata)], [int(event.ydata)], updateLayer=1)
+            plot.add_points([int(event.xdata)], [int(event.ydata)], updateLayer=1)
 
     @staticmethod
     def homog_key(event, plot):
@@ -237,7 +237,7 @@ class Frame(object):
             return
 
         # get the selected point
-        sel_point = plot.imgLayers[plot.pointsLayerIDs[1]].get_offsets()[0]
+        sel_point = plot.img_layers[plot.points_layer_ids[1]].get_offsets()[0]
         if sel_point[0] is None or sel_point[1] is None:
             return
 
@@ -251,7 +251,7 @@ class Frame(object):
         elif key == arrow_keys[3]:
             sel_point[1] += move
 
-        plot.addPoints([sel_point[0]], [sel_point[1]], updateLayer=1)
+        plot.add_points([sel_point[0]], [sel_point[1]], updateLayer=1)
 
     def homog_click_save(self, event, plot, binning):
         """Append the selected point on the map to homogPoints.
@@ -267,12 +267,12 @@ class Frame(object):
 
         """
         # get the selected point
-        sel_point = plot.imgLayers[plot.pointsLayerIDs[1]].get_offsets()[0]
+        sel_point = plot.img_layers[plot.points_layer_ids[1]].get_offsets()[0]
         if sel_point[0] is None or sel_point[1] is None:
             return
 
         # remove selected point from plot
-        plot.addPoints([None], [None], updateLayer=1)
+        plot.add_points([None], [None], updateLayer=1)
 
         # then scale and add to homog points list
         sel_point = tuple((sel_point / binning).round().astype(int))
@@ -280,7 +280,7 @@ class Frame(object):
 
         # update the plotted homog points
         homog_points = np.array(self.homog_points) * binning
-        plot.addPoints(homog_points[:, 0], homog_points[:, 1], updateLayer=0)
+        plot.add_points(homog_points[:, 0], homog_points[:, 1], updateLayer=0)
 
     def update_homog_points(self, homog_idx, new_point=None, delta=None):
         """

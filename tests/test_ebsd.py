@@ -62,7 +62,7 @@ class TestMapFindBoundaries:
     @staticmethod
     def test_return_type(mock_map):
         # run test and collect result
-        ebsd.Map.findBoundaries(mock_map, boundDef=10)
+        ebsd.Map.find_boundaries(mock_map, boundDef=10)
         result = mock_map.boundaries
 
         assert type(result) is np.ndarray
@@ -75,7 +75,7 @@ class TestMapFindBoundaries:
     @pytest.mark.parametrize('bound_def', [5, 10])
     def test_calc(mock_map, bound_def):
         # run test and collect result
-        ebsd.Map.findBoundaries(mock_map, boundDef=bound_def)
+        ebsd.Map.find_boundaries(mock_map, boundDef=bound_def)
         result = mock_map.boundaries
 
         # load expected
@@ -132,6 +132,6 @@ plotMisOri
 calcAverageSchmidFactors
 slipTraces
 printSlipTraces
-calcSlipTraces
+calc_slip_traces
 
 '''

@@ -18,7 +18,7 @@ from datetime import datetime
 from uuid import uuid4
 
 
-def reportProgress(message: str = ""):
+def report_progress(message: str = ""):
     """Decorator for reporting progress of given function
 
     Parameters

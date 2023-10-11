@@ -22,13 +22,13 @@ from defdap.quat import Quat
 
 
 class Phase(object):
-    def __init__(self, name, laueGroup, spaceGroup, latticeParams):
+    def __init__(self, name, laue_group, spaceGroup, latticeParams):
         """
         Parameters
         ----------
         name : str
             Name of the phase
-        laueGroup : int
+        laue_group : int
             Laue group
         spaceGroup : int
             Space group
@@ -37,7 +37,7 @@ class Phase(object):
 
         """
         self.name = name
-        self.laueGroup = laueGroup
+        self.laue_group = laue_group
         self.spaceGroup = spaceGroup
         self.latticeParams = latticeParams
 
@@ -45,9 +45,9 @@ class Phase(object):
             self.crystalStructure = {
                 9: crystalStructures['hexagonal'],
                 11: crystalStructures['cubic'],
-            }[laueGroup]
+            }[laue_group]
         except KeyError:
-            raise ValueError(f"Unknown Laue group key: {laueGroup}")
+            raise ValueError(f"Unknown Laue group key: {laue_group}")
 
         if self.crystalStructure is crystalStructures['hexagonal']:
             self.ss_file = defaults['slip_system_file']['HCP']
@@ -61,10 +61,10 @@ class Phase(object):
                 self.ss_file = None
 
         if self.ss_file is None:
-            self.slipSystems = None
+            self.slip_systems = None
             self.slipTraceColours = None
         else:
-            self.slipSystems, self.slipTraceColours = SlipSystem.load(
+            self.slip_systems, self.slipTraceColours = SlipSystem.load(
                 self.ss_file, self.crystalStructure, cOverA=self.cOverA
             )
 
@@ -88,13 +88,13 @@ class Phase(object):
 
         """
         # TODO: this should be moved to static method of the SlipSystem class
-        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems,
+        for i, (ssGroup, colour) in enumerate(zip(self.slip_systems,
                                                   self.slipTraceColours)):
             print('Plane {0}: {1}\tColour: {2}'.format(
-                i, ssGroup[0].slipPlaneLabel, colour
+                i, ssGroup[0].slip_plane_label, colour
             ))
             for j, ss in enumerate(ssGroup):
-                print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
+                print('  Direction {0}: {1}'.format(j, ss.slip_dir_label))
 
 
 class CrystalStructure(object):
@@ -350,15 +350,15 @@ class SlipSystem(object):
         return hash(posIdc(self.planeIdc) + posIdc(self.dirIdc))
 
     def __str__(self):
-        return self.slipPlaneLabel + self.slipDirLabel
+        return self.slip_plane_label + self.slip_dir_label
 
     def __repr__(self):
-        return (f"SlipSystem(slipPlane={self.slipPlaneLabel}, "
-                f"slipDir={self.slipDirLabel}, "
+        return (f"SlipSystem(slipPlane={self.slip_plane_label}, "
+                f"slipDir={self.slip_dir_label}, "
                 f"symmetry={self.crystalStructure.name})")
 
     @property
-    def slipPlaneLabel(self):
+    def slip_plane_label(self):
         """Return the slip plane label. For example '(111)'.
 
         Returns
@@ -370,7 +370,7 @@ class SlipSystem(object):
         return '(' + ''.join(map(strIdx, self.planeIdc)) + ')'
 
     @property
-    def slipDirLabel(self):
+    def slip_dir_label(self):
         """Returns the slip direction label. For example '[110]'.
 
         Returns
@@ -413,8 +413,8 @@ class SlipSystem(object):
         for i, symm in enumerate(symms):
             symm = symm.conjugate
 
-            plane_symm = symm.transformVector(plane)
-            dir_symm = symm.transformVector(dir)
+            plane_symm = symm.transform_vector(plane)
+            dir_symm = symm.transform_vector(dir)
 
             if self.crystalStructure.name == 'hexagonal':
                 # qMatrix inverse is equal to lMatrix transposed and vice-versa

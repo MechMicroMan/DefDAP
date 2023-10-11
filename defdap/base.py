@@ -23,7 +23,7 @@ from defdap.plotting import Plot, MapPlot, GrainPlot
 
 from skimage.measure import profile_line
 
-from defdap.utils import reportProgress, Datastore
+from defdap.utils import report_progress, Datastore
 from defdap.experiment import Frame
 
 
@@ -69,7 +69,7 @@ class Map(object):
     # allow array like getting of grains
     def __getitem__(self, key):
         # Check that grains have been detected in the map
-        # self.checkGrainsDetected()
+        # self.check_grains_detected()
 
         return self.grains[key]
 
@@ -93,12 +93,12 @@ class Map(object):
     def set_homog_point(self, **kwargs):
         self.frame.set_homog_point(self, **kwargs)
 
-    def checkGrainsDetected(self, raiseExc=True):
+    def check_grains_detected(self, raise_exc=True):
         """Check if grains have been detected.
 
         Parameters
         ----------
-        raiseExc : bool
+        raise_exc : bool
             If True then an exception is raised if grains have not been
             detected.
 
@@ -117,18 +117,18 @@ class Map(object):
         if (self._grains is None or
                 type(self._grains) is not list or
                 len(self._grains) < 1):
-            if raiseExc:
+            if raise_exc:
                 raise Exception("No grains detected.")
             else:
                 return False
         return True
 
-    def plotGrainNumbers(self, dilateBoundaries=False, ax=None, **kwargs):
+    def plot_grain_numbers(self, dilate_boundaries=False, ax=None, **kwargs):
         """Plot a map with grains numbered.
 
         Parameters
         ----------
-        dilateBoundaries : bool, optional
+        dilate_boundaries : bool, optional
             Set to true to dilate boundaries.
         ax : matplotlib.axes.Axes, optional
             axis to plot on, if not provided the current active axis is used.
@@ -142,7 +142,7 @@ class Map(object):
         """
 
         plot = plotting.MapPlot(self, ax=ax)
-        plot.addGrainBoundaries(colour='black', dilate=dilateBoundaries)
+        plot.add_grain_boundaries(colour='black', dilate=dilate_boundaries)
         plot.addGrainNumbers(**kwargs)
 
         return plot
@@ -161,24 +161,24 @@ class Map(object):
 
         """
         # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        self.check_grains_detected()
 
         # reset current selected grain and plot euler map with click handler
-        plot = self.plotDefault(makeInteractive=True, **kwargs)
+        plot = self.plotDefault(make_interactive=True, **kwargs)
         if click_event is None:
             # default click handler which highlights grain and prints id
-            plot.addEventHandler(
+            plot.add_event_handler(
                 'button_press_event',
-                lambda e, p: self.clickGrainID(e, p, display_grain)
+                lambda e, p: self.click_grain_id(e, p, display_grain)
             )
         else:
             # click handler loaded in as parameter. Pass current map
             # object to it.
-            plot.addEventHandler('button_press_event', click_event)
+            plot.add_event_handler('button_press_event', click_event)
 
         return plot
 
-    def clickGrainID(self, event, plot, displaySelected):
+    def click_grain_id(self, event, plot, displaySelected):
         """Event handler to capture clicking on a map.
 
         Parameters
@@ -204,18 +204,18 @@ class Map(object):
         print("Grain ID: {}".format(grain_id))
 
         # update the grain highlights layer in the plot
-        plot.addGrainHighlights([grain_id], alpha=self.highlightAlpha)
+        plot.add_grain_highlights([grain_id], alpha=self.highlightAlpha)
 
         if displaySelected:
             if self.grainPlot is None or not self.grainPlot.exists:
-                self.grainPlot = grain.plotDefault(makeInteractive=True)
+                self.grainPlot = grain.plotDefault(make_interactive=True)
             else:
                 self.grainPlot.clear()
                 self.grainPlot.callingGrain = grain
                 grain.plotDefault(plot=self.grainPlot)
                 self.grainPlot.draw()
 
-    def drawLineProfile(self, **kwargs):
+    def draw_line_profile(self, **kwargs):
         """Interactive plot for drawing a line profile of data.
 
         Parameters
@@ -224,42 +224,42 @@ class Map(object):
             Keyword arguments passed to :func:`defdap.base.Map.plotDefault`
 
         """
-        plot = self.plotDefault(makeInteractive=True, **kwargs)
+        plot = self.plotDefault(make_interactive=True, **kwargs)
 
-        plot.addEventHandler('button_press_event', plot.lineSlice)
-        plot.addEventHandler('button_release_event', lambda e, p: plot.lineSlice(e, p,
-                                                action=self.calcLineProfile))
+        plot.add_event_handler('button_press_event', plot.line_slice)
+        plot.add_event_handler('button_release_event', lambda e, p: plot.line_slice(e, p,
+                                                                                    action=self.calc_line_profile))
 
         return plot
 
-    def calcLineProfile(self, plot, startEnd, **kwargs):
+    def calc_line_profile(self, plot, start_end, **kwargs):
         """Calculate and plot the line profile.
 
         Parameters
         ----------
         plot : defdap.plotting.MapPlot
             Plot to calculate the line profile for.
-        startEnd : array_like
+        start_end : array_like
             Selected points (x0, y0, x1, y1).
         kwargs : dict, optional
             Keyword arguments passed to :func:`matplotlib.pyplot.plot`
 
         """
-        x0, y0 = startEnd[0:2]
-        x1, y1 = startEnd[2:4]
+        x0, y0 = start_end[0:2]
+        x1, y1 = start_end[2:4]
         profile_length = np.sqrt((y1 - y0) ** 2 + (x1 - x0) ** 2)
 
         # Extract the values along the line
         zi = profile_line(
-            plot.imgLayers[0].get_array(),
-            (startEnd[1], startEnd[0]),
-            (startEnd[3], startEnd[2]),
+            plot.img_layers[0].get_array(),
+            (start_end[1], start_end[0]),
+            (start_end[3], start_end[2]),
             mode='nearest'
         )
         xi = np.linspace(0, profile_length, len(zi))
 
         if self.profilePlot is None or not self.profilePlot.exists:
-            self.profilePlot = Plot(makeInteractive=True)
+            self.profilePlot = Plot(make_interactive=True)
         else:
             self.profilePlot.clear()
 
@@ -268,7 +268,7 @@ class Map(object):
         self.profilePlot.ax.set_ylabel('Intensity')
         self.profilePlot.draw()
 
-    @reportProgress("constructing neighbour network")
+    @report_progress("constructing neighbour network")
     def build_neighbour_network(self):
         """Construct a list of neighbours
 
@@ -325,12 +325,12 @@ class Map(object):
 
         self.neighbourNetwork = nn
 
-    def displayNeighbours(self, **kwargs):
+    def display_neighbours(self, **kwargs):
         return self.locate_grain(
-            click_event=self.clickGrainNeighbours, **kwargs
+            click_event=self.click_grain_neighbours, **kwargs
         )
 
-    def clickGrainNeighbours(self, event, plot):
+    def click_grain_neighbours(self, event, plot):
         """Event handler to capture clicking and show neighbours of selected grain.
 
         Parameters
@@ -344,7 +344,6 @@ class Map(object):
         # check if click was on the map
         if event.inaxes is not plot.ax:
             return
-
 
         # grain id of selected grain
         grain_id = self.data.grains[int(event.ydata), int(event.xdata)] - 1
@@ -368,13 +367,13 @@ class Map(object):
                     secondNeighbours.append(secondNeighbour)
         highlightGrains.extend(secondNeighbours)
 
-        highlightGrains = [grain.grainID for grain in highlightGrains]
+        highlightGrains = [grain.grain_id for grain in highlightGrains]
         highlightColours = ['white']
         highlightColours.extend(['yellow'] * len(firstNeighbours))
         highlightColours.append('green')
 
         # update the grain highlights layer in the plot
-        plot.addGrainHighlights(highlightGrains, grainColours=highlightColours)
+        plot.add_grain_highlights(highlightGrains, grain_colours=highlightColours)
 
     @property
     def proxigram(self):
@@ -386,12 +385,12 @@ class Map(object):
             Distance from a grain boundary at each point in map.
 
         """
-        self.calcProxigram(forceCalc=False)
+        self.calc_proxigram(forceCalc=False)
 
         return self.proxigramArr
 
-    @reportProgress("calculating proxigram")
-    def calcProxigram(self, numTrials=500, forceCalc=True):
+    @report_progress("calculating proxigram")
+    def calc_proxigram(self, numTrials=500, forceCalc=True):
         """Calculate distance from a grain boundary at each point in map.
 
         Parameters
@@ -402,7 +401,7 @@ class Map(object):
             Force calculation even is proxigramArr is populated.
 
         """
-        ## TODO: fix proxigram
+        # TODO: fix proxigram
         if self.proxigramArr is not None and not forceCalc:
             return
 
@@ -609,12 +608,12 @@ class Map(object):
 
         return MapPlot.create(self, map_data, **plot_params)
 
-    def calcGrainAv(self, mapData, grainIds=-1):
+    def calc_grain_average(self, map_data, grainIds=-1):
         """Calculate grain average of any DIC map data.
 
         Parameters
         ----------
-        mapData : numpy.ndarray
+        map_data : numpy.ndarray
             Array of map data to grain average. This must be cropped!
         grainIds : list, optional
             grainIDs to perform operation on, set to -1 for all grains.
@@ -627,19 +626,19 @@ class Map(object):
         """
 
         # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        self.check_grains_detected()
 
         if type(grainIds) is int and grainIds == -1:
             grainIds = range(len(self))
 
-        grainAvData = np.zeros(len(grainIds))
+        grain_average_data = np.zeros(len(grainIds))
 
         for i, grainId in enumerate(grainIds):
             grain = self[grainId]
-            grainData = grain.grainData(mapData)
-            grainAvData[i] = grainData.mean()
+            grainData = grain.grainData(map_data)
+            grain_average_data[i] = grainData.mean()
 
-        return grainAvData
+        return grain_average_data
 
     def grain_data_to_map(self, name):
         map_data = np.zeros(self[0].data[name].shape[:-1] + self.shape)
@@ -649,13 +648,13 @@ class Map(object):
 
         return map_data
 
-    def grainDataToMapData(self, grainData, grainIds=-1, bg=0):
+    def grain_data_to_map_data(self, grain_data, grainIds=-1, bg=0):
         """Create a map array with each grain filled with the given
         values.
 
         Parameters
         ----------
-        grainData : list or numpy.ndarray
+        grain_data : list or numpy.ndarray
             Grain values. This can be a single value per grain or RGB
             values.
         grainIds : list of int or int, optional
@@ -670,7 +669,7 @@ class Map(object):
 
         """
         # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        self.check_grains_detected()
 
         if type(grainIds) is int:
             if grainIds == -1:
@@ -678,27 +677,27 @@ class Map(object):
             else:
                 grainIds = [grainIds]
 
-        grainData = np.array(grainData)
-        if grainData.shape[0] != len(grainIds):
+        grain_data = np.array(grain_data)
+        if grain_data.shape[0] != len(grainIds):
             raise ValueError("The length of supplied grain data does not"
                              "match the number of grains.")
-        if len(grainData.shape) == 1:
+        if len(grain_data.shape) == 1:
             mapShape = [self.yDim, self.xDim]
-        elif len(grainData.shape) == 2 and grainData.shape[1] == 3:
+        elif len(grain_data.shape) == 2 and grain_data.shape[1] == 3:
             mapShape = [self.yDim, self.xDim, 3]
         else:
             raise ValueError("The grain data supplied must be either a"
                              "single value or RGB values per grain.")
 
-        grainMap = np.full(mapShape, bg, dtype=grainData.dtype)
-        for grainId, grainValue in zip(grainIds, grainData):
+        grainMap = np.full(mapShape, bg, dtype=grain_data.dtype)
+        for grainId, grainValue in zip(grainIds, grain_data):
             for point in self[grainId].data.point:
                 grainMap[point[1], point[0]] = grainValue
 
         return grainMap
 
-    def plotGrainDataMap(
-        self, mapData=None, grainData=None, grainIds=-1, bg=0, **kwargs
+    def plot_grain_data_map(
+        self, map_data=None, grain_data=None, grainIds=-1, bg=0, **kwargs
     ):
         """Plot a grain map with grains coloured by given data. The data
         can be provided as a list of values per grain or as a map which
@@ -706,10 +705,10 @@ class Map(object):
 
         Parameters
         ----------
-        mapData : numpy.ndarray, optional
+        map_data : numpy.ndarray, optional
             Array of map data. This must be cropped! Either mapData or 
             grainData must be supplied.
-        grainData : list or np.array, optional
+        grain_data : list or np.array, optional
             Grain values. This an be a single value per grain or RGB
             values. You must supply either mapData or grainData.
         grainIds: list of int or int, optional
@@ -729,15 +728,15 @@ class Map(object):
         plotParams = {}
         plotParams.update(kwargs)
 
-        if grainData is None:
-            if mapData is None:
+        if grain_data is None:
+            if map_data is None:
                 raise ValueError("Either 'mapData' or 'grainData' must "
                                  "be supplied.")
             else:
-                grainData = self.calcGrainAv(mapData, grainIds=grainIds)
+                grain_data = self.calc_grain_average(map_data, grainIds=grainIds)
 
-        grainMap = self.grainDataToMapData(grainData, grainIds=grainIds,
-                                           bg=bg)
+        grainMap = self.grain_data_to_map_data(grain_data, grainIds=grainIds,
+                                               bg=bg)
 
         plot = MapPlot.create(self, grainMap, **plotParams)
 
@@ -776,10 +775,10 @@ class Map(object):
                 raise ValueError("Either 'mapData' or 'grainData' must "
                                  "be supplied.")
             else:
-                grainData = self.calcGrainAv(mapData, grainIds=grainIds)
+                grainData = self.calc_grain_average(mapData, grainIds=grainIds)
 
         # Check that grains have been detected in the map
-        self.checkGrainsDetected()
+        self.check_grains_detected()
 
         if type(grainIds) is int and grainIds == -1:
             grainIds = range(len(self))
@@ -849,7 +848,7 @@ class Grain(object):
         self.data.point.append(point)
 
     @property
-    def extremeCoords(self):
+    def extreme_coords(self):
         """Coordinates of the bounding box for a grain.
 
         Returns
@@ -885,7 +884,7 @@ class Grain(object):
             Coordinates of centre of grain.
 
         """
-        x0, y0, xmax, ymax = self.extremeCoords
+        x0, y0, xmax, ymax = self.extreme_coords
         if centreType == "box":
             xCentre = round((xmax + x0) / 2)
             yCentre = round((ymax + y0) / 2)
@@ -916,7 +915,7 @@ class Grain(object):
             Bounding box for grain with :obj:`~numpy.nan` outside the grain and given number within.
 
         """
-        x0, y0, xmax, ymax = self.extremeCoords
+        x0, y0, xmax, ymax = self.extreme_coords
 
         # initialise array with nans so area not in grain displays white
         outline = np.full((ymax - y0 + 1, xmax - x0 + 1), bg, dtype=int)
@@ -926,17 +925,17 @@ class Grain(object):
 
         return outline
 
-    def plotOutline(self, ax=None, plotScaleBar=False, **kwargs):
+    def plotOutline(self, ax=None, plot_scale_bar=False, **kwargs):
         """Plot the outline of the grain.
 
         Parameters
         ----------
         ax : matplotlib.axes.Axes
             axis to plot on, if not provided the current active axis is used.
-        plotScaleBar : bool
+        plot_scale_bar : bool
             plots the scale bar on the grain if true.
         kwargs : dict
-            keyword arguments passed to :func:`defdap.plotting.GrainPlot.addMap`
+            keyword arguments passed to :func:`defdap.plotting.GrainPlot.add_map`
 
         Returns
         -------
@@ -946,8 +945,8 @@ class Grain(object):
         plot = plotting.GrainPlot(self, ax=ax)
         plot.addMap(self.grainOutline(), **kwargs)
 
-        if plotScaleBar:
-            plot.addScaleBar()
+        if plot_scale_bar:
+            plot.add_scale_bar()
 
         return plot
 
@@ -999,7 +998,7 @@ class Grain(object):
                                  "be supplied.")
             else:
                 grainData = self.grainData(mapData)
-        x0, y0, xmax, ymax = self.extremeCoords
+        x0, y0, xmax, ymax = self.extreme_coords
 
         grainMapData = np.full((ymax - y0 + 1, xmax - x0 + 1), bg,
                                dtype=type(grainData[0]))
@@ -1077,16 +1076,16 @@ class Grain(object):
 
         return grainMapDataCoarse
 
-    def plotGrainData(self, mapData=None, grainData=None, **kwargs):
+    def plot_grain_data(self, map_data=None, grain_data=None, **kwargs):
         """
         Plot a map of this grain from the given map data.
 
         Parameters
         ----------
-        mapData : numpy.ndarray
+        map_data : numpy.ndarray
             Array of map data. This must be cropped! Either this or
             'grainData' must be supplied and 'grainData' takes precedence.
-        grainData : numpy.ndarray
+        grain_data : numpy.ndarray
             List of data at each point in the grain. Either this or
             'mapData' must be supplied and 'grainData' takes precedence.
         kwargs : dict, optional
@@ -1097,7 +1096,7 @@ class Grain(object):
         plotParams = {}
         plotParams.update(kwargs)
 
-        grainMapData = self.grainMapData(mapData=mapData, grainData=grainData)
+        grainMapData = self.grainMapData(mapData=map_data, grainData=grain_data)
 
         plot = GrainPlot.create(self, grainMapData, **plotParams)
 
