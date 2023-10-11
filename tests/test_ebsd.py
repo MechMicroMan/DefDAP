@@ -38,7 +38,7 @@ def good_phase_array(good_map_with_quats):
 
 
 class TestMapFindBoundaries:
-    # Depends on Quat.symEqv, self.crystalSym, self.yDim, self.xDim,
+    # Depends on Quat.symEqv, self.crystal_sym, self.yDim, self.xDim,
     # self.quatArray, self.phaseArray
     # Affects self.boundaries
 
@@ -62,8 +62,8 @@ class TestMapFindBoundaries:
     @staticmethod
     def test_return_type(mock_map):
         # run test and collect result
-        ebsd.Map.find_boundaries(mock_map, boundDef=10)
-        result = mock_map.boundaries
+        ebsd.Map.find_boundaries(mock_map, misori_tol=10)
+        result = mock_map.data.grain_boundaries.image
 
         assert type(result) is np.ndarray
         assert result.dtype is np.dtype(np.int64)
@@ -75,8 +75,8 @@ class TestMapFindBoundaries:
     @pytest.mark.parametrize('bound_def', [5, 10])
     def test_calc(mock_map, bound_def):
         # run test and collect result
-        ebsd.Map.find_boundaries(mock_map, boundDef=bound_def)
-        result = mock_map.boundaries
+        ebsd.Map.find_boundaries(mock_map, misori_tol=bound_def)
+        result = mock_map.data.grain_boundaries.image
 
         # load expected
         expected = -np.loadtxt(

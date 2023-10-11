@@ -115,45 +115,47 @@ class TestEBSDDataLoader:
 
 class TestDICDataLoader:
 
-    @staticmethod
-    @pytest.fixture
-    def dic_loader():
-        return defdap.file_readers.DICDataLoader()
+    # TODO: test openpiv loader
 
     @staticmethod
     @pytest.fixture
-    def dic_metadata_loaded(dic_loader):
-        dic_loader.loadDavisMetadata(EXAMPLE_DIC)
-        return dic_loader
+    def davis_loader():
+        return defdap.file_readers.DavisLoader()
+
+    @staticmethod
+    @pytest.fixture
+    def dic_metadata_loaded(davis_loader):
+        davis_loader.load(EXAMPLE_DIC)
+        return davis_loader
 
     @staticmethod
     @pytest.fixture
     def dic_data_loaded(dic_metadata_loaded):
-        dic_metadata_loaded.loadDavisData(EXAMPLE_DIC)
+        dic_metadata_loaded.load(EXAMPLE_DIC)
         return dic_metadata_loaded
 
     @staticmethod
-    def test_init(dic_loader):
-        assert isinstance(dic_loader.loaded_metadata, dict)
-        assert isinstance(dic_loader.loaded_data, Datastore)
+    def test_init(davis_loader):
+        assert isinstance(davis_loader.loaded_metadata, dict)
+        assert isinstance(davis_loader.loaded_data, Datastore)
 
     @staticmethod
-    def test_load_davis_metadata(dic_loader):
-        dic_loader.loadDavisMetadata(EXAMPLE_DIC)
-        metadata = dic_loader.loaded_metadata
+    def test_load_davis_metadata(davis_loader):
+        davis_loader.load(EXAMPLE_DIC)
+        metadata = davis_loader.loaded_metadata
         assert metadata['format'] == "DaVis"
         assert metadata['version'] == "8.4.0"
         assert metadata['binning'] == 12
         assert metadata['shape'] == (200, 300)
 
     @staticmethod
-    def test_load_davis_metadata_bad_file(dic_loader):
+    def test_load_davis_metadata_bad_file(davis_loader):
         with pytest.raises(FileNotFoundError):
-            dic_loader.loadDavisMetadata("badger")
+            davis_loader.load("badger")
 
     @staticmethod
     def test_load_davis_data(dic_metadata_loaded):
-        dic_metadata_loaded.loadDavisData(EXAMPLE_DIC)
+        dic_metadata_loaded.load(EXAMPLE_DIC)
         shape = dic_metadata_loaded.loaded_metadata["shape"]
 
         data = dic_metadata_loaded.loaded_data['coordinate']
@@ -169,7 +171,7 @@ class TestDICDataLoader:
     @staticmethod
     def test_load_davis_data_bad_file(dic_metadata_loaded):
         with pytest.raises(FileNotFoundError):
-            dic_metadata_loaded.loadDavisData("badger")
+            dic_metadata_loaded.load("badger")
 
     @staticmethod
     def test_check_davis_data(dic_data_loaded):
