@@ -291,9 +291,10 @@ class Plot(object):
         """
         self.check_interactive()
 
-        self.ax.clear()
         if self.colour_bar is not None:
             self.colour_bar.remove()
+            self.colour_bar = None
+        self.ax.clear()
         self.draw()
 
     def draw(self):
@@ -383,7 +384,7 @@ class MapPlot(Plot):
 
         """
         img = self.img_layers[layer]
-        self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
+        self.colour_bar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
 
     def add_scale_bar(self, scale=None):
         """Add scale bar to plot.
@@ -748,7 +749,7 @@ class GrainPlot(Plot):
 
         """
         img = self.img_layers[layer]
-        self.colourBar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
+        self.colour_bar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
 
     def add_scale_bar(self, scale=None):
         """Add scale bar to grain plot.

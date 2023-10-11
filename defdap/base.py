@@ -60,7 +60,7 @@ class Map(object):
         self.proxigramArr = None
         self.neighbour_network = None
 
-        self.grainPlot = None
+        self.grain_plot = None
         self.profilePlot = None
 
     def __len__(self):
@@ -178,7 +178,7 @@ class Map(object):
 
         return plot
 
-    def click_grain_id(self, event, plot, displaySelected):
+    def click_grain_id(self, event, plot, display_grain):
         """Event handler to capture clicking on a map.
 
         Parameters
@@ -187,7 +187,7 @@ class Map(object):
             Click event.
         plot : defdap.plotting.MapPlot
             Plot to capture clicks from.
-        displaySelected : bool
+        display_grain : bool
             If true, plot the selected grain alone in pop-out window.
 
         """
@@ -206,14 +206,14 @@ class Map(object):
         # update the grain highlights layer in the plot
         plot.add_grain_highlights([grain_id], alpha=self.highlightAlpha)
 
-        if displaySelected:
-            if self.grainPlot is None or not self.grainPlot.exists:
-                self.grainPlot = grain.plotDefault(make_interactive=True)
+        if display_grain:
+            if self.grain_plot is None or not self.grain_plot.exists:
+                self.grain_plot = grain.plotDefault(make_interactive=True)
             else:
-                self.grainPlot.clear()
-                self.grainPlot.callingGrain = grain
-                grain.plotDefault(plot=self.grainPlot)
-                self.grainPlot.draw()
+                self.grain_plot.clear()
+                self.grain_plot.callingGrain = grain
+                grain.plotDefault(plot=self.grain_plot)
+                self.grain_plot.draw()
 
     def draw_line_profile(self, **kwargs):
         """Interactive plot for drawing a line profile of data.
@@ -227,8 +227,10 @@ class Map(object):
         plot = self.plotDefault(make_interactive=True, **kwargs)
 
         plot.add_event_handler('button_press_event', plot.line_slice)
-        plot.add_event_handler('button_release_event', lambda e, p: plot.line_slice(e, p,
-                                                                                    action=self.calc_line_profile))
+        plot.add_event_handler(
+            'button_release_event',
+            lambda e, p: plot.line_slice(e, p, action=self.calc_line_profile)
+        )
 
         return plot
 
@@ -353,27 +355,28 @@ class Map(object):
         self.sel_grain = grain
 
         # find first and second nearest neighbours
-        firstNeighbours = list(self.neighbourNetwork.neighbors(grain))
-        highlightGrains = [grain] + firstNeighbours
+        first_neighbours = list(self.neighbourNetwork.neighbors(grain))
+        highlight_grains = [grain] + first_neighbours
 
-        secondNeighbours = []
-        for firstNeighbour in firstNeighbours:
-            trialSecondNeighbours = list(
+        second_neighbours = []
+        for firstNeighbour in first_neighbours:
+            trial_second_neighbours = list(
                 self.neighbourNetwork.neighbors(firstNeighbour)
             )
-            for secondNeighbour in trialSecondNeighbours:
-                if (secondNeighbour not in highlightGrains and
-                        secondNeighbour not in secondNeighbours):
-                    secondNeighbours.append(secondNeighbour)
-        highlightGrains.extend(secondNeighbours)
+            for second_neighbour in trial_second_neighbours:
+                if (second_neighbour not in highlight_grains and
+                        second_neighbour not in second_neighbours):
+                    second_neighbours.append(second_neighbour)
+        highlight_grains.extend(second_neighbours)
 
-        highlightGrains = [grain.grain_id for grain in highlightGrains]
-        highlightColours = ['white']
-        highlightColours.extend(['yellow'] * len(firstNeighbours))
-        highlightColours.append('green')
+        highlight_grains = [grain.grain_id for grain in highlight_grains]
+        highlight_colours = ['white']
+        highlight_colours.extend(['yellow'] * len(first_neighbours))
+        highlight_colours.append('green')
 
         # update the grain highlights layer in the plot
-        plot.add_grain_highlights(highlightGrains, grain_colours=highlightColours)
+        plot.add_grain_highlights(highlight_grains,
+                                  grain_colours=highlight_colours)
 
     @property
     def proxigram(self):

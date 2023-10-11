@@ -833,8 +833,8 @@ class Grain(base.Grain):
         self.groups_list = []            # Unique angles drawn for STA
 
         self.plotDefault = lambda *args, **kwargs: self.plot_max_shear(
-            plot_colour_bar=True, plot_scale_bar=True, plotSlipTraces=True,
-            plotSlipBands=True, *args, **kwargs
+            plot_colour_bar=True, plot_scale_bar=True, plot_slip_traces=True,
+            plot_slip_bands=True, *args, **kwargs
         )
 
     def plot_max_shear(self, **kwargs):
