@@ -534,7 +534,8 @@ class GrainInspector:
 
         # Plot rdr values on number line
         unique_rdrs = set()
-        for x in [item for sublist in rdrs for item in sublist]: unique_rdrs.add(x)
+        for x in [item for sublist in rdrs for item in sublist]:
+            unique_rdrs.add(x)
         self.rdr_plot.number_line_axis.axvline(x=0, ymin=-20, ymax=20, c='k')
         self.rdr_plot.number_line_axis.plot(np.zeros(len(unique_rdrs)), list(unique_rdrs), 'bo', label='Theoretical RDR values')
         self.rdr_plot.number_line_axis.plot([0], slope, 'ro', label='Measured RDR value')

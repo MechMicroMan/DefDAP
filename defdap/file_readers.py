@@ -493,6 +493,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
         self.check_metadata()
 
         # Construct binary data format from listed fields
+        unknown_field_count = 0
         data_format = [('phase', 'uint8')]
         field_lookup = {
             3: ('ph1', 'float32'),
@@ -511,7 +512,10 @@ class OxfordBinaryLoader(EBSDDataLoader):
                 field_id = int(metadata['Fields']['Field{:}'.format(i + 1)])
                 data_format.append(field_lookup[field_id])
         except KeyError:
-            raise TypeError("Unknown data in EBSD file.")
+            print(f'\nUnknown field in file with key {field_id}. '
+                  f'Assuming float32 data.')
+            unknown_field_count += 1
+            data_format.append((f'unknown_{unknown_field_count}', 'float32'))
 
         self.data_format = np.dtype(data_format)
 

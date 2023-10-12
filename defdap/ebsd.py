@@ -346,7 +346,7 @@ class Map(base.Map):
         Parameters
         ----------
         direction : np.array len 3
-            Sample directiom.
+            Sample direction.
         phases : list of int
             Which phases to plot IPF data for.
         bg_colour : np.array len 3
@@ -1187,7 +1187,7 @@ class Map(base.Map):
         if self[0].average_schmid_factors is None:
             raise Exception("Run 'calc_average_grain_schmid_factors' first")
 
-        grains_sf = []
+        grains_sf_max = []
         for grain in self:
             current_sf = []
 
@@ -1204,10 +1204,7 @@ class Map(base.Map):
                 for sf_group in grain.average_schmid_factors:
                     current_sf += sf_group
 
-            grains_sf.append(current_sf)
-
-        grains_sf = np.array(grains_sf)
-        grains_sf_max = np.max(grains_sf, axis=1)
+            grains_sf_max.append(max(current_sf))
 
         plot = self.plot_grain_data_map(grain_data=grains_sf_max, bg=0.5,
                                         **plot_params)

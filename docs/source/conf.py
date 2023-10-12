@@ -18,9 +18,9 @@ import shutil
 sys.path.insert(0, os.path.abspath('../../')) 	# Reference the root directory so autodocs can find the python modules
 
 # Copy the example notebook, change %matplotlib to inline and change directory so that paths still work
-shutil.copyfile('../../example_notebook.ipynb', 'howtouse.ipynb')
+shutil.copyfile('../../notebooks/example_notebook.ipynb', 'howtouse.ipynb')
 with open('howtouse.ipynb') as f:
-    newText=f.read().replace('%matplotlib widget', r'%matplotlib inline\n%cd -q ../../')
+    newText=f.read().replace('%matplotlib tk', r'%matplotlib inline\n%cd -q ../../')
 newText=newText.replace('DefDAP Example notebook', r'How to use')
 newText=newText.replace('This notebook', r'These pages')
 with open('howtouse.ipynb', "w") as f:

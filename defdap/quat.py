@@ -220,6 +220,13 @@ class Quat(object):
     def __str__(self) -> str:
         return self.__repr__()
 
+    def __eq__(self, right: 'Quat') -> bool:
+        return (isinstance(right, type(self)) and 
+            self.quatCoef.tolist() == right.quatCoef.tolist())
+
+    def __hash__(self) -> int:
+        return hash(tuple(self.quatCoef.tolist()))
+
     def _plotIPF(
         self,
         direction: np.ndarray,
@@ -684,7 +691,7 @@ class Quat(object):
         symGroup
             Crystal type (cubic, hexagonal).
         dtype
-            Data type used for calculation, defaults to float.
+            Datatype used for calculation, defaults to `float`.
 
         Returns
         -------

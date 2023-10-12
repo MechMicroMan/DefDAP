@@ -243,7 +243,8 @@ class Plot(object):
             Title to set.
 
         """
-        self.fig.canvas.manager.set_window_title(txt)
+        if self.fig.canvas.manager is not None:
+            self.fig.canvas.manager.set_window_title(txt)
 
     def line_slice(self, event, plot, action=None):
         """ Catch click and drag then draw an arrow.
@@ -408,14 +409,22 @@ class MapPlot(Plot):
         kind : str, {"pixel", "line"}
             Type of boundaries to plot, either a boundary image or a
             collection of line segments.
-        boundaries : various, defdap.ebsd.BoundarySet
-            Boundaries to plot. If not provided the boundaries are loaded from
-            the calling map.
-        colour : str
-            Colour of grain boundaries.
+        boundaries : various, optional
+            Boundaries to plot, either a boundary image or a list of pairs
+            of coordinates representing the start and end of each boundary 
+            segment. If not provided the boundaries are loaded from the 
+            calling map.
+        colour : various
+            One of:
+              - Colour of all boundaries as a string (only option pixel kind)
+              - Colour of all boundaries as RGBA tuple
+              - List of values to represent colour of each line relative to a
+                `norm` and `cmap`
         dilate : bool
             If true, dilate the grain boundaries.
-        draw
+        kwargs
+            If line kind then other arguments are passed to 
+            :func:`matplotlib.collections.LineCollection`.
 
         Returns
         -------
@@ -430,13 +439,30 @@ class MapPlot(Plot):
             boundaries = self.calling_map.data.grain_boundaries
 
         if kind == "line":
-            lc = LineCollection(boundaries.lines,
-                                colors=mpl.colors.to_rgba(colour), **kwargs)
-            self.ax.add_collection(lc)
-            # ax.autoscale()
+            if isinstance(colour, str):
+                colour = mpl.colors.to_rgba(colour)
 
-            if draw:
-                self.draw()
+            boundary_lines = boundaries
+            if boundary_lines is None:
+                boundary_lines = self.callingMap.boundaryLines
+            
+            if len(colour) == len(boundary_lines):
+                colour_array = colour
+                colour_lc = None
+            elif len(colour) == 4:
+                colour_array = None
+                colour_lc = colour
+            else:
+                ValueError('Issue with passed colour')
+                
+            boundary_lines = boundaries
+            if boundary_lines is None:
+                boundary_lines = self.callingMap.boundaryLines
+
+            lc = LineCollection(boundary_lines, colors=colour_lc, **kwargs)
+            lc.set_array(colour_array)
+            img = self.ax.add_collection(lc)
+
         else:
             boundaries_image = boundaries.image.astype(int)
 
@@ -453,12 +479,11 @@ class MapPlot(Plot):
 
             img = self.ax.imshow(boundaries_image, cmap=boundaries_cmap,
                                  interpolation='None', vmin=0, vmax=1)
-            if draw:
-                self.draw()
 
-            self.img_layers.append(img)
-
-            return img
+        if draw:
+            self.draw()
+        self.imgLayers.append(img)
+        return img
 
     def add_grain_highlights(self, grain_ids, grain_colours=None, alpha=None,
                              new_layer=False):
