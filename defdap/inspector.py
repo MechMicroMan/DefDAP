@@ -352,7 +352,7 @@ class GrainInspector:
             if grain.points_list != []:
                 for group in grain.groups_list:
                     maxSF = np.max([item for sublist in grain.ebsd_grain.average_schmid_factors for item in sublist])
-                    eulers = self.selected_ebsd_grain.refOri.euler_angles() * 180 / np.pi
+                    eulers = self.selected_ebsd_grain.ref_ori.euler_angles() * 180 / np.pi
                     text = '{0}\t{1:.1f}\t{2:.1f}\t{3:.1f}\t{4:.3f}\t'.format(
                         idx, eulers[0], eulers[1], eulers[2], maxSF)
                     text += '{0}\t{1:.1f}\t{2}\t{3}\t{4:.2f}'.format(
@@ -455,7 +455,7 @@ class GrainInspector:
         """
 
         # Draw window and axes
-        self.rdr_plot = Plot(ax=None, make_interactive=True, title='rdr Calculation', figsize=(15, 8))
+        self.rdr_plot = Plot(ax=None, make_interactive=True, title='RDR Calculation', figsize=(15, 8))
         self.rdr_plot.ax.axis('off')
         self.rdr_plot.grain_axis = self.rdr_plot.add_axes((0.05, 0.5, 0.3, 0.45))
         self.rdr_plot.text_axis = self.rdr_plot.add_axes((0.37, 0.05, 0.3, 0.85))
@@ -498,9 +498,9 @@ class GrainInspector:
         self.selected_ebsd_grain.calc_slip_traces()
 
         if self.selected_ebsd_grain.average_schmid_factors is None:
-            raise Exception("Run 'calcAverageGrainSchmidFactors' first")
+            raise Exception("Run 'calc_average_grain_schmid_factors' first")
 
-        eulers = np.rad2deg(self.selected_ebsd_grain.refOri.euler_angles())
+        eulers = np.rad2deg(self.selected_ebsd_grain.ref_ori.euler_angles())
 
         text = 'Average angle: {0:.2f}\n'.format(grain.groups_list[group][1])
         text += 'Eulers: {0:.1f}    {1:.1f}    {2:.1f}\n\n'.format(eulers[0], eulers[1], eulers[2])
@@ -516,8 +516,8 @@ class GrainInspector:
             text = "Plane: {0:s}    Angle: {1:.1f}\n".format(ss_group[0].slip_plane_label, slip_trace_angle)
             temp_rdrs = [];
             for ss, sf in zip(ss_group, sf_group):
-                slip_dir_sample = self.selected_ebsd_grain.refOri.conjugate.transform_vector(ss.slipDir)
-                text = text + "          {0:s}    SF: {1:.3f}    rdr: {2:.3f}\n".format(
+                slip_dir_sample = self.selected_ebsd_grain.ref_ori.conjugate.transform_vector(ss.slipDir)
+                text = text + "          {0:s}    SF: {1:.3f}    RDR: {2:.3f}\n".format(
                     ss.slip_dir_label, sf, -slip_dir_sample[0] / slip_dir_sample[1])
                 rdr = -slip_dir_sample[0] / slip_dir_sample[1]
                 temp_rdrs.append(rdr)
@@ -536,8 +536,8 @@ class GrainInspector:
         unique_rdrs = set()
         for x in [item for sublist in rdrs for item in sublist]: unique_rdrs.add(x)
         self.rdr_plot.number_line_axis.axvline(x=0, ymin=-20, ymax=20, c='k')
-        self.rdr_plot.number_line_axis.plot(np.zeros(len(unique_rdrs)), list(unique_rdrs), 'bo', label='Theoretical rdr values')
-        self.rdr_plot.number_line_axis.plot([0], slope, 'ro', label='Measured rdr value')
+        self.rdr_plot.number_line_axis.plot(np.zeros(len(unique_rdrs)), list(unique_rdrs), 'bo', label='Theoretical RDR values')
+        self.rdr_plot.number_line_axis.plot([0], slope, 'ro', label='Measured RDR value')
         self.rdr_plot.add_text(self.rdr_plot.number_line_axis, -0.009, slope - 0.01, '{0:.3f}'.format(float(slope)),
                                fontfamily='monospace')
         self.rdr_plot.number_line_axis.legend(bbox_to_anchor=(1.15, 1.05))

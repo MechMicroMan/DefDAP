@@ -42,14 +42,14 @@ class Phase(object):
         self.latticeParams = latticeParams
 
         try:
-            self.crystalStructure = {
+            self.crystal_structure = {
                 9: crystalStructures['hexagonal'],
                 11: crystalStructures['cubic'],
             }[laue_group]
         except KeyError:
             raise ValueError(f"Unknown Laue group key: {laue_group}")
 
-        if self.crystalStructure is crystalStructures['hexagonal']:
+        if self.crystal_structure is crystalStructures['hexagonal']:
             self.ss_file = defaults['slip_system_file']['HCP']
         else:
             try:
@@ -65,25 +65,25 @@ class Phase(object):
             self.slipTraceColours = None
         else:
             self.slip_systems, self.slipTraceColours = SlipSystem.load(
-                self.ss_file, self.crystalStructure, cOverA=self.cOverA
+                self.ss_file, self.crystal_structure, cOverA=self.cOverA
             )
 
     def __str__(self):
         text = ("Phase: {:}\n  Crystal structure: {:}\n  Lattice params: "
                 "({:.2f}, {:.2f}, {:.2f}, {:.0f}, {:.0f}, {:.0f})\n"
                 "  Slip systems: {:}")
-        return text.format(self.name, self.crystalStructure.name,
+        return text.format(self.name, self.crystal_structure.name,
                            *self.latticeParams[:3],
                            *np.array(self.latticeParams[3:])*180/np.pi,
                            self.ss_file)
 
     @property
     def cOverA(self):
-        if self.crystalStructure is crystalStructures['hexagonal']:
+        if self.crystal_structure is crystalStructures['hexagonal']:
             return self.latticeParams[2] / self.latticeParams[0]
         return None
 
-    def printSlipSystems(self):
+    def print_slip_systems(self):
         """Print a list of slip planes (with colours) and slip directions.
 
         """

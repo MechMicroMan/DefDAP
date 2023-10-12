@@ -483,7 +483,7 @@ class MapPlot(Plot):
         if grain_colours is None:
             grain_colours = ['white']
         if alpha is None:
-            alpha = self.calling_map.highlightAlpha
+            alpha = self.calling_map.highlight_alpha
 
         outline = np.zeros(self.calling_map.shape, dtype=int)
         for i, grainId in enumerate(grain_ids, start=1):
@@ -542,7 +542,7 @@ class MapPlot(Plot):
                          fontsize=fontsize, **kwargs)
         self.draw()
 
-    def addLegend(self, values, labels, layer=0, **kwargs):
+    def add_legend(self, values, labels, layer=0, **kwargs):
         """Add a legend to a map.
 
         Parameters
@@ -761,7 +761,7 @@ class GrainPlot(Plot):
 
         """
         if scale is None:
-            scale = self.callingGrain.ownerMap.scale * 1e-6
+            scale = self.callingGrain.owner_map.scale * 1e-6
         self.ax.add_artist(ScaleBar(scale))
 
     def addTraces(self, angles, colours, topOnly=False, pos=None, **kwargs):
@@ -828,7 +828,7 @@ class GrainPlot(Plot):
 
         if colours is None:
             colours = self.callingGrain.ebsd_grain.phase.slipTraceColours
-        slipTraceAngles = self.callingGrain.slipTraces
+        slipTraceAngles = self.callingGrain.slip_traces
 
         self.addTraces(slipTraceAngles, colours, topOnly, pos=pos, **kwargs)
 
@@ -1492,14 +1492,14 @@ class CrystalPlot(Plot):
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {
+        plot_params = {
             'alpha': 0.6,
             'facecolor': '0.8',
             'linewidths': 3,
             'edgecolor': 'k'
         }
-        plotParams.update(kwargs)
+        plot_params.update(kwargs)
 
         # Add list of planes defined by given vertices to the 3D plot
-        pc = Poly3DCollection(verts, **plotParams)
+        pc = Poly3DCollection(verts, **plot_params)
         self.ax.add_collection3d(pc)

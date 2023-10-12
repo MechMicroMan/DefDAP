@@ -439,7 +439,7 @@ class TestMisOri:
     @staticmethod
     @parametrize_with_cases("ins, outs", cases=TestMisOriCases)
     def test_return_type(ins, outs):
-        result = ins[0].misOri(*ins[1:])
+        result = ins[0].mis_ori(*ins[1:])
 
         if ins[3] == 1:
             assert type(result) is Quat
@@ -454,7 +454,7 @@ class TestMisOri:
     @staticmethod
     @parametrize_with_cases("ins, outs", cases=TestMisOriCases)
     def test_calc(ins, outs):
-        result = ins[0].misOri(*ins[1:])
+        result = ins[0].mis_ori(*ins[1:])
 
         if ins[3] == 1:
             assert np.allclose(result.quat_coef, outs[1])
@@ -467,28 +467,28 @@ class TestMisOri:
     @staticmethod
     def test_bad_in_type(single_quat):
         with pytest.raises(TypeError):
-            single_quat.misOri(4, "blah")
+            single_quat.mis_ori(4, "blah")
 
 
 class TestMisOriAxis:
 
     @staticmethod
     def test_return_type(single_quat, single_quat2):
-        result = single_quat.misOriAxis(single_quat2)
+        result = single_quat.mis_ori_axis(single_quat2)
 
         assert type(result) is np.ndarray
         assert result.shape == (3,)
 
     @staticmethod
     def test_calc(single_quat, single_quat2):
-        result = single_quat.misOriAxis(single_quat2)
+        result = single_quat.mis_ori_axis(single_quat2)
 
         assert np.allclose(result, [1.10165762, -1.21828737, 2.285256])
 
     @staticmethod
     def test_bad_in_type(single_quat):
         with pytest.raises(TypeError):
-            single_quat.misOriAxis(4)
+            single_quat.mis_ori_axis(4)
 
 
 class TestExtractQuatComps:
@@ -605,9 +605,9 @@ __str__(self):
 plotIPF
 plotUnitCell
 
-createManyQuats(eulerArray)
+create_many_quats(eulerArray)
 calcSymEqvs(quats, symGroup, dtype=np.float)
-calcAverageOri(quatComps)
+calc_average_ori(quatComps)
 calcMisOri(quatComps, refOri)
 polarAngles(x, y, z)
 calcIPFcolours(quats, direction, symGroup)

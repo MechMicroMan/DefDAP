@@ -173,7 +173,7 @@ class Map(base.Map):
             cropped=True
         )
 
-        self.plotDefault = lambda *args, **kwargs: self.plot_map(map_name='max_shear',
+        self.plot_default = lambda *args, **kwargs: self.plot_map(map_name='max_shear',
             plotGBs=True, *args, **kwargs
         )
         self.homog_map_name = 'max_shear'
@@ -183,7 +183,7 @@ class Map(base.Map):
         return self.ydim, self.xdim
 
     @property
-    def crystalSym(self):
+    def crystal_sym(self):
         return self.ebsd_map.crystal_sym
 
     @report_progress("loading HRDIC data")
@@ -279,7 +279,7 @@ class Map(base.Map):
 
         return self.bse_scale * self.binning
 
-    def printStatsTable(self, percentiles, components):
+    def print_stats_table(self, percentiles, components):
         """Print out a statistics table for a DIC map
 
         Parameters
@@ -300,8 +300,8 @@ class Map(base.Map):
         print('\033[1m', end=''),  # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} "
               "x {3} pixels, number of points: {4})\n".format(
-            self.retrieveName(), self.xDim, self.yDim,
-            self.binning, self.xDim * self.yDim
+            self.retrieveName(), self.x_dim, self.y_dim,
+            self.binning, self.x_dim * self.y_dim
         ))
 
         # Print header
@@ -492,7 +492,7 @@ class Map(base.Map):
         numRemoved = np.sum(self.mask)
         numTotal = self.xdim * self.ydim
         numRemovedCrop = np.sum(self.crop(self.mask))
-        numTotalCrop = self.xDim * self.yDim
+        numTotalCrop = self.x_dim * self.y_dim
 
         print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
               .format(numRemoved, numTotal, (numRemoved / numTotal) * 100))
@@ -570,13 +570,13 @@ class Map(base.Map):
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {
+        plot_params = {
             'clabel': "Effective shear strain"
         }
-        plotParams.update(kwargs)
+        plot_params.update(kwargs)
 
         plot = self.plot_grain_data_map(
-            map_data=self.data.max_shear, **plotParams
+            map_data=self.data.max_shear, **plot_params
         )
 
         return plot
@@ -828,14 +828,14 @@ class Grain(base.Grain):
         # Call base class constructor
         super(Grain, self).__init__(grainID, dicMap, group_id)
 
-        self.dicMap = self.ownerMap     # DIC map this grain is a member of
+        self.dicMap = self.owner_map     # DIC map this grain is a member of
         self.ebsd_grain = None
         self.ebsd_map = None
 
         self.points_list = []            # Lines drawn for STA
         self.groups_list = []            # Unique angles drawn for STA
 
-        self.plotDefault = lambda *args, **kwargs: self.plot_max_shear(
+        self.plot_default = lambda *args, **kwargs: self.plot_max_shear(
             plot_colour_bar=True, plot_scale_bar=True, plot_slip_traces=True,
             plot_slip_bands=True, *args, **kwargs
         )
@@ -854,18 +854,18 @@ class Grain(base.Grain):
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {
+        plot_params = {
             'plot_colour_bar': True,
             'clabel': "Effective shear strain"
         }
-        plotParams.update(kwargs)
+        plot_params.update(kwargs)
 
-        plot = self.plot_grain_data(grain_data=self.data.max_shear, **plotParams)
+        plot = self.plot_grain_data(grain_data=self.data.max_shear, **plot_params)
 
         return plot
 
     @property
-    def refOri(self):
+    def ref_ori(self):
         """Returns average grain orientation.
 
         Returns
@@ -873,10 +873,10 @@ class Grain(base.Grain):
         defdap.quat.Quat
 
         """
-        return self.ebsd_grain.refOri
+        return self.ebsd_grain.ref_ori
 
     @property
-    def slipTraces(self):
+    def slip_traces(self):
         """Returns list of slip trace angles based on EBSD grain orientation.
 
         Returns
@@ -884,9 +884,9 @@ class Grain(base.Grain):
         list
 
         """
-        return self.ebsd_grain.slipTraces
+        return self.ebsd_grain.slip_traces
 
-    def calcSlipTraces(self, slipSystems=None):
+    def calc_slip_traces(self, slipSystems=None):
         """Calculates list of slip trace angles based on EBSD grain orientation.
 
         Parameters
@@ -894,7 +894,7 @@ class Grain(base.Grain):
         slipSystems : defdap.crystal.SlipSystem, optional
 
         """
-        self.ebsd_grain.calc_slip_traces(slipSystems=slipSystems)
+        self.ebsd_grain.calc_slip_traces(slip_systems=slipSystems)
 
     def calcSlipBands(self, grainMapData, thres=None, min_dist=None):
         """Use Radon transform to detect slip band angles.

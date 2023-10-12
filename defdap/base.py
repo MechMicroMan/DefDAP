@@ -80,11 +80,11 @@ class Map(object):
         return self._grains
 
     @property
-    def xDim(self):
+    def x_dim(self):
         return self.shape[1]
 
     @property
-    def yDim(self):
+    def y_dim(self):
         return self.shape[0]
 
     def crop(self, map_data, **kwargs):
@@ -157,14 +157,14 @@ class Map(object):
         display_grain : bool, optional
             If true, plot slip traces for grain selected by click.
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.base.Map.plotDefault`
+            Keyword arguments passed to :func:`defdap.base.Map.plot_default`
 
         """
         # Check that grains have been detected in the map
         self.check_grains_detected()
 
         # reset current selected grain and plot euler map with click handler
-        plot = self.plotDefault(make_interactive=True, **kwargs)
+        plot = self.plot_default(make_interactive=True, **kwargs)
         if click_event is None:
             # default click handler which highlights grain and prints id
             plot.add_event_handler(
@@ -208,11 +208,11 @@ class Map(object):
 
         if display_grain:
             if self.grain_plot is None or not self.grain_plot.exists:
-                self.grain_plot = grain.plotDefault(make_interactive=True)
+                self.grain_plot = grain.plot_default(make_interactive=True)
             else:
                 self.grain_plot.clear()
                 self.grain_plot.callingGrain = grain
-                grain.plotDefault(plot=self.grain_plot)
+                grain.plot_default(plot=self.grain_plot)
                 self.grain_plot.draw()
 
     def draw_line_profile(self, **kwargs):
@@ -221,10 +221,10 @@ class Map(object):
         Parameters
         ----------
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.base.Map.plotDefault`
+            Keyword arguments passed to :func:`defdap.base.Map.plot_default`
 
         """
-        plot = self.plotDefault(make_interactive=True, **kwargs)
+        plot = self.plot_default(make_interactive=True, **kwargs)
 
         plot.add_event_handler('button_press_event', plot.line_slice)
         plot.add_event_handler(
@@ -685,9 +685,9 @@ class Map(object):
             raise ValueError("The length of supplied grain data does not"
                              "match the number of grains.")
         if len(grain_data.shape) == 1:
-            mapShape = [self.yDim, self.xDim]
+            mapShape = [self.y_dim, self.x_dim]
         elif len(grain_data.shape) == 2 and grain_data.shape[1] == 3:
-            mapShape = [self.yDim, self.xDim, 3]
+            mapShape = [self.y_dim, self.x_dim, 3]
         else:
             raise ValueError("The grain data supplied must be either a"
                              "single value or RGB values per grain.")
@@ -728,8 +728,8 @@ class Map(object):
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {}
-        plotParams.update(kwargs)
+        plot_params = {}
+        plot_params.update(kwargs)
 
         if grain_data is None:
             if map_data is None:
@@ -741,7 +741,7 @@ class Map(object):
         grainMap = self.grain_data_to_map_data(grain_data, grainIds=grainIds,
                                                bg=bg)
 
-        plot = MapPlot.create(self, grainMap, **plotParams)
+        plot = MapPlot.create(self, grainMap, **plot_params)
 
         return plot
 
@@ -770,8 +770,8 @@ class Map(object):
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {}
-        plotParams.update(kwargs)
+        plot_params = {}
+        plot_params.update(kwargs)
 
         if grainData is None:
             if mapData is None:
@@ -793,10 +793,10 @@ class Map(object):
 
         for i, grainId in enumerate(grainIds):
             grain = self[grainId]
-            grainOri[i] = grain.refOri
+            grainOri[i] = grain.ref_ori
 
-        plot = Quat.plotIPF(grainOri, direction, self.crystalSym,
-                            c=grainData, **plotParams)
+        plot = Quat.plotIPF(grainOri, direction, self.crystal_sym,
+                            c=grainData, **plot_params)
 
         return plot
 
@@ -831,7 +831,7 @@ class Grain(object):
         # list of coords stored as tuples (x, y). These are coords in a
         # cropped image if crop exists.
         self.grainID = grainID
-        self.ownerMap = ownerMap
+        self.owner_map = ownerMap
 
     def __len__(self):
         return len(self.data.point)
@@ -1096,11 +1096,11 @@ class Grain(object):
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {}
-        plotParams.update(kwargs)
+        plot_params = {}
+        plot_params.update(kwargs)
 
         grainMapData = self.grainMapData(mapData=map_data, grainData=grain_data)
 
-        plot = GrainPlot.create(self, grainMapData, **plotParams)
+        plot = GrainPlot.create(self, grainMapData, **plot_params)
 
         return plot

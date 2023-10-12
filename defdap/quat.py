@@ -354,7 +354,7 @@ class Quat(object):
         )
         return vectorQuatTransformed.quat_coef[1:4]
 
-    def misOri(
+    def mis_ori(
         self,
         right: 'Quat',
         symGroup: str,
@@ -402,7 +402,7 @@ class Quat(object):
                 return minMisOri
         raise TypeError("Input must be a quaternion.")
 
-    def misOriAxis(self, right: 'Quat') -> np.ndarray:
+    def mis_ori_axis(self, right: 'Quat') -> np.ndarray:
         """
         Calculate misorientation axis between 2 orientations. This
         does not consider symmetries of the crystal structure.
@@ -476,8 +476,8 @@ class Quat(object):
             All other arguments are passed to :func:`defdap.plotting.PolePlot.add_points`.
 
         """
-        plotParams = {'marker': '+'}
-        plotParams.update(kwargs)
+        plot_params = {'marker': '+'}
+        plot_params.update(kwargs)
 
         # Works as an instance or static method on a list of Quats
         if isinstance(self, Quat):
@@ -495,7 +495,7 @@ class Quat(object):
         plot.addPoints(
             alphaFund, betaFund,
             marker_colour=markerColour, marker_size=markerSize,
-            **plotParams
+            **plot_params
         )
 
         if plot_colour_bar:
@@ -534,8 +534,8 @@ class Quat(object):
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {}
-        plotParams.update(kwargs)
+        plot_params = {}
+        plot_params.update(kwargs)
 
         # TODO: most of this should be moved to either the crystal or
         #  plotting module
@@ -576,14 +576,14 @@ class Quat(object):
         plot.ax.view_init(azim=270, elev=90)
         plot.ax._axis3don = False
 
-        plot.addVerts(planes, **plotParams)
+        plot.addVerts(planes, **plot_params)
 
         return plot
 
 # Static methods
 
     @staticmethod
-    def createManyQuats(eulerArray: np.ndarray) -> np.ndarray:
+    def create_many_quats(eulerArray: np.ndarray) -> np.ndarray:
         """Create a an array of quats from an array of Euler angles.
 
         Parameters
@@ -617,7 +617,7 @@ class Quat(object):
         return quats
 
     @staticmethod
-    def multiplyManyQuats(quats: List['Quat'], right: 'Quat') -> List['Quat']:
+    def multiply_many_quats(quats: List['Quat'], right: 'Quat') -> List['Quat']:
         """ Multiply all quats in a list of quats, by a single quat.
 
         Parameters
@@ -720,7 +720,7 @@ class Quat(object):
         return quatComps
 
     @staticmethod
-    def calcAverageOri(
+    def calc_average_ori(
         quatComps: np.ndarray
     ) -> 'Quat':
         """Calculate the average orientation of given quats.

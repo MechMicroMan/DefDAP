@@ -38,7 +38,7 @@ def good_phase_array(good_map_with_quats):
 
 
 class TestMapFindBoundaries:
-    # Depends on Quat.symEqv, self.crystal_sym, self.yDim, self.xDim,
+    # Depends on Quat.symEqv, self.crystal_sym, self.y_dim, self.x_dim,
     # self.quatArray, self.phaseArray
     # Affects self.boundaries
 
@@ -92,14 +92,14 @@ class TestMapFindBoundaries:
 ''' Functions left to test
 Map:
 __init__
-plotDefault
-loadData
+plot_default
+load_data
 scale
 transformData
 plotBandContrastMap
-plotEulerMap
-plotIPFMap
-plotPhaseMap
+plot_euler_map
+plot_ipf_map
+plot_phase_map
 calcKam
 plotKamMap
 calcNye
@@ -107,31 +107,31 @@ plotGNDMap
 checkDataLoaded
 buildQuatArray
 findPhaseBoundaries
-plotPhaseBoundaryMap
-plotBoundaryMap
+plot_phase_boundary_map
+plot_boundary_map
 findGrains
-plotGrainMap
+plot_grain_map
 floodFill
-calcGrainAvOris
-calcGrainMisOri
-plotMisOriMap
+calc_grain_av_oris
+calc_grain_mis_ori
+plot_mis_ori_map
 loadSlipSystems
-printSlipSystems
-calcAverageGrainSchmidFactors
-plotAverageGrainSchmidFactorsMap
+print_slip_systems
+calc_average_grain_schmid_factors
+plot_average_grain_schmid_factors_map
 
 Grain:
 __init__
 addPoint
-calcAverageOri
-buildMisOriList
-plotRefOri
-plotOriSpread
+calc_average_ori
+build_mis_ori_list
+plot_ref_ori
+plot_ori_spread
 plotUnitCell
-plotMisOri
-calcAverageSchmidFactors
-slipTraces
-printSlipTraces
+plot_mis_ori
+calc_average_schmid_factors
+slip_traces
+print_slip_traces
 calc_slip_traces
 
 '''

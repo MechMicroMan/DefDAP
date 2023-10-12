@@ -70,7 +70,7 @@ class TestEBSDDataLoader:
         assert loaded_phase.name == "Ni-superalloy"
         assert loaded_phase.latticeParams == \
                pytest.approx((3.57, 3.57, 3.57, np.pi/2, np.pi/2, np.pi/2))
-        assert loaded_phase.crystalStructure is crystalStructures['cubic']
+        assert loaded_phase.crystal_structure is crystalStructures['cubic']
 
     @staticmethod
     def test_load_oxford_cpr_bad_file(data_loader_oxford_binary):
