@@ -68,9 +68,6 @@ class Map(object):
 
     # allow array like getting of grains
     def __getitem__(self, key):
-        # Check that grains have been detected in the map
-        # self.check_grains_detected()
-
         return self.grains[key]
 
     @property
@@ -92,36 +89,6 @@ class Map(object):
 
     def set_homog_point(self, **kwargs):
         self.frame.set_homog_point(self, **kwargs)
-
-    def check_grains_detected(self, raise_exc=True):
-        """Check if grains have been detected.
-
-        Parameters
-        ----------
-        raise_exc : bool
-            If True then an exception is raised if grains have not been
-            detected.
-
-        Returns
-        -------
-        bool:
-            True if grains detected, False otherwise.
-
-        Raises
-        -------
-        Exception
-            If grains not detected.
-
-        """
-
-        if (self._grains is None or
-                type(self._grains) is not list or
-                len(self._grains) < 1):
-            if raise_exc:
-                raise Exception("No grains detected.")
-            else:
-                return False
-        return True
 
     def plot_grain_numbers(self, dilate_boundaries=False, ax=None, **kwargs):
         """Plot a map with grains numbered.
@@ -160,9 +127,6 @@ class Map(object):
             Keyword arguments passed to :func:`defdap.base.Map.plot_default`
 
         """
-        # Check that grains have been detected in the map
-        self.check_grains_detected()
-
         # reset current selected grain and plot euler map with click handler
         plot = self.plot_default(make_interactive=True, **kwargs)
         if click_event is None:
@@ -627,10 +591,6 @@ class Map(object):
             Array containing the grain average values.
 
         """
-
-        # Check that grains have been detected in the map
-        self.check_grains_detected()
-
         if type(grainIds) is int and grainIds == -1:
             grainIds = range(len(self))
 
@@ -671,9 +631,6 @@ class Map(object):
             Array filled with grain data values
 
         """
-        # Check that grains have been detected in the map
-        self.check_grains_detected()
-
         if type(grainIds) is int:
             if grainIds == -1:
                 grainIds = range(len(self))
@@ -779,9 +736,6 @@ class Map(object):
                                  "be supplied.")
             else:
                 grainData = self.calc_grain_average(mapData, grainIds=grainIds)
-
-        # Check that grains have been detected in the map
-        self.check_grains_detected()
 
         if type(grainIds) is int and grainIds == -1:
             grainIds = range(len(self))

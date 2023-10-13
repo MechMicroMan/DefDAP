@@ -1042,9 +1042,6 @@ class Map(base.Map):
         """Calculate the average orientation of grains.
 
         """
-        # Check that grains have been detected in the map
-        self.check_grains_detected()
-
         numGrains = len(self)
         for iGrain, grain in enumerate(self):
             grain.calc_average_ori()
@@ -1062,9 +1059,6 @@ class Map(base.Map):
             Calculate the misorientation axis if True.
 
         """
-        # Check that grains have been detected in the map
-        self.check_grains_detected()
-
         num_grains = len(self)
         for i_grain, grain in enumerate(self):
             grain.build_mis_ori_list(calc_axis=calc_axis)
@@ -1087,9 +1081,6 @@ class Map(base.Map):
         defdap.plotting.MapPlot
 
         """
-        # Check that grains have been detected in the map
-        self.check_grains_detected()
-
         if component in [1, 2, 3]:
             self.mis_ori = np.zeros(self.shape)
             # Calculate misorientation axis if not calculated
@@ -1141,9 +1132,6 @@ class Map(base.Map):
             planes calculated if not given.
 
         """
-        # Check that grains have been detected in the map
-        self.check_grains_detected()
-
         num_grains = len(self)
         for iGrain, grain in enumerate(self):
             grain.calc_average_schmid_factors(load_vector, slip_systems=slip_systems)
@@ -1180,9 +1168,6 @@ class Map(base.Map):
             'clabel': "Schmid factor"
         }
         plot_params.update(kwargs)
-
-        # Check that grains have been detected in the map
-        self.check_grains_detected()
 
         if self[0].average_schmid_factors is None:
             raise Exception("Run 'calc_average_grain_schmid_factors' first")
