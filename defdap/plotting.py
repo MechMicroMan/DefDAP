@@ -336,7 +336,7 @@ class MapPlot(Plot):
 
         self.calling_map = calling_map
         self.img_layers = []
-        self.highlightsLayerID = None
+        self.highlights_layer_id = None
         self.points_layer_ids = []
 
         self.ax.set_xticks([])
@@ -414,6 +414,11 @@ class MapPlot(Plot):
             of coordinates representing the start and end of each boundary 
             segment. If not provided the boundaries are loaded from the 
             calling map.
+
+        boundaries : various, defdap.ebsd.BoundarySet
+            Boundaries to plot. If not provided the boundaries are loaded from
+            the calling map.
+
         colour : various
             One of:
               - Colour of all boundaries as a string (only option pixel kind)
@@ -442,11 +447,7 @@ class MapPlot(Plot):
             if isinstance(colour, str):
                 colour = mpl.colors.to_rgba(colour)
 
-            boundary_lines = boundaries
-            if boundary_lines is None:
-                boundary_lines = self.callingMap.boundaryLines
-            
-            if len(colour) == len(boundary_lines):
+            if len(colour) == len(boundaries.lines):
                 colour_array = colour
                 colour_lc = None
             elif len(colour) == 4:
@@ -454,12 +455,8 @@ class MapPlot(Plot):
                 colour_lc = colour
             else:
                 ValueError('Issue with passed colour')
-                
-            boundary_lines = boundaries
-            if boundary_lines is None:
-                boundary_lines = self.callingMap.boundaryLines
 
-            lc = LineCollection(boundary_lines, colors=colour_lc, **kwargs)
+            lc = LineCollection(boundaries.lines, colors=colour_lc, **kwargs)
             lc.set_array(colour_array)
             img = self.ax.add_collection(lc)
 
@@ -482,7 +479,7 @@ class MapPlot(Plot):
 
         if draw:
             self.draw()
-        self.imgLayers.append(img)
+        self.img_layers.append(img)
         return img
 
     def add_grain_highlights(self, grain_ids, grain_colours=None, alpha=None,
@@ -532,14 +529,14 @@ class MapPlot(Plot):
         alphaMap[0] = 0
         highlightsCmap._lut[:, -1] = alphaMap
 
-        if self.highlightsLayerID is None or new_layer:
+        if self.highlights_layer_id is None or new_layer:
             img = self.ax.imshow(outline, interpolation='none',
                                  cmap=highlightsCmap)
-            if self.highlightsLayerID is None:
-                self.highlightsLayerID = len(self.img_layers)
+            if self.highlights_layer_id is None:
+                self.highlights_layer_id = len(self.img_layers)
             self.img_layers.append(img)
         else:
-            img = self.img_layers[self.highlightsLayerID]
+            img = self.img_layers[self.highlights_layer_id]
             img.set_data(outline)
             img.set_cmap(highlightsCmap)
             img.autoscale()

@@ -222,10 +222,10 @@ class Quat(object):
 
     def __eq__(self, right: 'Quat') -> bool:
         return (isinstance(right, type(self)) and 
-            self.quatCoef.tolist() == right.quatCoef.tolist())
+            self.quat_coef.tolist() == right.quat_coef.tolist())
 
     def __hash__(self) -> int:
-        return hash(tuple(self.quatCoef.tolist()))
+        return hash(tuple(self.quat_coef.tolist()))
 
     def _plotIPF(
         self,

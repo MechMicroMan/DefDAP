@@ -168,7 +168,7 @@ class Map(object):
         print("Grain ID: {}".format(grain_id))
 
         # update the grain highlights layer in the plot
-        plot.add_grain_highlights([grain_id], alpha=self.highlightAlpha)
+        plot.add_grain_highlights([grain_id], alpha=self.highlight_alpha)
 
         if display_grain:
             if self.grain_plot is None or not self.grain_plot.exists:

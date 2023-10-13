@@ -1613,6 +1613,16 @@ class BoundarySet(object):
             zip(*image_y.transpose().nonzero())
         )
 
+    @classmethod
+    def from_boundary_segments(cls, b_segs):
+        points_x = []
+        points_y = []
+        for b_seg in b_segs:
+            points_x += b_seg.boundary_points_x
+            points_y += b_seg.boundary_points_y
+
+        return cls(b_segs[0].ebsdMap, points_x, points_y)
+
     @property
     def points(self):
         return self.points_x.union(self.points_y)

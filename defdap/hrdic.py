@@ -57,7 +57,7 @@ class Map(base.Map):
         Correlation value.
     ebsd_map : defdap.ebsd.Map
         EBSD map linked to DIC map.
-    highlightAlpha : float
+    highlight_alpha : float
         Alpha (transparency) of grain highlight.
     bseScale : float
         Size of a pixel in the correlated images.
@@ -112,7 +112,7 @@ class Map(base.Map):
         self.corrVal = None     # correlation value
 
         self.ebsd_map = None                 # EBSD map linked to DIC map
-        self.highlightAlpha = 0.6
+        self.highlight_alpha = 0.6
         self.bse_scale = None                # size of pixels in pattern images
         self.path = path                    # file path
         self.fname = fname                  # file name
