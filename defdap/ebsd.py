@@ -1,4 +1,4 @@
-# Copyright 2021 Mechanics of Microstructures Group
+# Copyright 2023 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -220,7 +220,7 @@ class Map(base.Map):
             C over A ratio if hexagonal crystal structure otherwise None
 
         """
-        return self.primary_phase.cOverA
+        return self.primary_phase.c_over_a
 
     @property
     def num_phases(self):
@@ -307,7 +307,7 @@ class Map(base.Map):
         for phase, phase_id in zip(phases, phase_ids):
             # calculate IPF colours for phase
             phase_mask = self.data.phase == phase_id + 1
-            map_colours[phase_mask] = Quat.calcIPFcolours(
+            map_colours[phase_mask] = Quat.calc_ipf_colours(
                 map_data[phase_mask], direction, phase.crystal_structure.name
             ).T
 
@@ -841,7 +841,7 @@ class Map(base.Map):
         """
         # Set default plot parameters then update with any input
         plot_params = {
-            'plotGBs': True,
+            'plot_gbs': True,
             'boundaryColour': 'black'
         }
         plot_params.update(kwargs)
@@ -912,14 +912,14 @@ class Map(base.Map):
 
         # Assign phase to each grain
         for grain in grain_list:
-            phase_vals = grain.grainData(self.data.phase)
+            phase_vals = grain.grain_data(self.data.phase)
             if np.max(phase_vals) != np.min(phase_vals):
-                warn(f"Grain {grain.grainID} could not be assigned a "
+                warn(f"Grain {grain.grain_id} could not be assigned a "
                      f"phase, phase vals not constant.")
                 continue
             phase_id = phase_vals[0] - 1
             if not (0 <= phase_id < self.num_phases):
-                warn(f"Grain {grain.grainID} could not be assigned a "
+                warn(f"Grain {grain.grain_id} could not be assigned a "
                      f"phase, invalid phase {phase_id}.")
                 continue
             grain.phase_id = phase_id
@@ -987,7 +987,7 @@ class Map(base.Map):
 
         # add first point to the grain
         x, y = seed
-        grain.addPoint(seed)
+        grain.add_point(seed)
         grains[y, x] = index
         points_left[y, x] = False
         edge = [seed]
@@ -1030,7 +1030,7 @@ class Map(base.Map):
                         add_point = not boundary_im_y[t, s]
 
                 if add_point:
-                    grain.addPoint((s, t))
+                    grain.add_point((s, t))
                     grains[t, s] = index
                     points_left[t, s] = False
                     edge.append((s, t))
@@ -1241,9 +1241,9 @@ class Grain(base.Grain):
          Angle between slip plane and screen plane.
 
     """
-    def __init__(self, grainID, ebsdMap, group_id):
+    def __init__(self, grain_id, ebsdMap, group_id):
         # Call base class constructor
-        super(Grain, self).__init__(grainID, ebsdMap, group_id)
+        super(Grain, self).__init__(grain_id, ebsdMap, group_id)
 
         self.ebsd_map = self.owner_map            # ebsd map this grain is a member of
         self.mis_ori_list = None                  # list of mis_ori at each point in grain
@@ -1287,7 +1287,7 @@ class Grain(base.Grain):
         """Calculate the average orientation of a grain.
 
         """
-        quat_comps_sym = Quat.calcSymEqvs(self.data.orientation, self.crystal_sym)
+        quat_comps_sym = Quat.calc_sym_eqvs(self.data.orientation, self.crystal_sym)
 
         self.ref_ori = Quat.calc_average_ori(quat_comps_sym)
 
@@ -1300,7 +1300,7 @@ class Grain(base.Grain):
             Calculate the misorientation axis if True.
 
         """
-        quat_comps_sym = Quat.calcSymEqvs(self.data.orientation, self.crystal_sym)
+        quat_comps_sym = Quat.calc_sym_eqvs(self.data.orientation, self.crystal_sym)
 
         if self.ref_ori is None:
             self.ref_ori = Quat.calc_average_ori(quat_comps_sym)
@@ -1343,7 +1343,7 @@ class Grain(base.Grain):
                 self.mis_ori_axis_list.append(row)
 
     def calc_grod(self):
-        quat_comps = Quat.calcSymEqvs(self.data.orientation, self.crystal_sym)
+        quat_comps = Quat.calc_sym_eqvs(self.data.orientation, self.crystal_sym)
 
         if self.ref_ori is None:
             self.ref_ori = Quat.calc_average_ori(quat_comps)
@@ -1376,7 +1376,7 @@ class Grain(base.Grain):
         direction : numpy.ndarray
             Sample direction for IPF.
         kwargs
-            All other arguments are passed to :func:`defdap.quat.Quat.plotIPF`.
+            All other arguments are passed to :func:`defdap.quat.Quat.plot_ipf`.
 
         Returns
         -------
@@ -1385,8 +1385,8 @@ class Grain(base.Grain):
         """
         plot_params = {'marker': '+'}
         plot_params.update(kwargs)
-        return Quat.plotIPF([self.ref_ori], direction, self.crystal_sym,
-                            **plot_params)
+        return Quat.plot_ipf([self.ref_ori], direction, self.crystal_sym,
+                             **plot_params)
 
     def plot_ori_spread(self, direction=np.array([0, 0, 1]), **kwargs):
         """Plot all orientations within a given grain, on an IPF.
@@ -1396,7 +1396,7 @@ class Grain(base.Grain):
         direction : numpy.ndarray
             Sample direction for IPF.
         kwargs
-            All other arguments are passed to :func:`defdap.quat.Quat.plotIPF`.
+            All other arguments are passed to :func:`defdap.quat.Quat.plot_ipf`.
 
         Returns
         -------
@@ -1405,8 +1405,8 @@ class Grain(base.Grain):
         """
         plot_params = {'marker': '.'}
         plot_params.update(kwargs)
-        return Quat.plotIPF(self.data.orientation, direction, self.crystal_sym,
-                            **plot_params)
+        return Quat.plot_ipf(self.data.orientation, direction, self.crystal_sym,
+                             **plot_params)
 
     def plot_unit_cell(self, fig=None, ax=None, plot=None, **kwargs):
         """Plot an unit cell of the average grain orientation.
@@ -1425,7 +1425,7 @@ class Grain(base.Grain):
         """
         crystal_structure = self.ebsd_map.phases[self.phase_id].crystal_structure
         plot = Quat.plot_unit_cell(self.ref_ori, fig=fig, ax=ax, plot=plot,
-                                   crystalStructure=crystal_structure, **kwargs)
+                                   crystal_structure=crystal_structure, **kwargs)
 
         return plot
 
@@ -1497,15 +1497,15 @@ class Grain(base.Grain):
 
         self.average_schmid_factors = []
         # flatten list of lists
-        # slipSystems = chain.from_iterable(slipSystems)
+        # slip_systems = chain.from_iterable(slip_systems)
 
         # Loop over groups of slip systems with same slip plane
         for i, slip_system_group in enumerate(slip_systems):
             self.average_schmid_factors.append([])
             # Then loop over individual slip systems
             for slip_system in slip_system_group:
-                schmidFactor = abs(np.dot(load_vector_crystal, slip_system.slipPlane) *
-                                   np.dot(load_vector_crystal, slip_system.slipDir))
+                schmidFactor = abs(np.dot(load_vector_crystal, slip_system.slip_plane) *
+                                   np.dot(load_vector_crystal, slip_system.slip_dir))
                 self.average_schmid_factors[i].append(schmidFactor)
 
         return
@@ -1536,7 +1536,7 @@ class Grain(base.Grain):
 
         for ss_group, colour, sf_group, slip_trace in zip(
             self.phase.slip_systems,
-            self.phase.slipTraceColours,
+            self.phase.slip_trace_colours,
             self.average_schmid_factors,
             self.slip_traces
         ):
@@ -1568,7 +1568,7 @@ class Grain(base.Grain):
         # Loop over each group of slip systems
         for slip_system_group in slip_systems:
             # Take slip plane from first in group
-            slip_plane_norm = slip_system_group[0].slipPlane
+            slip_plane_norm = slip_system_group[0].slip_plane
             # planeLabel = slip_system_group[0].slip_plane_label
 
             # Calculate intersection of slip plane with plane of screen
@@ -1770,7 +1770,7 @@ class BoundarySegment(object):
 
     def misorientation(self):
         mis_ori, minSymm = self.grain1.ref_ori.mis_ori(
-            self.grain2.ref_ori, self.ebsdMap.crystal_sym, returnQuat=2
+            self.grain2.ref_ori, self.ebsdMap.crystal_sym, return_quat=2
         )
         mis_ori = 2 * np.arccos(mis_ori)
         mis_ori_axis = self.grain1.ref_ori.mis_ori_axis(minSymm)
@@ -1849,7 +1849,7 @@ class Linker(object):
 
         origin = (int(event.xdata), int(event.ydata))
         plot.calling_map.origin = origin
-        plot.add_points([origin[0]], [origin[1]], updateLayer=0)
+        plot.add_points([origin[0]], [origin[1]], update_layer=0)
         print(f"Origin set to ({origin[0]}, {origin[1]})")
 
     def start_linking(self):

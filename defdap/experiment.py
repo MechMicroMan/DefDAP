@@ -215,7 +215,7 @@ class Frame(object):
         # right mouse click or shift + left mouse click
         # shift click doesn't work in osx backend
         if event.button == 3 or (event.button == 1 and event.key == 'shift'):
-            plot.add_points([int(event.xdata)], [int(event.ydata)], updateLayer=1)
+            plot.add_points([int(event.xdata)], [int(event.ydata)], update_layer=1)
 
     @staticmethod
     def homog_key(event, plot):
@@ -251,7 +251,7 @@ class Frame(object):
         elif key == arrow_keys[3]:
             sel_point[1] += move
 
-        plot.add_points([sel_point[0]], [sel_point[1]], updateLayer=1)
+        plot.add_points([sel_point[0]], [sel_point[1]], update_layer=1)
 
     def homog_click_save(self, event, plot, binning):
         """Append the selected point on the map to homogPoints.
@@ -272,7 +272,7 @@ class Frame(object):
             return
 
         # remove selected point from plot
-        plot.add_points([None], [None], updateLayer=1)
+        plot.add_points([None], [None], update_layer=1)
 
         # then scale and add to homog points list
         sel_point = tuple((sel_point / binning).round().astype(int))
@@ -280,7 +280,7 @@ class Frame(object):
 
         # update the plotted homog points
         homog_points = np.array(self.homog_points) * binning
-        plot.add_points(homog_points[:, 0], homog_points[:, 1], updateLayer=0)
+        plot.add_points(homog_points[:, 0], homog_points[:, 1], update_layer=0)
 
     def update_homog_points(self, homog_idx, new_point=None, delta=None):
         """

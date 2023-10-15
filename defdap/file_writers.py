@@ -1,4 +1,4 @@
-# Copyright 2021 Mechanics of Microstructures Group
+# Copyright 2023 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -102,8 +102,8 @@ class OxfordTextWriter(EBSDDataWriter):
                 "Euler angles refer to Sample Coordinate system (CS0)!\n")
             ctf_file.write(f"Phases\t{len(self.metadata['phases'])}\n")
             for phase in self.metadata['phases']:
-                dims = "{:.3f};{:.3f};{:.3f}".format(*phase.latticeParams[:3])
-                angles = (f * 180 / np.pi for f in phase.latticeParams[3:])
+                dims = "{:.3f};{:.3f};{:.3f}".format(*phase.lattice_params[:3])
+                angles = (f * 180 / np.pi for f in phase.lattice_params[3:])
                 angles = "{:.3f};{:.3f};{:.3f}".format(*angles)
 
                 ctf_file.write(f"{dims}\t{angles}\t{phase.name}"

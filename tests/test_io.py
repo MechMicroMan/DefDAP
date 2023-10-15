@@ -5,7 +5,7 @@ import defdap.file_readers
 from defdap.crystal import crystalStructures, Phase
 from defdap.utils import Datastore
 
-DATA_DIR = "tests/data/"
+DATA_DIR = "../tests/data/"
 EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
 EXAMPLE_DIC = DATA_DIR + "testDataDIC.txt"
 
@@ -68,7 +68,7 @@ class TestEBSDDataLoader:
         assert len(metadata["phases"]) == 1
         loaded_phase = metadata["phases"][0]
         assert loaded_phase.name == "Ni-superalloy"
-        assert loaded_phase.latticeParams == \
+        assert loaded_phase.lattice_params == \
                pytest.approx((3.57, 3.57, 3.57, np.pi/2, np.pi/2, np.pi/2))
         assert loaded_phase.crystal_structure is crystalStructures['cubic']
 

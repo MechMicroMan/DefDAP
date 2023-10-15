@@ -1,4 +1,4 @@
-# Copyright 2021 Mechanics of Microstructures Group
+# Copyright 2023 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -85,7 +85,7 @@ class Map(base.Map):
             Grain list data to map data from all grains
 
     """
-    def __init__(self, path, fname, dataType=None, **kwargs):
+    def __init__(self, path, fname, data_type=None, **kwargs):
         """Initialise class and import DIC data from file.
 
         Parameters
@@ -94,7 +94,7 @@ class Map(base.Map):
             Path to file.
         fname : str
             Name of file including extension.
-        dataType : str
+        data_type : str
             Type of data file.
 
         """
@@ -109,7 +109,7 @@ class Map(base.Map):
         self.xdim = None        # size of map along x (from header)
         self.ydim = None        # size of map along y (from header)
 
-        self.corrVal = None     # correlation value
+        self.corr_val = None     # correlation value
 
         self.ebsd_map = None                 # EBSD map linked to DIC map
         self.highlight_alpha = 0.6
@@ -118,7 +118,7 @@ class Map(base.Map):
         self.fname = fname                  # file name
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
 
-        self.loadData(path, fname, dataType=dataType)
+        self.load_data(path, fname, data_type=data_type)
 
         ## TODO: cropping, have metadata to state if saved data is cropped, if
         ## not cropped then crop on accesss. Maybe mark cropped data as invalid
@@ -174,7 +174,7 @@ class Map(base.Map):
         )
 
         self.plot_default = lambda *args, **kwargs: self.plot_map(map_name='max_shear',
-            plotGBs=True, *args, **kwargs
+            plot_gbs=True, *args, **kwargs
         )
         self.homog_map_name = 'max_shear'
 
@@ -187,68 +187,68 @@ class Map(base.Map):
         return self.ebsd_map.crystal_sym
 
     @report_progress("loading HRDIC data")
-    def loadData(self, fileDir, fileName, dataType=None):
+    def load_data(self, file_dir, file_name, data_type=None):
         """Load DIC data from file.
 
         Parameters
         ----------
-        fileDir : str
+        file_dir : str
             Path to file.
-        fileName : str
+        file_name : str
             Name of file including extension.
-        dataType : str,  {'DavisText'}
+        data_type : str,  {'DavisText'}
             Type of data file.
 
         """
-        dataLoader = DICDataLoader.get_loader(dataType)
-        dataLoader.load(fileName, fileDir)
+        data_loader = DICDataLoader.get_loader(data_type)
+        data_loader.load(file_name, file_dir)
 
-        metadataDict = dataLoader.loaded_metadata
-        self.format = metadataDict['format']      # Software name
-        self.version = metadataDict['version']    # Software version
-        self.binning = metadataDict['binning']    # Sub-window width in pixels
+        metadata_dict = data_loader.loaded_metadata
+        self.format = metadata_dict['format']      # Software name
+        self.version = metadata_dict['version']    # Software version
+        self.binning = metadata_dict['binning']    # Sub-window width in pixels
         # *dim are full size of data. shape (old *Dim) are size after cropping
         # *dim are full size of data. shape (old *Dim) are size after cropping
-        self.shape = metadataDict['shape']
-        self.xdim = metadataDict['shape'][1]      # size of map along x (from header)
-        self.ydim = metadataDict['shape'][0]      # size of map along y (from header)
+        self.shape = metadata_dict['shape']
+        self.xdim = metadata_dict['shape'][1]      # size of map along x (from header)
+        self.ydim = metadata_dict['shape'][0]      # size of map along y (from header)
 
-        self.data.update(dataLoader.loaded_data)
+        self.data.update(data_loader.loaded_data)
 
         # write final status
         yield (f"Loaded {self.format} {self.version} data "
                f"(dimensions: {self.xdim} x {self.xdim} pixels, "
                f"sub-window size: {self.binning} x {self.binning} pixels)")
 
-    def loadCorrValData(self, fileDir, fileName, dataType=None):
+    def load_corr_val_data(self, file_dir, file_name, data_type=None):
         """Load correlation value for DIC data
 
         Parameters
         ----------
-        fileDir : str
+        file_dir : str
             Path to file.
-        fileName : str
+        file_name : str
             Name of file including extension.
-        dataType : str,  {'DavisImage'}
+        data_type : str,  {'DavisImage'}
             Type of data file.
 
         """
-        dataType = "DavisImage" if dataType is None else dataType
+        data_type = "DavisImage" if data_type is None else data_type
 
-        dataLoader = DICDataLoader()
-        if dataType == "DavisImage":
-            loaded_data = dataLoader.loadDavisImageData(fileName, fileDir)
+        data_loader = DICDataLoader()
+        if data_type == "DavisImage":
+            loaded_data = data_loader.loadDavisImageData(file_name, file_dir)
         else:
             raise Exception("No loader found for this DIC data.")
             
-        self.corrVal = loaded_data
+        self.corr_val = loaded_data
         
-        assert self.xdim == self.corrVal.shape[1], \
+        assert self.xdim == self.corr_val.shape[1], \
             "Dimensions of imported data and dic data do not match"
-        assert self.ydim == self.corrVal.shape[0], \
+        assert self.ydim == self.corr_val.shape[0], \
             "Dimensions of imported data and dic data do not match"
 
-    def retrieveName(self):
+    def retrieve_name(self):
         """Gets the first name assigned to the a map, as a string
 
         """
@@ -293,29 +293,29 @@ class Map(base.Map):
 
         # Check that components are valid
         if not set(components).issubset(self.data):
-            strFormat = '{}, ' * (len(self.data) - 1) + '{}'
-            raise Exception("Components must be: " + strFormat.format(*self.data))
+            str_format = '{}, ' * (len(self.data) - 1) + '{}'
+            raise Exception("Components must be: " + str_format.format(*self.data))
 
         # Print map info
         print('\033[1m', end=''),  # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} "
               "x {3} pixels, number of points: {4})\n".format(
-            self.retrieveName(), self.x_dim, self.y_dim,
+            self.retrieve_name(), self.x_dim, self.y_dim,
             self.binning, self.x_dim * self.y_dim
         ))
 
         # Print header
-        strFormat = '{:10} ' + '{:12}' * len(percentiles)
-        print(strFormat.format('Component', *percentiles))
+        str_format = '{:10} ' + '{:12}' * len(percentiles)
+        print(str_format.format('Component', *percentiles))
         print('\033[0m', end='')  # END BOLD
 
         # Print table
-        strFormat = '{:10} ' + '{:12.4f}' * len(percentiles)
+        str_format = '{:10} ' + '{:12.4f}' * len(percentiles)
         for c in components:
             # Iterate over tensor components (i.e. e11, e22, e12)
             for i in np.ndindex(self.data[c].shape[:len(np.shape(self.data[c]))-2]):
                 per = [np.nanpercentile(self.data[c][i], p) for p in percentiles]
-                print(strFormat.format(c+''.join([str(t+1) for t in i]), *per))
+                print(str_format.format(c+''.join([str(t+1) for t in i]), *per))
 
     def set_crop(self, *, left=None, right=None, top=None, bottom=None,
                  update_homog_points=False):
@@ -358,9 +358,9 @@ class Map(base.Map):
             self.frame.update_homog_points(homog_idx=-1, delta=(dx, dy))
 
         # set new cropped dimensions
-        xDim = self.xdim - self.crop_dists[0, 0] - self.crop_dists[0, 1]
-        yDim = self.ydim - self.crop_dists[1, 0] - self.crop_dists[1, 1]
-        self.shape = (yDim, xDim)
+        x_dim = self.xdim - self.crop_dists[0, 0] - self.crop_dists[0, 1]
+        y_dim = self.ydim - self.crop_dists[1, 0] - self.crop_dists[1, 1]
+        self.shape = (y_dim, x_dim)
 
     def crop(self, map_data, binning=None):
         """ Crop given data using crop parameters stored in map
@@ -375,13 +375,13 @@ class Map(base.Map):
         """
         binning = 1 if binning is None else binning
 
-        minY = int(self.crop_dists[1, 0] * binning)
-        maxY = int((self.ydim - self.crop_dists[1, 1]) * binning)
+        min_y = int(self.crop_dists[1, 0] * binning)
+        max_y = int((self.ydim - self.crop_dists[1, 1]) * binning)
 
-        minX = int(self.crop_dists[0, 0] * binning)
-        maxX = int((self.xdim - self.crop_dists[0, 1]) * binning)
+        min_x = int(self.crop_dists[0, 0] * binning)
+        max_x = int((self.xdim - self.crop_dists[0, 1]) * binning)
 
-        return map_data[..., minY:maxY, minX:maxX]
+        return map_data[..., min_y:max_y, min_x:max_x]
 
     def link_ebsd_map(self, ebsd_map, transform_type="affine", **kwargs):
         """Calculates the transformation required to align EBSD dataset to DIC.
@@ -451,7 +451,7 @@ class Map(base.Map):
         )
 
     # TODO: fix component stuff
-    def generateThresholdMask(self, mask, dilation=0, preview=True):
+    def generate_threshold_mask(self, mask, dilation=0, preview=True):
         """
         Generate a dilated mask, based on a boolean array and previews the appication of
         this mask to the max shear map.
@@ -468,20 +468,20 @@ class Map(base.Map):
 
         Examples
         ----------
-        To remove data points in dicMap where `max_shear` is above 0.8, use:
+        To remove data points in dic_map where `max_shear` is above 0.8, use:
 
-        >>> mask = dicMap.data.max_shear > 0.8
+        >>> mask = dic_map.data.max_shear > 0.8
 
-        To remove data points in dicMap where e11 is above 1 or less than -1, use:
+        To remove data points in dic_map where e11 is above 1 or less than -1, use:
 
-        >>> mask = (dicMap.data.e[0, 0] > 1) | (dicMap.data.e[0, 0] < -1)
+        >>> mask = (dic_map.data.e[0, 0] > 1) | (dic_map.data.e[0, 0] < -1)
 
-        To remove data points in dicMap where corrVal is less than 0.4, use:
+        To remove data points in dic_map where corrVal is less than 0.4, use:
 
-        >>> mask = dicMap.corrVal < 0.4
+        >>> mask = dic_map.corr_val < 0.4
 
         Note: correlation value data needs to be loaded seperately from the DIC map,
-        see :func:`defdap.hrdic.loadCorrValData`
+        see :func:`defdap.hrdic.load_corr_val_data`
 
         """
         self.mask = mask
@@ -489,17 +489,17 @@ class Map(base.Map):
         if dilation != 0:
             self.mask = binary_dilation(self.mask, iterations=dilation)
 
-        numRemoved = np.sum(self.mask)
-        numTotal = self.xdim * self.ydim
-        numRemovedCrop = np.sum(self.crop(self.mask))
-        numTotalCrop = self.x_dim * self.y_dim
+        num_removed = np.sum(self.mask)
+        num_total = self.xdim * self.ydim
+        num_removed_crop = np.sum(self.crop(self.mask))
+        num_total_crop = self.x_dim * self.y_dim
 
         print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
-              .format(numRemoved, numTotal, (numRemoved / numTotal) * 100))
+              .format(num_removed, num_total, (num_removed / num_total) * 100))
         print(
             'Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
-            .format(numRemovedCrop, numTotalCrop,
-                    (numRemovedCrop / numTotalCrop * 100)))
+            .format(num_removed_crop, num_total_crop,
+                    (num_removed_crop / num_total_crop * 100)))
 
         if preview == True:
             plot1 = MapPlot.create(self, self.crop(self.mask), cmap='binary')
@@ -512,9 +512,9 @@ class Map(base.Map):
                                    clabel="Effective shear strain")
             plot2.set_title('Effective shear strain preview')
         print(
-            'Use applyThresholdMask function to apply this filtering to data')
+            'Use apply_threshold_mask function to apply this filtering to data')
 
-    def applyThresholdMask(self):
+    def apply_threshold_mask(self):
         """ Apply mask to all DIC map data by setting masked values to nan.
 
         """
@@ -558,7 +558,7 @@ class Map(base.Map):
             )
         return img
 
-    def plotGrainAvMaxShear(self, **kwargs):
+    def plot_grain_av_max_shear(self, **kwargs):
         """Plot grain map with grains filled with average value of max shear.
         This uses the max shear values stored in grain objects, to plot other data
         use :func:`~defdap.hrdic.Map.plotGrainAv`.
@@ -736,7 +736,7 @@ class Map(base.Map):
 
         # add first point to the grain
         x, y = seed
-        grain.addPoint(seed)
+        grain.add_point(seed)
         grains[y, x] = index
         points_left[y, x] = False
         edge = [seed]
@@ -766,29 +766,29 @@ class Map(base.Map):
                     add_point = True
 
                 if add_point:
-                    grain.addPoint((s, t))
+                    grain.add_point((s, t))
                     grains[t, s] = index
                     points_left[t, s] = False
 
         return grain
 
-    def grain_inspector(self, vmax=0.1, corrAngle=0, RDRlength=3):
+    def grain_inspector(self, vmax=0.1, correction_angle=0, rdr_line_length=3):
         """Run the grain inspector interactive tool.
 
         Parameters
         ----------
         vmax : float
             Maximum value of the colour map.
-        corrAngle: float
+        correction_angle: float
             Correction angle in degrees to subtract from measured angles to account
             for small rotation between DIC and EBSD frames. Approximately the rotation
             component of affine transform.
-        RDRlength: int
+        rdr_line_length: int
             Length of lines perpendicular to slip trace used to calculate RDR.
 
         """
-        GrainInspector(selected_dic_map=self, vmax=vmax, correction_angle=corrAngle,
-                       rdr_line_length=RDRlength)
+        GrainInspector(selected_dic_map=self, vmax=vmax, correction_angle=correction_angle,
+                       rdr_line_length=rdr_line_length)
 
 
 class Grain(base.Grain):
@@ -824,11 +824,11 @@ class Grain(base.Grain):
             Map data to list data from the map the grain is part of
 
     """
-    def __init__(self, grainID, dicMap, group_id):
+    def __init__(self, grain_id, dicMap, group_id):
         # Call base class constructor
-        super(Grain, self).__init__(grainID, dicMap, group_id)
+        super(Grain, self).__init__(grain_id, dicMap, group_id)
 
-        self.dicMap = self.owner_map     # DIC map this grain is a member of
+        self.dic_map = self.owner_map     # DIC map this grain is a member of
         self.ebsd_grain = None
         self.ebsd_map = None
 
@@ -886,22 +886,22 @@ class Grain(base.Grain):
         """
         return self.ebsd_grain.slip_traces
 
-    def calc_slip_traces(self, slipSystems=None):
+    def calc_slip_traces(self, slip_systems=None):
         """Calculates list of slip trace angles based on EBSD grain orientation.
 
         Parameters
         -------
-        slipSystems : defdap.crystal.SlipSystem, optional
+        slip_systems : defdap.crystal.SlipSystem, optional
 
         """
-        self.ebsd_grain.calc_slip_traces(slip_systems=slipSystems)
+        self.ebsd_grain.calc_slip_traces(slip_systems=slip_systems)
 
-    def calcSlipBands(self, grainMapData, thres=None, min_dist=None):
+    def calc_slip_bands(self, grain_map_data, thres=None, min_dist=None):
         """Use Radon transform to detect slip band angles.
 
         Parameters
         ----------
-        grainMapData : numpy.ndarray
+        grain_map_data : numpy.ndarray
             Data to find bands in.
         thres : float, optional
             Normalised threshold for peaks.
@@ -918,18 +918,18 @@ class Grain(base.Grain):
             thres = 0.3
         if min_dist is None:
             min_dist = 30
-        grainMapData = np.nan_to_num(grainMapData)
+        grain_map_data = np.nan_to_num(grain_map_data)
 
-        if grainMapData.min() < 0:
+        if grain_map_data.min() < 0:
             print("Negative values in data, taking absolute value.")
-            # grainMapData = grainMapData**2
-            grainMapData = np.abs(grainMapData)
+            # grain_map_data = grain_map_data**2
+            grain_map_data = np.abs(grain_map_data)
         # array to hold shape / support of grain
-        suppGMD = np.zeros(grainMapData.shape)
-        suppGMD[grainMapData!=0]=1
-        sin_map = tf.radon(grainMapData, circle=False)
+        supp_gmd = np.zeros(grain_map_data.shape)
+        supp_gmd[grain_map_data != 0]=1
+        sin_map = tf.radon(grain_map_data, circle=False)
         #profile = np.max(sin_map, axis=0) # old method
-        supp_map = tf.radon(suppGMD, circle=False)
+        supp_map = tf.radon(supp_gmd, circle=False)
         supp_1 = np.zeros(supp_map.shape)
         supp_1[supp_map>0]=1
         # minimum diameter of grain
@@ -941,6 +941,7 @@ class Grain(base.Grain):
         crop_map[selection] = sin_map[selection] / supp_map[selection] 
         supp_crop = np.zeros(crop_map.shape)
         supp_crop[crop_map>0] = 1
+
         # raise to power to accentuate local peaks
         profile = np.sum(crop_map**4, axis=0) / np.sum(supp_crop, axis=0)
 
@@ -951,9 +952,9 @@ class Grain(base.Grain):
         # peaks = peakutils.interpolate(x, profile, ind=indexes)
         print("Number of bands detected: {:}".format(len(peaks)))
 
-        slipBandAngles = peaks
-        slipBandAngles = slipBandAngles * np.pi / 180
-        return slipBandAngles
+        slip_band_angles = peaks
+        slip_band_angles = slip_band_angles * np.pi / 180
+        return slip_band_angles
 
 
 class BoundarySet(object):

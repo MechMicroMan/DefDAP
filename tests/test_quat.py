@@ -33,12 +33,12 @@ def testInitDimension(inputLength):
     (-np.pi, -np.pi, -np.pi, [0, -1., 0, 0]),
 ])
 def testInitEuler(ph1, phi, ph2, expectedOutput):
-    """Check quatCoef is correct after initialisation with Eulers"""
+    """Check quat_coef is correct after initialisation with Eulers"""
     returnedQuat = Quat.from_euler_angles(ph1, phi, ph2)
     assert np.allclose(returnedQuat.quat_coef, expectedOutput, atol=1e-4)
 
 
-# Check quatCoef is correct after initialisation with quat array
+# Check quat_coef is correct after initialisation with quat array
 @pytest.mark.parametrize('testValues, expectedOutput', [
     ([0, 0, 0, 0], [0, 0, 0, 0]),
     ([1., 2., 3., 4.], [1., 2., 3., 4.])
@@ -48,7 +48,7 @@ def testInitArray(testValues, expectedOutput):
     assert np.allclose(returnedQuat, expectedOutput, atol=1e-4)
 
 
-# Check quatCoef is correct after initialisation with quat coeffs
+# Check quat_coef is correct after initialisation with quat coeffs
 @pytest.mark.parametrize('a1, a2, a3, a4, expectedOutput', [
     (0, 0, 0, 0, [0, 0, 0, 0]),
     (1, 2, 3, 4, [1, 2, 3, 4])
@@ -93,7 +93,7 @@ def testInitStrEul(ph1, phi, ph2):
 
 
 ## from_axis_angle
-# Check quatCoef is correct for given axis and angle
+# Check quat_coef is correct for given axis and angle
 @pytest.mark.parametrize('axis, angle, expectedOutput', [
     ([1, 0, 0], np.pi, [0, -1, 0, 0]),
     ([1, 1, 0], -np.pi/2, [np.sin(np.pi/4), 0.5, 0.5, 0]),
@@ -579,7 +579,7 @@ class TestSymEqv:
     @staticmethod
     @parametrize_with_cases("ins, outs", cases=TestSymEqvCases)
     def test_return_type(ins, outs):
-        syms = Quat.symEqv(*ins)
+        syms = Quat.sym_eqv(*ins)
 
         assert type(syms) is list
         assert len(syms) == len(outs[0])
@@ -588,7 +588,7 @@ class TestSymEqv:
     @staticmethod
     @parametrize_with_cases("ins, outs", cases=TestSymEqvCases)
     def test_calc(ins, outs):
-        syms = Quat.symEqv(*ins)
+        syms = Quat.sym_eqv(*ins)
 
         assert all([np.allclose(sym.quat_coef, row) for sym, row
                     in zip(syms, outs[0])])
@@ -602,16 +602,16 @@ class TestSymEqv:
 ''' Functions left to test
 __repr__(self):
 __str__(self):
-plotIPF
+plot_ipf
 plotUnitCell
 
 create_many_quats(eulerArray)
-calcSymEqvs(quats, symGroup, dtype=np.float)
+calc_sym_eqvs(quats, symGroup, dtype=np.float)
 calc_average_ori(quatComps)
 calcMisOri(quatComps, refOri)
-polarAngles(x, y, z)
-calcIPFcolours(quats, direction, symGroup)
-calcFundDirs(quats, direction, symGroup, dtype=np.float)
+polar_angles(x, y, z)
+calc_ipf_colours(quats, direction, symGroup)
+calc_fund_dirs(quats, direction, symGroup, dtype=np.float)
 '''
 
 

@@ -8,7 +8,7 @@ import defdap.crystal as crystal
 from defdap.utils import Datastore
 
 
-DATA_DIR = "tests/data/"
+DATA_DIR = "../tests/data/"
 EXPECTED_RESULTS_DIR = DATA_DIR + "expected_output/"
 EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
 
@@ -38,7 +38,7 @@ def good_phase_array(good_map_with_quats):
 
 
 class TestMapFindBoundaries:
-    # Depends on Quat.symEqv, self.crystal_sym, self.y_dim, self.x_dim,
+    # Depends on Quat.sym_eqv, self.crystal_sym, self.y_dim, self.x_dim,
     # self.quatArray, self.phaseArray
     # Affects self.boundaries
 
@@ -122,7 +122,7 @@ plot_average_grain_schmid_factors_map
 
 Grain:
 __init__
-addPoint
+add_point
 calc_average_ori
 build_mis_ori_list
 plot_ref_ori

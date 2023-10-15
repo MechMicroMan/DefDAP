@@ -1,4 +1,4 @@
-# Copyright 2021 Mechanics of Microstructures Group
+# Copyright 2023 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +58,7 @@ class GrainInspector:
         self.vmax = vmax
         self.correction_angle = correction_angle
         self.rdr_line_length = rdr_line_length
-        self.filename = str(self.selected_dic_map.retrieveName()) + '_RDR.txt'
+        self.filename = str(self.selected_dic_map.retrieve_name()) + '_RDR.txt'
 
         # Plot window
         self.plot = Plot(ax=None, make_interactive=True, figsize=(13, 8), title='Grain Inspector')
@@ -311,15 +311,15 @@ class GrainInspector:
         # Draw slip traces
         self.slip_trace_axis.clear()
         self.slip_trace_axis.set_aspect('equal', 'box')
-        slipPlot = GrainPlot(fig=self.plot.fig, 
-                             callingGrain=self.selected_dic_map[self.grain_id], ax=self.slip_trace_axis)
-        traces = slipPlot.add_slip_traces(topOnly=True)
+        slipPlot = GrainPlot(fig=self.plot.fig,
+                             calling_grain=self.selected_dic_map[self.grain_id], ax=self.slip_trace_axis)
+        traces = slipPlot.add_slip_traces(top_only=True)
         self.slip_trace_axis.axis('off')
 
         # Draw slip bands
         bands = [elem[1] for elem in self.selected_dic_grain.groups_list]
         if self.selected_dic_grain.groups_list != None:
-            slipPlot.add_slip_bands(topOnly=True, angles=list(np.deg2rad(bands)))
+            slipPlot.add_slip_bands(top_only=True, angles=list(np.deg2rad(bands)))
 
     def run_rdr_group(self,
                       event: int,
@@ -516,7 +516,7 @@ class GrainInspector:
             text = "Plane: {0:s}    Angle: {1:.1f}\n".format(ss_group[0].slip_plane_label, slip_trace_angle)
             temp_rdrs = [];
             for ss, sf in zip(ss_group, sf_group):
-                slip_dir_sample = self.selected_ebsd_grain.ref_ori.conjugate.transform_vector(ss.slipDir)
+                slip_dir_sample = self.selected_ebsd_grain.ref_ori.conjugate.transform_vector(ss.slip_dir)
                 text = text + "          {0:s}    SF: {1:.3f}    RDR: {2:.3f}\n".format(
                     ss.slip_dir_label, sf, -slip_dir_sample[0] / slip_dir_sample[1])
                 rdr = -slip_dir_sample[0] / slip_dir_sample[1]
