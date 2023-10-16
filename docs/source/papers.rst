@@ -1,7 +1,7 @@
 Papers
 ========
 
-Here is a list of papers which have use the DefDAP Python library.
+Here is a list of papers which have used the DefDAP Python library.
 
 2023
 ------
@@ -21,9 +21,11 @@ Here is a list of papers which have use the DefDAP Python library.
 
 * `C.Hardie, R.Thomas, Y. Liu, P.Frankel, F.Dunne. Simulation of crystal plasticity in irradiated metals: A case study on Zircaloy-4. Acta Materialia. Volume 241. Dec 2022. 118361. <https://doi.org/10.1016/j.actamat.2022.118361>`_
 
-* `A.E. Davis, X. Zeng, R. Thomas, J.R. Kennedy 1, J. Donoghue, A. Gholinia, P.B. Prangnell, J. Quinta Da Fonseca. Optimising large-area crystal orientation mapping of nanoscale β phase in α + β titanium alloys using EBSD. Materials Characterization. Volume 194. Dec 2022. 112371. <https://doi.org/10.1016/j.matchar.2022.112371>`_
+* `A.E. Davis, X. Zeng, R. Thomas, J.R. Kennedy, J. Donoghue, A. Gholinia, P.B. Prangnell, J. Quinta Da Fonseca. Optimising large-area crystal orientation mapping of nanoscale β phase in α + β titanium alloys using EBSD. Materials Characterization. Volume 194. Dec 2022. 112371. <https://doi.org/10.1016/j.matchar.2022.112371>`_
 
 * `S.Cao, L.Meng, H.Liu, Y.Zou, A.Smith, X.Wu, J.Donoghue, R.Thomas, M.Preuss, D.Lunt. Role of microstructure heterogeneity on deformation behaviour in additive manufactured Ti-6Al-4V. Materialia. Volume 26. Dec 2022. 101636. <https://doi.org/10.1016/j.mtla.2022.101636>`_
+
+* `X.C.Li, Y.N.Wu, R.Yang, Z.B.Zhang, Origin of strain localization at twin boundary in Inconel 718 superalloy fabricated by laser powder bed fusion. 42nd Risø International Symposium on Materials Science: Microstructural variability: Processing, analysis, mechanisms and properties.  Volume 1249. September 2022.  <https://doi.org/10.1088/1757-899X/1249/1/012016>`_
 
 * `C.Liu, R.Thomas, T.Sun, J.Donoghue, X.Zhang, T.L.Burnett, J.Quinta da Fonseca, M.Preuss. Multi-dimensional study of the effect of early slip activity on fatigue crack initiation in a near-α titanium alloy. Acta Materialia. Volume 223. Jul 2022. 117967. <https://doi.org/10.1016/j.actamat.2022.117967>`_
 
@@ -35,6 +37,9 @@ Here is a list of papers which have use the DefDAP Python library.
 * `R.Thomas, D.Lunt, M.D.Atkinson, J.Quinta da Fonseca, M.Preuss, F.Barton, J.O’Hanlon,P. Frankel. The Effect of Loading Direction on Slip and Twinning in an Irradiated Zirconium Alloy. Zirconium in the Nuclear Industry: 19th International Symposium. ASTM International. Pages 233–261. <https://doi.org/10.1520/STP162220190027>`_
 
 * `D.Lunt, R.Thomas, M.D.Atkinson, A. Smith, R.Sandala, J.Quinta da Fonseca, M. Preuss. Understanding the role of local texture variation on slip activity in a two-phase titanium alloy. Acta Materialia. Volume 216. Sept 2021. 117111. <https://doi.org/10.1016/j.actamat.2021.117111>`_
+
+* `O.Levano Blanch, D.Lunt, G.J.Baxter, Deformation Behaviour of a FAST Diffusion Bond Processed from Dissimilar Titanium Alloy Powders. Metall Mater Trans A. Volume 52. Apr 2021. 3064–3082 (2021). <https://doi.org/10.1007/s11661-021-06301-w>`_
+
 
 2020
 ------
