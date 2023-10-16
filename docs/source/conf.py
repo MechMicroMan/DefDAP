@@ -24,7 +24,6 @@ with open('howtouse.ipynb') as f:
 new_text = old_text.replace('%matplotlib tk', r'%matplotlib inline')
 
 # change directory so that paths still work
-new_text = new_text.replace('../tests/data/testDataEBSD', r'../../tests/data/testDataEBSD')
 new_text = new_text.replace('../tests/data/', r'../../tests/data/')
 
 # Change title to 'How to use'
