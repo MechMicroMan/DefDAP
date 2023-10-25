@@ -25,6 +25,7 @@ from defdap.file_readers import EBSDDataLoader
 from defdap.file_writers import EBSDDataWriter
 from defdap.quat import Quat
 from defdap import base
+from defdap._accelerated import flood_fill
 
 from defdap import defaults
 from defdap.plotting import MapPlot
@@ -881,12 +882,14 @@ class Map(base.Map):
         # Loop until all points (except boundaries) have been assigned
         # to a grain or ignored
         i = 0
+        added_coords_buffer = np.zeros((boundary_im_y.size, 2), dtype=np.intp)
         while found_point >= 0:
             # Flood fill first unknown point and return grain object
             seed = np.unravel_index(next_point, self.shape)
             grain = self.flood_fill(
                 (seed[1], seed[0]), grain_index, points_left, grains,
-                boundary_im_x, boundary_im_y, group_id
+                boundary_im_x, boundary_im_y, group_id,
+                added_coords_buffer,
             )
 
             if len(grain) < min_grain_size:
@@ -963,7 +966,7 @@ class Map(base.Map):
         return plot
 
     def flood_fill(self, seed, index, points_left, grains, boundary_im_x,
-                   boundary_im_y, group_id):
+                   boundary_im_y, group_id, added_coords_buffer=None):
         """Flood fill algorithm that uses the x and y boundary arrays to
         fill a connected area around the seed point. The points are inserted
         into a grain object and the grain map array is updated.
@@ -991,49 +994,12 @@ class Map(base.Map):
         grains[y, x] = index
         points_left[y, x] = False
         edge = [seed]
-
-        while edge:
-            x, y = edge.pop(0)
-
-            moves = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
-            # get rid of any that go out of the map area
-            if x <= 0:
-                moves.pop(1)
-            elif x >= self.shape[1] - 1:
-                moves.pop(0)
-            if y <= 0:
-                moves.pop(-1)
-            elif y >= self.shape[0] - 1:
-                moves.pop(-2)
-
-            for (s, t) in moves:
-                if grains[t, s] > 0:
-                    continue
-
-                add_point = False
-
-                if t == y:
-                    # moving horizontally
-                    if s > x:
-                        # moving right
-                        add_point = not boundary_im_x[y, x]
-                    else:
-                        # moving left
-                        add_point = not boundary_im_x[t, s]
-                else:
-                    # moving vertically
-                    if t > y:
-                        # moving down
-                        add_point = not boundary_im_y[y, x]
-                    else:
-                        # moving up
-                        add_point = not boundary_im_y[t, s]
-
-                if add_point:
-                    grain.add_point((s, t))
-                    grains[t, s] = index
-                    points_left[t, s] = False
-                    edge.append((s, t))
+        added_coords = flood_fill(
+                seed, index,
+                points_left, grains,
+                boundary_im_x, boundary_im_y,
+                added_coords_buffer)
+        grain.data.point = list(added_coords)
 
         return grain
 
