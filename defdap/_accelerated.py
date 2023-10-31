@@ -72,6 +72,7 @@ def flood_fill_dic(seed, index, points_remaining, grains, added_coords):
     grains[y, x] = index
     points_remaining[y, x] = False
     edge = [seed]
+    added_coords[0] = seed
     npoints = 1
 
     while edge:
