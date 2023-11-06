@@ -99,7 +99,6 @@ class TestMapFindGrains:
         assert len(result) == 111
 
     @staticmethod
-    @pytest.mark.parametrize('min_grain_size', [0, 10, 100])
     def test_grain_points(mock_map, min_grain_size):
         algorithm = 'warp'
         hrdic.Map.find_grains(mock_map, algorithm=algorithm)
@@ -110,10 +109,11 @@ class TestMapFindGrains:
             f'{EXPECTED_RESULTS_DIR}/hrdic_grains_{algorithm}.npz'
         )['grains']
 
+        # transform both to set of tuples so order of points is ignored
         for i in range(expected_grains.max()):
-            expected_point = zip(*np.nonzero(expected_grains == i+1)[::-1])
+            expected_point = set(zip(*np.nonzero(expected_grains == i+1)[::-1]))
 
-            assert set(result[i].data.point) == set(expected_point)
+            assert set([(*r, ) for r in result[i].data.point]) == expected_point
 
 
 # methods to test

@@ -630,9 +630,7 @@ class Map(base.Map):
                 grain = Grain(dic_grain_id, self, group_id)
 
                 # Find (x,y) coordinates and corresponding max shears of grain
-                # coords = np.argwhere(grains == dic_grain_id + 1)  # (y,x)
-                coords = props_dict[dic_grain_id + 1].coords  # (r, c)
-                # grain.data.point = [(x, y) for y, x in coords]
+                coords = props_dict[dic_grain_id + 1].coords  # (y, x)
                 grain.data.point = np.flip(coords, axis=1)  # (x, y)
 
                 # Assign EBSD grain ID to DIC grain and increment grain list
@@ -646,9 +644,7 @@ class Map(base.Map):
 
             # List of points where no grain has been set yet
             points_left = grains == 0
-            added_coords_buffer = np.zeros(
-                    (points_left.size, 2), dtype=np.intp
-                    )
+            added_coords_buffer = np.zeros((points_left.size, 2), dtype=np.intp)
             total_points = points_left.sum()
             found_point = 0
             next_point = points_left.tobytes().find(b'\x01')
@@ -748,7 +744,7 @@ class Map(base.Map):
         added_coords = flood_fill_dic(seed, index, points_left, grains,
                                       added_coords_buffer)
 
-        grain.data.point = list(added_coords)
+        grain.data.point = added_coords
 
         return grain
 

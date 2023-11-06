@@ -990,16 +990,14 @@ class Map(base.Map):
 
         # add first point to the grain
         x, y = seed
-        grain.add_point(seed)
         grains[y, x] = index
         points_left[y, x] = False
-        edge = [seed]
         added_coords = flood_fill(
                 seed, index,
                 points_left, grains,
                 boundary_im_x, boundary_im_y,
                 added_coords_buffer)
-        grain.data.point = list(added_coords)
+        grain.data.point = added_coords
 
         return grain
 

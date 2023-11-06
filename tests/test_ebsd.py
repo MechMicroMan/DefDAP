@@ -223,11 +223,11 @@ class TestMapFindGrains:
             f'{EXPECTED_RESULTS_DIR}/ebsd_grains_5deg_{min_grain_size}.npz'
         )['grains']
 
+        # transform both to set of tuples so order of points is ignored
         for i in range(expected_grains.max()):
+            expected_point = set(zip(*np.nonzero(expected_grains == i+1)[::-1]))
 
-            expected_point = zip(*np.nonzero(expected_grains == i+1)[::-1])
-
-            assert set(result[i].data.point) == set(expected_point)
+            assert set([(*r, ) for r in result[i].data.point]) == expected_point
 
 
 ''' Functions left to test

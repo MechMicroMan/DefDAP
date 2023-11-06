@@ -793,17 +793,6 @@ class Grain(object):
     def __str__(self):
         return f"Grain(ID={self.grain_id})"
 
-    def add_point(self, point):
-        """Append a coordinate and a quat to a grain.
-
-        Parameters
-        ----------
-        point : tuple
-            (x,y) coordinate to append
-
-        """
-        self.data.point.append(point)
-
     @property
     def extreme_coords(self):
         """Coordinates of the bounding box for a grain.
@@ -814,12 +803,7 @@ class Grain(object):
             minimum x, minimum y, maximum x, maximum y.
 
         """
-        points = np.array(self.data.point, dtype=int)
-
-        x0, y0 = points.min(axis=0)
-        xmax, ymax = points.max(axis=0)
-
-        return x0, y0, xmax, ymax
+        return *self.data.point.min(axis=0), *self.data.point.max(axis=0)
 
     def centre_coords(self, centre_type="box", grain_coords=True):
         """
@@ -846,7 +830,7 @@ class Grain(object):
             x_centre = round((xmax + x0) / 2)
             y_centre = round((ymax + y0) / 2)
         elif centre_type == "com":
-            x_centre, y_centre = np.array(self.data.point).mean(axis=0).round()
+            x_centre, y_centre = self.data.point.mean(axis=0).round()
         else:
             raise ValueError("centreType must be box or com")
 
