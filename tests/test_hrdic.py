@@ -99,7 +99,7 @@ class TestMapFindGrains:
         assert len(result) == 111
 
     @staticmethod
-    def test_grain_points(mock_map, min_grain_size):
+    def test_grain_points(mock_map):
         algorithm = 'warp'
         hrdic.Map.find_grains(mock_map, algorithm=algorithm)
         result = mock_map._grains
