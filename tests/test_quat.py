@@ -9,8 +9,7 @@ from defdap.quat import Quat
 # Initialisation tests
 
 
-@pytest.mark.parametrize('inputLength',
-                         [2, 5, 6])
+@pytest.mark.parametrize('inputLength', [2, 5, 6])
 def testInitDimension(inputLength):
     """Quat initialisation should raise a DimensionError if not length
     1, 3, 4"""
