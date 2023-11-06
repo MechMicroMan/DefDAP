@@ -189,7 +189,7 @@ class TestMapFindGrains:
         mock_add_derivative = Mock()
         mock_map.data.add_derivative = mock_add_derivative
         # run test and collect result
-        result = ebsd.Map.find_grains(mock_map, min_grain_size=10)
+        ebsd.Map.find_grains(mock_map, min_grain_size=10)
 
         mock_add_derivative.assert_called_once()
 
@@ -228,6 +228,7 @@ class TestMapFindGrains:
             expected_point = zip(*np.nonzero(expected_grains == i+1)[::-1])
 
             assert set(result[i].data.point) == set(expected_point)
+
 
 ''' Functions left to test
 Map:
