@@ -5,7 +5,7 @@ import defdap.file_readers
 from defdap.crystal import crystalStructures, Phase
 from defdap.utils import Datastore
 
-DATA_DIR = "../tests/data/"
+DATA_DIR = "tests/data/"
 EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
 EXAMPLE_DIC = DATA_DIR + "testDataDIC.txt"
 

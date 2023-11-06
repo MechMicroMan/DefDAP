@@ -9,7 +9,7 @@ from defdap.quat import Quat
 from defdap.utils import Datastore
 
 
-DATA_DIR = "../tests/data/"
+DATA_DIR = "tests/data/"
 EXPECTED_RESULTS_DIR = DATA_DIR + "expected_output/"
 EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
 
