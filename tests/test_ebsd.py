@@ -1,7 +1,5 @@
 import pytest
-from pytest import approx
 from unittest.mock import Mock, MagicMock
-from functools import partial
 
 import numpy as np
 import defdap.ebsd as ebsd
@@ -102,10 +100,6 @@ class TestMapFindBoundaries:
         mock_crystal_structure.symmetries = good_symmetries
         mock_phase = Mock(spec=crystal.Phase)
         mock_phase.crystal_structure = mock_crystal_structure
-
-        # mock_phase = Mock(spec=crystal.Phase)
-        # mock_phase.crystal_structure = crystal.crystalStructures['cubic']
-
         mock_map.primary_phase = mock_phase
 
         return mock_map
@@ -153,10 +147,8 @@ class TestMapFindGrains:
         mock_datastore.phase = good_phase_array
         mock_datastore.grain_boundaries = good_grain_boundaries
         mock_datastore.generate_id = Mock(return_value=1)
-        # mock_datastore.__iter__.return_value = []
         mock_map.data = mock_datastore
         mock_map.shape = good_phase_array.shape
-        mock_map.flood_fill = partial(ebsd.Map.flood_fill, mock_map)
         mock_map.num_phases = 1
         mock_map.phases = [Mock(crystal.Phase)]
 
@@ -223,11 +215,11 @@ class TestMapFindGrains:
             f'{EXPECTED_RESULTS_DIR}/ebsd_grains_5deg_{min_grain_size}.npz'
         )['grains']
 
+        # transform both to set of tuples so order of points is ignored
         for i in range(expected_grains.max()):
+            expected_point = set(zip(*np.nonzero(expected_grains == i+1)[::-1]))
 
-            expected_point = zip(*np.nonzero(expected_grains == i+1)[::-1])
-
-            assert set(result[i].data.point) == set(expected_point)
+            assert set([(*r, ) for r in result[i].data.point]) == expected_point
 
 
 ''' Functions left to test

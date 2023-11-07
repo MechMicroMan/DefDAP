@@ -41,17 +41,17 @@ setup(
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Framework :: IPython',
         'Framework :: Jupyter',
         'Framework :: Matplotlib'
     ],
     packages=find_packages(exclude=['tests']),
     package_data={'defdap': ['slip_systems/*.txt']},
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     install_requires=[
         'scipy>=1.9',
         'numpy',
@@ -61,11 +61,14 @@ setup(
         'peakutils',
         'matplotlib_scalebar',
         'networkx',
+        'numba',
     ],
     extras_require={
         'testing': ['pytest', 'coverage', 'pytest-cov', 'pytest_cases'],
-        'docs': ['sphinx==5.0.2', 'sphinx_rtd_theme==0.5.0', 'sphinx_autodoc_typehints==1.11.1',
-                 'nbsphinx==0.9.3', 'ipykernel', 'pandoc', 'ipympl']
+        'docs': [
+            'sphinx==5.0.2', 'sphinx_rtd_theme==0.5.0', 
+            'sphinx_autodoc_typehints==1.11.1', 'nbsphinx==0.9.3', 
+            'ipykernel', 'pandoc', 'ipympl'
+        ]
     }
-
 )
