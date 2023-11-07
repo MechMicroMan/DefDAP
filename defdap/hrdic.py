@@ -644,7 +644,7 @@ class Map(base.Map):
 
             # List of points where no grain has been set yet
             points_left = grains == 0
-            added_coords_buffer = np.zeros((points_left.size, 2), dtype=np.intp)
+            coords_buffer = np.zeros((points_left.size, 2), dtype=np.intp)
             total_points = points_left.sum()
             found_point = 0
             next_point = points_left.tobytes().find(b'\x01')
@@ -661,8 +661,9 @@ class Map(base.Map):
                 grain = Grain(grain_index - 1, self, group_id)
                 grain.data.point = flood_fill_dic(
                     (seed[1], seed[0]), grain_index, points_left,
-                    grains, added_coords_buffer
+                    grains, coords_buffer
                 )
+                coords_buffer = coords_buffer[len(grain.data.point):]
 
                 if len(grain) < min_grain_size:
                     # if grain size less than minimum, ignore grain and set

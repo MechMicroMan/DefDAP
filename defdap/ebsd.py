@@ -882,18 +882,17 @@ class Map(base.Map):
         # Loop until all points (except boundaries) have been assigned
         # to a grain or ignored
         i = 0
-        added_coords_buffer = np.zeros((boundary_im_y.size, 2), dtype=np.intp)
+        coords_buffer = np.zeros((boundary_im_y.size, 2), dtype=np.intp)
         while found_point >= 0:
             # Flood fill first unknown point and return grain object
             seed = np.unravel_index(next_point, self.shape)
 
             grain = Grain(grain_index - 1, self, group_id)
             grain.data.point = flood_fill(
-                (seed[1], seed[0]), grain_index,
-                points_left, grains,
-                boundary_im_x, boundary_im_y,
-                added_coords_buffer
+                (seed[1], seed[0]), grain_index, points_left, grains,
+                boundary_im_x, boundary_im_y, coords_buffer
             )
+            coords_buffer = coords_buffer[len(grain.data.point):]
 
             if len(grain) < min_grain_size:
                 # if grain size less than minimum, ignore grain and set

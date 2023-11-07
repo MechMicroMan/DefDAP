@@ -80,7 +80,7 @@ def flood_fill(seed, index, points_remaining, grains, boundary_x, boundary_y,
                 npoints += 1
                 edge.append((s, t))
 
-    return np.copy(added_coords[:npoints])
+    return added_coords[:npoints]
 
 
 @njit
@@ -145,4 +145,4 @@ def flood_fill_dic(seed, index, points_remaining, grains, added_coords):
                 points_remaining[t, s] = False
                 npoints += 1
 
-    return np.copy(added_coords[:npoints])
+    return added_coords[:npoints]
