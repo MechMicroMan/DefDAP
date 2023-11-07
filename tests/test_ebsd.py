@@ -1,7 +1,5 @@
 import pytest
-from pytest import approx
 from unittest.mock import Mock, MagicMock
-from functools import partial
 
 import numpy as np
 import defdap.ebsd as ebsd
@@ -102,10 +100,6 @@ class TestMapFindBoundaries:
         mock_crystal_structure.symmetries = good_symmetries
         mock_phase = Mock(spec=crystal.Phase)
         mock_phase.crystal_structure = mock_crystal_structure
-
-        # mock_phase = Mock(spec=crystal.Phase)
-        # mock_phase.crystal_structure = crystal.crystalStructures['cubic']
-
         mock_map.primary_phase = mock_phase
 
         return mock_map
@@ -153,10 +147,8 @@ class TestMapFindGrains:
         mock_datastore.phase = good_phase_array
         mock_datastore.grain_boundaries = good_grain_boundaries
         mock_datastore.generate_id = Mock(return_value=1)
-        # mock_datastore.__iter__.return_value = []
         mock_map.data = mock_datastore
         mock_map.shape = good_phase_array.shape
-        mock_map.flood_fill = partial(ebsd.Map.flood_fill, mock_map)
         mock_map.num_phases = 1
         mock_map.phases = [Mock(crystal.Phase)]
 
