@@ -886,10 +886,13 @@ class Map(base.Map):
         while found_point >= 0:
             # Flood fill first unknown point and return grain object
             seed = np.unravel_index(next_point, self.shape)
-            grain = self.flood_fill(
-                (seed[1], seed[0]), grain_index, points_left, grains,
-                boundary_im_x, boundary_im_y, group_id,
-                added_coords_buffer,
+
+            grain = Grain(grain_index - 1, self, group_id)
+            grain.data.point = flood_fill(
+                (seed[1], seed[0]), grain_index,
+                points_left, grains,
+                boundary_im_x, boundary_im_y,
+                added_coords_buffer
             )
 
             if len(grain) < min_grain_size:
@@ -964,42 +967,6 @@ class Map(base.Map):
         plot = MapPlot.create(self, self.data.grains, **plot_params)
 
         return plot
-
-    def flood_fill(self, seed, index, points_left, grains, boundary_im_x,
-                   boundary_im_y, group_id, added_coords_buffer=None):
-        """Flood fill algorithm that uses the x and y boundary arrays to
-        fill a connected area around the seed point. The points are inserted
-        into a grain object and the grain map array is updated.
-
-        Parameters
-        ----------
-        seed : tuple of 2 int
-            Seed point x for flood fill
-        index : int
-            Value to fill in grain map
-        points_left : numpy.ndarray
-            Boolean map of the points that have not been assigned a grain yet
-
-        Returns
-        -------
-        grain : defdap.ebsd.Grain
-            New grain object with points added
-        """
-        # create new grain
-        grain = Grain(index - 1, self, group_id)
-
-        # add first point to the grain
-        x, y = seed
-        grains[y, x] = index
-        points_left[y, x] = False
-        added_coords = flood_fill(
-                seed, index,
-                points_left, grains,
-                boundary_im_x, boundary_im_y,
-                added_coords_buffer)
-        grain.data.point = added_coords
-
-        return grain
 
     @report_progress("calculating grain mean orientations")
     def calc_grain_av_oris(self):

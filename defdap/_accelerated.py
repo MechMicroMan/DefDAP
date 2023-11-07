@@ -12,6 +12,24 @@ def find_first(arr):
 @njit
 def flood_fill(seed, index, points_remaining, grains, boundary_x, boundary_y,
                added_coords):
+    """Flood fill algorithm that uses the x and y boundary arrays to
+    fill a connected area around the seed point. The points are inserted
+    into a grain object and the grain map array is updated.
+
+    Parameters
+    ----------
+    seed : tuple of 2 int
+        Seed point x for flood fill
+    index : int
+        Value to fill in grain map
+    points_remaining : numpy.ndarray
+        Boolean map of the points that have not been assigned a grain yet
+
+    Returns
+    -------
+    grain : defdap.ebsd.Grain
+        New grain object with points added
+    """
     x, y = seed
     grains[y, x] = index
     points_remaining[y, x] = False
@@ -67,6 +85,28 @@ def flood_fill(seed, index, points_remaining, grains, boundary_x, boundary_y,
 
 @njit
 def flood_fill_dic(seed, index, points_remaining, grains, added_coords):
+    """Flood fill algorithm that uses the combined x and y boundary array
+    to fill a connected area around the seed point. The points are returned and
+    the grain map array is updated.
+
+    Parameters
+    ----------
+    seed : tuple of 2 int
+        Seed point x for flood fill
+    index : int
+        Value to fill in grain map
+    points_remaining : numpy.ndarray
+        Boolean map of the points remaining to assign a grain yet
+    grains : numpy.ndarray
+    added_coords : numpy.ndarray
+        Buffer for points in the grain
+
+    Returns
+    -------
+    numpy.ndarray
+        Flooded points (n, 2)
+
+    """
     # add first point to the grain
     x, y = seed
     grains[y, x] = index

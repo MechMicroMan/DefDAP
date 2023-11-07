@@ -657,9 +657,11 @@ class Map(base.Map):
             while found_point >= 0:
                 # Flood fill first unknown point and return grain object
                 seed = np.unravel_index(next_point, self.shape)
-                grain = self.flood_fill(
-                    (seed[1], seed[0]), grain_index, points_left, grains,
-                    group_id, added_coords_buffer,
+
+                grain = Grain(grain_index - 1, self, group_id)
+                grain.data.point = flood_fill_dic(
+                    (seed[1], seed[0]), grain_index, points_left,
+                    grains, added_coords_buffer
                 )
 
                 if len(grain) < min_grain_size:
@@ -716,37 +718,6 @@ class Map(base.Map):
 
         self._grains = grain_list
         return grains
-
-    def flood_fill(self, seed, index, points_left, grains, group_id,
-                   added_coords_buffer=None):
-        """Flood fill algorithm that uses the combined x and y boundary array
-        to fill a connected area around the seed point. The points are inserted
-        into a grain object and the grain map array is updated.
-
-        Parameters
-        ----------
-        seed : tuple of 2 int
-            Seed point x for flood fill
-        index : int
-            Value to fill in grain map
-        points_left : numpy.ndarray
-            Boolean map of the points that have not been assigned a grain yet
-
-        Returns
-        -------
-        grain : defdap.hrdic.Grain
-            New grain object with points added
-
-        """
-        # create new grain
-        grain = Grain(index - 1, self, group_id)
-
-        added_coords = flood_fill_dic(seed, index, points_left, grains,
-                                      added_coords_buffer)
-
-        grain.data.point = added_coords
-
-        return grain
 
     def grain_inspector(self, vmax=0.1, correction_angle=0, rdr_line_length=3):
         """Run the grain inspector interactive tool.
