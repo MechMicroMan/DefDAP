@@ -45,7 +45,6 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
-        'Programming Language :: Python :: 3.12',
         'Framework :: IPython',
         'Framework :: Jupyter',
         'Framework :: Matplotlib'
@@ -66,8 +65,10 @@ setup(
     ],
     extras_require={
         'testing': ['pytest', 'coverage', 'pytest-cov', 'pytest_cases'],
-        'docs': ['sphinx==5.0.2', 'sphinx_rtd_theme==0.5.0', 'sphinx_autodoc_typehints==1.11.1',
-                 'nbsphinx==0.9.3', 'ipykernel', 'pandoc', 'ipympl']
+        'docs': [
+            'sphinx==5.0.2', 'sphinx_rtd_theme==0.5.0', 
+            'sphinx_autodoc_typehints==1.11.1', 'nbsphinx==0.9.3', 
+            'ipykernel', 'pandoc', 'ipympl'
+        ]
     }
-
 )
