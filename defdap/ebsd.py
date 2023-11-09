@@ -76,24 +76,24 @@ class Map(base.Map):
             Grain list data to map data from all grains
 
     """
-    def __init__(self, fileName, dataType=None, **kwargs):
+    MAPNAME = 'ebsd'
+
+    def __init__(self, *args, **kwargs):
         """
         Initialise class and load EBSD data.
 
         Parameters
         ----------
-        fileName : str
-            Path to EBSD file, including name, excluding extension.
-        dataType : str, {'OxfordBinary', 'OxfordText'}
-            Format of EBSD data file.
+        *args, **kwarg
+            Passed to base constructor
 
         """
-        # Call base class constructor
-        super(Map, self).__init__(**kwargs)
-        self.increment.add_map('ebsd', self)
-
+        # Initialise variables
         self.step_size = None
         self.phases = []
+
+        # Call base class constructor
+        super(Map, self).__init__(*args, **kwargs)
 
         self.mis_ori = None
         self.mis_ori_axis = None
@@ -107,8 +107,6 @@ class Map(base.Map):
         self.plot_default = self.plot_euler_map
         self.homog_map_name = 'band_contrast'
         self.highlight_alpha = 1
-
-        self.load_data(fileName, data_type=dataType)
 
         self.data.add_generator(
             'orientation', self.calc_quat_array, unit='', type='map',
@@ -154,13 +152,13 @@ class Map(base.Map):
 
         Parameters
         ----------
-        file_name : str
-            Path to EBSD file, including name, excluding extension.
-        data_type : str, {'OxfordBinary', 'OxfordText'}
+        file_name : pathlib.Path
+            Path to EBSD file
+        data_type : str, {'OxfordBinary', 'OxfordText', 'EdaxAng', 'PythonDict'}
             Format of EBSD data file.
 
         """
-        data_loader = EBSDDataLoader.get_loader(data_type)
+        data_loader = EBSDDataLoader.get_loader(data_type, file_name)
         data_loader.load(file_name)
 
         metadata_dict = data_loader.loaded_metadata

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import numpy as np
 from matplotlib.pyplot import imread
 import inspect
@@ -27,7 +29,7 @@ import peakutils
 
 from defdap._accelerated import flood_fill_dic
 from defdap.utils import Datastore
-from defdap.file_readers import DICDataLoader
+from defdap.file_readers import DICDataLoader, DavisLoader
 from defdap import base
 
 from defdap import defaults
@@ -87,23 +89,17 @@ class Map(base.Map):
             Grain list data to map data from all grains
 
     """
-    def __init__(self, path, fname, data_type=None, **kwargs):
+    MAPNAME = 'hrdic'
+
+    def __init__(self, *args, **kwargs):
         """Initialise class and import DIC data from file.
 
         Parameters
         ----------
-        path : str
-            Path to file.
-        fname : str
-            Name of file including extension.
-        data_type : str
-            Type of data file.
+        *args, **kwarg
+            Passed to base constructor
 
         """
-        # Call base class constructor
-        super(Map, self).__init__(**kwargs)
-        self.increment.add_map('dic', self)
-
         # Initialise variables
         self.format = None      # Software name
         self.version = None     # Software version
@@ -111,16 +107,16 @@ class Map(base.Map):
         self.xdim = None        # size of map along x (from header)
         self.ydim = None        # size of map along y (from header)
 
+        # Call base class constructor
+        super(Map, self).__init__(*args, **kwargs)
+
         self.corr_val = None     # correlation value
 
         self.ebsd_map = None                 # EBSD map linked to DIC map
         self.highlight_alpha = 0.6
         self.bse_scale = None                # size of pixels in pattern images
-        self.path = path                    # file path
-        self.fname = fname                  # file name
+        self.bse_scale = None                # size of pixels in pattern images
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
-
-        self.load_data(path, fname, data_type=data_type)
 
         ## TODO: cropping, have metadata to state if saved data is cropped, if
         ## not cropped then crop on accesss. Maybe mark cropped data as invalid
@@ -189,21 +185,19 @@ class Map(base.Map):
         return self.ebsd_map.crystal_sym
 
     @report_progress("loading HRDIC data")
-    def load_data(self, file_dir, file_name, data_type=None):
+    def load_data(self, file_name, data_type=None):
         """Load DIC data from file.
 
         Parameters
         ----------
-        file_dir : str
-            Path to file.
-        file_name : str
+        file_name : pathlib.Path
             Name of file including extension.
-        data_type : str,  {'DavisText'}
+        data_type : str,  {'Davis', 'OpenPIV'}
             Type of data file.
 
         """
         data_loader = DICDataLoader.get_loader(data_type)
-        data_loader.load(file_name, file_dir)
+        data_loader.load(file_name)
 
         metadata_dict = data_loader.loaded_metadata
         self.format = metadata_dict['format']      # Software name
@@ -222,24 +216,22 @@ class Map(base.Map):
                f"(dimensions: {self.xdim} x {self.xdim} pixels, "
                f"sub-window size: {self.binning} x {self.binning} pixels)")
 
-    def load_corr_val_data(self, file_dir, file_name, data_type=None):
+    def load_corr_val_data(self, file_name, data_type=None):
         """Load correlation value for DIC data
 
         Parameters
         ----------
-        file_dir : str
+        file_name : pathlib.Path or str
             Path to file.
-        file_name : str
-            Name of file including extension.
         data_type : str,  {'DavisImage'}
             Type of data file.
 
         """
         data_type = "DavisImage" if data_type is None else data_type
 
-        data_loader = DICDataLoader()
+        data_loader = DavisLoader()
         if data_type == "DavisImage":
-            loaded_data = data_loader.loadDavisImageData(file_name, file_dir)
+            loaded_data = data_loader.load_davis_image_data(Path(file_name))
         else:
             raise Exception("No loader found for this DIC data.")
             
@@ -540,7 +532,7 @@ class Map(base.Map):
             the pattern are half the size of the dic data.
 
         """
-        path = self.path + img_path
+        path = self.file_name.parent / img_path
         self.data['pattern', 'path'] = path
         self.data['pattern', 'binning'] = window_size
 

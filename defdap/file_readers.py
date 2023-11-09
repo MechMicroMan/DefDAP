@@ -16,6 +16,7 @@
 import numpy as np
 from numpy.lib.recfunctions import structured_to_unstructured
 import pandas as pd
+from abc import ABC, abstractmethod
 import pathlib
 import re
 
@@ -26,7 +27,7 @@ from defdap.quat import Quat
 from defdap.utils import Datastore
 
 
-class EBSDDataLoader(object):
+class EBSDDataLoader(ABC):
     """Class containing methods for loading and checking EBSD data
 
     """
@@ -55,21 +56,26 @@ class EBSDDataLoader(object):
         self.data_format = None
 
     @staticmethod
-    def get_loader(data_type: str) -> 'Type[EBSDDataLoader]':
+    def get_loader(data_type: str, file_name: pathlib.Path) -> 'Type[EBSDDataLoader]':
         if data_type is None:
-            data_type = "OxfordBinary"
+            data_type = {
+                '.crc': 'oxfordbinary',
+                '.cpr': 'oxfordbinary',
+                '.ctf': 'oxfordtext',
+                '.ang': 'edaxang',
+            }.get(file_name.suffix, 'oxfordbinary')
 
         data_type = data_type.lower()
-        if data_type == "oxfordbinary":
-            return OxfordBinaryLoader()
-        elif data_type == "oxfordtext":
-            return OxfordTextLoader()
-        elif data_type == "edaxang":
-            return EdaxAngLoader()
-        elif data_type == "pythondict":
-            return PythonDictLoader()
-        else:
+        try:
+            loader = {
+                'oxfordbinary': OxfordBinaryLoader,
+                'oxfordtext': OxfordTextLoader,
+                'edaxang': EdaxAngLoader,
+                'pythondict': PythonDictLoader,
+            }[data_type]
+        except KeyError:
             raise ValueError(f"No loader for EBSD data of type {data_type}.")
+        return loader()
 
     def check_metadata(self) -> None:
         """
@@ -87,29 +93,25 @@ class EBSDDataLoader(object):
         assert self.loaded_data.euler_angle.shape == (3,) + shape
         # assert self.loaded_data['bandContrast'].shape == mapShape
 
+    @abstractmethod
+    def load(self, file_name: pathlib.Path) -> None:
+        pass
+
 
 class OxfordTextLoader(EBSDDataLoader):
-    def load(
-        self,
-        file_name: str,
-        file_dir: str = ""
-    ) -> None:
+    def load(self, file_name: pathlib.Path) -> None:
         """ Read an Oxford Instruments .ctf file, which is a HKL single
         orientation file.
 
         Parameters
         ----------
         file_name
-            File name.
-        file_dir
-            Path to file.
+            Path to file
 
         """
         # open data file and read in metadata
-        file_name = "{}.ctf".format(file_name)
-        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
-        if not file_path.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(file_path))
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
 
         def parse_phase() -> Phase:
             line_split = line.split('\t')
@@ -128,7 +130,7 @@ class OxfordTextLoader(EBSDDataLoader):
 
         # default values for acquisition rotation in case missing in in file
         acq_eulers = [0., 0., 0.]
-        with open(str(file_path), 'r') as ctf_file:
+        with open(str(file_name), 'r') as ctf_file:
             for i, line in enumerate(ctf_file):
                 if 'XCells' in line:
                     x_dim = int(line.split()[-1])
@@ -191,7 +193,7 @@ class OxfordTextLoader(EBSDDataLoader):
 
         # now read the data from file
         data = np.loadtxt(
-            str(file_path), dtype=self.data_format, usecols=load_cols,
+            str(file_name), dtype=self.data_format, usecols=load_cols,
             skiprows=num_header_lines
         )
 
@@ -233,30 +235,22 @@ class OxfordTextLoader(EBSDDataLoader):
 
 
 class EdaxAngLoader(EBSDDataLoader):
-    def load(
-        self,
-        file_name: str,
-        file_dir: str = ""
-    ) -> None:
+    def load(self, file_name: pathlib.Path) -> None:
         """ Read an EDAX .ang file.
 
         Parameters
         ----------
         file_name
-            File name.
-        file_dir
-            Path to file.
+            Path to file
 
         """
         # open data file and read in metadata
-        file_name = f'{file_name}.ang'
-        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
-        if not file_path.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(file_path))
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
 
         i_phase = 1
         # parse header lines (starting with #)
-        with open(str(file_path), 'r') as ang_file:
+        with open(str(file_name), 'r') as ang_file:
             while True:
                 line = ang_file.readline()
 
@@ -311,7 +305,7 @@ class EdaxAngLoader(EBSDDataLoader):
 
         # now read the data from file
         data = np.loadtxt(
-            str(file_path), dtype=self.data_format, comments='#',
+            str(file_name), dtype=self.data_format, comments='#',
             usecols=load_cols
         )
 
@@ -383,25 +377,19 @@ class EdaxAngLoader(EBSDDataLoader):
 
 
 class OxfordBinaryLoader(EBSDDataLoader):
-    def load(
-        self,
-        fileName: str,
-        file_dir: str = ""
-    ) -> None:
+    def load(self, file_name: pathlib.Path) -> None:
         """Read Oxford Instruments .cpr/.crc file pair.
 
         Parameters
         ----------
-        fileName
-            File name.
-        file_dir
-            Path to file.
+        file_name
+            Path to file
 
         """
-        self.load_oxford_cpr(fileName, file_dir=file_dir)
-        self.load_oxford_crc(fileName, file_dir=file_dir)
+        self.load_oxford_cpr(file_name)
+        self.load_oxford_crc(file_name)
 
-    def load_oxford_cpr(self, file_name: str, file_dir: str = "") -> None:
+    def load_oxford_cpr(self, file_name: pathlib.Path) -> None:
         """
         Read an Oxford Instruments .cpr file, which is a metadata file
         describing EBSD data.
@@ -409,17 +397,14 @@ class OxfordBinaryLoader(EBSDDataLoader):
         Parameters
         ----------
         file_name
-            File name.
-        file_dir
-            Path to file.
+            Path to file
 
         """
         comment_char = ';'
 
-        file_name = "{}.cpr".format(file_name)
-        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
-        if not file_path.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(file_path))
+        file_name = file_name.with_suffix('.cpr')
+        if not file_name.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_name))
 
         # CPR file is split into groups, load each group into a
         # hierarchical dict
@@ -434,7 +419,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
             except ValueError:
                 pass
 
-        with open(str(file_path), 'r') as cpr_file:
+        with open(str(file_name), 'r') as cpr_file:
             while True:
                 line = cpr_file.readline()
                 if not line:
@@ -519,26 +504,23 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
         self.data_format = np.dtype(data_format)
 
-    def load_oxford_crc(self, file_name: str, file_dir: str = "") -> None:
+    def load_oxford_crc(self, file_name: pathlib.Path) -> None:
         """Read binary EBSD data from an Oxford Instruments .crc file
 
         Parameters
         ----------
         file_name
-            File name.
-        file_dir
-            Path to file.
+            Path to file
 
         """
         shape = self.loaded_metadata['shape']
 
-        file_name = "{}.crc".format(file_name)
-        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
-        if not file_path.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(file_path))
+        file_name = file_name.with_suffix('.crc')
+        if not file_name.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_name))
 
         # load binary data from file
-        data = np.fromfile(str(file_path), self.data_format, count=-1)
+        data = np.fromfile(str(file_name), self.data_format, count=-1)
 
         self.loaded_data.add(
             'band_contrast', data['BC'].reshape(shape),
@@ -620,7 +602,7 @@ class PythonDictLoader(EBSDDataLoader):
         self.check_data()
 
 
-class DICDataLoader(object):
+class DICDataLoader(ABC):
     """Class containing methods for loading and checking HRDIC data
 
     """
@@ -656,12 +638,14 @@ class DICDataLoader(object):
             data_type = "Davis"
 
         data_type = data_type.lower()
-        if data_type == "davis":
-            return DavisLoader()
-        elif data_type == "openpiv":
-            return OpenPivLoader()
-        else:
-            raise ValueError(f"No loader for EBSD data of type {data_type}.")
+        try:
+            loader = {
+                'davis': DavisLoader,
+                'openpiv': OpenPivLoader,
+            }[data_type]
+        except KeyError:
+            raise ValueError(f"No loader for DIC data of type {data_type}.")
+        return loader()
 
     def checkMetadata(self) -> None:
         return
@@ -691,28 +675,25 @@ class DICDataLoader(object):
                 f'`{self.loaded_metadata["shape"]}`'
             )
 
+    @abstractmethod
+    def load(self, file_name: pathlib.Path) -> None:
+        pass
+
 
 class DavisLoader(DICDataLoader):
-    def load(
-        self,
-        file_name: str,
-        file_dir: str = ""
-    ) -> None:
+    def load(self, file_name: pathlib.Path) -> None:
         """ Load from Davis .txt file.
 
         Parameters
         ----------
         file_name
-            File name.
-        file_dir
-            Path to file.
+            Path to file
 
         """
-        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
-        if not file_path.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(file_path))
+        if not file_name.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_name))
 
-        with open(str(file_path), 'r') as f:
+        with open(str(file_name), 'r') as f:
             header = f.readline()
         metadata = header.split()
 
@@ -726,7 +707,7 @@ class DavisLoader(DICDataLoader):
 
         self.checkMetadata()
 
-        data = pd.read_table(str(file_path), delimiter='\t', skiprows=1,
+        data = pd.read_table(str(file_name), delimiter='\t', skiprows=1,
                              header=None).values
         data = data.reshape(self.loaded_metadata['shape'] + (-1,))
         data = data.transpose((2, 0, 1))
@@ -737,15 +718,13 @@ class DavisLoader(DICDataLoader):
         self.check_data()
 
     @staticmethod
-    def loadDavisImageData(file_name: str, file_dir: str = "") -> np.ndarray:
+    def load_davis_image_data(file_name: pathlib.Path) -> np.ndarray:
         """ A .txt file from DaVis containing a 2D image
 
         Parameters
         ----------
         file_name
-            File name.
-        file_dir
-            Path to file.
+            Path to file
 
         Returns
         -------
@@ -753,40 +732,29 @@ class DavisLoader(DICDataLoader):
             Array of data.
 
         """
-        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
-        if not file_path.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(file_path))
+        if not file_name.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_name))
 
-        data = pd.read_table(str(file_path), delimiter='\t', skiprows=1,
+        data = pd.read_table(str(file_name), delimiter='\t', skiprows=1,
                              header=None)
-       
-        # x and y coordinates
-        loaded_data = np.array(data)
 
-        return loaded_data
+        return np.array(data)
 
 
 class OpenPivLoader(DICDataLoader):
-    def load(
-            self,
-            file_name: str,
-            file_dir: str = ""
-    ) -> None:
+    def load(self, file_name: pathlib.Path) -> None:
         """ Load from Open PIV .txt file.
 
         Parameters
         ----------
         file_name
-            File name.
-        file_dir
-            Path to file.
+            Path to file
 
         """
-        file_path = pathlib.Path(file_dir) / pathlib.Path(file_name)
-        if not file_path.is_file():
-            raise FileNotFoundError(f"Cannot open file {file_path}")
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
 
-        with open(str(file_path), 'r') as f:
+        with open(str(file_name), 'r') as f:
             header = f.readline()[1:].split()
             data = np.loadtxt(f)
         col = {

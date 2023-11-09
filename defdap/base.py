@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC, abstractmethod
+from pathlib import Path
+
 import numpy as np
 import networkx as nx
 
@@ -27,7 +30,7 @@ from defdap.utils import report_progress, Datastore
 from defdap.experiment import Frame
 
 
-class Map(object):
+class Map(ABC):
     """
     Base class for a map. Contains common functionality for all maps.
 
@@ -40,16 +43,33 @@ class Map(object):
         The last selected grain
 
     """
-    def __init__(self, experiment=None, increment=None, frame=None):
+    def __init__(self, file_name, data_type=None, experiment=None,
+                 increment=None, frame=None, map_name=None):
+        """
+
+        Parameters
+        ----------
+        file_name : str
+            Path to EBSD file, including name, excluding extension.
+        data_type : str, {'OxfordBinary', 'OxfordText'}
+            Format of EBSD data file.
+
+        """
 
         self.data = Datastore(crop_func=self.crop)
         self.frame = frame if frame is not None else Frame()
-        if experiment is None:
-            self.experiment = defdap.anonymous_experiment
-            self.increment = self.experiment.add_increment()
+        if increment is not None:
+            self.increment = increment
+            self.experiment = self.increment.experiment
+            if experiment is not None:
+                assert self.experiment is experiment
         else:
             self.experiment = experiment
-            self.increment = experiment.add_increment() if increment is None else increment
+            if experiment is None:
+                self.experiment = defdap.anonymous_experiment
+            self.increment = self.experiment.add_increment()
+        map_name = self.MAPNAME if map_name is None else map_name
+        self.increment.add_map(map_name, self)
 
         self.shape = (0, 0)
 
@@ -62,6 +82,13 @@ class Map(object):
 
         self.grain_plot = None
         self.profile_plot = None
+
+        self.file_name = Path(file_name)
+        self.load_data(file_name, data_type=data_type)
+
+    @abstractmethod
+    def load_data(self, file_name, data_type=None):
+        pass
 
     def __len__(self):
         return len(self.grains)
@@ -755,7 +782,7 @@ class Map(object):
         return plot
 
 
-class Grain(object):
+class Grain(ABC):
     """
     Base class for a grain.
 
