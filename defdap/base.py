@@ -84,7 +84,7 @@ class Map(ABC):
         self.profile_plot = None
 
         self.file_name = Path(file_name)
-        self.load_data(file_name, data_type=data_type)
+        self.load_data(self.file_name, data_type=data_type)
 
     @abstractmethod
     def load_data(self, file_name, data_type=None):
