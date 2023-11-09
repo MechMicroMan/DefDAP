@@ -8,10 +8,20 @@ class Experiment(object):
         self.frame_relations = {}
         self.increments = []
 
+    def __getitem__(self, key):
+        return self.increments[key]
+
     def add_increment(self, **kwargs):
-        inc = Increment(**kwargs)
+        inc = Increment(self, **kwargs)
         self.increments.append(inc)
         return inc
+
+    def iter_over_maps(self, map_name):
+        for i, inc in enumerate(self.increments):
+            map_obj = inc.maps.get(map_name)
+            if map_obj is None:
+                continue
+            yield i, map_obj
 
     def link_frames(self, frame_1, frame_2, transform_props):
         self.frame_relations[(frame_1, frame_2)] = transform_props
@@ -129,12 +139,15 @@ class Experiment(object):
 
 
 class Increment(object):
-    def __init__(self, **kwargs):
+    # def __init__(self, experiment, **kwargs):
+    def __init__(self, experiment, **kwargs):
+
         self.maps = {}
         # ex: (name, map, frame)
         # default behaviour for no frame, different frame for
         # each EBSD map, initial increment frame for DIC maps
 
+        self.experiment = experiment
         self.metadata = kwargs
 
     def add_map(self, name, map_obj):
