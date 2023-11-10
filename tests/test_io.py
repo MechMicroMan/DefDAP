@@ -1,13 +1,14 @@
 import pytest
 import numpy as np
+from pathlib import Path
 
 import defdap.file_readers
 from defdap.crystal import crystalStructures, Phase
 from defdap.utils import Datastore
 
-DATA_DIR = "tests/data/"
-EXAMPLE_EBSD = DATA_DIR + "testDataEBSD"
-EXAMPLE_DIC = DATA_DIR + "testDataDIC.txt"
+DATA_DIR = Path("tests/data/")
+EXAMPLE_EBSD = DATA_DIR / "testDataEBSD"
+EXAMPLE_DIC = DATA_DIR / "testDataDIC.txt"
 
 
 class TestEBSDDataLoader:
@@ -75,7 +76,7 @@ class TestEBSDDataLoader:
     @staticmethod
     def test_load_oxford_cpr_bad_file(data_loader_oxford_binary):
         with pytest.raises(FileNotFoundError):
-            data_loader_oxford_binary.load_oxford_cpr("badger")
+            data_loader_oxford_binary.load_oxford_cpr(Path("badger"))
 
     @staticmethod
     def test_load_oxford_crc_good_file(metadata_loaded_oxford_binary):
@@ -110,7 +111,7 @@ class TestEBSDDataLoader:
     @staticmethod
     def test_load_oxford_crc_bad(metadata_loaded_oxford_binary):
         with pytest.raises(FileNotFoundError):
-            metadata_loaded_oxford_binary.load_oxford_crc("badger")
+            metadata_loaded_oxford_binary.load_oxford_crc(Path("badger"))
 
 
 class TestDICDataLoader:
@@ -151,7 +152,7 @@ class TestDICDataLoader:
     @staticmethod
     def test_load_davis_metadata_bad_file(davis_loader):
         with pytest.raises(FileNotFoundError):
-            davis_loader.load("badger")
+            davis_loader.load(Path("badger"))
 
     @staticmethod
     def test_load_davis_data(dic_metadata_loaded):
@@ -171,7 +172,7 @@ class TestDICDataLoader:
     @staticmethod
     def test_load_davis_data_bad_file(dic_metadata_loaded):
         with pytest.raises(FileNotFoundError):
-            dic_metadata_loaded.load("badger")
+            dic_metadata_loaded.load(Path("badger"))
 
     @staticmethod
     def test_check_davis_data(dic_data_loaded):
