@@ -222,6 +222,41 @@ class TestMapFindGrains:
             assert set([(*r, ) for r in result[i].data.point]) == expected_point
 
 
+class TestMapCalcProxigram:
+    @staticmethod
+    @pytest.fixture
+    def mock_map(good_grain_boundaries, good_phase_array):
+        # create stub object
+        mock_map = Mock(spec=ebsd.Map)
+        mock_datastore = MagicMock(spec=Datastore)
+        mock_datastore.grain_boundaries = good_grain_boundaries
+        mock_map.data = mock_datastore
+        mock_map.shape = good_grain_boundaries.ebsd_map.shape
+
+        return mock_map
+
+    @staticmethod
+    def test_return_type(mock_map):
+        # run test and collect result
+        result = ebsd.Map.calc_proxigram(mock_map)
+
+        assert isinstance(result, np.ndarray)
+        assert result.shape == mock_map.shape
+        assert result.dtype == float
+
+    @staticmethod
+    def test_calc(mock_map):
+        # run test and collect result
+        result = ebsd.Map.calc_proxigram(mock_map)
+
+        # load expected
+        expected = np.load(
+            f'{EXPECTED_RESULTS_DIR}/ebsd_proxigram.npz'
+        )['proxigram']
+
+        np.testing.assert_array_equal(result, expected)
+
+
 ''' Functions left to test
 Map:
 __init__
