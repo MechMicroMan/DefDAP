@@ -714,14 +714,10 @@ class Quat(object):
                 scalar_sym[:, np.newaxis] * scalar0
                 - np.tensordot(vector_sym, vector0, axes=[(1,), (0,)])
                 )[..., np.newaxis]
-        quat_comps_vector = (
-                scalar0[:, np.newaxis] * vector_sym[:, np.newaxis, :]
-                + scalar_sym[:, np.newaxis, np.newaxis] * vector0.T
-                + np.cross(
-                        vector_sym[:, np.newaxis, :], vector0.T,
-                        axisa=2, axisb=1,
-                        )
-                )
+        c0 = scalar0[:, np.newaxis] * vector_sym[:, np.newaxis, :]
+        c1 = scalar_sym[:, np.newaxis, np.newaxis] * vector0.T
+        c2 = np.cross(vector_sym[:, np.newaxis, :], vector0.T, axisa=2, axisb=1)
+        quat_comps_vector = c0 + c1 + c2
         quat_comps = np.concatenate(
                 [quat_comps_scalar, quat_comps_vector], axis=-1
                 )
