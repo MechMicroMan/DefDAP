@@ -79,6 +79,8 @@ extensions = [
 
 nbsphinx_allow_errors = True
 nbsphinx_execute = 'always'
+nbsphinx_kernel_name = 'python3'
+
 nbsphinx_prolog = """
 This page was built from the example_notebook Jupyter notebook available on `Github <https://github.com/MechMicroMan/DefDAP>`_
 

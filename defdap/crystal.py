@@ -296,7 +296,7 @@ class SlipSystem(object):
 
         Parameters
         ----------
-        slip_plane: nunpy.ndarray
+        slip_plane: numpy.ndarray
             Slip plane.
         slip_dir: numpy.ndarray
             Slip direction.
