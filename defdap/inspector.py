@@ -100,8 +100,11 @@ class GrainInspector:
         self.grain_info_axis = self.plot.add_axes((div_frac, 0.86, 0.25, 0.06))
         self.line_info_axis = self.plot.add_axes((div_frac, 0.55, 0.25, 0.3))
         self.groups_info_axis = self.plot.add_axes((div_frac, 0.15, 0.25, 0.3))
-        self.grain_plot = self.selected_dic_map[self.grain_id].plot_max_shear(fig=self.plot.fig, ax=self.max_shear_axis,
-                                                                              vmax=self.vmax, plot_scale_bar=True, plot_colour_bar=True)
+        self.grain_plot = self.selected_dic_map[self.grain_id].plot_max_shear(fig=self.plot.fig,
+                                                                              ax=self.max_shear_axis,
+                                                                              vmax=self.vmax,
+                                                                              plot_scale_bar=True,
+                                                                              plot_colour_bar=True)
         self.plot.ax.axis('off')
 
         # Draw the stuff that will need to be redrawn often in a separate function
@@ -190,7 +193,8 @@ class GrainInspector:
                         # If within +- 5 degrees of existing group, set that as the group
                         group = np.argmin(np.abs(np.array([x[1] for x in grain.groups_list]) - angle))
                         grain.points_list[i][2] = group
-                        new_average = float('{0:.2f}'.format(np.average([x[1] for x in grain.points_list if x[2] == group])))
+                        new_average = float('{0:.2f}'.format(
+                            np.average([x[1] for x in grain.points_list if x[2] == group])))
                         grain.groups_list[group][1] = new_average
                     else:
                         # Make new group and set
@@ -279,14 +283,16 @@ class GrainInspector:
                    '-----------------------------------------\n'
         if self.selected_dic_grain.points_list:
             for idx, points in enumerate(self.selected_dic_grain.points_list):
-                lines_text += '{0:<3} {1:<5.0f} {2:<5.0f} {3:<5.0f} {4:<5.0f} {5:<7.1f} {6:<5}\n'.format(idx, *points[0],
-                                                                                                points[1], points[2])
+                lines_text += '{0:<3} {1:<5.0f} {2:<5.0f} {3:<5.0f} {4:<5.0f} {5:<7.1f} {6:<5}\n'.format(
+                    idx, *points[0], points[1], points[2])
                 self.grain_plot.add_arrow(start_end=points[0], clear_previous=False, persistent=True, label=idx)
 
         self.line_info_axis.clear()
         self.line_info_axis.axis('off')
-        self.plot.add_text(self.line_info_axis, 0, 1, title_text, va='top', fontsize=10, fontfamily='monospace', weight='bold')
-        self.plot.add_text(self.line_info_axis, 0, 0.9, lines_text, va='top', fontsize=10, fontfamily='monospace')
+        self.plot.add_text(self.line_info_axis, 0, 1, title_text, va='top',
+                           fontsize=10, fontfamily='monospace', weight='bold')
+        self.plot.add_text(self.line_info_axis, 0, 0.9, lines_text, va='top',
+                           fontsize=10, fontfamily='monospace')
 
         # Write groups info text
         title_text = 'List of groups'
@@ -487,43 +493,46 @@ class GrainInspector:
 
         self.rdr_plot.plot_axis.scatter(x=v_list, y=u_list, marker='x', lw=1)
         self.rdr_plot.plot_axis.plot(
-            [np.min(v_list), np.max(v_list)], [slope * np.min(v_list) + intercept, slope * np.max(v_list) + intercept], '-')
+            [np.min(v_list), np.max(v_list)],
+            [slope * np.min(v_list) + intercept, slope * np.max(v_list) + intercept], '-')
         self.rdr_plot.plot_axis.set_xlabel('v-centered')
         self.rdr_plot.plot_axis.set_ylabel('u-centered')
-        self.rdr_plot.add_text(self.rdr_plot.plot_axis, 0.95, 0.01, 'Slope = {0:.3f} ± {1:.3f}\nR-squared = {2:.3f}\nn={3}'
-                               .format(slope, std_err, r_value ** 2, len(u_list)), va='bottom', ha='right',
-                               transform=self.rdr_plot.plot_axis.transAxes, fontsize=10);
+        self.rdr_plot.add_text(self.rdr_plot.plot_axis, 0.95, 0.01,
+                               'Slope = {0:.3f} ± {1:.3f}\nR-squared = {2:.3f}\nn={3}'
+                               .format(slope, std_err, r_value ** 2, len(u_list)),
+                               va='bottom', ha='right',
+                               transform=self.rdr_plot.plot_axis.transAxes, fontsize=10, fontfamily='monospace');
 
-        # Write grain info
         self.selected_ebsd_grain.calc_slip_traces()
+        self.selected_ebsd_grain.calc_rdr()
 
         if self.selected_ebsd_grain.average_schmid_factors is None:
             raise Exception("Run 'calc_average_grain_schmid_factors' first")
 
+        # Write grain info
         eulers = np.rad2deg(self.selected_ebsd_grain.ref_ori.euler_angles())
-
         text = 'Average angle: {0:.2f}\n'.format(grain.groups_list[group][1])
         text += 'Eulers: {0:.1f}    {1:.1f}    {2:.1f}\n\n'.format(eulers[0], eulers[1], eulers[2])
 
         self.rdr_plot.add_text(self.rdr_plot.text_axis, 0.15, 1, text, fontsize=10, va='top', fontfamily='monospace')
 
         # Write slip system info
-        rdrs = []
         offset = 0
-        for idx, (ss_group, sf_group, slip_trace_angle) in enumerate(
-                zip(self.selected_ebsd_grain.phase.slip_systems, self.selected_ebsd_grain.average_schmid_factors,
-                    np.rad2deg(self.selected_ebsd_grain.slip_trace_angles))):
-            text = "Plane: {0:s}    Angle: {1:.1f}\n".format(ss_group[0].slip_plane_label, slip_trace_angle)
-            temp_rdrs = [];
-            for ss, sf in zip(ss_group, sf_group):
-                slip_dir_sample = self.selected_ebsd_grain.ref_ori.conjugate.transform_vector(ss.slip_dir)
-                text = text + "          {0:s}    SF: {1:.3f}    RDR: {2:.3f}\n".format(
-                    ss.slip_dir_label, sf, -slip_dir_sample[0] / slip_dir_sample[1])
-                rdr = -slip_dir_sample[0] / slip_dir_sample[1]
-                temp_rdrs.append(rdr)
-            rdrs.append(temp_rdrs)
 
-            if idx in grain.groups_list[group][2]:
+        # Loop over groups of slip systems with same slip plane
+        for i, slip_system_group in enumerate(self.selected_ebsd_grain.phase.slip_systems):
+            slip_trace_angle = np.rad2deg(self.selected_ebsd_grain.slip_trace_angles[i])
+            text = "Plane: {0:s}    Angle: {1:.1f}\n".format(slip_system_group[0].slip_plane_label,
+                                                             slip_trace_angle)
+
+            # Then loop over individual slip systems
+            for j, slip_system in enumerate(slip_system_group):
+                schmid_factor = self.selected_ebsd_grain.average_schmid_factors[i][j]
+
+                text = text + "          {0:s}    SF: {1:.3f}    RDR: {2:.3f}\n".format(
+                    slip_system.slip_dir_label, schmid_factor, self.selected_ebsd_grain.rdr[i][j])
+
+            if i in grain.groups_list[group][2]:
                 self.rdr_plot.add_text(self.rdr_plot.text_axis, 0.15, 0.9 - offset, text, va='top',
                                        weight='bold', fontsize=10)
             else:
@@ -532,30 +541,42 @@ class GrainInspector:
 
             offset += 0.0275 * text.count('\n')
 
-        # Plot rdr values on number line
-        unique_rdrs = set()
-        for x in [item for sublist in rdrs for item in sublist]:
-            unique_rdrs.add(x)
+        # Finf all unique rdr values
+        unique_rdrs = set([item for sublist in self.selected_ebsd_grain.rdr for item in sublist])
+
+        # Plot number line
         self.rdr_plot.number_line_axis.axvline(x=0, ymin=-20, ymax=20, c='k')
-        self.rdr_plot.number_line_axis.plot(np.zeros(len(unique_rdrs)), list(unique_rdrs), 'bo', label='Theoretical RDR values')
+
+        # Theoretical values as blue points
+        self.rdr_plot.number_line_axis.plot(np.zeros(len(unique_rdrs)), list(unique_rdrs),
+                                            'bo', label='Theoretical RDR values')
+
+        # Measured values as red points
         self.rdr_plot.number_line_axis.plot([0], slope, 'ro', label='Measured RDR value')
-        self.rdr_plot.add_text(self.rdr_plot.number_line_axis, -0.009, slope - 0.01, '{0:.3f}'.format(float(slope)),
-                               fontfamily='monospace')
+        self.rdr_plot.add_text(self.rdr_plot.number_line_axis, -0.002, slope, '{0:.3f}'.format(float(slope)),
+                               fontfamily='monospace', horizontalalignment='right', verticalalignment='center')
+
         self.rdr_plot.number_line_axis.legend(bbox_to_anchor=(1.15, 1.05))
 
         # Label rdrs by slip system on number line
-        for rdr in list(unique_rdrs):
-            if (rdr > slope - 1.5) & (rdr < slope + 1.5):
-                self.rdr_plot.add_text(self.rdr_plot.number_line_axis, -0.009, rdr - 0.01, '{0:.3f}'.format(float(rdr)))
-                txt = ''
-                for idx, ss_group in enumerate(rdrs):
-                    for idx2, rdr in enumerate(ss_group):
-                        if rdr == rdr:
-                            txt += str('{0} {1}  '
-                                       .format(self.selected_ebsd_grain.phase.slip_systems[idx][idx2].slip_plane_label,
-                                               self.selected_ebsd_grain.phase.slip_systems[idx][idx2].slip_dir_label))
+        for unique_rdr in list(unique_rdrs):
+            if (unique_rdr > slope - 1.5) & (unique_rdr < slope + 1.5):
+                # Add number to the left of point
+                self.rdr_plot.add_text(self.rdr_plot.number_line_axis, -0.002, unique_rdr,
+                                       '{0:.3f}'.format(float(unique_rdr)),
+                                       fontfamily='monospace', horizontalalignment='right', verticalalignment='center')
 
-                    self.rdr_plot.add_text(self.rdr_plot.number_line_axis, 0.002, rdr - 0.01, txt)
+                # Go through all planes and directions and add to string if they have the rdr from above loop
+                txt = ''
+                for i, slip_system_group in enumerate(self.selected_ebsd_grain.phase.slip_systems):
+                    # Then loop over individual slip systems
+                    for j, slip_system in enumerate(slip_system_group):
+                        rdr = self.selected_ebsd_grain.rdr[i][j]
+                        if rdr == unique_rdr:
+                            txt += str('{0} {1}  '.format(slip_system.slip_plane_label, slip_system.slip_dir_label))
+
+                self.rdr_plot.add_text(self.rdr_plot.number_line_axis, 0.002, unique_rdr - 0.01,
+                                       txt)
 
         self.rdr_plot.number_line_axis.set_ylim(slope - 1.5, slope + 1.5)
         self.rdr_plot.number_line_axis.set_xlim(-0.01, 0.05)

@@ -1067,6 +1067,16 @@ class Map(base.Map):
             # report progress
             yield (iGrain + 1) / num_grains
 
+    @report_progress("calculating RDR values")
+    def calc_rdr(self):
+        """Calculates Relative Displacent Ratio values for all grains"""
+        num_grains = len(self)
+        for iGrain, grain in enumerate(self):
+            grain.calc_rdr()
+
+            # report progress
+            yield (iGrain + 1) / num_grains
+
     def plot_average_grain_schmid_factors_map(self, planes=None, directions=None,
                                               **kwargs):
         """
@@ -1437,6 +1447,18 @@ class Grain(base.Grain):
                 self.average_schmid_factors[i].append(schmidFactor)
 
         return
+
+    def calc_rdr(self):
+        """Calculate Relative Displacement Ratio values."""
+        self.rdr = []
+
+        # Loop over groups of slip systems with same slip plane
+        for i, slip_system_group in enumerate(self.phase.slip_systems):
+            self.rdr.append([])
+            # Then loop over individual slip systems
+            for slip_system in slip_system_group:
+                slip_dir_sample = self.ref_ori.conjugate.transform_vector(slip_system.slip_dir)
+                self.rdr[i].append(-slip_dir_sample[0] / slip_dir_sample[1])
 
     @property
     def slip_traces(self):
