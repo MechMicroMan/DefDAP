@@ -3,10 +3,19 @@ Papers
 
 Here is a list of papers which have used the DefDAP Python library.
 
+2024
+------
+
+* `I.Alakiozidis, C.Hunt, R.Thomas, D.Lunt, A.D.Smith, M.Maric, Z.Shah, A.Ambard, P.Frankel. Quantifying cracking and strain localisation in a cold spray chromium coating on a zirconium alloy substrate under tensile loading at room temperature. Journal of Nuclear Materials. Apr 2024. 154899. <https://doi.org/10.1016/j.jnucmat.2024.154899>`_
+
+* `M.Maric, R.Thomas, A.Davis, D.Lunt, J.Donoghue, A.Gholinia, M.De Graef, T.Ungar, P.Barberis, F.Bourlier, P.Frankel, P.Shanthraj, M.Preuss. Identification, classification and characterisation of hydrides in Zr alloys. Scripta Materialia. Jan 2024. 115768. <https://doi.org/10.1016/j.scriptamat.2023.115768>`_
+
 2023
 ------
 
-* `R.Thomas, D.Lunt, M.D.Atkinson, J.Quinta da Fonseca, M.Preuss, P.Honniball, P.Frankel. The role of hydrides and precipitates on the strain localisation behaviour in a zirconium alloy. Acta Materialia. 119327. <https://doi.org/10.1016/j.actamat.2023.119327>`_
+* `Y.Liu, R.Thomas, C.D.Hardie, P.Frankel, F.P.E.Dunne. Exploring the hydride-slip interaction in zirconium alloys. Acta Materialia. Dec 2023. 119388. <https://doi.org/10.1016/j.actamat.2023.119388>`_
+
+* `R.Thomas, D.Lunt, M.D.Atkinson, J.Quinta da Fonseca, M.Preuss, P.Honniball, P.Frankel. The role of hydrides and precipitates on the strain localisation behaviour in a zirconium alloy. Acta Materialia. Dec 2023. 119327. <https://doi.org/10.1016/j.actamat.2023.119327>`_
 
 * `M.Maric, R,Thomas, A.Davis, D.Lunt, J.Donoghue, A.Gholinia, M.De Graef, T.Ungar, P.Barberis, F.Bourlier, P.Frankel, P.Shanthraj, M.Preuss. Identification, classification and characterisation of hydrides in Zr alloys. Scripta Materialia. Volume 238. Aug 2023. 115768. <https://doi.org/10.1016/j.scriptamat.2023.115768>`_
 
@@ -16,8 +25,12 @@ Here is a list of papers which have used the DefDAP Python library.
 
 * `C.Liu, X.Xu, T.Sun, R.Thomas, J.Quinta da Fonseca, M.Preuss. Microstructural effects on fatigue crack initiation mechanisms in a near-alpha titanium alloy. Acta Materialia. Volume 253. Jul 2023. 118957. <https://doi.org/10.1016/j.actamat.2023.118957>`_
 
+* `B.Yavuzyegit, E.Avcu, A.D.Smith, J.M.Donoghue a, D.Lunt, J.D.Robson, T.L.Burnett, J.Quinta da Fonseca, P.J.Withers. Mapping plastic deformation mechanisms in AZ31 magnesium alloy at the nanoscale. Acta Materialia. Volume 250. May 2023. 118876. <https://doi.org/10.1016/j.actamat.2023.118876>`_
+
 2022
 ------
+
+* `X.Li, Z.Zhai, W.Lin, Y.Ou, Y.Wu, R.Yang, Z.Zhang. Precipitate mediated plasticity at twin boundary in Nickel-based superalloy. Materialia. Volume 26. Dec 2022. 101612. <https://doi.org/10.1016/j.mtla.2022.101612>`_
 
 * `C.Hardie, R.Thomas, Y. Liu, P.Frankel, F.Dunne. Simulation of crystal plasticity in irradiated metals: A case study on Zircaloy-4. Acta Materialia. Volume 241. Dec 2022. 118361. <https://doi.org/10.1016/j.actamat.2022.118361>`_
 
@@ -30,6 +43,8 @@ Here is a list of papers which have used the DefDAP Python library.
 * `C.Liu, R.Thomas, T.Sun, J.Donoghue, X.Zhang, T.L.Burnett, J.Quinta da Fonseca, M.Preuss. Multi-dimensional study of the effect of early slip activity on fatigue crack initiation in a near-α titanium alloy. Acta Materialia. Volume 223. Jul 2022. 117967. <https://doi.org/10.1016/j.actamat.2022.117967>`_
 
 * `C.Dichtl, D.Lunt, M.Atkinson, R.Thomas, A.Plowman, B.Barzdajn, R.Sandala, J.Quinta da Fonseca, M.Preuss. Slip activity during low-stress cold creep deformation in a near-α titanium alloy. Acta Materialia. Volume 229. May 2022. 117691. <https://doi.org/10.1016/j.actamat.2022.117691>`_
+
+* `X.C.Li, Y.N.Wu, R.Yang, Z.B.Zhang. Origin of strain localization at twin boundary in Inconel 718 superalloy fabricated by laser powder bed fusion. IOP Conference Series: Materials Science and Engineering. 1249. 012016. <https://doi.org/10.1088/1757-899X/1249/1/012016>`_
 
 2021
 ------
@@ -47,6 +62,8 @@ Here is a list of papers which have used the DefDAP Python library.
 * `M.D.Atkinson, J.M.Donoghue, J.Quinta da Fonseca. Measurement of local plastic strain during uniaxial reversed loading of nickel alloy 625. Materials Characterization. Volume 168, October 2020, 110561. <https://doi.org/10.1016/j.matchar.2020.110561>`_
 
 * `R.Sperry, A.Harte, J.Quinta da Fonseca, E.R.Homer, R.H.Wagoner, D.T.Fullwood. Slip band characteristics in the presence of grain boundaries in nickel-based superalloy. Acta Materialia. Volume 193, July 2020, Pages 229-238. <https://www.sciencedirect.com/science/article/abs/pii/S1359645420303025>`_
+
+* `E.Polatidis, M.Šmíd, I.Kuběna, W.-N.Hsu, G.Laplanche, H.V.Swygenhoven. Deformation mechanisms in a superelastic NiTi alloy: An in-situ high resolution digital image correlation study. Materials & Design. Volume 191, June 2020, 108622. <https://doi.org/10.1016/j.matdes.2020.108622>`_
 
 * `A.Harte, M.Atkinson, M.Preuss, J.Quinta da Fonseca. A statistical study of the relationship between plastic strain and lattice misorientation on the surface of a deformed Ni-based superalloy. Acta Materialia. May 2020. <https://doi.org/10.1016/j.actamat.2020.05.029>`_
 
