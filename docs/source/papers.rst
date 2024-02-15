@@ -8,6 +8,8 @@ Here is a list of papers which have used the DefDAP Python library.
 
 * `I.Alakiozidis, C.Hunt, R.Thomas, D.Lunt, A.D.Smith, M.Maric, Z.Shah, A.Ambard, P.Frankel. Quantifying cracking and strain localisation in a cold spray chromium coating on a zirconium alloy substrate under tensile loading at room temperature. Journal of Nuclear Materials. Apr 2024. 154899. <https://doi.org/10.1016/j.jnucmat.2024.154899>`_
 
+* `B.Poole, A.Marsh, D.Lunt, M.Gorley, C.Hamelin, C. Hardie, A.Harte. High-resolution strain mapping in a thermionic LaB6 scanning electron microscope. Strain. Feb 2024. <https://doi.org/10.1111/str.12472>`_
+
 * `M.Maric, R.Thomas, A.Davis, D.Lunt, J.Donoghue, A.Gholinia, M.De Graef, T.Ungar, P.Barberis, F.Bourlier, P.Frankel, P.Shanthraj, M.Preuss. Identification, classification and characterisation of hydrides in Zr alloys. Scripta Materialia. Jan 2024. 115768. <https://doi.org/10.1016/j.scriptamat.2023.115768>`_
 
 2023
