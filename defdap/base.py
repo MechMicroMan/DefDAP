@@ -56,7 +56,7 @@ class Map(ABC):
 
         """
 
-        self.data = Datastore(crop_func=self.crop)
+        self.data = Datastore(crop_func=self.crop, mask_func=self.mask)
         self.frame = frame if frame is not None else Frame()
         if increment is not None:
             self.increment = increment

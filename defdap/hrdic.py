@@ -117,6 +117,7 @@ class Map(base.Map):
         self.bse_scale = None                # size of pixels in pattern images
         self.bse_scale = None                # size of pixels in pattern images
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
+        self.mask = None
 
         ## TODO: cropping, have metadata to state if saved data is cropped, if
         ## not cropped then crop on accesss. Maybe mark cropped data as invalid
@@ -444,11 +445,9 @@ class Map(base.Map):
             **kwargs
         )
 
-    # TODO: fix component stuff
-    def generate_threshold_mask(self, mask, dilation=0, preview=True):
+    def set_mask(self, mask, dilation=0):
         """
-        Generate a dilated mask, based on a boolean array and previews the appication of
-        this mask to the max shear map.
+        Generate a dilated mask, based on a boolean array.
 
         Parameters
         ----------
@@ -457,8 +456,6 @@ class Map(base.Map):
         dilation: int, optional
             Number of pixels to dilate the mask by. Useful to remove anomalous points
             around masked values. No dilation applied if not specified.
-        preview: bool
-            If true, show the mask and preview the masked effective shear strain map.
 
         Examples
         ----------
@@ -484,40 +481,24 @@ class Map(base.Map):
             self.mask = binary_dilation(self.mask, iterations=dilation)
 
         num_removed = np.sum(self.mask)
-        num_total = self.xdim * self.ydim
-        num_removed_crop = np.sum(self.crop(self.mask))
-        num_total_crop = self.x_dim * self.y_dim
+        num_total = self.x_dim * self.y_dim
 
-        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
-              .format(num_removed, num_total, (num_removed / num_total) * 100))
         print(
-            'Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
-            .format(num_removed_crop, num_total_crop,
-                    (num_removed_crop / num_total_crop * 100)))
+            'Masking will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
+            .format(num_removed, num_total, (num_removed / num_total * 100)))
 
-        if preview == True:
-            plot1 = MapPlot.create(self, self.crop(self.mask), cmap='binary')
-            plot1.set_title('Removed datapoints in black')
-            plot2 = MapPlot.create(self,
-                                   self.crop(
-                                       np.where(self.mask == True, np.nan,
-                                                self.data.max_shear)),
-                                   plot_colour_bar='True',
-                                   clabel="Effective shear strain")
-            plot2.set_title('Effective shear strain preview')
-        print(
-            'Use apply_threshold_mask function to apply this filtering to data')
-
-    def apply_threshold_mask(self):
-        """ Apply mask to all DIC map data by setting masked values to nan.
-
+    def mask(self, map_data):
+        """ Values set to False in mask will be set to nan in map.
         """
-        for comp in ('max_shear',
-                     'e11', 'e12', 'e22',
-                     'f11', 'f12', 'f21', 'e22',
-                     'x_map', 'y_map'):
-            # self.data[comp] = np.where(self.mask == True, np.nan, self.data[comp])
-            self.data[comp][self.mask] = np.nan
+
+        if self.mask is not None:
+            if np.shape(self.mask) == self.shape:
+                map_data[..., self.mask] = np.nan
+                return map_data
+            else:
+                raise Exception("Mask must be the same shape as cropped data.")
+        else:
+            return map_data
 
     def set_pattern(self, img_path, window_size):
         """Set the path to the image of the pattern.
