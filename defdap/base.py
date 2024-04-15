@@ -118,6 +118,9 @@ class Map(ABC):
 
     def crop(self, map_data, **kwargs):
         return map_data
+    
+    def mask(self, map_data, **kwargs):
+        return map_data
 
     def set_homog_point(self, **kwargs):
         self.frame.set_homog_point(self, **kwargs)
