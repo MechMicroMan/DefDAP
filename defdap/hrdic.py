@@ -484,7 +484,7 @@ class Map(base.Map):
         num_total = self.x_dim * self.y_dim
 
         print(
-            'Masking will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
+            'Masking will remove {0} out of {1} ({2:.3f} %) datapoints in cropped map'
             .format(num_removed, num_total, (num_removed / num_total * 100)))
 
     def mask(self, map_data):

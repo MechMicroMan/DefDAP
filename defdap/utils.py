@@ -177,7 +177,6 @@ class Datastore(object):
                 not self.get_metadata(key, 'cropped', False)):
             binning = self.get_metadata(key, 'binning', 1)
             val = self._crop_func(val, binning=binning)
-            
             val = self._mask_func(val)
 
         return val
