@@ -117,7 +117,6 @@ class Map(base.Map):
         self.bse_scale = None                # size of pixels in pattern images
         self.bse_scale = None                # size of pixels in pattern images
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
-        self.mask = None
 
         ## TODO: cropping, have metadata to state if saved data is cropped, if
         ## not cropped then crop on accesss. Maybe mark cropped data as invalid
@@ -135,7 +134,6 @@ class Map(base.Map):
                 'clabel': 'Deformation gradient',
             }
         )
-
         # Green strain
         e = 0.5 * (np.einsum('ki...,kj...->ij...', f, f))
         e[0, 0] -= 0.5
@@ -147,7 +145,6 @@ class Map(base.Map):
                 'clabel': 'Green strain',
             }
         )
-
         # max shear component
         max_shear = np.sqrt(((e[0, 0] - e[1, 1]) / 2.) ** 2 + e[0, 1] ** 2)
         self.data.add(
@@ -157,23 +154,25 @@ class Map(base.Map):
                 'clabel': 'Effective shear strain',
             }
         )
-
         # pattern image
         self.data.add_generator(
             'pattern', self.load_pattern, unit='', type='map', order=0,
-            save=False,
+            save=False, apply_mask=False,
             plot_params={
                 'cmap': 'gray'
             }
         )
-
         self.data.add_generator(
             'grains', self.find_grains, unit='', type='map', order=0,
-            cropped=True
+            cropped=True, apply_mask=False
+        )
+        self.data.add_generator(
+            'mask', self.calc_mask, unit='', type='map', order=0,
+            cropped=True, apply_mask=False
         )
 
-        self.plot_default = lambda *args, **kwargs: self.plot_map(map_name='max_shear',
-            plot_gbs=True, *args, **kwargs
+        self.plot_default = lambda *args, **kwargs: self.plot_map(
+            map_name='max_shear', plot_gbs=True, *args, **kwargs
         )
         self.homog_map_name = 'max_shear'
 
@@ -445,7 +444,7 @@ class Map(base.Map):
             **kwargs
         )
 
-    def set_mask(self, mask, dilation=0):
+    def calc_mask(self, mask=None, dilation=0):
         """
         Generate a dilated mask, based on a boolean array.
 
@@ -475,30 +474,34 @@ class Map(base.Map):
         see :func:`defdap.hrdic.load_corr_val_data`
 
         """
-        self.mask = mask
+        if mask is None:
+            #TODO: need better way to set to null mask. None not possible 
+            return "unset_mask"
+
+        if not isinstance(mask, np.ndarray) or mask.shape != self.shape:
+            raise ValueError('The mask must be a numpy array the same shape as '
+                             'the cropped map.')
 
         if dilation != 0:
-            self.mask = binary_dilation(self.mask, iterations=dilation)
+            mask = binary_dilation(mask, iterations=dilation)
 
-        num_removed = np.sum(self.mask)
-        num_total = self.x_dim * self.y_dim
-
-        print(
-            'Masking will mask {0} out of {1} ({2:.3f} %) datapoints in cropped map'
-            .format(num_removed, num_total, (num_removed / num_total * 100)))
+        num_removed = np.sum(mask)
+        num_total = self.shape[0] * self.shape[1]
+        frac_removed = num_removed / num_total * 100
+        print(f'Masking will mask {num_removed} out of {num_total} '
+              f'({frac_removed:.3f} %) datapoints in cropped map.')
+        
+        return mask
 
     def mask(self, map_data):
         """ Values set to False in mask will be set to nan in map.
         """
-
-        if self.mask is not None:
-            if np.shape(self.mask) == self.shape:
-                map_data[..., self.mask] = np.nan
-                return map_data
-            else:
-                raise Exception("Mask must be the same shape as cropped data.")
-        else:
+        if self.data.mask == "unset_mask":
             return map_data
+
+        #TODO: this mutates the stored data, need to change
+        map_data[..., self.mask] = np.nan
+        return map_data
 
     def set_pattern(self, img_path, window_size):
         """Set the path to the image of the pattern.

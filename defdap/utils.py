@@ -173,11 +173,12 @@ class Datastore(object):
                 # No generator found
                 pass
 
-        if (attr == 'data' and self.get_metadata(key, 'type') == 'map' and
-                not self.get_metadata(key, 'cropped', False)):
-            binning = self.get_metadata(key, 'binning', 1)
-            val = self._crop_func(val, binning=binning)
-            val = self._mask_func(val)
+        if attr == 'data' and self.get_metadata(key, 'type') == 'map':
+            if not self.get_metadata(key, 'cropped', False):
+                binning = self.get_metadata(key, 'binning', 1)
+                val = self._crop_func(val, binning=binning)
+            if self.get_metadata(key, 'apply_mask', True):
+                val = self._mask_func(val)
 
         return val
 
