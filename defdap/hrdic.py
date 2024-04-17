@@ -118,9 +118,10 @@ class Map(base.Map):
         self.bse_scale = None                # size of pixels in pattern images
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
 
-        ## TODO: cropping, have metadata to state if saved data is cropped, if
-        ## not cropped then crop on accesss. Maybe mark cropped data as invalid
-        ## if crop distances change
+        self.data.add_generator(
+            'mask', self.calc_mask, unit='', type='map', order=0,
+            cropped=True, apply_mask=False
+        )
 
         # Deformation gradient
         f = np.gradient(self.data.displacement, self.binning, axis=(1, 2))
@@ -132,7 +133,8 @@ class Map(base.Map):
             plot_params={
                 'plot_colour_bar': True,
                 'clabel': 'Deformation gradient',
-            }
+            },
+            apply_mask=True
         )
         # Green strain
         e = 0.5 * (np.einsum('ki...,kj...->ij...', f, f))
@@ -143,7 +145,8 @@ class Map(base.Map):
             plot_params={
                 'plot_colour_bar': True,
                 'clabel': 'Green strain',
-            }
+            },
+            apply_mask=True
         )
         # max shear component
         max_shear = np.sqrt(((e[0, 0] - e[1, 1]) / 2.) ** 2 + e[0, 1] ** 2)
@@ -152,7 +155,8 @@ class Map(base.Map):
             plot_params={
                 'plot_colour_bar': True,
                 'clabel': 'Effective shear strain',
-            }
+            },
+            apply_mask=True
         )
         # pattern image
         self.data.add_generator(
@@ -164,10 +168,6 @@ class Map(base.Map):
         )
         self.data.add_generator(
             'grains', self.find_grains, unit='', type='map', order=0,
-            cropped=True, apply_mask=False
-        )
-        self.data.add_generator(
-            'mask', self.calc_mask, unit='', type='map', order=0,
             cropped=True, apply_mask=False
         )
 
@@ -356,6 +356,8 @@ class Map(base.Map):
         y_dim = self.ydim - self.crop_dists[1, 0] - self.crop_dists[1, 1]
         self.shape = (y_dim, x_dim)
 
+        self.data.generate('mask')
+
     def crop(self, map_data, binning=None):
         """ Crop given data using crop parameters stored in map
         i.e. cropped_data = DicMap.crop(DicMap.data_to_crop).
@@ -444,7 +446,7 @@ class Map(base.Map):
             **kwargs
         )
 
-    def calc_mask(self, mask=None, dilation=0):
+    def calc_mask(self, mask="unset_mask", dilation=0):
         """
         Generate a dilated mask, based on a boolean array.
 
@@ -474,9 +476,9 @@ class Map(base.Map):
         see :func:`defdap.hrdic.load_corr_val_data`
 
         """
-        if mask is None:
-            #TODO: need better way to set to null mask. None not possible 
-            return "unset_mask"
+        if mask == "unset_mask":
+            mask = np.full((self.shape), fill_value = False)
+            return mask
 
         if not isinstance(mask, np.ndarray) or mask.shape != self.shape:
             raise ValueError('The mask must be a numpy array the same shape as '
@@ -496,12 +498,9 @@ class Map(base.Map):
     def mask(self, map_data):
         """ Values set to False in mask will be set to nan in map.
         """
-        if self.data.mask == "unset_mask":
-            return map_data
-
-        #TODO: this mutates the stored data, need to change
-        map_data[..., self.mask] = np.nan
-        return map_data
+ 
+        return np.ma.array(map_data, 
+                           mask=np.broadcast_to(self.data.mask, np.shape(map_data)))
 
     def set_pattern(self, img_path, window_size):
         """Set the path to the image of the pattern.
