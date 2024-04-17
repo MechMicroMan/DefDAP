@@ -13,6 +13,8 @@
 - Use example_notebook to generate a 'How To Use' page in the documentation
 
 ### Changed
+- All functions and arguments are now in snake_case instead of CamelCase
+- Cropping and masking are now performed upon access to data
 - Overhaul of data storage in the Map classes
 - RDR calculation `calcRDR` in grain inspector is faster and more robust
 - Improve formatting of grain inspector and RDR plot window
@@ -23,6 +25,18 @@
 - Fix bug in grain inspector (`None` passed to `corrAngle` inadvertently)
 - Fix EBSD grain linker
 - Remove `IPython` and `jupyter` as requirements
+
+
+## 0.93.5 (20-11-2023)
+
+### Added
+- Add more options for colouring lines
+
+### Fixed
+- Fix bug with accessing slip systems in grain inspector
+- Replace np.float with python float
+- Remove in_place argument to skimage.morphology.remove_small_objects
+- set_window_title has been moved from figure.canvas to figure.canvas.manager
 
 
 ## 0.93.5 (07-03-2022)
