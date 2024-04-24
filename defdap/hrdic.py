@@ -356,8 +356,6 @@ class Map(base.Map):
         y_dim = self.ydim - self.crop_dists[1, 0] - self.crop_dists[1, 1]
         self.shape = (y_dim, x_dim)
 
-        self.data.generate('mask')
-
     def crop(self, map_data, binning=None):
         """ Crop given data using crop parameters stored in map
         i.e. cropped_data = DicMap.crop(DicMap.data_to_crop).
@@ -452,16 +450,21 @@ class Map(base.Map):
 
         Parameters
         ----------
-        mask: numpy.array(bool)
-            A boolean array where points to be removed are True
+        mask: numpy.array(bool) or str('unset_mask')
+            A boolean array where points to be removed are True. Set to string 'unset_mask' to disable masking.
         dilation: int, optional
             Number of pixels to dilate the mask by. Useful to remove anomalous points
             around masked values. No dilation applied if not specified.
 
         Examples
         ----------
-        To remove data points in dic_map where `max_shear` is above 0.8, use:
+        
+        To disable masking:
 
+        >>> mask = 'unset_mask'
+               
+        To remove data points in dic_map where `max_shear` is above 0.8, use:
+        
         >>> mask = dic_map.data.max_shear > 0.8
 
         To remove data points in dic_map where e11 is above 1 or less than -1, use:
@@ -476,10 +479,9 @@ class Map(base.Map):
         see :func:`defdap.hrdic.load_corr_val_data`
 
         """
-        if mask == "unset_mask":
-            mask = np.full((self.shape), fill_value = False)
+        if type(mask) == str and mask == "unset_mask":
             return mask
-
+        
         if not isinstance(mask, np.ndarray) or mask.shape != self.shape:
             raise ValueError('The mask must be a numpy array the same shape as '
                              'the cropped map.')
@@ -498,9 +500,11 @@ class Map(base.Map):
     def mask(self, map_data):
         """ Values set to False in mask will be set to nan in map.
         """
- 
-        return np.ma.array(map_data, 
-                           mask=np.broadcast_to(self.data.mask, np.shape(map_data)))
+        if self.data.mask == 'unset_mask':
+            return map_data
+        else:
+            return np.ma.array(map_data, 
+                            mask=np.broadcast_to(self.data.mask, np.shape(map_data)))
 
     def set_pattern(self, img_path, window_size):
         """Set the path to the image of the pattern.
