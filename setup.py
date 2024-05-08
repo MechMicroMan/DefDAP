@@ -53,7 +53,7 @@ setup(
     package_data={'defdap': ['slip_systems/*.txt']},
     python_requires='>=3.6',
     install_requires=[
-        'scipy',
+        'scipy>=1.9',
         'numpy',
         'matplotlib>=3.0.0',
         'scikit-image',

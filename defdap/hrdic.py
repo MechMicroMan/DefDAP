@@ -938,8 +938,8 @@ class Map(base.Map):
                 # Find grain by masking the native ebsd grain image with
                 # selected grain from the warped dic grain image. The modal
                 # value is the EBSD grain label.
-                modeId, _ = mode(self.ebsdMap.grains[warpedDicGrains == i + 1])
-                ebsd_grain_idx = modeId[0] - 1
+                modeId, _ = mode(self.ebsdMap.grains[warpedDicGrains == i + 1], keepdims=False)
+                ebsd_grain_idx = modeId - 1
                 self.ebsdGrainIds.append(ebsd_grain_idx)
                 self[i].ebsdGrainId = ebsd_grain_idx
                 self[i].ebsdGrain = self.ebsdMap[ebsd_grain_idx]
