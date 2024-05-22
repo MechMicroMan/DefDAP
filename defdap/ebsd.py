@@ -73,7 +73,8 @@ class Map(base.Map):
             Nye_tensor : numpy.ndarray
                 3x3 Nye tensor at each point.
         Derived data:
-            Grain list data to map data from all grains
+            grain_data_to_map : numpy.ndarray
+                Grain list data to map data from all grains
 
     """
     MAPNAME = 'ebsd'
@@ -1156,9 +1157,9 @@ class Grain(base.Grain):
                 (x, y)
         Generated data:
             GROD : numpy.ndarray
-
+                Grain reference orientation distribution magnitude
             GROD_axis : numpy.ndarray
-
+                Grain reference orientation distribution direction
         Derived data:
             Map data to list data from the map the grain is part of
 

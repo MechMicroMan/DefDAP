@@ -56,7 +56,7 @@ class Map(ABC):
 
         """
 
-        self.data = Datastore(crop_func=self.crop)
+        self.data = Datastore(crop_func=self.crop, mask_func=self.mask)
         self.frame = frame if frame is not None else Frame()
         if increment is not None:
             self.increment = increment
@@ -117,6 +117,9 @@ class Map(ABC):
         return self.shape[0]
 
     def crop(self, map_data, **kwargs):
+        return map_data
+    
+    def mask(self, map_data, **kwargs):
         return map_data
 
     def set_homog_point(self, **kwargs):
