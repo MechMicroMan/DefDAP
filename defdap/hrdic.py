@@ -1073,6 +1073,24 @@ class Grain(base.Grain):
             plotColourBar=True, plotScaleBar=True, plotSlipTraces=True,
             plotSlipBands=True, *args, **kwargs
         )
+        
+    def printData(self):
+        """Print the data stored in the Grain object."""
+        print(f"Grain ID: {self.grainID}")
+        print(f"Coordinate List: {self.coordList}")
+        print(f"Optical Data: {self.optical_data}")
+        print(f"Points List: {self.pointsList}")
+        print(f"Groups List: {self.groupsList}")
+
+        if self.ebsdGrain is not None:
+            print(f"EBSD Grain: {self.ebsdGrain}")
+        else:
+            print("EBSD Grain: None")
+
+        if self.ebsdMap is not None:
+            print(f"EBSD Map: {self.ebsdMap}")
+        else:
+            print("EBSD Map: None")
 
     # coord is a tuple (x, y)
     def addPoint(self, coord, maxShear):

@@ -273,6 +273,8 @@ class Map(object):
             plot.addButton("Save point",
                            lambda e, p: self.clickSaveHomog(e, p, binSize),
                            color="0.85", hovercolor="blue")
+            print("BaseClass: setHomogPoint called")
+            print(f"binSize: {binSize}, points: {points}, kwargs: {kwargs}")
         else:
             self.homogPoints = points
 
@@ -795,6 +797,7 @@ class Grain(object):
         self.grainID = grainID
         self.ownerMap = ownerMap
         self.coordList = []
+        #print(f"Initialized Grain with ID: {self.grainID} and ownerMap: {self.ownerMap}")
 
     def __len__(self):
         return len(self.coordList)
@@ -920,7 +923,7 @@ class Grain(object):
 
         """
         grainData = np.zeros(len(self), dtype=mapData.dtype)
-
+        print(mapData)
         for i, coord in enumerate(self.coordList):
             grainData[i] = mapData[coord[1], coord[0]]
 

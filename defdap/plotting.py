@@ -614,7 +614,7 @@ class MapPlot(Plot):
 
         return points
 
-    @classmethod
+    '''@classmethod #old
     def create(
         cls, callingMap, mapData,
         fig=None, figParams={}, ax=None, axParams={},
@@ -625,7 +625,7 @@ class MapPlot(Plot):
         highlightGrains=None, highlightColours=None, highlightAlpha=None,
         **kwargs
     ):
-        """Create a plot for a map.
+        ""Create a plot for a map.
 
         Parameters
         ----------
@@ -678,7 +678,7 @@ class MapPlot(Plot):
         -------
         defdap.plotting.MapPlot
 
-        """
+        ""
         if plot is None:
             plot = cls(callingMap, fig=fig, ax=ax, axParams=axParams,
                        makeInteractive=makeInteractive, **figParams)
@@ -703,7 +703,124 @@ class MapPlot(Plot):
         if plotScaleBar:
             plot.addScaleBar(scale=scale)
 
-        return plot
+        return plot'''
+        
+        
+    @classmethod
+    def create(
+        cls, callingMap, mapData=None,  # mapData for DIC or EBSD, None for optical images
+        fig=None, figParams={}, ax=None, axParams={},
+        plot=None, makeInteractive=False,
+        plotColourBar=False, vmin=None, vmax=None, cmap=None, clabel="",
+        plotGBs=False, dilateBoundaries=False, boundaryColour='red',  # Default boundary color set
+        plotScaleBar=False, scale=None,
+        highlightGrains=None, highlightColours=None, highlightAlpha=None,
+        **kwargs
+    ):
+        """Create a plot for a map or an optical image.
+
+        Parameters
+        ----------
+        callingMap : base.Map
+            DIC, EBSD or Optical map which called this plot.
+        mapData : numpy.ndarray, optional
+            Data to be plotted (None for optical images).
+        fig : matplotlib.figure.Figure, optional
+            Matplotlib figure to plot on.
+        figParams : dict, optional
+            Passed to defdap.plotting.Plot.
+        ax : matplotlib.axes.Axes, optional
+            Matplotlib axis to plot on.
+        axParams : dict, optional
+            Passed to defdap.plotting.Plot as axParams.
+        plot : defdap.plotting.Plot, optional
+            If none, use current plot.
+        makeInteractive : bool, optional
+            If true, make plot interactive.
+        plotColourBar : bool, optional
+            If true, plot a colour bar next to the map.
+        vmin : float, optional
+            Minimum value for the colour scale.
+        vmax : float, optional
+            Maximum value for the colour scale.
+        cmap : str, optional
+            Colour map.
+        clabel : str, optional
+            Label for the colour bar.
+        plotGBs : bool, optional
+            If true, plot the grain boundaries on the map.
+        dilateBoundaries : bool, optional
+            If true, dilate the grain boundaries.
+        boundaryColour : str, optional
+            Colour to use for the grain boundaries (default is red).
+        plotScaleBar : bool, optional
+            If true, plot a scale bar in the map.
+        scale : float, optional
+            Size of pixel in microns.
+        highlightGrains : list(int), optional
+            List of grain IDs to highlight.
+        highlightColours : str, optional
+            Colour to hightlight grains.
+        highlightAlpha : float, optional
+            Alpha (transparency) by which to highlight grains.
+        kwargs : dict, optional
+            Additional arguments passed to :func:`defdap.plotting.MapPlot.addMap`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot or None
+            Returns the plot if a map component is plotted, otherwise None for optical images.
+        """
+    
+        # 1. Plotting Map Data (DIC, EBSD, etc.)
+        if mapData is not None:
+            if plot is None:
+                plot = cls(callingMap, fig=fig, ax=ax, axParams=axParams,
+                        makeInteractive=makeInteractive, **figParams)
+
+            plot.addMap(mapData, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+
+            if plotColourBar:
+                plot.addColourBar(clabel)
+
+            if plotGBs:
+                plot.addGrainBoundaries(
+                    colour=boundaryColour, dilate=dilateBoundaries, kind=plotGBs
+                )
+
+            if highlightGrains is not None:
+                plot.addGrainHighlights(
+                    highlightGrains,
+                    grainColours=highlightColours, alpha=highlightAlpha
+                )
+
+            if plotScaleBar:
+                plot.addScaleBar(scale=scale)
+
+            return plot
+
+        # 2. Plotting Optical Images
+        else:
+            if plot is None:  # Create a figure if not provided
+                fig, ax = plt.subplots(figsize=(8, 8))
+
+            # Plot the optical image
+            ax.imshow(callingMap.optical, cmap='gray')  # Assuming optical images are grayscale
+            ax.axis('off')  # Hide axes for better display
+
+            # 3. Plot Grain Boundaries over Optical Image if enabled
+            if plotGBs and callingMap.ebsdGrainIds is not None:
+                # Assuming callingMap.ebsdGrainIds contains the grain boundaries
+                # This will need to be calculated before plotting
+                boundaries = callingMap.ebsdGrainIds
+                ax.plot(boundaries[:, 0], boundaries[:, 1], color=boundaryColour)
+
+            # Add title if provided
+            if "title" in kwargs:
+                ax.set_title(kwargs["title"])
+
+            plt.show()
+            return fig
 
 class GrainPlot(Plot):
     """ Class for creating a map for a grain.
