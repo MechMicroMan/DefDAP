@@ -683,12 +683,14 @@ class MapPlot(Plot):
         defdap.plotting.MapPlot
 
         """
+       
         if plot is None:
             plot = cls(calling_map, fig=fig, ax=ax, ax_params=ax_params,
                        make_interactive=make_interactive, **fig_params)
 
         if map_data is not None:
             plot.add_map(map_data, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+            
 
         if plot_colour_bar:
             plot.add_colour_bar(clabel)

@@ -213,7 +213,7 @@ class Map(base.Map):
 
         # write final status
         yield (f"Loaded {self.format} {self.version} data "
-               f"(dimensions: {self.xdim} x {self.xdim} pixels, "
+               f"(dimensions: {self.xdim} x {self.ydim} pixels, "
                f"sub-window size: {self.binning} x {self.binning} pixels)")
 
     def load_corr_val_data(self, file_name, data_type=None):

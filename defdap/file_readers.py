@@ -19,12 +19,40 @@ import pandas as pd
 from abc import ABC, abstractmethod
 import pathlib
 import re
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 from typing import TextIO, Dict, List, Callable, Any, Type, Optional
 
 from defdap.crystal import Phase
 from defdap.quat import Quat
 from defdap.utils import Datastore
+
+
+
+class OpticalDataLoader(ABC):
+    def __init__(self, file_path):
+        """Initialize with the file path of the image."""
+        self.file_path = file_path
+
+    @abstractmethod
+    def load_image(self):
+        """Abstract method to load the image. Must be implemented by subclass."""
+        pass
+        
+class MatplotlibLoader(OpticalDataLoader):
+    def load_image(self):
+        """Loads an image using matplotlib and displays it."""
+        try:
+            # Use matplotlib's imread to load the image
+            self.image = mpimg.imread(self.file_path)
+            print(f"Image loaded from {self.file_path}")
+            
+            return self.image
+        except Exception as e:
+            print(f"Failed to load image: {e}")
+            return None
+
 
 
 class EBSDDataLoader(ABC):
@@ -741,6 +769,7 @@ class DavisLoader(DICDataLoader):
         return np.array(data)
 
 
+
 class OpenPivLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
         """ Load from Open PIV .txt file.
@@ -791,6 +820,7 @@ class OpenPivLoader(DICDataLoader):
         self.check_data()
 
 
+
 def read_until_string(
     file: TextIO,
     term_string: str,
@@ -798,6 +828,8 @@ def read_until_string(
     line_process: Optional[Callable[[str], Any]] = None,
     exact: bool = False
 ) -> List[Any]:
+
+
     """Read lines in a file until a line starting with the `termString`
     is encountered. The file position is returned before the line starting
     with the `termString` when found. Comment and empty lines are ignored.
@@ -837,3 +869,4 @@ def read_until_string(
             line = line_process(line)
         lines.append(line)
     return lines
+
