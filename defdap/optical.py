@@ -7,6 +7,7 @@ from defdap.plotting import MapPlot
 from defdap.utils import report_progress
 import numpy as np
 
+
 class Map(base.Map):
     '''
     This class is for import and analysiing optical image data
@@ -61,17 +62,36 @@ class Map(base.Map):
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
         self.file_name = None
         self.shape= None
+        self.binning = 1
+        
+        self.plot_default = lambda *args, **kwargs: self.plot_map(map_name='optical',
+            plot_gbs=True, *args, **kwargs)
+        
+        self.homog_map_name = 'optical'
+        
+                
+        self.data.add_generator(
+            'grains', self.find_grains, unit='', type='map', order=0,
+            cropped=True
+        )
+        
+        self.data.add_generator(
+            'optical', self.load_data,  # This should point to your load_data method
+            unit='', type='map', order=0,
+            save=False,
+            plot_params={'cmap': 'gray'}
+        )
+
         
     @report_progress("loading Optical data")
     def load_data(self, file_name, data_type=None):
-        """Load DIC data from file.
+        """Load optical data from file.
 
         Parameters
         ----------
         file_name : pathlib.Path
             Name of file including extension.
-        data_type : str,  {'Davis', 'OpenPIV'}
-            Type of data file.
+        data_type : str,  not sure is relavent?
 
         """
         loader = MatplotlibLoader(file_name)
@@ -88,6 +108,14 @@ class Map(base.Map):
                f"(dimensions: {self.xdim} x {self.ydim} pixels) "
                )
                
+    def load_metadata_from_excel(self, file_path):
+        """Load metadata from an Excel file and convert it into a list of dictionaries."""
+        # Read the Excel file into a DataFrame
+        df = pd.read_excel(file_path)
+
+        # Convert each row in the DataFrame to a dictionary and store in a list
+        self.metadata = df.to_dict(orient='records')
+
                
     def set_scale(self, scale):
         """Sets the scale of the map.
@@ -188,12 +216,139 @@ class Map(base.Map):
             )
             return plot_instance   
 
-    '''        
-    def plot_optical_image(self,map_data, **kwargs):
-        """Uses the Plot class to display the optical image."""
-        plot_params = {}
-        plot_params.update(kwargs)
-        return MapPlot.create(self, **plot_params)
-    '''
-     
-  
+    @report_progress("finding grains")
+    def find_grains(self, algorithm=None, min_grain_size=10):
+        """Finds grains in the DIC map.
+
+        Parameters
+        ----------
+        algorithm : str {'warp', 'floodfill'}
+            Use floodfill or warp algorithm.
+        min_grain_size : int
+            Minimum grain area in pixels for floodfill algorithm.
+        """
+        # Check a EBSD map is linked
+        self.check_ebsd_linked()
+
+        if algorithm is None:
+            algorithm = defaults['hrdic_grain_finding_method']
+        algorithm = algorithm.lower()
+
+        grain_list = []
+        group_id = Datastore.generate_id()
+
+        if algorithm == 'warp':
+            # Warp EBSD grain map to DIC frame
+            grains = self.warp_to_dic_frame(
+                self.ebsd_map.data.grains, order=0, preserve_range=True
+            )
+
+            # Find all unique values (these are the EBSD grain IDs in the DIC area, sorted)
+            ebsd_grain_ids = np.unique(grains)
+            neg_vals = ebsd_grain_ids[ebsd_grain_ids <= 0]
+            ebsd_grain_ids = ebsd_grain_ids[ebsd_grain_ids > 0]
+
+            # Map the EBSD IDs to the DIC IDs (keep the same mapping for values <= 0)
+            old = np.concatenate((neg_vals, ebsd_grain_ids))
+            new = np.concatenate((neg_vals, np.arange(1, len(ebsd_grain_ids) + 1)))
+            index = np.digitize(grains.ravel(), old, right=True)
+            grains = new[index].reshape(self.shape)
+            grainprops = measure.regionprops(grains)
+            props_dict = {prop.label: prop for prop in grainprops}
+
+            for dic_grain_id, ebsd_grain_id in enumerate(ebsd_grain_ids):
+                yield dic_grain_id / len(ebsd_grain_ids)
+
+                # Make grain object
+                grain = Grain(dic_grain_id, self, group_id)
+
+                # Find (x,y) coordinates and corresponding max shears of grain
+                coords = props_dict[dic_grain_id + 1].coords  # (y, x)
+                grain.data.point = np.flip(coords, axis=1)  # (x, y)
+
+                # Assign EBSD grain ID to DIC grain and increment grain list
+                grain.ebsd_grain = self.ebsd_map[ebsd_grain_id - 1]
+                grain.ebsd_map = self.ebsd_map
+                grain_list.append(grain)
+
+        elif algorithm == 'floodfill':
+            # Initialise the grain map
+            grains = -np.copy(self.data.grain_boundaries.image.astype(int))
+
+            # List of points where no grain has been set yet
+            points_left = grains == 0
+            coords_buffer = np.zeros((points_left.size, 2), dtype=np.intp)
+            total_points = points_left.sum()
+            found_point = 0
+            next_point = points_left.tobytes().find(b'\x01')
+
+            # Start counter for grains
+            grain_index = 1
+            # Loop until all points (except boundaries) have been assigned
+            # to a grain or ignored
+            i = 0
+            while found_point >= 0:
+                # Flood fill first unknown point and return grain object
+                seed = np.unravel_index(next_point, self.shape)
+
+                grain = Grain(grain_index - 1, self, group_id)
+                grain.data.point = flood_fill_dic(
+                    (seed[1], seed[0]), grain_index, points_left,
+                    grains, coords_buffer
+                )
+                coords_buffer = coords_buffer[len(grain.data.point):]
+
+                if len(grain) < min_grain_size:
+                    # if grain size less than minimum, ignore grain and set
+                    # values in grain map to -2
+                    for point in grain.data.point:
+                        grains[point[1], point[0]] = -2
+                else:
+                    # add grain to list and increment grain index
+                    grain_list.append(grain)
+                    grain_index += 1
+
+                # find next search point
+                points_left_sub = points_left.reshape(-1)[next_point + 1:]
+                found_point = points_left_sub.tobytes().find(b'\x01')
+                next_point += found_point + 1
+
+                # report progress
+                i += 1
+                if i == defaults['find_grain_report_freq']:
+                    yield 1. - points_left_sub.sum() / total_points
+                    i = 0
+
+            # Now link grains to those in ebsd Map
+            # Warp DIC grain map to EBSD frame
+            warped_dic_grains = self.experiment.warp_image(
+                grains.astype(float), self.frame, self.ebsd_map.frame,
+                output_shape=self.ebsd_map.shape, order=0
+            ).astype(int)
+            for i, grain in enumerate(grain_list):
+                # Find grain by masking the native ebsd grain image with
+                # selected grain from the warped dic grain image. The modal
+                # value is the EBSD grain label.
+                mode_id, _ = mode(
+                    self.ebsd_map.data.grains[warped_dic_grains == i+1],
+                    keepdims=False
+                )
+                grain.ebsd_grain = self.ebsd_map[mode_id - 1]
+                grain.ebsd_map = self.ebsd_map
+
+        else:
+            raise ValueError(f"Unknown grain finding algorithm '{algorithm}'.")
+
+        ## TODO: this will get duplicated if find grains called again
+        self.data.add_derivative(
+            grain_list[0].data, self.grain_data_to_map, pass_ref=True,
+            in_props={
+                'type': 'list'
+            },
+            out_props={
+                'type': 'map'
+            }
+        )
+
+        self._grains = grain_list
+        return grains
