@@ -28,14 +28,13 @@ from scipy.ndimage import binary_dilation
 import peakutils
 
 from defdap._accelerated import flood_fill_dic
-from defdap.utils import Datastore
+from defdap.utils import Datastore, report_progress
 from defdap.file_readers import DICDataLoader, DavisLoader
 from defdap import base
 
 from defdap import defaults
 from defdap.plotting import MapPlot, GrainPlot
 from defdap.inspector import GrainInspector
-from defdap.utils import report_progress
 
 
 class Map(base.Map):
@@ -114,7 +113,6 @@ class Map(base.Map):
 
         self.ebsd_map = None                 # EBSD map linked to DIC map
         self.highlight_alpha = 0.6
-        self.bse_scale = None                # size of pixels in pattern images
         self.bse_scale = None                # size of pixels in pattern images
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
 

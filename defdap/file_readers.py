@@ -19,40 +19,13 @@ import pandas as pd
 from abc import ABC, abstractmethod
 import pathlib
 import re
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+from skimage.io import imread
 
 from typing import TextIO, Dict, List, Callable, Any, Type, Optional
 
 from defdap.crystal import Phase
 from defdap.quat import Quat
 from defdap.utils import Datastore
-
-
-
-class OpticalDataLoader(ABC):
-    def __init__(self, file_path):
-        """Initialize with the file path of the image."""
-        self.file_path = file_path
-
-    @abstractmethod
-    def load_image(self):
-        """Abstract method to load the image. Must be implemented by subclass."""
-        pass
-        
-class MatplotlibLoader(OpticalDataLoader):
-    def load_image(self):
-        """Loads an image using matplotlib and displays it."""
-        try:
-            # Use matplotlib's imread to load the image
-            self.image = mpimg.imread(self.file_path)
-            print(f"Image loaded from {self.file_path}")
-            
-            return self.image
-        except Exception as e:
-            print(f"Failed to load image: {e}")
-            return None
-
 
 
 class EBSDDataLoader(ABC):
@@ -233,7 +206,6 @@ class OxfordTextLoader(EBSDDataLoader):
                 'cmap': 'gray',
                 'clabel': 'Band contrast',
             }
-
         )
         self.loaded_data.add(
             'band_slope', data['BS'].reshape(shape),
@@ -769,7 +741,6 @@ class DavisLoader(DICDataLoader):
         return np.array(data)
 
 
-
 class OpenPivLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
         """ Load from Open PIV .txt file.
@@ -820,6 +791,21 @@ class OpenPivLoader(DICDataLoader):
         self.check_data()
 
 
+def load_image(file_name: pathlib.Path) -> Datastore:
+    image = imread(file_name, as_gray=True)
+    loaded_metadata = {
+        'shape': image.shape,
+    }
+    laoded_data = Datastore()
+    laoded_data.add(
+        'image', image, unit='', type='map', order=0,
+        plot_params={
+            'plot_colour_bar': False,
+            'cmap': 'gray',
+        }
+    )
+    return loaded_metadata, laoded_data
+
 
 def read_until_string(
     file: TextIO,
@@ -869,4 +855,3 @@ def read_until_string(
             line = line_process(line)
         lines.append(line)
     return lines
-

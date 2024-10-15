@@ -1,11 +1,26 @@
-from pathlib import Path
-from matplotlib.pyplot import imread
-import matplotlib.pyplot as plt
-from defdap.file_readers import OpticalDataLoader, MatplotlibLoader
-from defdap import base
-from defdap.plotting import MapPlot
-from defdap.utils import report_progress
+# Copyright 2023 Mechanics of Microstructures Group
+#    at The University of Manchester
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
+
+from skimage import measure
+
+from defdap.file_readers import load_image
+from defdap import base
+from defdap.utils import Datastore, report_progress
+from defdap import defaults
 
 
 class Map(base.Map):
@@ -53,37 +68,21 @@ class Map(base.Map):
         # Call base class constructor
         super(Map, self).__init__(*args, **kwargs)
         
-        self.corr_val = None     # correlation value ------------not sure if i need this??
-
         self.ebsd_map = None                 # EBSD map linked to DIC map
         self.highlight_alpha = 0.6
-        self.bse_scale = None                # size of pixels in pattern images
-        self.bse_scale = None                # size of pixels in pattern images
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
-        self.file_name = None
-        self.shape= None
-        self.binning = 1
         
-        self.plot_default = lambda *args, **kwargs: self.plot_map(map_name='optical',
-            plot_gbs=True, *args, **kwargs)
+        self.plot_default = lambda *args, **kwargs: self.plot_map(
+            map_name='image', plot_gbs=True, *args, **kwargs)
         
-        self.homog_map_name = 'optical'
-        
-                
+        self.homog_map_name = 'image'
+
         self.data.add_generator(
             'grains', self.find_grains, unit='', type='map', order=0,
             cropped=True
         )
-        
-        self.data.add_generator(
-            'optical', self.load_data,  # This should point to your load_data method
-            unit='', type='map', order=0,
-            save=False,
-            plot_params={'cmap': 'gray'}
-        )
 
-        
-    @report_progress("loading Optical data")
+    @report_progress("loading optical data")
     def load_data(self, file_name, data_type=None):
         """Load optical data from file.
 
@@ -94,27 +93,26 @@ class Map(base.Map):
         data_type : str,  not sure is relavent?
 
         """
-        loader = MatplotlibLoader(file_name)
-
+        metadata_dict, loaded_data = load_image(file_name)
+        self.data.update(loaded_data)
+        
+        self.shape = metadata_dict['shape']
         # *dim are full size of data. shape (old *Dim) are size after cropping
-        # *dim are full size of data. shape (old *Dim) are size after cropping
-        self.optical = loader.load_image()
-        self.shape = np.shape(self.optical)
-        self.xdim = self.shape[1]     # size of map along x (from header)
-        self.ydim = self.shape[0]     # size of map along y (from header)
+        ## TODO needs updating for all maps. cropped shape is stored as a 
+        # tuple, why are this seperate values
+        self.xdim = self.shape[1]
+        self.ydim = self.shape[0]
         
         # write final status
-        yield (
-               f"(dimensions: {self.xdim} x {self.ydim} pixels) "
-               )
+        yield f"(dimensions: {self.xdim} x {self.ydim} pixels)"
                
-    def load_metadata_from_excel(self, file_path):
-        """Load metadata from an Excel file and convert it into a list of dictionaries."""
-        # Read the Excel file into a DataFrame
-        df = pd.read_excel(file_path)
+    # def load_metadata_from_excel(self, file_path):
+    #     """Load metadata from an Excel file and convert it into a list of dictionaries."""
+    #     # Read the Excel file into a DataFrame
+    #     df = pd.read_excel(file_path)
 
-        # Convert each row in the DataFrame to a dictionary and store in a list
-        self.metadata = df.to_dict(orient='records')
+    #     # Convert each row in the DataFrame to a dictionary and store in a list
+    #     self.metadata = df.to_dict(orient='records')
 
                
     def set_scale(self, scale):
@@ -205,16 +203,83 @@ class Map(base.Map):
 
         return map_data[..., min_y:max_y, min_x:max_x]
         
-    def plot_optical_image(self, **kwargs):
-        """Uses the Plot class to display the optical image."""
-        if self.optical is not None:
-            # Pass the optical data into the create method of Plot
-            plot_instance = MapPlot.create(
-                calling_map=self,  # Pass the current instance of Map
-                map_data=self.optical,  # Pass the loaded optical data
-                **kwargs  # Additional parameters can be passed here
-            )
-            return plot_instance   
+    # def plot_optical_image(self, **kwargs):
+    #     """Uses the Plot class to display the optical image."""
+    #     if self.optical is not None:
+    #         # Pass the optical data into the create method of Plot
+    #         plot_instance = MapPlot.create(
+    #             calling_map=self,  # Pass the current instance of Map
+    #             map_data=self.optical,  # Pass the loaded optical data
+    #             **kwargs  # Additional parameters can be passed here
+    #         )
+    #         return plot_instance
+
+    def link_ebsd_map(self, ebsd_map, transform_type="affine", **kwargs):
+        """Calculates the transformation required to align EBSD dataset to DIC.
+
+        Parameters
+        ----------
+        ebsd_map : defdap.ebsd.Map
+            EBSD map object to link.
+        transform_type : str, optional
+            affine, piecewiseAffine or polynomial.
+        kwargs
+            All arguments are passed to `estimate` method of the transform.
+
+        """
+        self.ebsd_map = ebsd_map
+        kwargs.update({'type': transform_type.lower()})
+        self.experiment.link_frames(self.frame, ebsd_map.frame, kwargs)
+        self.data.add_derivative(
+            self.ebsd_map.data,
+            lambda boundaries: BoundarySet.from_ebsd_boundaries(
+                self, boundaries
+            ),
+            in_props={
+                'type': 'boundaries'
+            }
+        )
+
+    def check_ebsd_linked(self):
+        """Check if an EBSD map has been linked.
+
+        Returns
+        ----------
+        bool
+            Returns True if EBSD map linked.
+
+        Raises
+        ----------
+        Exception
+            If EBSD map not linked.
+
+        """
+        if self.ebsd_map is None:
+            raise Exception("No EBSD map linked.")
+        return True
+
+    def warp_to_dic_frame(self, map_data, **kwargs):
+        """Warps a map to the DIC frame.
+
+        Parameters
+        ----------
+        map_data : numpy.ndarray
+            Data to warp.
+        kwargs
+            All other arguments passed to :func:`defdap.experiment.Experiment.warp_map`.
+
+        Returns
+        ----------
+        numpy.ndarray
+            Map (i.e. EBSD map data) warped to the DIC frame.
+
+        """
+        # Check a EBSD map is linked
+        self.check_ebsd_linked()
+        return self.experiment.warp_image(
+            map_data, self.ebsd_map.frame, self.frame, output_shape=self.shape,
+            **kwargs
+        )
 
     @report_progress("finding grains")
     def find_grains(self, algorithm=None, min_grain_size=10):
@@ -272,69 +337,7 @@ class Map(base.Map):
                 grain_list.append(grain)
 
         elif algorithm == 'floodfill':
-            # Initialise the grain map
-            grains = -np.copy(self.data.grain_boundaries.image.astype(int))
-
-            # List of points where no grain has been set yet
-            points_left = grains == 0
-            coords_buffer = np.zeros((points_left.size, 2), dtype=np.intp)
-            total_points = points_left.sum()
-            found_point = 0
-            next_point = points_left.tobytes().find(b'\x01')
-
-            # Start counter for grains
-            grain_index = 1
-            # Loop until all points (except boundaries) have been assigned
-            # to a grain or ignored
-            i = 0
-            while found_point >= 0:
-                # Flood fill first unknown point and return grain object
-                seed = np.unravel_index(next_point, self.shape)
-
-                grain = Grain(grain_index - 1, self, group_id)
-                grain.data.point = flood_fill_dic(
-                    (seed[1], seed[0]), grain_index, points_left,
-                    grains, coords_buffer
-                )
-                coords_buffer = coords_buffer[len(grain.data.point):]
-
-                if len(grain) < min_grain_size:
-                    # if grain size less than minimum, ignore grain and set
-                    # values in grain map to -2
-                    for point in grain.data.point:
-                        grains[point[1], point[0]] = -2
-                else:
-                    # add grain to list and increment grain index
-                    grain_list.append(grain)
-                    grain_index += 1
-
-                # find next search point
-                points_left_sub = points_left.reshape(-1)[next_point + 1:]
-                found_point = points_left_sub.tobytes().find(b'\x01')
-                next_point += found_point + 1
-
-                # report progress
-                i += 1
-                if i == defaults['find_grain_report_freq']:
-                    yield 1. - points_left_sub.sum() / total_points
-                    i = 0
-
-            # Now link grains to those in ebsd Map
-            # Warp DIC grain map to EBSD frame
-            warped_dic_grains = self.experiment.warp_image(
-                grains.astype(float), self.frame, self.ebsd_map.frame,
-                output_shape=self.ebsd_map.shape, order=0
-            ).astype(int)
-            for i, grain in enumerate(grain_list):
-                # Find grain by masking the native ebsd grain image with
-                # selected grain from the warped dic grain image. The modal
-                # value is the EBSD grain label.
-                mode_id, _ = mode(
-                    self.ebsd_map.data.grains[warped_dic_grains == i+1],
-                    keepdims=False
-                )
-                grain.ebsd_grain = self.ebsd_map[mode_id - 1]
-                grain.ebsd_map = self.ebsd_map
+            raise NotImplementedError()
 
         else:
             raise ValueError(f"Unknown grain finding algorithm '{algorithm}'.")
@@ -352,3 +355,81 @@ class Map(base.Map):
 
         self._grains = grain_list
         return grains
+
+
+class Grain(base.Grain):
+    """
+    Class to encapsulate DIC grain data and useful analysis and plotting
+    methods.
+
+    Attributes
+    ----------
+    dicMap : defdap.hrdic.Map
+        DIC map this grain is a member of
+    ownerMap : defdap.hrdic.Map
+        DIC map this grain is a member of
+    maxShearList : list
+        List of maximum shear values for grain.
+    ebsd_grain : defdap.ebsd.Grain
+        EBSD grain ID that this DIC grain corresponds to.
+    ebsd_map : defdap.ebsd.Map
+        EBSD map that this DIC grain belongs to.
+    points_list : numpy.ndarray
+        Start and end points for lines drawn using defdap.inspector.GrainInspector.
+    groups_list :
+        Groups, angles and slip systems detected for
+        lines drawn using defdap.inspector.GrainInspector.
+
+    data : defdap.utils.Datastore
+        Must contain after creating:
+            point : list of tuples
+                (x, y) in cropped map
+        Generated data:
+
+        Derived data:
+            Map data to list data from the map the grain is part of
+
+    """
+    def __init__(self, grain_id, optical_map, group_id):
+        # Call base class constructor
+        super(Grain, self).__init__(grain_id, optical_map, group_id)
+
+        self.optical_map = self.owner_map     # DIC map this grain is a member of
+        self.ebsd_grain = None
+        self.ebsd_map = None
+
+        # self.plot_default = lambda *args, **kwargs: self.plot_max_shear(
+        #     plot_colour_bar=True, plot_scale_bar=True, plot_slip_traces=True,
+        #     plot_slip_bands=True, *args, **kwargs
+        # )
+
+
+class BoundarySet(object):
+    def __init__(self, dic_map, points, lines):
+        self.dic_map = dic_map
+        self.points = set(points)
+        self.lines = lines
+
+    @classmethod
+    def from_ebsd_boundaries(cls, dic_map, ebsd_boundaries):
+        if len(ebsd_boundaries.points) == 0:
+            return cls(dic_map, [], [])
+
+        points = dic_map.experiment.warp_points(
+            ebsd_boundaries.image.astype(float),
+            dic_map.ebsd_map.frame, dic_map.frame,
+            output_shape=dic_map.shape
+        )
+        lines = dic_map.experiment.warp_lines(
+            ebsd_boundaries.lines, dic_map.ebsd_map.frame, dic_map.frame
+        )
+        return cls(dic_map, points, lines)
+
+    def _image(self, points):
+        image = np.zeros(self.dic_map.shape, dtype=bool)
+        image[tuple(zip(*points))[::-1]] = True
+        return image
+
+    @property
+    def image(self):
+        return self._image(self.points)
