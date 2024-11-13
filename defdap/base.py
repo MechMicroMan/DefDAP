@@ -921,6 +921,7 @@ class Grain(ABC):
 
         return grain_data
 
+
     def grain_map_data(self, map_data=None, grain_data=None, bg=np.nan):
         """Extract a single grain map from the given map data.
 

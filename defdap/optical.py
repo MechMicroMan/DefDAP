@@ -21,7 +21,8 @@ from defdap.file_readers import load_image
 from defdap import base
 from defdap.utils import Datastore, report_progress
 from defdap import defaults
-
+from defdap.plotting import MapPlot
+from defdap import inspector_optical
 
 class Map(base.Map):
     '''
@@ -203,16 +204,33 @@ class Map(base.Map):
 
         return map_data[..., min_y:max_y, min_x:max_x]
         
-    # def plot_optical_image(self, **kwargs):
-    #     """Uses the Plot class to display the optical image."""
-    #     if self.optical is not None:
-    #         # Pass the optical data into the create method of Plot
-    #         plot_instance = MapPlot.create(
-    #             calling_map=self,  # Pass the current instance of Map
-    #             map_data=self.optical,  # Pass the loaded optical data
-    #             **kwargs  # Additional parameters can be passed here
-    #         )
-    #         return plot_instance
+    def plot_optical_map(self, **kwargs):
+        """
+        Plot a map with points coloured in IPF colouring,
+        with respect to a given sample direction.
+
+        Parameters
+        ----------
+        kwargs
+            Other arguments passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+        """
+        # Ensure map_data is available in the optical object
+        if not hasattr(self, 'map_data'):
+            raise ValueError("The optical object must have 'map_data' attribute set.")
+
+        # Set default plot parameters then update with any input
+        plot_params = {
+            'calling_map': self,  # Assuming `self` is the calling map (instance of base.Map)
+            'map_data': self.optical  # Access the map_data from the optical object
+        }
+        
+        plot_params.update(kwargs)
+
+        return MapPlot.create(**plot_params)
 
     def link_ebsd_map(self, ebsd_map, transform_type="affine", **kwargs):
         """Calculates the transformation required to align EBSD dataset to DIC.
@@ -356,6 +374,12 @@ class Map(base.Map):
         self._grains = grain_list
         return grains
 
+    def grain_inspector(self):
+        """Run the grain inspector interactive tool.
+
+        """
+        inspector_optical.GrainInspector(selected_dic_map=self)
+
 
 class Grain(base.Grain):
     """
@@ -364,7 +388,7 @@ class Grain(base.Grain):
 
     Attributes
     ----------
-    dicMap : defdap.hrdic.Map
+    dicMap : defdap.optical.Map
         DIC map this grain is a member of
     ownerMap : defdap.hrdic.Map
         DIC map this grain is a member of
@@ -398,11 +422,45 @@ class Grain(base.Grain):
         self.ebsd_grain = None
         self.ebsd_map = None
 
+        self.points_list = []            # Lines drawn for STA
+        self.groups_list = []            # Unique angles drawn for STA
+
         # self.plot_default = lambda *args, **kwargs: self.plot_max_shear(
         #     plot_colour_bar=True, plot_scale_bar=True, plot_slip_traces=True,
         #     plot_slip_bands=True, *args, **kwargs
         # )
+        
+    @property
+    def ref_ori(self):
+        """Returns average grain orientation.
 
+        Returns
+        -------
+        defdap.quat.Quat
+
+        """
+        return self.ebsd_grain.ref_ori
+
+    @property
+    def slip_traces(self):
+        """Returns list of slip trace angles based on EBSD grain orientation.
+
+        Returns
+        -------
+        list
+
+        """
+        return self.ebsd_grain.slip_traces
+
+    def calc_slip_traces(self, slip_systems=None):
+        """Calculates list of slip trace angles based on EBSD grain orientation.
+
+        Parameters
+        -------
+        slip_systems : defdap.crystal.SlipSystem, optional
+
+        """
+        self.ebsd_grain.calc_slip_traces(slip_systems=slip_systems)
 
 class BoundarySet(object):
     def __init__(self, dic_map, points, lines):

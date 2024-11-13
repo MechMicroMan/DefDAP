@@ -851,7 +851,8 @@ class GrainPlot(Plot):
         """
 
         if colours is None:
-            colours = self.calling_grain.ebsd_grain.phase.slip_trace_colours
+            #colours = self.calling_grain.ebsd_grain.phase.slip_trace_colours #-----------------------------------------
+            colours = self.calling_grain.phase.slip_trace_colours
         slip_trace_angles = self.calling_grain.slip_traces
 
         self.add_traces(slip_trace_angles, colours, top_only, pos=pos, **kwargs)
