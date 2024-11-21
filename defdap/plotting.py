@@ -103,7 +103,9 @@ class Plot(object):
         if proj == '2d':
             return self.fig.add_axes(loc)
         if proj == '3d':
-            return Axes3D(self.fig, rect=loc, proj_type='ortho', azim=270, elev=90)
+            return self.fig.add_axes(loc, projection='3d', proj_type='ortho', azim=270, elev=90)
+        
+        
 
     def add_button(self, label, click_handler, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
         """Add a button to the plot.
