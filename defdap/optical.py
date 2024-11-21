@@ -22,7 +22,7 @@ from defdap import base
 from defdap.utils import Datastore, report_progress
 from defdap import defaults
 from defdap.plotting import MapPlot
-from defdap import inspector_optical
+from defdap.inspector import GrainInspector
 
 class Map(base.Map):
     '''
@@ -378,7 +378,7 @@ class Map(base.Map):
         """Run the grain inspector interactive tool.
 
         """
-        inspector_optical.GrainInspector(selected_dic_map=self)
+        GrainInspector(selected_map=self)
 
 
 class Grain(base.Grain):
@@ -418,7 +418,7 @@ class Grain(base.Grain):
         # Call base class constructor
         super(Grain, self).__init__(grain_id, optical_map, group_id)
 
-        self.optical_map = self.owner_map     # DIC map this grain is a member of
+        self.optical_map = self.owner_map     # Optical map this grain is a member of
         self.ebsd_grain = None
         self.ebsd_map = None
 

@@ -19,9 +19,8 @@ from skimage.draw import line as skimage_line
 import ast
 
 from defdap.plotting import Plot, GrainPlot
-from defdap import hrdic
 
-from typing import List
+from typing import List, Union
 
 
 class GrainInspector:
@@ -32,15 +31,15 @@ class GrainInspector:
     """
 
     def __init__(self,
-                 selected_dic_map: 'hrdic.Map',
-                 vmax: float,
+                 selected_map: Union['hrdic.Map', 'optical.Map'],
+                 vmax: float = 0.1,
                  correction_angle: float = 0,
                  rdr_line_length: int = 3):
         """
 
         Parameters
         ----------
-        selected_dic_map
+        selected_map
             DIC map to run grain inspector on.
         vmax
             Maximum effective shear strain in colour scale.
@@ -51,14 +50,16 @@ class GrainInspector:
         """
         # Initialise some values
         self.grain_id = 0
-        self.selected_dic_map = selected_dic_map
-        self.selected_ebsd_map = self.selected_dic_map.ebsd_map
-        self.selected_dic_grain = self.selected_dic_map[self.grain_id]
-        self.selected_ebsd_grain = self.selected_dic_grain.ebsd_grain
-        self.vmax = vmax
+        self.selected_map = selected_map
+        self.selected_ebsd_map = self.selected_map.ebsd_map
+        self.selected_grain = self.selected_map[self.grain_id]
+        self.selected_ebsd_grain = self.selected_grain.ebsd_grain
         self.correction_angle = correction_angle
-        self.rdr_line_length = rdr_line_length
-        self.filename = str(self.selected_dic_map.retrieve_name()) + '_RDR.txt'
+
+        if self.selected_map.MAPNAME == 'hrdic':
+            self.vmax = vmax
+            self.rdr_line_length = rdr_line_length
+            self.filename = str(self.selected_map.retrieve_name()) + '_RDR.txt'
 
         # Plot window
         self.plot = Plot(ax=None, make_interactive=True, figsize=(13, 8), title='Grain Inspector')
@@ -75,24 +76,27 @@ class GrainInspector:
         self.plot.add_button(
             'Next\nGrain', lambda e, p: self.goto_grain(self.grain_id + 1, p), (div_frac + 0.06, 0.94, 0.05, 0.04))
         self.plot.add_button(
-            'Run All STA', self.batch_run_sta, (0.85, 0.07, 0.11, 0.04))
+            'Print STA table', self.batch_run_sta, (0.85, 0.07, 0.11, 0.04))
         self.plot.add_button(
             'Clear\nAll Lines', self.clear_all_lines, (div_frac + 0.2, 0.48, 0.05, 0.04))
-        self.plot.add_button(
-            'Load\nFile', self.load_file, (0.85, 0.02, 0.05, 0.04))
-        self.plot.add_button(
-            'Save\nFile', self.save_file, (0.91, 0.02, 0.05, 0.04))
+        if self.selected_map.MAPNAME == 'hrdic':
+            self.plot.add_button(
+                'Load\nFile', self.load_file, (0.85, 0.02, 0.05, 0.04))
+            self.plot.add_button(
+                'Save\nFile', self.save_file, (0.91, 0.02, 0.05, 0.04))
 
         # Text boxes
-        self.plot.add_text_box(label='', loc=(0.7, 0.02, 0.13, 0.04),
+        if self.selected_map.MAPNAME == 'hrdic':
+            self.plot.add_text_box(label='', loc=(0.7, 0.02, 0.13, 0.04),
                                change_handler=self.update_filename, initial=self.filename)
+            self.rdr_group_text_box = self.plot.add_text_box(label='Run RDR only\non group:', loc=(0.78, 0.07, 0.05, 0.04),
+                                                         submit_handler=self.run_rdr_group)
+            
         self.plot.add_text_box(label='Go to \ngrain ID:', loc=(div_frac + 0.17, 0.94, 0.05, 0.04),
                                submit_handler=self.goto_grain)
         self.plot.add_text_box(label='Remove\nID:', loc=(div_frac + 0.1, 0.48, 0.05, 0.04),
                                submit_handler=self.remove_line)
-        self.rdr_group_text_box = self.plot.add_text_box(label='Run RDR only\non group:', loc=(0.78, 0.07, 0.05, 0.04),
-                                                         submit_handler=self.run_rdr_group)
-
+        
         # Axes
         self.max_shear_axis = self.plot.add_axes((0.05, 0.4, 0.65, 0.55))
         self.slip_trace_axis = self.plot.add_axes((0.25, 0.05, 0.5, 0.3))
@@ -100,7 +104,8 @@ class GrainInspector:
         self.grain_info_axis = self.plot.add_axes((div_frac, 0.86, 0.25, 0.06))
         self.line_info_axis = self.plot.add_axes((div_frac, 0.55, 0.25, 0.3))
         self.groups_info_axis = self.plot.add_axes((div_frac, 0.15, 0.25, 0.3))
-        self.grain_plot = self.selected_dic_map[self.grain_id].plot_max_shear(fig=self.plot.fig,
+        if self.selected_map.MAPNAME == 'hrdic':
+            self.grain_plot = self.selected_map[self.grain_id].plot_max_shear(fig=self.plot.fig,
                                                                               ax=self.max_shear_axis,
                                                                               vmax=self.vmax,
                                                                               plot_scale_bar=True,
@@ -124,8 +129,8 @@ class GrainInspector:
         # Go to grain ID specified in event
         self.grain_id = int(event)
         self.grain_plot.arrow = None
-        self.selected_dic_grain = self.selected_dic_map[self.grain_id]
-        self.selected_ebsd_grain = self.selected_dic_grain.ebsd_grain
+        self.selected_grain = self.selected_map[self.grain_id]
+        self.selected_ebsd_grain = self.selected_grain.ebsd_grain
         self.redraw()
 
     def save_line(self,
@@ -155,7 +160,7 @@ class GrainInspector:
         line_angle = float("{:.2f}".format(line_angle))
 
         # Save drawn line to the DIC grain
-        self.selected_dic_grain.points_list.append([points, line_angle, -1])
+        self.selected_grain.points_list.append([points, line_angle, -1])
 
         # Group lines and redraw
         self.group_lines()
@@ -177,7 +182,7 @@ class GrainInspector:
         """
 
         if grain is None:
-            grain = self.selected_dic_grain
+            grain = self.selected_grain
 
         if grain.points_list == []:
             grain.groups_list = []
@@ -221,8 +226,8 @@ class GrainInspector:
 
         """
 
-        self.selected_dic_grain.points_list = []
-        self.selected_dic_grain.groups_list = []
+        self.selected_grain.points_list = []
+        self.selected_grain.groups_list = []
         self.redraw()
 
     def remove_line(self,
@@ -237,7 +242,7 @@ class GrainInspector:
 
         """
         # Remove single line
-        del self.selected_dic_grain.points_list[int(event)]
+        del self.selected_grain.points_list[int(event)]
         self.group_lines()
         self.redraw()
 
@@ -248,21 +253,35 @@ class GrainInspector:
 
         # Plot max shear for grain
         self.max_shear_axis.clear()
-        self.grain_plot = self.selected_dic_map[self.grain_id].plot_max_shear(
-            fig=self.plot.fig, ax=self.max_shear_axis, vmax=self.vmax, plot_colour_bar=False, plot_scale_bar=True)
+        if self.selected_map.MAPNAME == 'hrdic':
+            self.grain_plot = self.selected_grain.plot_max_shear(fig=self.plot.fig, 
+                                                                     ax=self.max_shear_axis, 
+                                                                     vmax=self.vmax, 
+                                                                     plot_colour_bar=False, 
+                                                                     plot_scale_bar=True)
+            
+        elif self.selected_map.MAPNAME == 'optical':    
+                    self.grain_plot = self.selected_grain.plot_grain_data(grain_data=self.selected_grain.data.image, 
+                                                                  fig=self.plot.fig,
+                                                                  ax=self.max_shear_axis,
+                                                                  cmap='grey')
 
         # Draw unit cell
         self.unit_cell_axis.clear()
-        self.selected_ebsd_grain.plot_unit_cell(fig=self.plot.fig, ax=self.unit_cell_axis)
+        try:
+            self.selected_ebsd_grain.plot_unit_cell(fig=self.plot.fig, ax=self.unit_cell_axis)
+        except:
+            print('An error occured plotting the unit cell. Try running calc_average_grain_schmid_factors on the EBSD map')
 
         # Write grain info text
         self.grain_info_axis.clear()
         self.grain_info_axis.axis('off')
-        grain_info_text = 'Grain ID: {0} / {1}\n'.format(self.grain_id, len(self.selected_dic_map.grains) - 1)
-        grain_info_text += 'Min: {0:.2f} %     Mean:{1:.2f} %     Max: {2:.2f} %'.format(
-            np.min(self.selected_dic_grain.data.max_shear) * 100,
-            np.mean(self.selected_dic_grain.data.max_shear) * 100,
-            np.max(self.selected_dic_grain.data.max_shear) * 100)
+        grain_info_text = 'Grain ID: {0} / {1}\n'.format(self.grain_id, len(self.selected_map.grains) - 1)
+        if self.selected_map.MAPNAME == 'hrdic':
+            grain_info_text += 'Min: {0:.2f} %     Mean:{1:.2f} %     Max: {2:.2f} %'.format(
+            np.min(self.selected_grain.data.max_shear) * 100,
+            np.mean(self.selected_grain.data.max_shear) * 100,
+            np.max(self.selected_grain.data.max_shear) * 100)
         self.plot.add_text(self.grain_info_axis, 0, 1, grain_info_text, va='top', ha='left',
                            fontsize=10, fontfamily='monospace')
 
@@ -281,8 +300,8 @@ class GrainInspector:
         title_text = 'List of lines'
         lines_text = 'ID  x0    y0    x1    y1    Angle   Group\n' \
                    '-----------------------------------------\n'
-        if self.selected_dic_grain.points_list:
-            for idx, points in enumerate(self.selected_dic_grain.points_list):
+        if self.selected_grain.points_list:
+            for idx, points in enumerate(self.selected_grain.points_list):
                 lines_text += '{0:<3} {1:<5.0f} {2:<5.0f} {3:<5.0f} {4:<5.0f} {5:<7.1f} {6:<5}\n'.format(
                     idx, *points[0], points[1], points[2])
                 self.grain_plot.add_arrow(start_end=points[0], clear_previous=False, persistent=True, label=idx)
@@ -297,16 +316,28 @@ class GrainInspector:
         # Write groups info text
         title_text = 'List of groups'
 
-        groupsTxt = 'ID  Av. Angle  System  Dev          RDR\n' \
+        if self.selected_map.MAPNAME == 'hrdic':
+            groupsTxt = 'ID  Av. Angle  System  Dev          RDR\n' \
                     '----------------------------------------\n'
-        if self.selected_dic_grain.groups_list:
-            for idx, group in enumerate(self.selected_dic_grain.groups_list):
-                groupsTxt += '{0:<3} {1:<10.1f} {2:<7} {3:<12} {4:.2f}\n'.format(
-                    idx,
-                    group[1],
-                    ','.join([str(np.round(i, 1)) for i in group[2]]),
-                    ','.join([str(np.round(i, 1)) for i in group[3]]),
-                    group[4])
+        elif self.selected_map.MAPNAME == 'optical':
+            groupsTxt = 'ID  Av. Angle  System  Dev\n' \
+                        '--------------------------\n'
+        if self.selected_grain.groups_list:
+            for idx, group in enumerate(self.selected_grain.groups_list):
+                if self.selected_map.MAPNAME == 'hrdic':
+                    groupsTxt += '{0:<3} {1:<10.1f} {2:<7} {3:<12} {4:.2f}\n'.format(
+                        idx,
+                        group[1],
+                        ','.join([str(np.round(i, 1)) for i in group[2]]),
+                        ','.join([str(np.round(i, 1)) for i in group[3]]),
+                        group[4])
+                elif self.selected_map.MAPNAME == 'optical':
+                    groupsTxt += '{0:<3} {1:<10.1f} {2:<7} {3:<12}\n'.format(
+                        idx,
+                        group[1],
+                        ','.join([str(np.round(i, 1)) for i in group[2]]),
+                        ','.join([str(np.round(i, 1)) for i in group[3]]))
+
 
         self.groups_info_axis.clear()
         self.groups_info_axis.axis('off')
@@ -318,18 +349,49 @@ class GrainInspector:
         self.slip_trace_axis.clear()
         self.slip_trace_axis.set_aspect('equal', 'box')
         slipPlot = GrainPlot(fig=self.plot.fig,
-                             calling_grain=self.selected_dic_map[self.grain_id], ax=self.slip_trace_axis)
+                             calling_grain=self.selected_map[self.grain_id].ebsd_grain, ax=self.slip_trace_axis)
         traces = slipPlot.add_slip_traces(top_only=True)
         self.slip_trace_axis.axis('off')
 
         # Draw slip bands
-        bands = [elem[1] for elem in self.selected_dic_grain.groups_list]
-        if self.selected_dic_grain.groups_list != None:
+        bands = [elem[1] for elem in self.selected_grain.groups_list]
+        if self.selected_grain.groups_list != None:
             slipPlot.add_slip_bands(top_only=True, angles=list(np.deg2rad(bands)))
 
-    def run_rdr_group(self,
-                      event: int,
+
+    def batch_run_sta(self,
+                      event,
                       plot):
+        """  Run slip trace analysis on all grains which hve slip trace lines drawn.
+
+        """
+
+        # Print header
+        if self.selected_map.MAPNAME == 'hrdic':
+            print("Grain\tEul1\tEul2\tEul3\tMaxSF\tGroup\tAngle\tSystem\tDev\tRDR")
+        elif self.selected_map.MAPNAME == 'optical':
+            print("Grain\tEul1\tEul2\tEul3\tMaxSF\tGroup\tAngle\tSystem\tDev")
+
+        # Print information for each grain
+        for idx, grain in enumerate(self.selected_map):
+            if grain.points_list != []:
+                for group in grain.groups_list:
+                    maxSF = np.max([item for sublist in grain.ebsd_grain.average_schmid_factors for item in sublist])
+                    eulers = self.selected_ebsd_grain.ref_ori.euler_angles() * 180 / np.pi
+                    text = '{0}\t{1:.1f}\t{2:.1f}\t{3:.1f}\t{4:.3f}\t'.format(
+                        idx, eulers[0], eulers[1], eulers[2], maxSF)
+                    if self.selected_map.MAPNAME == 'hrdic':
+                        text += '{0}\t{1:.1f}\t{2}\t{3}\t{4:.2f}'.format(
+                                    group[0], group[1], group[2], np.round(group[3], 3), group[4])
+                    elif self.selected_map.MAPNAME == 'optical':
+                        text += '{0}\t{1:.1f}\t{2}\t{3}'.format(
+                                    group[0], group[1], group[2], np.round(group[3], 3))
+
+                    print(text)
+        
+    def run_rdr_group(self,
+                    event: int,
+                    plot):
         """  Run RDR on a specified group, upon submitting a text box.
 
         Parameters
@@ -340,35 +402,13 @@ class GrainInspector:
         """
         # Run RDR for group of lines
         if event != '':
-            self.calc_rdr(grain=self.selected_dic_grain, group=int(event))
+            self.calc_rdr(grain=self.selected_grain, group=int(event))
             self.rdr_group_text_box.set_val('')
 
-    def batch_run_sta(self,
-                      event,
-                      plot):
-        """  Run slip trace analysis on all grains which hve slip trace lines drawn.
-
-        """
-
-        # Print header
-        print("Grain\tEul1\tEul2\tEul3\tMaxSF\tGroup\tAngle\tSystem\tDev\tRDR")
-
-        # Print information for each grain
-        for idx, grain in enumerate(self.selected_dic_map):
-            if grain.points_list != []:
-                for group in grain.groups_list:
-                    maxSF = np.max([item for sublist in grain.ebsd_grain.average_schmid_factors for item in sublist])
-                    eulers = self.selected_ebsd_grain.ref_ori.euler_angles() * 180 / np.pi
-                    text = '{0}\t{1:.1f}\t{2:.1f}\t{3:.1f}\t{4:.3f}\t'.format(
-                        idx, eulers[0], eulers[1], eulers[2], maxSF)
-                    text += '{0}\t{1:.1f}\t{2}\t{3}\t{4:.2f}'.format(
-                        group[0], group[1], group[2], np.round(group[3], 3), group[4])
-                    print(text)
-
     def calc_rdr(self,
-                 grain,
-                 group: int,
-                 show_plot: bool = True):
+                grain,
+                group: int,
+                show_plot: bool = True):
         """ Calculates the relative displacement ratio for a given grain and group.
 
         Parameters
@@ -406,15 +446,15 @@ class GrainInspector:
             x, y = skimage_line(int(x0), int(y0), int(x1), int(y1))
 
             # Get x and y coordinates for points to be samples for RDR
-            xmap = np.array(x).T[:, None] + coordinateOffsets[:,0] + self.selected_dic_grain.extreme_coords[0]
-            ymap = np.array(y).T[:, None] + coordinateOffsets[:,1] + self.selected_dic_grain.extreme_coords[1]
+            xmap = np.array(x).T[:, None] + coordinateOffsets[:,0] + self.selected_grain.extreme_coords[0]
+            ymap = np.array(y).T[:, None] + coordinateOffsets[:,1] + self.selected_grain.extreme_coords[1]
 
-            x_list.extend(xmap - self.selected_dic_grain.extreme_coords[0])
-            y_list.extend(ymap - self.selected_dic_grain.extreme_coords[1])
+            x_list.extend(xmap - self.selected_grain.extreme_coords[0])
+            y_list.extend(ymap - self.selected_grain.extreme_coords[1])
 
             # Get u and v values at each coordinate
-            u = self.selected_dic_map.crop(self.selected_dic_map.data.displacement[0])[ymap, xmap]
-            v = self.selected_dic_map.crop(self.selected_dic_map.data.displacement[1])[ymap, xmap]
+            u = self.selected_map.crop(self.selected_map.data.displacement[0])[ymap, xmap]
+            v = self.selected_map.crop(self.selected_map.data.displacement[1])[ymap, xmap]
 
             # Subtract mean u and v value for each row
             u_list.extend(u - np.mean(u, axis=1)[:, None])
@@ -430,13 +470,13 @@ class GrainInspector:
             self.plot_rdr(grain, group, u_list, v_list, x_list, y_list, lin_reg_result)
 
     def plot_rdr(self,
-                 grain,
-                 group: int,
-                 u_list: List[float],
-                 v_list: List[float],
-                 x_list: List[List[int]],
-                 y_list: List[List[int]],
-                 lin_reg_result: List):
+                grain,
+                group: int,
+                u_list: List[float],
+                v_list: List[float],
+                x_list: List[List[int]],
+                y_list: List[List[int]],
+                lin_reg_result: List):
         """
         Plot rdr figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered.
         
@@ -471,8 +511,8 @@ class GrainInspector:
         self.rdr_plot.plot_axis = self.rdr_plot.add_axes((0.05, 0.1, 0.3, 0.35))
 
         # Draw grain plot
-        self.rdr_plot.grainPlot = self.selected_dic_grain.plot_grain_data(
-            grain_data=self.selected_dic_grain.data.max_shear,
+        self.rdr_plot.grainPlot = self.selected_grain.plot_grain_data(
+            grain_data=self.selected_grain.data.max_shear,
             fig=self.rdr_plot.fig,
             ax=self.rdr_plot.grain_axis,
             plot_colour_bar=False,
@@ -498,10 +538,10 @@ class GrainInspector:
         self.rdr_plot.plot_axis.set_xlabel('v-centered')
         self.rdr_plot.plot_axis.set_ylabel('u-centered')
         self.rdr_plot.add_text(self.rdr_plot.plot_axis, 0.95, 0.01,
-                               'Slope = {0:.3f} ± {1:.3f}\nR-squared = {2:.3f}\nn={3}'
-                               .format(slope, std_err, r_value ** 2, len(u_list)),
-                               va='bottom', ha='right',
-                               transform=self.rdr_plot.plot_axis.transAxes, fontsize=10, fontfamily='monospace');
+                            'Slope = {0:.3f} ± {1:.3f}\nR-squared = {2:.3f}\nn={3}'
+                            .format(slope, std_err, r_value ** 2, len(u_list)),
+                            va='bottom', ha='right',
+                            transform=self.rdr_plot.plot_axis.transAxes, fontsize=10, fontfamily='monospace');
 
         self.selected_ebsd_grain.calc_slip_traces()
         self.selected_ebsd_grain.calc_rdr()
@@ -523,7 +563,7 @@ class GrainInspector:
         for i, slip_system_group in enumerate(self.selected_ebsd_grain.phase.slip_systems):
             slip_trace_angle = np.rad2deg(self.selected_ebsd_grain.slip_trace_angles[i])
             text = "Plane: {0:s}    Angle: {1:.1f}\n".format(slip_system_group[0].slip_plane_label,
-                                                             slip_trace_angle)
+                                                            slip_trace_angle)
 
             # Then loop over individual slip systems
             for j, slip_system in enumerate(slip_system_group):
@@ -534,10 +574,10 @@ class GrainInspector:
 
             if i in grain.groups_list[group][2]:
                 self.rdr_plot.add_text(self.rdr_plot.text_axis, 0.15, 0.9 - offset, text, va='top',
-                                       weight='bold', fontsize=10)
+                                    weight='bold', fontsize=10)
             else:
                 self.rdr_plot.add_text(self.rdr_plot.text_axis, 0.15, 0.9 - offset, text, va='top',
-                                       fontsize=10)
+                                    fontsize=10)
 
             offset += 0.0275 * text.count('\n')
 
@@ -554,7 +594,7 @@ class GrainInspector:
         # Measured values as red points
         self.rdr_plot.number_line_axis.plot([0], slope, 'ro', label='Measured RDR value')
         self.rdr_plot.add_text(self.rdr_plot.number_line_axis, -0.002, slope, '{0:.3f}'.format(float(slope)),
-                               fontfamily='monospace', horizontalalignment='right', verticalalignment='center')
+                            fontfamily='monospace', horizontalalignment='right', verticalalignment='center')
 
         self.rdr_plot.number_line_axis.legend(bbox_to_anchor=(1.15, 1.05))
 
@@ -563,8 +603,8 @@ class GrainInspector:
             if (unique_rdr > slope - 1.5) & (unique_rdr < slope + 1.5):
                 # Add number to the left of point
                 self.rdr_plot.add_text(self.rdr_plot.number_line_axis, -0.002, unique_rdr,
-                                       '{0:.3f}'.format(float(unique_rdr)),
-                                       fontfamily='monospace', horizontalalignment='right', verticalalignment='center')
+                                    '{0:.3f}'.format(float(unique_rdr)),
+                                    fontfamily='monospace', horizontalalignment='right', verticalalignment='center')
 
                 # Go through all planes and directions and add to string if they have the rdr from above loop
                 txt = ''
@@ -576,7 +616,7 @@ class GrainInspector:
                             txt += str('{0} {1}  '.format(slip_system.slip_plane_label, slip_system.slip_dir_label))
 
                 self.rdr_plot.add_text(self.rdr_plot.number_line_axis, 0.002, unique_rdr - 0.01,
-                                       txt)
+                                    txt)
 
         self.rdr_plot.number_line_axis.set_ylim(slope - 1.5, slope + 1.5)
         self.rdr_plot.number_line_axis.set_xlim(-0.01, 0.05)
@@ -594,8 +634,8 @@ class GrainInspector:
         self.filename = event
 
     def save_file(self,
-                  event,
-                  plot):
+                event,
+                plot):
         """  Save a file which contains definitions of slip lines drawn in grains
             [(x0, y0, x1, y1), angle, groupID]
             and groups of lines, defined by an average angle and identified sip plane
@@ -603,14 +643,14 @@ class GrainInspector:
 
         """
 
-        with open(self.selected_dic_map.path + str(self.filename), 'w') as file:
+        with open(self.selected_map.path + str(self.filename), 'w') as file:
             file.write('# This is a file generated by defdap which contains ')
             file.write('definitions of slip lines drawn in grains by grainInspector\n')
             file.write('# [(x0, y0, x1, y1), angle, groupID]\n')
             file.write('# and groups of lines, defined by an average angle and identified sip plane\n')
             file.write('# [groupID, angle, [slip plane id], [angular deviation]\n\n')
 
-            for i, grain in enumerate(self.selected_dic_map):
+            for i, grain in enumerate(self.selected_map):
                 if grain.points_list != []:
                     file.write('Grain {0}\n'.format(i))
                     file.write('{0} Lines\n'.format(len(grain.points_list)))
@@ -622,8 +662,8 @@ class GrainInspector:
                     file.write('\n')
 
     def load_file(self,
-                  event,
-                  plot):
+                event,
+                plot):
         """  Load a file which contains definitions of slip lines drawn in grains
             [(x0, y0, x1, y1), angle, groupID]
             and groups of lines, defined by an average angle and identified sip plane
@@ -631,7 +671,7 @@ class GrainInspector:
 
         """
 
-        with open(self.selected_dic_map.path + str(self.filename), 'r') as file:
+        with open(self.selected_map.path + str(self.filename), 'r') as file:
             lines = file.readlines()
 
         # Parse file and make list of 
@@ -653,11 +693,11 @@ class GrainInspector:
             start_index_lines = start_index + 2
             grain_points = lines[start_index_lines:start_index_lines + num_lines]
             for point in grain_points:
-                self.selected_dic_map[grain_id].points_list.append(ast.literal_eval(point.split('\\')[0]))
+                self.selected_map[grain_id].points_list.append(ast.literal_eval(point.split('\\')[0]))
 
             start_index_groups = start_index + 3 + num_lines
             grain_groups = lines[start_index_groups:start_index_groups + num_groups]
             for group in grain_groups:
-                self.selected_dic_map[grain_id].groups_list.append(ast.literal_eval(group.split('\\')[0]))
+                self.selected_map[grain_id].groups_list.append(ast.literal_eval(group.split('\\')[0]))
 
         self.redraw()

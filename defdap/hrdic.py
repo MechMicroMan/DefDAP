@@ -486,10 +486,10 @@ class Map(base.Map):
         num_removed_crop = np.sum(self.crop(self.mask))
         num_total_crop = self.x_dim * self.y_dim
 
-        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
+        print('Filtering will remove {0} / {1} ({2:.3f} %) datapoints in map'
               .format(num_removed, num_total, (num_removed / num_total) * 100))
         print(
-            'Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
+            'Filtering will remove {0} / {1} ({2:.3f} %) datapoints in cropped map'
             .format(num_removed_crop, num_total_crop,
                     (num_removed_crop / num_total_crop * 100)))
 
@@ -725,7 +725,7 @@ class Map(base.Map):
             Length of lines perpendicular to slip trace used to calculate RDR.
 
         """
-        GrainInspector(selected_dic_map=self, vmax=vmax, correction_angle=correction_angle,
+        GrainInspector(selected_map=self, vmax=vmax, correction_angle=correction_angle,
                        rdr_line_length=rdr_line_length)
 
 
