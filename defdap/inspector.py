@@ -1,4 +1,4 @@
-# Copyright 2023 Mechanics of Microstructures Group
+# Copyright 2024 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -271,7 +271,7 @@ class GrainInspector:
         try:
             self.selected_ebsd_grain.plot_unit_cell(fig=self.plot.fig, ax=self.unit_cell_axis)
         except:
-            print('An error occured plotting the unit cell. Try running calc_average_grain_schmid_factors on the EBSD map')
+            print('An error occured plotting the unit cell. Try running calc_average_grain_schmid_factors on the EBSD map.')
 
         # Write grain info text
         self.grain_info_axis.clear()
