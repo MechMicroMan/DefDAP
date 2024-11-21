@@ -26,7 +26,7 @@ from defdap.inspector import GrainInspector
 
 class Map(base.Map):
     '''
-    This class is for import and analysiing optical image data
+    This class is for import and analysing optical image data
     such as polarised light images and darkfield images to link
     to EBSD data for slip trace analysis. (No RDR)
     
@@ -41,7 +41,7 @@ class Map(base.Map):
     corrVal : numpy.ndarray
         Correlation value.
     ebsd_map : defdap.ebsd.Map
-        EBSD map linked to DIC map.
+        EBSD map linked to optical map.
     highlight_alpha : float
         Alpha (transparency) of grain highlight.
     path : str
@@ -53,9 +53,8 @@ class Map(base.Map):
 
     data : defdap.utils.Datastore
         Must contain after loading data (maps):
-            coordinate : numpy.ndarray
-                X and Y coordinates
-            pixel_value: fill in -------------------
+            image : numpy.ndarray
+                2D image data
         Derived data:
             Grain list data to map data from all grains
     '''
@@ -69,7 +68,7 @@ class Map(base.Map):
         # Call base class constructor
         super(Map, self).__init__(*args, **kwargs)
         
-        self.ebsd_map = None                 # EBSD map linked to DIC map
+        self.ebsd_map = None                 # EBSD map linked to optical map
         self.highlight_alpha = 0.6
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
         
@@ -83,6 +82,10 @@ class Map(base.Map):
             cropped=True
         )
 
+        self.plot_default = lambda *args, **kwargs: self.plot_map(map_name='image',
+            plot_gbs=True, *args, **kwargs
+        )    
+        
     @report_progress("loading optical data")
     def load_data(self, file_name, data_type=None):
         """Load optical data from file.
@@ -91,7 +94,6 @@ class Map(base.Map):
         ----------
         file_name : pathlib.Path
             Name of file including extension.
-        data_type : str,  not sure is relavent?
 
         """
         metadata_dict, loaded_data = load_image(file_name)
@@ -129,7 +131,7 @@ class Map(base.Map):
 
     @property
     def scale(self):
-        """Returns the number of micrometers per pixel in the DIC map.
+        """Returns the number of micrometers per pixel in the optical map.
 
         """
         if self.optical_scale is None:
@@ -140,7 +142,7 @@ class Map(base.Map):
         
     def set_crop(self, *, left=None, right=None, top=None, bottom=None,
                  update_homog_points=False):
-        """Set a crop for the DIC map.
+        """Set a crop for the optical map.
 
         Parameters
         ----------
@@ -203,37 +205,9 @@ class Map(base.Map):
         max_x = int((self.xdim - self.crop_dists[0, 1]) * binning)
 
         return map_data[..., min_y:max_y, min_x:max_x]
-        
-    def plot_optical_map(self, **kwargs):
-        """
-        Plot a map with points coloured in IPF colouring,
-        with respect to a given sample direction.
-
-        Parameters
-        ----------
-        kwargs
-            Other arguments passed to :func:`defdap.plotting.MapPlot.create`.
-
-        Returns
-        -------
-        defdap.plotting.MapPlot
-        """
-        # Ensure map_data is available in the optical object
-        if not hasattr(self, 'map_data'):
-            raise ValueError("The optical object must have 'map_data' attribute set.")
-
-        # Set default plot parameters then update with any input
-        plot_params = {
-            'calling_map': self,  # Assuming `self` is the calling map (instance of base.Map)
-            'map_data': self.optical  # Access the map_data from the optical object
-        }
-        
-        plot_params.update(kwargs)
-
-        return MapPlot.create(**plot_params)
 
     def link_ebsd_map(self, ebsd_map, transform_type="affine", **kwargs):
-        """Calculates the transformation required to align EBSD dataset to DIC.
+        """Calculates the transformation required to align EBSD dataset to optical.
 
         Parameters
         ----------
@@ -277,7 +251,7 @@ class Map(base.Map):
         return True
 
     def warp_to_dic_frame(self, map_data, **kwargs):
-        """Warps a map to the DIC frame.
+        """Warps a map to the optical frame.
 
         Parameters
         ----------
@@ -289,7 +263,7 @@ class Map(base.Map):
         Returns
         ----------
         numpy.ndarray
-            Map (i.e. EBSD map data) warped to the DIC frame.
+            Map (i.e. EBSD map data) warped to the optical frame.
 
         """
         # Check a EBSD map is linked
@@ -301,7 +275,7 @@ class Map(base.Map):
 
     @report_progress("finding grains")
     def find_grains(self, algorithm=None, min_grain_size=10):
-        """Finds grains in the DIC map.
+        """Finds grains in the optical map.
 
         Parameters
         ----------
@@ -321,17 +295,17 @@ class Map(base.Map):
         group_id = Datastore.generate_id()
 
         if algorithm == 'warp':
-            # Warp EBSD grain map to DIC frame
+            # Warp EBSD grain map to optical frame
             grains = self.warp_to_dic_frame(
                 self.ebsd_map.data.grains, order=0, preserve_range=True
             )
 
-            # Find all unique values (these are the EBSD grain IDs in the DIC area, sorted)
+            # Find all unique values (these are the EBSD grain IDs in the optical area, sorted)
             ebsd_grain_ids = np.unique(grains)
             neg_vals = ebsd_grain_ids[ebsd_grain_ids <= 0]
             ebsd_grain_ids = ebsd_grain_ids[ebsd_grain_ids > 0]
 
-            # Map the EBSD IDs to the DIC IDs (keep the same mapping for values <= 0)
+            # Map the EBSD IDs to the optical IDs (keep the same mapping for values <= 0)
             old = np.concatenate((neg_vals, ebsd_grain_ids))
             new = np.concatenate((neg_vals, np.arange(1, len(ebsd_grain_ids) + 1)))
             index = np.digitize(grains.ravel(), old, right=True)
@@ -349,7 +323,7 @@ class Map(base.Map):
                 coords = props_dict[dic_grain_id + 1].coords  # (y, x)
                 grain.data.point = np.flip(coords, axis=1)  # (x, y)
 
-                # Assign EBSD grain ID to DIC grain and increment grain list
+                # Assign EBSD grain ID to optical grain and increment grain list
                 grain.ebsd_grain = self.ebsd_map[ebsd_grain_id - 1]
                 grain.ebsd_map = self.ebsd_map
                 grain_list.append(grain)
@@ -374,30 +348,35 @@ class Map(base.Map):
         self._grains = grain_list
         return grains
 
-    def grain_inspector(self):
+    def grain_inspector(self, correction_angle=0):
         """Run the grain inspector interactive tool.
-
+        Parameters
+        ----------
+        correction_angle: float
+            Correction angle in degrees to subtract from measured angles to account
+            for small rotation between optical and EBSD frames. Approximately the rotation
+            component of affine transform.
         """
-        GrainInspector(selected_map=self)
+        GrainInspector(selected_map=self, correction_angle=correction_angle)
 
 
 class Grain(base.Grain):
     """
-    Class to encapsulate DIC grain data and useful analysis and plotting
+    Class to encapsulate optical grain data and useful analysis and plotting
     methods.
 
     Attributes
     ----------
     dicMap : defdap.optical.Map
-        DIC map this grain is a member of
+        Optical map this grain is a member of
     ownerMap : defdap.hrdic.Map
-        DIC map this grain is a member of
+        Optical map this grain is a member of
     maxShearList : list
         List of maximum shear values for grain.
     ebsd_grain : defdap.ebsd.Grain
-        EBSD grain ID that this DIC grain corresponds to.
+        EBSD grain ID that this optical grain corresponds to.
     ebsd_map : defdap.ebsd.Map
-        EBSD map that this DIC grain belongs to.
+        EBSD map that this optical grain belongs to.
     points_list : numpy.ndarray
         Start and end points for lines drawn using defdap.inspector.GrainInspector.
     groups_list :
@@ -425,10 +404,31 @@ class Grain(base.Grain):
         self.points_list = []            # Lines drawn for STA
         self.groups_list = []            # Unique angles drawn for STA
 
-        # self.plot_default = lambda *args, **kwargs: self.plot_max_shear(
-        #     plot_colour_bar=True, plot_scale_bar=True, plot_slip_traces=True,
-        #     plot_slip_bands=True, *args, **kwargs
-        # )
+        self.plot_default = lambda *args, **kwargs: self.plot_map(
+            plot_colour_bar=True, plot_scale_bar=True, *args, **kwargs
+        )
+
+    def plot_map(self, **kwargs):
+        """Plot the image for an individual grain.
+
+        Parameters
+        ----------
+        kwargs
+            All arguments are passed to :func:`defdap.base.plot_grain_data`.
+
+        Returns
+        -------
+        defdap.plotting.GrainPlot
+
+        """
+        # Set default plot parameters then update with any input
+        plot_params = {
+        }
+        plot_params.update(kwargs)
+
+        plot = self.plot_grain_data(grain_data=self.data.image, **plot_params)
+
+        return plot
         
     @property
     def ref_ori(self):
