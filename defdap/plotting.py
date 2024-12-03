@@ -1011,23 +1011,46 @@ class PolePlot(Plot):
                              pad_y=0.005, va='bottom', ha='center', fontsize=12)
 
         elif self.plot_type == "IPF" and self.crystal_sym == "hexagonal":
-            # line between [0001] and [10-10] ([001] and [210])
-            # converted to cubic axes
-            self.add_line([0, 0, 1], [np.sqrt(3), 1, 0], c='k', lw=2)
+            
+            triangle = 'aztec'
+            
+            if triangle == 'aztec':
+                # line between [0001] and [01-10] ([001] and [2-10])
+                # converted to cubic axes
+                self.add_line([0, 0, 1], [np.sqrt(3), -1, 0], c='k', lw=2)
 
-            # line between [0001] and [2-1-10] ([001] and [100])
-            self.add_line([0, 0, 1], [1, 0, 0], c='k', lw=2)
+                # line between [0001] and [-12-10] ([001] and [100])
+                self.add_line([0, 0, 1], [1, 0, 0], c='k', lw=2)
 
-            # line between [2-1-10] and [10-10] ([100] and [210])
-            self.add_line([1, 0, 0], [np.sqrt(3), 1, 0], c='k', lw=2)
+                # line between [-12-10] and [01-10] ([100] and [2-10])
+                self.add_line([1, 0, 0], [np.sqrt(3), -1, 0], c='k', lw=2)
 
-            # label poles
-            self.label_point([0, 0, 1], '0001',
-                             pad_y=-0.012, va='top', ha='center', fontsize=12)
-            self.label_point([1, 0, 0], r'$2\bar{1}\bar{1}0$',
-                             pad_y=-0.012, va='top', ha='center', fontsize=12)
-            self.label_point([np.sqrt(3), 1, 0], r'$10\bar{1}0$',
-                             pad_y=0.009, va='bottom', ha='center', fontsize=12)
+                # label poles
+                self.label_point([0, 0, 1], '0001',
+                                pad_y=0.012, va='bottom', ha='center', fontsize=12)
+                self.label_point([1, 0, 0], r'$\bar{1}2\bar{1}0$',
+                                pad_y=0.012, va='bottom', ha='center', fontsize=12)
+                self.label_point([np.sqrt(3), -1, 0], r'$01\bar{1}0$',
+                                pad_y=-0.006, va='top', ha='center', fontsize=12)
+            
+            elif triangle == 'mtex':
+                # line between [0001] and [10-10] ([001] and [210])
+                # converted to cubic axes
+                self.add_line([0, 0, 1], [np.sqrt(3), 1, 0], c='k', lw=2)
+
+                # line between [0001] and [2-1-10] ([001] and [100])
+                self.add_line([0, 0, 1], [1, 0, 0], c='k', lw=2)
+
+                # line between [2-1-10] and [10-10] ([100] and [210])
+                self.add_line([1, 0, 0], [np.sqrt(3), 1, 0], c='k', lw=2)
+
+                # label poles
+                self.label_point([0, 0, 1], '0001',
+                                pad_y=-0.012, va='top', ha='center', fontsize=12)
+                self.label_point([1, 0, 0], r'$2\bar{1}\bar{1}0$',
+                                pad_y=-0.012, va='top', ha='center', fontsize=12)
+                self.label_point([np.sqrt(3), 1, 0], r'$10\bar{1}0$',
+                                pad_y=0.009, va='bottom', ha='center', fontsize=12)
 
         else:
             raise NotImplementedError("Only works for cubic and hexagonal.")

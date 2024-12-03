@@ -1052,15 +1052,32 @@ class Quat(object):
             alpha_fund = alpha[min_alpha_idx, np.arange(len(min_alpha_idx))]
 
         elif sym_group == "hexagonal":
-            # first beta should be between 0 and 30 deg leaving 1
-            # symmetric equivalent per orientation
-            trial_poles = np.logical_and(beta >= 0, beta <= np.pi / 6)
-            # if less than 1 left need to expand search slightly to
-            # catch edge cases
-            if np.any(np.sum(trial_poles, axis=0) < 1):
-                delta_beta = 1e-8
-                trial_poles = np.logical_and(beta >= -delta_beta,
-                                            beta <= np.pi / 6 + delta_beta)
+            
+            triangle = 'aztec'
+            
+            if triangle == 'aztec':
+                    
+                # first beta should be between 0 and 30 deg leaving 1
+                # symmetric equivalent per orientation
+                trial_poles = np.logical_and(beta <= 0, beta >= -np.pi / 6)
+                # if less than 1 left need to expand search slightly to
+                # catch edge cases
+                if np.any(np.sum(trial_poles, axis=0) < 1):
+                    delta_beta = 1e-8
+                    trial_poles = np.logical_and(beta >= delta_beta,
+                                                beta <= - (np.pi / 6 + delta_beta))
+            
+            if triangle == 'mtex':
+                
+                # first beta should be between -30 and 0 deg leaving 1
+                # symmetric equivalent per orientation
+                trial_poles = np.logical_and(beta >= 0, beta <= np.pi / 6)
+                # if less than 1 left need to expand search slightly to
+                # catch edge cases
+                if np.any(np.sum(trial_poles, axis=0) < 1):
+                    delta_beta = 1e-8
+                    trial_poles = np.logical_and(beta >= -delta_beta,
+                                                beta <= np.pi / 6 + delta_beta)
 
             # non-indexed points cause more than 1 symmetric equivalent, use this
             # to pick one and filter non-indexed points later
