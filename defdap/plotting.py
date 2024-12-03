@@ -978,8 +978,13 @@ class PolePlot(Plot):
 
         self.addAxis()
 
-    def addAxis(self):
+    def addAxis(self,alignment=="DefDAP"):
         """Draw axes on the IPF based on crystal symmetry.
+        
+        
+        Parameters
+        ----------
+        alignment : "DefDAP", "Aztec", changes the software which the IPF triangle is aligned
 
         Raises
         -------
@@ -987,42 +992,81 @@ class PolePlot(Plot):
             If a crystal type other than 'cubic' or 'hexagonal' are selected.
 
         """
-        if self.plotType == "IPF" and self.crystalSym == "cubic":
-            # line between [001] and [111]
-            self.addLine([0, 0, 1], [1, 1, 1], c='k', lw=2)
+        if alignment == "DefDAP":
+            if self.plotType == "IPF" and self.crystalSym == "cubic":
+                # line between [001] and [111]
+                self.addLine([0, 0, 1], [1, 1, 1], c='k', lw=2)
 
-            # line between [001] and [101]
-            self.addLine([0, 0, 1], [1, 0, 1], c='k', lw=2)
+                # line between [001] and [101]
+                self.addLine([0, 0, 1], [1, 0, 1], c='k', lw=2)
 
-            # line between [101] and [111]
-            self.addLine([1, 0, 1], [1, 1, 1], c='k', lw=2)
+                # line between [101] and [111]
+                self.addLine([1, 0, 1], [1, 1, 1], c='k', lw=2)
 
-            # label poles
-            self.labelPoint([0, 0, 1], '001',
-                            padY=-0.005, va='top', ha='center', fontsize=12)
-            self.labelPoint([1, 0, 1], '101',
-                            padY=-0.005, va='top', ha='center', fontsize=12)
-            self.labelPoint([1, 1, 1], '111',
-                            padY=0.005, va='bottom', ha='center', fontsize=12)
+                # label poles
+                self.labelPoint([0, 0, 1], '001',
+                                padY=-0.005, va='top', ha='center', fontsize=12)
+                self.labelPoint([1, 0, 1], '101',
+                                padY=-0.005, va='top', ha='center', fontsize=12)
+                self.labelPoint([1, 1, 1], '111',
+                                padY=0.005, va='bottom', ha='center', fontsize=12)
 
-        elif self.plotType == "IPF" and self.crystalSym == "hexagonal":
-            # line between [0001] and [10-10] ([001] and [210])
-            # converted to cubic axes
-            self.addLine([0, 0, 1], [np.sqrt(3), 1, 0], c='k', lw=2)
+            elif self.plotType == "IPF" and self.crystalSym == "hexagonal":
+                # line between [0001] and [10-10] ([001] and [210])
+                # converted to cubic axes
+                self.addLine([0, 0, 1], [np.sqrt(3), 1, 0], c='k', lw=2)
 
-            # line between [0001] and [2-1-10] ([001] and [100])
-            self.addLine([0, 0, 1], [1, 0, 0], c='k', lw=2)
+                # line between [0001] and [2-1-10] ([001] and [100])
+                self.addLine([0, 0, 1], [1, 0, 0], c='k', lw=2)
 
-            # line between [2-1-10] and [10-10] ([100] and [210])
-            self.addLine([1, 0, 0], [np.sqrt(3), 1, 0], c='k', lw=2)
+                # line between [2-1-10] and [10-10] ([100] and [210])
+                self.addLine([1, 0, 0], [np.sqrt(3), 1, 0], c='k', lw=2)
 
-            # label poles
-            self.labelPoint([0, 0, 1], '0001',
-                            padY=-0.012, va='top', ha='center', fontsize=12)
-            self.labelPoint([1, 0, 0], r'$2\bar{1}\bar{1}0$',
-                            padY=-0.012, va='top', ha='center', fontsize=12)
-            self.labelPoint([np.sqrt(3), 1, 0], r'$10\bar{1}0$',
-                            padY=0.009, va='bottom', ha='center', fontsize=12)
+                # label poles
+                self.labelPoint([0, 0, 1], '0001',
+                                padY=-0.012, va='top', ha='center', fontsize=12)
+                self.labelPoint([1, 0, 0], r'$2\bar{1}\bar{1}0$',
+                                padY=-0.012, va='top', ha='center', fontsize=12)
+                self.labelPoint([np.sqrt(3), 1, 0], r'$10\bar{1}0$',
+                                padY=0.009, va='bottom', ha='center', fontsize=12)
+                                
+        if alignment == "Aztec":
+            if self.plotType == "IPF" and self.crystalSym == "cubic":
+                # line between [001] and [111]
+                self.addLine([0, 0, 1], [1, 1, 1], c='k', lw=2)
+
+                # line between [001] and [101]
+                self.addLine([0, 0, 1], [1, 0, 1], c='k', lw=2)
+
+                # line between [101] and [111]
+                self.addLine([1, 0, 1], [1, 1, 1], c='k', lw=2)
+
+                # label poles
+                self.labelPoint([0, 0, 1], '001',
+                                padY=-0.005, va='top', ha='center', fontsize=12)
+                self.labelPoint([1, 0, 1], '101',
+                                padY=-0.005, va='top', ha='center', fontsize=12)
+                self.labelPoint([1, 1, 1], '111',
+                                padY=0.005, va='bottom', ha='center', fontsize=12)
+
+            elif self.plotType == "IPF" and self.crystalSym == "hexagonal":
+                # line between [0001] and [10-10] ([001] and [210])
+                # converted to cubic axes
+                self.addLine([0, 0, 1], [np.sqrt(3), 1, 0], c='k', lw=2)
+
+                # line between [0001] and [2-1-10] ([001] and [100])
+                self.addLine([0, 0, 1], [1, 0, 0], c='k', lw=2)
+
+                # line between [2-1-10] and [10-10] ([100] and [210])
+                self.addLine([1, 0, 0], [np.sqrt(3), 1, 0], c='k', lw=2)
+
+                # label poles
+                self.labelPoint([0, 0, 1], '0001',
+                                padY=-0.012, va='top', ha='center', fontsize=12)
+                self.labelPoint([1, 0, 0], r'$10\bar{1}0$',
+                                padY=-0.012, va='top', ha='center', fontsize=12)
+                self.labelPoint([np.sqrt(3), 1, 0], r'$2\bar{1}\bar{1}0$',
+                                padY=0.009, va='bottom', ha='center', fontsize=12)
 
         else:
             raise NotImplementedError("Only works for cubic and hexagonal.")
