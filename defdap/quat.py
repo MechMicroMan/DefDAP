@@ -16,6 +16,7 @@
 import numpy as np
 
 from defdap import plotting
+from defdap import defaults
 
 from typing import Union, Tuple, List, Optional
 
@@ -1053,9 +1054,13 @@ class Quat(object):
 
         elif sym_group == "hexagonal":
             
-            triangle = 'aztec'
+            triangle = defaults['ipf_triangle_convention']
+            convention = defaults['crystal_ortho_conv']
+
+            if convention.lower() in ['hkl', 'oi']:
+                beta += np.pi / 6
             
-            if triangle == 'aztec':
+            if triangle.lower() == 'aztec':
                     
                 # first beta should be between 0 and 30 deg leaving 1
                 # symmetric equivalent per orientation
@@ -1067,7 +1072,7 @@ class Quat(object):
                     trial_poles = np.logical_and(beta >= delta_beta,
                                                 beta <= - (np.pi / 6 + delta_beta))
             
-            if triangle == 'mtex':
+            if triangle.lower() == 'mtex':
                 
                 # first beta should be between -30 and 0 deg leaving 1
                 # symmetric equivalent per orientation

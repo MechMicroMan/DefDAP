@@ -1012,7 +1012,7 @@ class PolePlot(Plot):
 
         elif self.plot_type == "IPF" and self.crystal_sym == "hexagonal":
             
-            triangle = 'aztec'
+            triangle = defaults['ipf_triangle_convention']
             
             if triangle == 'aztec':
                 # line between [0001] and [01-10] ([001] and [2-10])
@@ -1047,9 +1047,9 @@ class PolePlot(Plot):
                 # label poles
                 self.label_point([0, 0, 1], '0001',
                                 pad_y=-0.012, va='top', ha='center', fontsize=12)
-                self.label_point([1, 0, 0], r'$2\bar{1}\bar{1}0$',
+                self.label_point([1, 0, 0], r'$\bar{1}2\bar{1}0$',
                                 pad_y=-0.012, va='top', ha='center', fontsize=12)
-                self.label_point([np.sqrt(3), 1, 0], r'$10\bar{1}0$',
+                self.label_point([np.sqrt(3), 1, 0], r'$\bar{1}100$',
                                 pad_y=0.009, va='bottom', ha='center', fontsize=12)
 
         else:
