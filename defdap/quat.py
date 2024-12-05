@@ -495,6 +495,12 @@ class Quat(object):
 
         alpha_fund, beta_fund = Quat.calc_fund_dirs(quats, direction, sym_group)
 
+        if defaults['ipf_triangle_convention'] == 'aztec':
+            beta_fund -= np.pi/6
+
+        if defaults['ipf_triangle_convention'] == 'mtex':
+            beta_fund = - beta_fund + np.pi/6
+
         if plot is None:
             plot = plotting.PolePlot(
                 "IPF", sym_group, projection=projection,
@@ -1053,36 +1059,16 @@ class Quat(object):
             alpha_fund = alpha[min_alpha_idx, np.arange(len(min_alpha_idx))]
 
         elif sym_group == "hexagonal":
-            
-            triangle = defaults['ipf_triangle_convention']
-            convention = defaults['crystal_ortho_conv']
-
-            if convention.lower() in ['hkl', 'oi']:
-                beta += np.pi / 6
-            
-            if triangle.lower() == 'aztec':
-                    
-                # first beta should be between 0 and 30 deg leaving 1
-                # symmetric equivalent per orientation
-                trial_poles = np.logical_and(beta <= 0, beta >= -np.pi / 6)
-                # if less than 1 left need to expand search slightly to
-                # catch edge cases
-                if np.any(np.sum(trial_poles, axis=0) < 1):
-                    delta_beta = 1e-8
-                    trial_poles = np.logical_and(beta >= delta_beta,
-                                                beta <= - (np.pi / 6 + delta_beta))
-            
-            if triangle.lower() == 'mtex':
                 
-                # first beta should be between -30 and 0 deg leaving 1
-                # symmetric equivalent per orientation
-                trial_poles = np.logical_and(beta >= 0, beta <= np.pi / 6)
-                # if less than 1 left need to expand search slightly to
-                # catch edge cases
-                if np.any(np.sum(trial_poles, axis=0) < 1):
-                    delta_beta = 1e-8
-                    trial_poles = np.logical_and(beta >= -delta_beta,
-                                                beta <= np.pi / 6 + delta_beta)
+            # first beta should be between -30 and 0 deg leaving 1
+            # symmetric equivalent per orientation
+            trial_poles = np.logical_and(beta >= 0, beta <= np.pi / 6)
+            # if less than 1 left need to expand search slightly to
+            # catch edge cases
+            if np.any(np.sum(trial_poles, axis=0) < 1):
+                delta_beta = 1e-8
+                trial_poles = np.logical_and(beta >= -delta_beta,
+                                            beta <= np.pi / 6 + delta_beta)
 
             # non-indexed points cause more than 1 symmetric equivalent, use this
             # to pick one and filter non-indexed points later
