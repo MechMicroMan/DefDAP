@@ -495,12 +495,6 @@ class Quat(object):
 
         alpha_fund, beta_fund = Quat.calc_fund_dirs(quats, direction, sym_group)
 
-        if defaults['ipf_triangle_convention'] == 'aztec':
-            beta_fund -= np.pi/6
-
-        if defaults['ipf_triangle_convention'] == 'mtex':
-            beta_fund = - beta_fund + np.pi/6
-
         if plot is None:
             plot = plotting.PolePlot(
                 "IPF", sym_group, projection=projection,
@@ -955,7 +949,8 @@ class Quat(object):
         quats: np.ndarray,
         direction: np.ndarray,
         sym_group: str,
-        dtype: Optional[type] = float
+        dtype: Optional[type] = float,
+        triangle: Optional[str] = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Transform the sample direction to crystal coords based on the quats
@@ -1041,45 +1036,41 @@ class Quat(object):
 
         # find the poles in the fundamental triangle
         if sym_group == "cubic":
-            # first beta should be between 0 and 45 deg leaving 3
-            # symmetric equivalents per orientation
-            trial_poles = np.logical_and(beta >= 0, beta <= np.pi / 4)
-
-            # if less than 3 left need to expand search slightly to
-            # catch edge cases
-            if np.any(np.sum(trial_poles, axis=0) < 3):
-                delta_beta = 1e-8
-                trial_poles = np.logical_and(beta >= -delta_beta,
-                                            beta <= np.pi / 4 + delta_beta)
-
-            # now of symmetric equivalents left we want the one with
-            # minimum alpha
-            min_alpha_idx = np.nanargmin(np.where(trial_poles==False, np.nan, alpha), axis=0)
-            beta_fund = beta[min_alpha_idx, np.arange(len(min_alpha_idx))]
-            alpha_fund = alpha[min_alpha_idx, np.arange(len(min_alpha_idx))]
+            beta_range = (np.pi / 2, 3/4 * np.pi, 3)
 
         elif sym_group == "hexagonal":
-                
-            # first beta should be between -30 and 0 deg leaving 1
-            # symmetric equivalent per orientation
-            trial_poles = np.logical_and(beta >= 0, beta <= np.pi / 6)
-            # if less than 1 left need to expand search slightly to
-            # catch edge cases
-            if np.any(np.sum(trial_poles, axis=0) < 1):
-                delta_beta = 1e-8
-                trial_poles = np.logical_and(beta >= -delta_beta,
-                                            beta <= np.pi / 6 + delta_beta)
+            if triangle is None:
+                triangle = defaults['ipf_triangle_convention']
 
+            if triangle == 'up':
+                beta_range = (np.pi / 2, 2/3 * np.pi, 1)
+            elif triangle == 'down':
+                beta_range = (1/3 * np.pi, np.pi / 2, 1)
+            else:
+                ValueError("`triangle` must be 'up' or 'down'")
+        else:
+            raise ValueError("sym_group must be cubic or hexagonal")
+        
+        trial_poles = np.logical_and(beta >= beta_range[0], beta <= beta_range[1])
+        # expand search slightly to catch edge cases if needed
+        if np.any(np.sum(trial_poles, axis=0) < beta_range[2]):
+            delta_beta = 1e-8
+            trial_poles = np.logical_and(
+                beta >= beta_range[0] - delta_beta,
+                beta <= beta_range[1] + delta_beta
+            )
+
+        if sym_group == "cubic":
+            # now of symmetric equivalents left we want the one with
+            # minimum alpha
+            fund_idx = np.nanargmin(np.where(trial_poles, alpha, np.nan), axis=0)
+        else:
             # non-indexed points cause more than 1 symmetric equivalent, use this
             # to pick one and filter non-indexed points later
-            first_idx = (trial_poles==True).argmax(axis=0)
-            beta_fund = beta[first_idx, np.arange(len(first_idx))]
-            alpha_fund = alpha[first_idx, np.arange(len(first_idx))]
+            fund_idx = trial_poles.argmax(axis=0)
 
-        else:
-            raise Exception("symGroup must be cubic or hexagonal")
-
-        return alpha_fund, beta_fund
+        fund_idx = (fund_idx, range(len(fund_idx)))
+        return alpha[fund_idx], beta[fund_idx]
 
     @staticmethod
     def sym_eqv(symGroup: str) -> List['Quat']:

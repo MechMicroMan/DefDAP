@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial
+
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -28,6 +30,7 @@ from skimage import morphology as mph
 
 from defdap import defaults
 from defdap import quat
+from defdap.crystal_utils import project_to_orth, equavlent_indicies, idc_to_string
 
 # TODO: add plot parameter to add to current figure
 
@@ -993,67 +996,51 @@ class PolePlot(Plot):
 
         """
         if self.plot_type == "IPF" and self.crystal_sym == "cubic":
-            # line between [001] and [111]
-            self.add_line([0, 0, 1], [1, 1, 1], c='k', lw=2)
-
-            # line between [001] and [101]
-            self.add_line([0, 0, 1], [1, 0, 1], c='k', lw=2)
-
-            # line between [101] and [111]
-            self.add_line([1, 0, 1], [1, 1, 1], c='k', lw=2)
-
-            # label poles
-            self.label_point([0, 0, 1], '001',
-                             pad_y=-0.005, va='top', ha='center', fontsize=12)
-            self.label_point([1, 0, 1], '101',
-                             pad_y=-0.005, va='top', ha='center', fontsize=12)
-            self.label_point([1, 1, 1], '111',
-                             pad_y=0.005, va='bottom', ha='center', fontsize=12)
+            lines = [
+                ((0, 0, 1), (0, 1, 1)),
+                ((0, 0, 1), (-1, 1, 1)),
+                ((0, 1, 1), (-1, 1, 1)),
+            ]
+            labels = [
+                ((0, 0, 1), -0.005, 'top'),
+                ((0, 1, 1), -0.005, 'top'),
+                ((-1, 1, 1), 0.005, 'bottom'),
+            ]
 
         elif self.plot_type == "IPF" and self.crystal_sym == "hexagonal":
-            
-            triangle = defaults['ipf_triangle_convention']
-            
-            if triangle == 'aztec':
-                # line between [0001] and [01-10] ([001] and [2-10])
-                # converted to cubic axes
-                self.add_line([0, 0, 1], [np.sqrt(3), -1, 0], c='k', lw=2)
-
-                # line between [0001] and [-12-10] ([001] and [100])
-                self.add_line([0, 0, 1], [1, 0, 0], c='k', lw=2)
-
-                # line between [-12-10] and [01-10] ([100] and [2-10])
-                self.add_line([1, 0, 0], [np.sqrt(3), -1, 0], c='k', lw=2)
-
-                # label poles
-                self.label_point([0, 0, 1], '0001',
-                                pad_y=0.012, va='bottom', ha='center', fontsize=12)
-                self.label_point([1, 0, 0], r'$\bar{1}2\bar{1}0$',
-                                pad_y=0.012, va='bottom', ha='center', fontsize=12)
-                self.label_point([np.sqrt(3), -1, 0], r'$01\bar{1}0$',
-                                pad_y=-0.006, va='top', ha='center', fontsize=12)
-            
-            elif triangle == 'mtex':
-                # line between [0001] and [10-10] ([001] and [210])
-                # converted to cubic axes
-                self.add_line([0, 0, 1], [np.sqrt(3), 1, 0], c='k', lw=2)
-
-                # line between [0001] and [2-1-10] ([001] and [100])
-                self.add_line([0, 0, 1], [1, 0, 0], c='k', lw=2)
-
-                # line between [2-1-10] and [10-10] ([100] and [210])
-                self.add_line([1, 0, 0], [np.sqrt(3), 1, 0], c='k', lw=2)
-
-                # label poles
-                self.label_point([0, 0, 1], '0001',
-                                pad_y=-0.012, va='top', ha='center', fontsize=12)
-                self.label_point([1, 0, 0], r'$\bar{1}2\bar{1}0$',
-                                pad_y=-0.012, va='top', ha='center', fontsize=12)
-                self.label_point([np.sqrt(3), 1, 0], r'$\bar{1}100$',
-                                pad_y=0.009, va='bottom', ha='center', fontsize=12)
-
+            if defaults['ipf_triangle_convention'] == 'down':
+                lines = [
+                    ((0, 0, 0, 1), (-1, 2, -1, 0)),
+                    ((0, 0, 0, 1), (0, 1, -1, 0)),
+                    ((-1, 2, -1, 0), (0, 1, -1, 0)),
+                ]
+                labels = [
+                    ((0, 0, 0, 1), 0.012, 'bottom'),
+                    ((-1, 2, -1, 0), 0.012, 'bottom'),
+                    ((0, 1, -1, 0), -0.006, 'top'),
+                ]
+        
+            else:
+                lines = [
+                    ((0, 0, 0, 1), (-1, 2, -1, 0)),
+                    ((0, 0, 0, 1), (-1, 1, 0, 0)),
+                    ((-1, 2, -1, 0), (-1, 1, 0, 0)),
+                ]
+                labels = [
+                    ((0, 0, 0, 1), -0.006, 'top'),
+                    ((-1, 2, -1, 0), -0.006, 'top'),
+                    ((-1, 1, 0, 0), 0.012, 'bottom'),
+                ]
         else:
             raise NotImplementedError("Only works for cubic and hexagonal.")
+        
+        for line in lines:
+            self.add_line(*line, c='k', lw=2)
+        for label in labels:
+            self.label_point(
+                label[0], pad_y=label[1], va=label[2], 
+                ha='center', fontsize=12
+            )
 
         self.ax.axis('equal')
         self.ax.axis('off')
@@ -1063,9 +1050,9 @@ class PolePlot(Plot):
 
         Parameters
         ----------
-        start_point : numpy.ndarray
+        start_point : tuple
             Start point in crystal coordinates (i.e. [0,0,1]).
-        end_point : numpy.ndarray
+        end_point : tuple
             End point in crystal coordinates, (i.e. [1,0,0]).
         plot_syms : bool, optional
             If true, plot all symmetrically equivelant points.
@@ -1075,11 +1062,15 @@ class PolePlot(Plot):
             All other arguments are passed to :func:`matplotlib.pyplot.plot`.
 
         """
+        if self.crystal_sym == 'hexagonal':
+            start_point = project_to_orth(0.8165, dir=start_point, in_type='mb')
+            end_point = project_to_orth(0.8165, dir=end_point, in_type='mb')
+
         lines = [(start_point, end_point)]
         if plot_syms:
             for symm in quat.Quat.sym_eqv(self.crystal_sym)[1:]:
-                start_point_symm = symm.transform_vector(start_point).astype(int)
-                end_point_symm = symm.transform_vector(end_point).astype(int)
+                start_point_symm = symm.transform_vector(start_point)
+                end_point_symm = symm.transform_vector(end_point)
 
                 if start_point_symm[2] < 0:
                     start_point_symm *= -1
@@ -1099,14 +1090,14 @@ class PolePlot(Plot):
             xp, yp = self.projection(line_points[0], line_points[1], line_points[2])
             self.ax.plot(xp, yp, **kwargs)
 
-    def label_point(self, point, label, pad_x=0, pad_y=0, **kwargs):
+    def label_point(self, point, label=None, plot_syms=False, pad_x=0, pad_y=0, **kwargs):
         """Place a label near a coordinate in the pole plot.
 
         Parameters
         ----------
         point : tuple
             (x, y) coordinate to place text.
-        label : str
+        label : str, optional
             Text to use in label.
         pad_x : int, optional
             Pad added to x coordinate.
@@ -1116,8 +1107,37 @@ class PolePlot(Plot):
             Other arguments are passed to :func:`matplotlib.axes.Axes.text`.
 
         """
-        xp, yp = self.projection(*point)
-        self.ax.text(xp + pad_x, yp + pad_y, label, **kwargs)
+        labels = [idc_to_string(point, str_type='tex')] if label is None else [label]
+        
+        point_idc = point
+        if self.crystal_sym == 'hexagonal':
+            point = project_to_orth(0.8165, dir=point, in_type='mb')
+
+        points = [point]
+
+        if plot_syms:
+            for symm in quat.Quat.sym_eqv(self.crystal_sym)[1:]:
+                point_symm = symm.transform_vector(point)
+                if point_symm[2] < 0:
+                    point_symm *= -1
+                points.append(point_symm)
+
+            if label is None:
+                labels = map(
+                    partial(idc_to_string, str_type='tex'), 
+                    equavlent_indicies(
+                        self.crystal_sym, 
+                        quat.Quat.sym_eqv(self.crystal_sym), 
+                        dir=point_idc, 
+                        c_over_a=0.8165
+                    )
+                )
+            else:
+                labels *= len(quat.Quat.sym_eqv(self.crystal_sym))
+
+        for point, label in zip(points, labels):
+            xp, yp = self.projection(*point)
+            self.ax.text(xp + pad_x, yp + pad_y, label, **kwargs)
 
     def add_points(self, alpha_ang, beta_ang, marker_colour=None, marker_size=None, **kwargs):
         """Add a point to the pole plot.
@@ -1196,7 +1216,14 @@ class PolePlot(Plot):
         img = self.img_layers[layer]
         self.colour_bar = plt.colorbar(img, ax=self.ax, label=label, **kwargs)
 
-    def add_legend(self, label='Grain area (μm$^2$)', number=6, layer=0, scaling=1, **kwargs):
+    def add_legend(
+        self, 
+        label='Grain area (μm$^2$)', 
+        number=6, 
+        layer=0, 
+        scaling=1, 
+        **kwargs
+    ):
         """Add a marker size legend to the pole plot.
 
         Parameters
@@ -1214,8 +1241,11 @@ class PolePlot(Plot):
 
         """
         img = self.img_layers[layer]
-        self.legend = plt.legend(*img.legend_elements("sizes", num=number,
-                                                      func=lambda s: s / scaling), title=label, **kwargs)
+        self.legend = plt.legend(
+            *img.legend_elements("sizes", num=number, func=lambda s: s / scaling), 
+            title=label, 
+            **kwargs
+        )
 
     @staticmethod
     def _validateProjection(projection_in, validate_default=False):
@@ -1279,8 +1309,8 @@ class PolePlot(Plot):
             raise Exception("3 arguments for pole directions and 2 for polar angles.")
 
         alpha_comp = np.tan(alpha / 2)
-        xp = alpha_comp * np.cos(beta)
-        yp = alpha_comp * np.sin(beta)
+        xp = alpha_comp * np.cos(beta - np.pi/2)
+        yp = alpha_comp * np.sin(beta - np.pi/2)
 
         return xp, yp
 
@@ -1312,8 +1342,8 @@ class PolePlot(Plot):
             raise Exception("3 arguments for pole directions and 2 for polar angles.")
 
         alpha_comp = np.sqrt(2 * (1 - np.cos(alpha)))
-        xp = alpha_comp * np.cos(beta)
-        yp = alpha_comp * np.sin(beta)
+        xp = alpha_comp * np.cos(beta - np.pi/2)
+        yp = alpha_comp * np.sin(beta - np.pi/2)
 
         return xp, yp
 
