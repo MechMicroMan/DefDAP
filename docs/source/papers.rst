@@ -6,6 +6,14 @@ Here is a list of papers which have used the DefDAP Python library.
 2024
 ------
 
+* `S.Cao, R.Thomas, A.D.Smith, P.Zhang, L.Meng, H.Liu, J.Guo, J.Donoghue, D.Lunt. The effect of a keyhole defect on strain localisation in an additive manufactured titanium alloy. Journal of Materials Research and Technology. Volume 33, Nov–Dec 2024. Pages 9664-9673.  <https://doi.org/10.1016/j.jmrt.2024.11.237>`_
+
+* `B.Poole, A.Marsh, D.Lunt, C.Hardie, M.Gorley, C.Hamelin, A.Harte. Nanoscale speckle patterning for combined high-resolution strain and orientation mapping of environmentally sensitive materials. Strain. Volume 60. Issue 6. Dec 2024. <https://doi.org/10.1111/str.12477>`_
+
+* `R.Nia, C.J.Boehlert, Y.Zenga, B.Chen, S.Huang, J.Zheng, H.Zhou, Q.Wang, D.Yin. Automated analysis framework of strain partitioning and deformation mechanisms via multimodal fusion and computer vision. International Journal of Plasticity. Volume 182. 2024. 104119. <https://doi.org/10.1016/j.ijplas.2024.104119>`_
+
+* `E. Nieto-Valeiras, A. Orozco-Caballero, M. Sarebanzadeh, J. Sun, J. LLorca. Analysis of slip transfer across grain boundaries in Ti via diffraction contrast tomography and high-resolution digital image correlation: When the geometrical criteria are not sufficient. Volume 175, April 2024, 103941. <https://doi.org/10.1016/j.ijplas.2024.103941>`_
+
 * `I.Alakiozidis, C.Hunt, R.Thomas, D.Lunt, A.D.Smith, M.Maric, Z.Shah, A.Ambard, P.Frankel. Quantifying cracking and strain localisation in a cold spray chromium coating on a zirconium alloy substrate under tensile loading at room temperature. Journal of Nuclear Materials. Apr 2024. 154899. <https://doi.org/10.1016/j.jnucmat.2024.154899>`_
 
 * `B.Poole, A.Marsh, D.Lunt, M.Gorley, C.Hamelin, C. Hardie, A.Harte. High-resolution strain mapping in a thermionic LaB6 scanning electron microscope. Strain. Feb 2024. <https://doi.org/10.1111/str.12472>`_
