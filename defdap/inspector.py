@@ -20,7 +20,7 @@ import ast
 from typing import List
 
 from scipy.stats import linregress
-from scipy.stats._stats_mstats_common import LinregressResult
+from scipy.stats._stats_py import LinregressResult
 import pandas as pd
 
 from defdap.plotting import Plot, GrainPlot
