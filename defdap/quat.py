@@ -872,7 +872,7 @@ class Quat(object):
         num_quats = len(quats)
 
         alpha_fund, beta_fund = Quat.calc_fund_dirs(
-            quats, direction, sym_group, dtype=dtype
+            quats, direction, sym_group, triangle = 'ipf_map', dtype=dtype
         )
 
         # revert to cartesians
@@ -1046,6 +1046,8 @@ class Quat(object):
                 beta_range = (np.pi / 2, 2/3 * np.pi, 1)
             elif triangle == 'down':
                 beta_range = (1/3 * np.pi, np.pi / 2, 1)
+            elif triangle == 'ipf_map':
+                beta_range = (0 * np.pi, 1/6* np.pi,1)
             else:
                 ValueError("`triangle` must be 'up' or 'down'")
         else:
