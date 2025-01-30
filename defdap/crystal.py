@@ -19,6 +19,7 @@ from numpy.linalg import norm
 
 from defdap import defaults
 from defdap.quat import Quat
+from defdap.crystal_utils import *
 
 
 class Phase(object):
@@ -103,78 +104,6 @@ class CrystalStructure(object):
         self.symmetries = symmetries
         self.vertices = vertices
         self.faces = faces
-
-    # TODO: Move these to the phase class where the lattice parameters
-    #  can be accessed
-    @staticmethod
-    def l_matrix(a, b, c, alpha, beta, gamma, convention=None):
-        """ Construct L matrix based on Page 22 of
-        Randle and Engle - Introduction to texture analysis"""
-        l_matrix = np.zeros((3, 3))
-
-        cos_alpha = np.cos(alpha)
-        cos_beta = np.cos(beta)
-        cos_gamma = np.cos(gamma)
-
-        sin_gamma = np.sin(gamma)
-
-        l_matrix[0, 0] = a
-        l_matrix[0, 1] = b * cos_gamma
-        l_matrix[0, 2] = c * cos_beta
-
-        l_matrix[1, 1] = b * sin_gamma
-        l_matrix[1, 2] = c * (cos_alpha - cos_beta * cos_gamma) / sin_gamma
-
-        l_matrix[2, 2] = c * np.sqrt(
-            1 + 2 * cos_alpha * cos_beta * cos_gamma -
-            cos_alpha**2 - cos_beta**2 - cos_gamma**2
-        ) / sin_gamma
-
-        # OI/HKL convention - x // [10-10],     y // a2 [-12-10]
-        # TSL    convention - x // a1 [2-1-10], y // [01-10]
-        if convention is None:
-            convention = defaults['crystal_ortho_conv']
-
-        if convention.lower() in ['hkl', 'oi']:
-            # Swap 00 with 11 and 01 with 10 due to how OI orthonormalises
-            # From Brad Wynne
-            t1 = l_matrix[0, 0]
-            t2 = l_matrix[1, 0]
-
-            l_matrix[0, 0] = l_matrix[1, 1]
-            l_matrix[1, 0] = l_matrix[0, 1]
-
-            l_matrix[1, 1] = t1
-            l_matrix[0, 1] = t2
-
-        elif convention.lower() != 'tsl':
-            raise ValueError(
-                f"Unknown convention '{convention}' for orthonormalisation of "
-                f"crystal structure, can be 'hkl' or 'tsl'"
-            )
-
-        # Set small components to 0
-        l_matrix[np.abs(l_matrix) < 1e-10] = 0
-
-        return l_matrix
-
-    @staticmethod
-    def q_matrix(l_matrix):
-        """ Construct matrix of reciprocal lattice vectors to transform
-        plane normals See C. T. Young and J. L. Lytton, J. Appl. Phys.,
-        vol. 43, no. 4, pp. 1408–1417, 1972."""
-        a = l_matrix[:, 0]
-        b = l_matrix[:, 1]
-        c = l_matrix[:, 2]
-
-        volume = abs(np.dot(a, np.cross(b, c)))
-        a_star = np.cross(b, c) / volume
-        b_star = np.cross(c, a) / volume
-        c_star = np.cross(a, b) / volume
-
-        q_matrix = np.stack((a_star, b_star, c_star), axis=1)
-
-        return q_matrix
 
 
 over_root2 = np.sqrt(2) / 2
@@ -327,14 +256,14 @@ class SlipSystem(object):
             slip_dir_m = convert_idc('mb', dir=slip_dir)
 
             # Transformation from crystal to orthonormal coords
-            l_matrix = CrystalStructure.l_matrix(
+            l_matrix = create_l_matrix(
                 1, 1, c_over_a, np.pi / 2, np.pi / 2, np.pi * 2 / 3
             )
             # Q matrix for transforming planes
-            qMatrix = CrystalStructure.q_matrix(l_matrix)
+            q_matrix = create_q_matrix(l_matrix)
 
             # Transform into orthonormal basis and then normalise
-            self.slip_plane = np.matmul(qMatrix, slip_plane_m)
+            self.slip_plane = np.matmul(q_matrix, slip_plane_m)
             self.slip_plane /= norm(self.slip_plane)
             self.slip_dir = np.matmul(l_matrix, slip_dir_m)
             self.slip_dir /= norm(self.slip_dir)
@@ -367,7 +296,7 @@ class SlipSystem(object):
             Slip plane label.
 
         """
-        return '(' + ''.join(map(str_idx, self.plane_idc)) + ')'
+        return idc_to_string(self.plane_idc, '()')
 
     @property
     def slip_dir_label(self):
@@ -379,7 +308,7 @@ class SlipSystem(object):
             Slip direction label.
 
         """
-        return '[' + ''.join(map(str_idx, self.dir_idc)) + ']'
+        return idc_to_string(self.dir_idc, '[]')
 
     def generate_family(self):
         """Generate the family of slip systems which this system belongs to.
@@ -400,11 +329,11 @@ class SlipSystem(object):
 
         if self.crystal_structure.name == 'hexagonal':
             # Transformation from crystal to orthonormal coords
-            l_matrix = CrystalStructure.l_matrix(
+            l_matrix = create_l_matrix(
                 1, 1, self.c_over_a, np.pi / 2, np.pi / 2, np.pi * 2 / 3
             )
             # Q matrix for transforming planes
-            q_matrix = CrystalStructure.q_matrix(l_matrix)
+            q_matrix = create_q_matrix(l_matrix)
 
             # Transform into orthonormal basis
             plane = np.matmul(q_matrix, convert_idc('mb', plane=plane))
@@ -566,163 +495,3 @@ class SlipSystem(object):
         package_dir, _ = os.path.split(__file__)
         print("Slip system definition files are stored in directory:")
         print(f"{package_dir}/slip_systems/")
-
-
-def convert_idc(in_type, *, dir=None, plane=None):
-    """
-    Convert between Miller and Miller-Bravais indices.
-
-    Parameters
-    ----------
-    in_type : str {'m', 'mb'}
-        Type of indices provided. If 'm' converts from Miller to
-        Miller-Bravais, opposite for 'mb'.
-    dir : tuple of int or equivalent, optional
-        Direction to convert. This OR `plane` must me provided.
-    plane : tuple of int or equivalent, optional
-        Plane to convert. This OR `direction` must me provided.
-
-    Returns
-    -------
-    tuple of int
-        The converted plane or direction.
-
-    """
-    if dir is None and plane is None:
-        raise ValueError("One of either `direction` or `plane` must be "
-                         "provided.")
-    if dir is not None and plane is not None:
-        raise ValueError("One of either `direction` or `plane` must be "
-                         "provided, not both.")
-
-    def check_len(val, length):
-        if len(val) != length:
-            raise ValueError(f"Vector must have {length} values.")
-
-    if in_type.lower() == 'm':
-        if dir is None:
-            # plane M->MB
-            check_len(plane, 3)
-            out = np.array(plane)[[0, 1, 0, 2]]
-            out[2] += plane[1]
-            out[2] *= -1
-
-        else:
-            # direction M->MB
-            check_len(dir, 3)
-            u, v, w = dir
-            out = np.array([2*u-v, 2*v-u, -u-v, 3*w]) / 3
-            try:
-                # Attempt to cast to integers
-                out = safe_int_cast(out)
-            except ValueError:
-                pass
-
-    elif in_type.lower() == 'mb':
-        if dir is None:
-            # plane MB->M
-            check_len(plane, 4)
-            out = np.array(plane)[[0, 1, 3]]
-
-        else:
-            # direction MB->M
-            check_len(dir, 4)
-            out = np.array(dir)[[0, 1, 3]]
-            out[[0, 1]] -= dir[2]
-
-    else:
-        raise ValueError("`inType` must be either 'm' or 'mb'.")
-
-    return tuple(out)
-
-
-def pos_idc(vec):
-    """
-    Return a consistent positive version of a set of indices.
-
-    Parameters
-    ----------
-    vec : tuple of int or equivalent
-        Indices to convert.
-
-    Returns
-    -------
-    tuple of int
-        Positive version of indices.
-
-    """
-    for idx in vec:
-        if idx == 0:
-            continue
-        if idx > 0:
-            return tuple(vec)
-        else:
-            return tuple(-np.array(vec))
-
-
-def reduce_idc(vec):
-    """
-    Reduce indices to lowest integers
-
-    Parameters
-    ----------
-    vec : tuple of int or equivalent
-        Indices to reduce.
-
-    Returns
-    -------
-    tuple of int
-        The reduced indices.
-
-    """
-    return tuple((np.array(vec) / np.gcd.reduce(vec)).astype(np.int8))
-
-
-def safe_int_cast(vec, tol=1e-3):
-    """
-    Cast a tuple of floats to integers, raising an error if rounding is
-    over a tolerance.
-
-    Parameters
-    ----------
-    vec : tuple of float or equivalent
-        Vector to cast.
-    tol : float
-        Tolerance above which an error is raised.
-
-    Returns
-    -------
-    tuple of int
-
-    Raises
-    ------
-    ValueError
-        If the rounding is over the tolerance for any value.
-
-    """
-    vec = np.array(vec)
-    vec_rounded = vec.round()
-
-    if np.any(np.abs(vec - vec_rounded) > tol):
-        raise ValueError('Rounding too large', np.abs(vec - vec_rounded))
-
-    return tuple(vec_rounded.astype(np.int8))
-
-
-def str_idx(idx):
-    """
-    String representation of an index with overbars.
-
-    Parameters
-    ----------
-    idx : int
-
-    Returns
-    -------
-    str
-
-    """
-    if not isinstance(idx, (int, np.integer)):
-        raise ValueError("Index must be an integer.")
-
-    return str(idx) if idx >= 0 else str(-idx) + u'\u0305'
