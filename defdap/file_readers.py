@@ -641,7 +641,9 @@ class DICDataLoader(ABC):
         try:
             loader = {
                 'davis': DavisLoader,
-                'openpiv': OpenPivLoader,
+                'openpiv': OpenPivTextLoader,    #Backwards compatability
+                'openpivtext': OpenPivTextLoader,
+                'openpivbinary': OpenPivBinaryLoader
             }[data_type]
         except KeyError:
             raise ValueError(f"No loader for DIC data of type {data_type}.")
@@ -741,7 +743,7 @@ class DavisLoader(DICDataLoader):
         return np.array(data)
 
 
-class OpenPivLoader(DICDataLoader):
+class OpenPivTextLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
         """ Load from Open PIV .txt file.
 
@@ -777,16 +779,52 @@ class OpenPivLoader(DICDataLoader):
 
         # shape of map (from header)
         shape = data[:, [col['y'], col['x']]].max(axis=0) + binning / 2
-        assert np.allclose(shape % binning, 0.)
         shape = tuple((shape / binning).astype(int).tolist())
         self.loaded_metadata['shape'] = shape
 
         self.checkMetadata()
-
-        data = data.reshape(shape + (-1,))[::-1].transpose((2, 0, 1))
+        
+        # if y descending, flip
+        if np.all(np.diff(data[:, col['y']].reshape(shape)[:,0])) > 0:
+            data = data.reshape(shape + (-1,))[::-1].transpose((2, 0, 1))
 
         self.loaded_data.coordinate = data[[col['x'], col['y']]]
         self.loaded_data.displacement = data[[col['u'], col['v']]]
+
+        self.check_data()
+
+class OpenPivBinaryLoader(DICDataLoader):
+    def load(self, file_name: pathlib.Path) -> None:
+        """ Load from Open PIV .npz file.
+
+        Parameters
+        ----------
+        file_name
+            Path to file
+
+        """
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
+
+        data = np.load(file_name)
+
+        # Software name and version
+        self.loaded_metadata['format'] = data['format']
+        self.loaded_metadata['version'] = data['version']
+
+        # Load binning and shape
+        self.loaded_metadata['binning'] = data['binning']
+        self.loaded_metadata['shape'] = tuple(data['shape'])
+
+        self.checkMetadata()
+        
+        # if y descending, flip
+        if np.all(np.diff(data['y'][:,0])) > 0:
+            self.loaded_data.coordinate = np.array([data['x'][::-1], data['y'][::-1]])
+            self.loaded_data.displacement = np.array([data['u'][::-1], data['v'][::-1]])
+        else:
+            self.loaded_data.coordinate = np.array([data['x'], data['y']])
+            self.loaded_data.displacement = np.array([data['u'], data['v']])
 
         self.check_data()
 
