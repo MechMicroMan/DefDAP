@@ -174,7 +174,7 @@ class TestMapFindGrains:
             f'{EXPECTED_RESULTS_DIR}/ebsd_grains_5deg_{min_grain_size}.npz'
         )['grains']
 
-        assert np.alltrue(result == expected)
+        assert np.all(result == expected)
 
     @staticmethod
     def test_add_derivative(mock_map):

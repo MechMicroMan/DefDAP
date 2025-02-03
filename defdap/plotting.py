@@ -1,4 +1,4 @@
-# Copyright 2023 Mechanics of Microstructures Group
+# Copyright 2024 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -103,7 +103,9 @@ class Plot(object):
         if proj == '2d':
             return self.fig.add_axes(loc)
         if proj == '3d':
-            return Axes3D(self.fig, rect=loc, proj_type='ortho', azim=270, elev=90)
+            return self.fig.add_axes(loc, projection='3d', proj_type='ortho', azim=270, elev=90)
+        
+        
 
     def add_button(self, label, click_handler, loc=(0.8, 0.0, 0.1, 0.07), **kwargs):
         """Add a button to the plot.
@@ -683,12 +685,14 @@ class MapPlot(Plot):
         defdap.plotting.MapPlot
 
         """
+       
         if plot is None:
             plot = cls(calling_map, fig=fig, ax=ax, ax_params=ax_params,
                        make_interactive=make_interactive, **fig_params)
 
         if map_data is not None:
             plot.add_map(map_data, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+            
 
         if plot_colour_bar:
             plot.add_colour_bar(clabel)
@@ -849,7 +853,8 @@ class GrainPlot(Plot):
         """
 
         if colours is None:
-            colours = self.calling_grain.ebsd_grain.phase.slip_trace_colours
+            #colours = self.calling_grain.ebsd_grain.phase.slip_trace_colours #-----------------------------------------
+            colours = self.calling_grain.phase.slip_trace_colours
         slip_trace_angles = self.calling_grain.slip_traces
 
         self.add_traces(slip_trace_angles, colours, top_only, pos=pos, **kwargs)

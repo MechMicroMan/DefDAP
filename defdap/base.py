@@ -1,4 +1,4 @@
-# Copyright 2023 Mechanics of Microstructures Group
+# Copyright 2024 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -920,6 +920,7 @@ class Grain(ABC):
             grain_data[i] = map_data[coord[1], coord[0]]
 
         return grain_data
+
 
     def grain_map_data(self, map_data=None, grain_data=None, bg=np.nan):
         """Extract a single grain map from the given map data.

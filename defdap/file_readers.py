@@ -1,4 +1,4 @@
-# Copyright 2023 Mechanics of Microstructures Group
+# Copyright 2024 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ import pandas as pd
 from abc import ABC, abstractmethod
 import pathlib
 import re
+from skimage.io import imread
 
 from typing import TextIO, Dict, List, Callable, Any, Type, Optional
 
@@ -205,7 +206,6 @@ class OxfordTextLoader(EBSDDataLoader):
                 'cmap': 'gray',
                 'clabel': 'Band contrast',
             }
-
         )
         self.loaded_data.add(
             'band_slope', data['BS'].reshape(shape),
@@ -791,6 +791,22 @@ class OpenPivLoader(DICDataLoader):
         self.check_data()
 
 
+def load_image(file_name: pathlib.Path) -> Datastore:
+    image = imread(file_name, as_gray=True)
+    loaded_metadata = {
+        'shape': image.shape,
+    }
+    laoded_data = Datastore()
+    laoded_data.add(
+        'image', image, unit='', type='map', order=0,
+        plot_params={
+            'plot_colour_bar': False,
+            'cmap': 'gray',
+        }
+    )
+    return loaded_metadata, laoded_data
+
+
 def read_until_string(
     file: TextIO,
     term_string: str,
@@ -798,6 +814,8 @@ def read_until_string(
     line_process: Optional[Callable[[str], Any]] = None,
     exact: bool = False
 ) -> List[Any]:
+
+
     """Read lines in a file until a line starting with the `termString`
     is encountered. The file position is returned before the line starting
     with the `termString` when found. Comment and empty lines are ignored.
