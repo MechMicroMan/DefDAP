@@ -20,7 +20,6 @@ import ast
 from typing import List
 
 from scipy.stats import linregress
-from scipy.stats._stats_py import LinregressResult
 import pandas as pd
 
 from defdap.plotting import Plot, GrainPlot
@@ -427,7 +426,7 @@ class GrainInspector:
         vlist: List[float], 
         allxlist: List[float], 
         allylist: List[float], 
-        linRegResults: 'LinregressResult'):
+        linRegResults):
         """
         Plot RDR figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered.
         
