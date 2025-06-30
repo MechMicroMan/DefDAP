@@ -1,4 +1,4 @@
-# Copyright 2023 Mechanics of Microstructures Group
+# Copyright 2024 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -242,21 +242,34 @@ class Map(base.Map):
         return self.step_size
 
     @report_progress("rotating EBSD data")
-    def rotate_data(self):
-        """Rotate map by 180 degrees and transform quats accordingly.
+    def rotate_data(self, angle=180):
+        """Rotate map counter-clockwise by the specified angle (90, 180, 270 degrees) 
+        and transform quats accordingly.
+
+        Parameters
+        ----------
+        angle : int
+            The angle to rotate the map. Must be one of [90, 180, 270].
 
         """
+        if angle not in [90, 180, 270]:
+            raise ValueError("Angle must be one of [90, 180, 270]")
 
-        self.data.euler_angle = self.data.euler_angle[:, ::-1, ::-1]
-        self.data.band_contrast = self.data.band_contrast[::-1, ::-1]
-        self.data.band_slope = self.data.band_slope[::-1, ::-1]
-        self.data.phase = self.data.phase[::-1, ::-1]
-        self.calc_quat_array()
+        # Rotate the data arrays by the specified angle
+        k = angle // 90  # Number of 90 degree rotations
 
-        # Rotation from old coord system to new
-        transform_quat = Quat.from_axis_angle(np.array([0, 0, 1]), np.pi).conjugate
+        # Change the shape of the EBSD data to match
+        if k % 2 == 1:
+            self.shape = self.shape[::-1]
+    
+        self.data.euler_angle = np.rot90(self.data.euler_angle, k=k, axes=(1, 2))
+        self.data.band_contrast = np.rot90(self.data.band_contrast, k=k)
+        self.data.mean_angular_deviation = np.rot90(self.data.mean_angular_deviation, k=k)
+        self.data.band_slope = np.rot90(self.data.band_slope, k=k)
+        self.data.phase = np.rot90(self.data.phase, k=k)
 
-        # Perform vectorised multiplication
+        # Rotation quaterions from old coord system to new
+        transform_quat = Quat.from_axis_angle(np.array([0, 0, 1]), np.deg2rad(-angle)).conjugate
         quats = Quat.multiply_many_quats(self.data.orientation.flatten(), transform_quat)
         self.data.orientation = np.array(quats).reshape(self.shape)
 
