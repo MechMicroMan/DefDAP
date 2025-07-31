@@ -630,6 +630,8 @@ class Map(base.Map):
                 grain.ebsd_map = self.ebsd_map
                 grain_list.append(grain)
 
+                grain.ebsd_grain.dic_grain = grain
+
         elif algorithm == 'floodfill':
             # Initialise the grain map
             grains = -np.copy(self.data.grain_boundaries.image.astype(int))
