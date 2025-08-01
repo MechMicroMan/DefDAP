@@ -213,7 +213,7 @@ class Map(base.Map):
 
         # write final status
         yield (f"Loaded {self.format} {self.version} data "
-               f"(dimensions: {self.xdim} x {self.xdim} pixels, "
+               f"(dimensions: {self.xdim} x {self.ydim} pixels, "
                f"sub-window size: {self.binning} x {self.binning} pixels)")
 
     def load_corr_val_data(self, file_name, data_type=None):
@@ -488,10 +488,10 @@ class Map(base.Map):
         num_removed_crop = np.sum(self.crop(self.mask))
         num_total_crop = self.x_dim * self.y_dim
 
-        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
+        print('Filtering will remove {0} / {1} ({2:.3f} %) datapoints in map'
               .format(num_removed, num_total, (num_removed / num_total) * 100))
         print(
-            'Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
+            'Filtering will remove {0} / {1} ({2:.3f} %) datapoints in cropped map'
             .format(num_removed_crop, num_total_crop,
                     (num_removed_crop / num_total_crop * 100)))
 

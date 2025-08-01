@@ -914,12 +914,7 @@ class Grain(ABC):
             Array containing this grains values from the given map data.
 
         """
-        grain_data = np.zeros(len(self), dtype=map_data.dtype)
-
-        for i, coord in enumerate(self.data.point):
-            grain_data[i] = map_data[coord[1], coord[0]]
-
-        return grain_data
+        return map_data[..., self.data.point[:, 1], self.data.point[:, 0]]
 
     def grain_map_data(self, map_data=None, grain_data=None, bg=np.nan):
         """Extract a single grain map from the given map data.

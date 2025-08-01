@@ -33,3 +33,6 @@ DefDAP.egg-info/
 
 # coverage
 .coverage
+
+# vscode
+.vscode

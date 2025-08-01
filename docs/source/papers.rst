@@ -3,6 +3,13 @@ Papers
 
 Here is a list of papers which have used the DefDAP Python library.
 
+2025
+------
+
+* `B.Yang, X.Xu, D.Lunt, F.Zhang, M.D.Atkinson, Y.Li, J.LLorca, X.Zhou. Grain size dependence of microscopic strain distribution in a high entropy alloy at the onset of plastic deformation. Acta Materialia. Volume 285, Feb 2025, 120682. <https://doi.org/10.1016/j.actamat.2024.120682>`_
+
+* `D.Hu, A.D.Smith, D.Lunt, R.Thomas, M.D.Atkinson, X.Liu, Ö.Koç, J.M.Donoghue, Z.Zhang, J.Quinta da Fonseca, M.Preuss, Tracking the onset of plasticity in a Ni-base superalloy using in-situ High-Resolution Digital Image Correlation. Materialia. Volume 220, Feb 2025, 114654. <https://doi.org/10.1016/j.matchar.2024.114654>`_
+
 2024
 ------
 

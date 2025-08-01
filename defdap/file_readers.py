@@ -829,6 +829,72 @@ class OpenPivBinaryLoader(DICDataLoader):
         self.check_data()
 
 
+class PyValeLoader(DICDataLoader):
+    def load(self, file_name: pathlib.Path) -> None:
+        """ Load from PyVale csv file.
+
+        Parameters
+        ----------
+        file_name
+            Path to file
+
+        """
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
+
+        with open(str(file_name), 'r') as f:
+            header = f.readline()[1:].split()
+            data = np.loadtxt(f, delimiter=',')
+        col = {
+            'x': 0,
+            'y': 1,
+            'u': 2,
+            'v': 3,
+            'displacement_mag': 4,
+            'converged': 5,
+            'cost': 6,
+            'ftol': 7,
+            'xtol': 8,
+            'num_iterations': 9,
+        }
+
+        # Software name and version
+        self.loaded_metadata['format'] = 'PyVale'
+        self.loaded_metadata['version'] = 'n/a'
+
+        # Sub-window width in pixels
+        binning_x = int(np.min(np.abs(np.diff(data[:, col['x']]))))
+        binning_y = int(np.max(np.abs(np.diff(data[:, col['y']]))))
+        assert binning_x == binning_y
+        binning = binning_x
+        self.loaded_metadata['binning'] = binning
+
+        # shape of map (from header)
+        shape = (
+            data[:, [col['y'], col['x']]].max(axis=0) 
+            - data[:, [col['y'], col['x']]].min(axis=0) 
+        )
+        assert np.allclose(shape % binning, 0.)
+        shape = tuple((shape / binning + 1).astype(int).tolist())
+        self.loaded_metadata['shape'] = shape
+
+        self.checkMetadata()
+
+        index_array = ((
+            data[:, [col['y'], col['x']]] 
+            - data[:, [col['y'], col['x']]].min(axis=0) 
+        ) // binning).astype(int)
+        disp_dense = np.zeros(shape + (2,))
+        disp_dense[index_array[:, 0], index_array[:, 1]] = data[:, [col['u'], col['v']]]
+        print(disp_dense.shape)
+        disp_dense = disp_dense.transpose((2, 0, 1))
+
+        self.loaded_data.coordinate = data[[col['x'], col['y']]]
+        self.loaded_data.displacement = disp_dense
+
+        # self.check_data()
+
+
 def read_until_string(
     file: TextIO,
     term_string: str,
