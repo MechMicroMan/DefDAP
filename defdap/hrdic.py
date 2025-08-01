@@ -488,10 +488,10 @@ class Map(base.Map):
         num_removed_crop = np.sum(self.crop(self.mask))
         num_total_crop = self.x_dim * self.y_dim
 
-        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
+        print('Filtering will remove {0} / {1} ({2:.3f} %) datapoints in map'
               .format(num_removed, num_total, (num_removed / num_total) * 100))
         print(
-            'Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
+            'Filtering will remove {0} / {1} ({2:.3f} %) datapoints in cropped map'
             .format(num_removed_crop, num_total_crop,
                     (num_removed_crop / num_total_crop * 100)))
 
@@ -629,8 +629,6 @@ class Map(base.Map):
                 grain.ebsd_grain = self.ebsd_map[ebsd_grain_id - 1]
                 grain.ebsd_map = self.ebsd_map
                 grain_list.append(grain)
-
-                grain.ebsd_grain.dic_grain = grain
 
         elif algorithm == 'floodfill':
             # Initialise the grain map
