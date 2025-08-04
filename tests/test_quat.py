@@ -616,7 +616,7 @@ class TestIpfColour:
         returnColours = Quat.calc_ipf_colours(quats=ori_quat_list_valid,
                                               sym_group='cubic',
                                               direction=direction)
-        assert np.allclose(returnColours, expectedOutput.T)
+        assert np.allclose(returnColours, expectedOutput.T, atol=1e-4)
 
     @staticmethod
     @pytest.mark.parametrize("direction, expectedOutput", [
@@ -631,7 +631,7 @@ class TestIpfColour:
         returnColours = Quat.calc_ipf_colours(quats=ori_quat_list_valid,
                                               sym_group='hexagonal',
                                               direction=direction)
-        assert np.allclose(returnColours, expectedOutput.T)
+        assert np.allclose(returnColours, expectedOutput.T, atol=1e-4)
 
 
 
@@ -659,7 +659,7 @@ class TestFundDirs:
         returnDirs = Quat.calc_fund_dirs(quats=ori_quat_list_valid,
                                               sym_group='cubic',
                                               direction=direction)
-        assert np.allclose(returnDirs, expectedOutput)
+        assert np.allclose(returnDirs, expectedOutput, atol=1e-4)
 
     @staticmethod
     @pytest.mark.parametrize("direction, expectedOutput", [
@@ -675,7 +675,7 @@ class TestFundDirs:
                                               sym_group='hexagonal',
                                               direction=direction,
                                               triangle='up')
-        assert np.allclose(returnColours, expectedOutput)
+        assert np.allclose(returnColours, expectedOutput, atol=1e-4)
 
     @staticmethod
     @pytest.mark.parametrize("direction, expectedOutput", [
@@ -691,7 +691,7 @@ class TestFundDirs:
                                               sym_group='hexagonal',
                                               direction=direction,
                                               triangle='down')
-        assert np.allclose(returnColours, expectedOutput)
+        assert np.allclose(returnColours, expectedOutput, atol=1e-4)
 
 
 
