@@ -966,6 +966,9 @@ class Quat(object):
             Crystal type (cubic, hexagonal).
         dtype
             Data type to use for calculation.
+        triangle:  str, optional
+            Triangle convention to use for hexagonal symmetry (up, down). If None,
+            defaults to the value in `defaults['ipf_triangle_convention']`.
 
         Returns
         -------
@@ -1036,7 +1039,10 @@ class Quat(object):
 
         # find the poles in the fundamental triangle
         if sym_group == "cubic":
-            beta_range = (np.pi / 2, 3/4 * np.pi, 3)
+            if triangle == 'ipf_map':
+                beta_range = (0, np.pi / 4, 3)
+            else:
+                beta_range = (np.pi / 2, 3/4 * np.pi, 3)
 
         elif sym_group == "hexagonal":
             if triangle is None:
