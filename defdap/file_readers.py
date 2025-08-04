@@ -606,7 +606,8 @@ class DICDataLoader(ABC):
     """Class containing methods for loading and checking HRDIC data
 
     """
-    def __init__(self) -> None:
+    def __init__(self, file_type : str = '') -> None:
+        self.file_type = file_type
         self.loaded_metadata = {
             'format': '',
             'version': '',
@@ -637,7 +638,9 @@ class DICDataLoader(ABC):
         if data_type is None:
             data_type = "Davis"
 
-        data_type = data_type.lower()
+        data_type = data_type.lower().split('-')
+        data_subtype = '' if len(data_type) == 1 else data_type[1]
+        data_type = data_type[0]
         try:
             loader = {
                 'davis': DavisLoader,
@@ -647,7 +650,7 @@ class DICDataLoader(ABC):
             }[data_type]
         except KeyError:
             raise ValueError(f"No loader for DIC data of type {data_type}.")
-        return loader()
+        return loader(file_type=data_subtype)
 
     def checkMetadata(self) -> None:
         return
@@ -841,58 +844,66 @@ class PyValeLoader(DICDataLoader):
         """
         if not file_name.is_file():
             raise FileNotFoundError(f"Cannot open file {file_name}")
-
-        with open(str(file_name), 'r') as f:
-            header = f.readline()[1:].split()
-            data = np.loadtxt(f, delimiter=',')
-        col = {
-            'x': 0,
-            'y': 1,
-            'u': 2,
-            'v': 3,
-            'displacement_mag': 4,
-            'converged': 5,
-            'cost': 6,
-            'ftol': 7,
-            'xtol': 8,
-            'num_iterations': 9,
-        }
+        
+        int_type = 'int32'
+        double_type = 'double'
+        data_format = np.dtype([
+            ('x', int_type),
+            ('y', int_type),
+            ('u', double_type),
+            ('v', double_type),
+            ('displacement_mag', double_type),
+            ('converged', 'uint8'),
+            ('cost', double_type),
+            ('ftol', double_type),
+            ('xtol', double_type),
+            ('num_iterations', int_type),
+        ])
+        
+        if self.file_type == 'csv':
+            with open(str(file_name), 'r') as f:
+                header = f.readline()[1:].split()
+                data = np.loadtxt(f, delimiter=',', dtype=data_format)
+        elif self.file_type == 'binary':
+            data = np.fromfile(str(file_name), data_format, count=-1)
+        else:
+            raise ValueError(f"Unknown pyvale file type {self.file_type}")
 
         # Software name and version
         self.loaded_metadata['format'] = 'PyVale'
         self.loaded_metadata['version'] = 'n/a'
 
         # Sub-window width in pixels
-        binning_x = int(np.min(np.abs(np.diff(data[:, col['x']]))))
-        binning_y = int(np.max(np.abs(np.diff(data[:, col['y']]))))
+        binning_x = int(np.min(np.abs(np.diff(data['x']))))
+        binning_y = int(np.max(np.abs(np.diff(data['y']))))
         assert binning_x == binning_y
         binning = binning_x
         self.loaded_metadata['binning'] = binning
 
-        # shape of map (from header)
-        shape = (
-            data[:, [col['y'], col['x']]].max(axis=0) 
-            - data[:, [col['y'], col['x']]].min(axis=0) 
-        )
+        # shape of map (from data)
+        yx_array = structured_to_unstructured(data[['y', 'x']])
+        shape = yx_array.max(axis=0) - yx_array.min(axis=0)
         assert np.allclose(shape % binning, 0.)
-        shape = tuple((shape / binning + 1).astype(int).tolist())
+        shape = tuple((shape // binning + 1).tolist())
         self.loaded_metadata['shape'] = shape
 
         self.checkMetadata()
 
-        index_array = ((
-            data[:, [col['y'], col['x']]] 
-            - data[:, [col['y'], col['x']]].min(axis=0) 
-        ) // binning).astype(int)
+        index_array = (yx_array - yx_array.min(axis=0)) // binning
         disp_dense = np.zeros(shape + (2,))
-        disp_dense[index_array[:, 0], index_array[:, 1]] = data[:, [col['u'], col['v']]]
-        print(disp_dense.shape)
+        disp_dense[index_array[:, 0], index_array[:, 1]] = (
+            structured_to_unstructured(data[['u', 'v']]))
         disp_dense = disp_dense.transpose((2, 0, 1))
 
-        self.loaded_data.coordinate = data[[col['x'], col['y']]]
+        coord_dense = np.mgrid[
+            *(slice(mn, mx+binning, binning)
+              for mn, mx in zip(yx_array.min(axis=0), yx_array.max(axis=0)))
+        ][::-1]
+
+        self.loaded_data.coordinate = coord_dense
         self.loaded_data.displacement = disp_dense
 
-        # self.check_data()
+        self.check_data()
 
 
 def read_until_string(
