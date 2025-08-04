@@ -1053,7 +1053,7 @@ class Quat(object):
             elif triangle == 'down':
                 beta_range = (1/3 * np.pi, np.pi / 2, 1)
             elif triangle == 'ipf_map':
-                beta_range = (0 * np.pi, 1/6* np.pi,1)
+                beta_range = (0, np.pi / 6, 1)
             else:
                 ValueError("`triangle` must be 'up' or 'down'")
         else:
