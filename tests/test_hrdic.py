@@ -114,7 +114,7 @@ class TestMapFindGrains:
             f'{EXPECTED_RESULTS_DIR}/hrdic_grains_{algorithm}{min_grain_size}.npz'
         )['grains']
 
-        assert np.alltrue(result == expected)
+        assert np.all(result == expected)
 
     @staticmethod
     def test_add_derivative(mock_map):
