@@ -592,6 +592,41 @@ class TestSymEqv:
         assert all([np.allclose(sym.quat_coef, row) for sym, row
                     in zip(syms, outs[0])])
 
+class TestIpfColour:
+
+    @staticmethod
+    def test_return_type(ori_quat_list_valid):
+        ipfColours = Quat.calc_ipf_colours(quats=ori_quat_list_valid, 
+                                           sym_group='cubic',
+                                           direction=[1,0,0])
+
+        assert type(ipfColours) is np.ndarray
+        assert ipfColours.shape == (3, len(ori_quat_list_valid))
+
+    @staticmethod
+    @pytest.mark.parametrize("direction, expectedOutput", [
+        ([1, 0, 0], np.array([[0.544662  , 1.        , 0.1593424]])),
+        ([0, 1, 0], np.array([[0.753261  , 1.        , 0.59282076]])),
+        ([0, 0 ,1], np.array([[1.        , 0.03458299, 0.20609842]]))
+        ])
+    def test_calc_cubic(single_quat, direction, expectedOutput):
+        returnColours = Quat.calc_ipf_colours(quats=[single_quat],
+                                              sym_group='cubic',
+                                              direction=direction)
+        assert np.allclose(returnColours, expectedOutput.T)
+
+    @staticmethod
+    @pytest.mark.parametrize("direction, expectedOutput", [
+        ([1, 0, 0], np.array([[0.03947794, 0.00972226, 1.        ]])),
+        ([0, 1, 0], np.array([[0.11697529, 1.        , 0.01040418]])),
+        ([0, 0 ,1], np.array([[1.        , 0.04602823, 0.08812372]]))
+        ])
+    def test_calc_hexagonal(single_quat, direction, expectedOutput):
+        returnColours = Quat.calc_ipf_colours(quats=[single_quat],
+                                              sym_group='hexagonal',
+                                              direction=direction)
+        assert np.allclose(returnColours, expectedOutput.T)
+
 
 
 
@@ -609,7 +644,6 @@ calc_sym_eqvs(quats, symGroup, dtype=np.float)
 calc_average_ori(quatComps)
 calcMisOri(quatComps, refOri)
 polar_angles(x, y, z)
-calc_ipf_colours(quats, direction, symGroup)
 calc_fund_dirs(quats, direction, symGroup, dtype=np.float)
 '''
 
