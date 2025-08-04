@@ -605,24 +605,30 @@ class TestIpfColour:
 
     @staticmethod
     @pytest.mark.parametrize("direction, expectedOutput", [
-        ([1, 0, 0], np.array([[0.544662  , 1.        , 0.1593424]])),
-        ([0, 1, 0], np.array([[0.753261  , 1.        , 0.59282076]])),
-        ([0, 0 ,1], np.array([[1.        , 0.03458299, 0.20609842]]))
+        ([1, 0, 0], np.array([[0.35420787, 0.12277055, 1.        ],
+                              [0.15471244, 0.48918578, 1.        ]])),
+        ([0, 1, 0], np.array([[0.64776397, 1.        , 0.31802678],
+                              [0.44914624, 0.09666619, 1.        ]])),
+        ([0, 0 ,1], np.array([[1.        , 0.8721636 , 0.4601925 ],
+                              [0.46039796, 1.        , 0.3333338 ]]))
         ])
-    def test_calc_cubic(single_quat, direction, expectedOutput):
-        returnColours = Quat.calc_ipf_colours(quats=[single_quat],
+    def test_calc_cubic(ori_quat_list_valid, direction, expectedOutput):
+        returnColours = Quat.calc_ipf_colours(quats=ori_quat_list_valid,
                                               sym_group='cubic',
                                               direction=direction)
         assert np.allclose(returnColours, expectedOutput.T)
 
     @staticmethod
     @pytest.mark.parametrize("direction, expectedOutput", [
-        ([1, 0, 0], np.array([[0.03947794, 0.00972226, 1.        ]])),
-        ([0, 1, 0], np.array([[0.11697529, 1.        , 0.01040418]])),
-        ([0, 0 ,1], np.array([[1.        , 0.04602823, 0.08812372]]))
+        ([1, 0, 0], np.array([[1.        , 0.5744279 , 0.35764635],
+                              [1.        , 0.95659405, 0.08325193]])),
+        ([0, 1, 0], np.array([[0.5724089 , 0.32813743, 1.        ],
+                              [0.4527689 , 1.        , 0.11840012]])),
+        ([0, 0 ,1], np.array([[0.46313933, 1.        , 0.39832234],
+                              [0.7022287 , 1.        , 0.40724975]]))
         ])
-    def test_calc_hexagonal(single_quat, direction, expectedOutput):
-        returnColours = Quat.calc_ipf_colours(quats=[single_quat],
+    def test_calc_hexagonal(ori_quat_list_valid, direction, expectedOutput):
+        returnColours = Quat.calc_ipf_colours(quats=ori_quat_list_valid,
                                               sym_group='hexagonal',
                                               direction=direction)
         assert np.allclose(returnColours, expectedOutput.T)
