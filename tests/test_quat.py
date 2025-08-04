@@ -629,7 +629,63 @@ class TestIpfColour:
 
 
 
+class TestFundDirs:
 
+    @staticmethod
+    def test_return_type(ori_quat_list_valid):
+        fundDirs = Quat.calc_fund_dirs(quats=ori_quat_list_valid, 
+                                           direction=[1,0,0],
+                                           sym_group='cubic')
+
+        assert type(fundDirs) is tuple
+        assert len(fundDirs) == 2
+
+    @staticmethod
+    @pytest.mark.parametrize("direction, expectedOutput", [
+        ([1, 0, 0], (np.array([0.69952609, 0.78403021]), 
+                     np.array([2.2874346 , 2.12872533]))),
+        ([0, 1, 0], (np.array([0.52608403, 0.65695865]), 
+                     np.array([1.7791031 , 2.30187058]))),
+        ([0, 0 ,1], (np.array([0.45057319, 0.58619799]), 
+                     np.array([1.86989854, 1.78713809])))
+        ])
+    def test_calc_cubic(ori_quat_list_valid, direction, expectedOutput):
+        returnDirs = Quat.calc_fund_dirs(quats=ori_quat_list_valid,
+                                              sym_group='cubic',
+                                              direction=direction)
+        assert np.allclose(returnDirs, expectedOutput)
+
+    @staticmethod
+    @pytest.mark.parametrize("direction, expectedOutput", [
+        ([1, 0, 0], (np.array([0.69952609, 0.78403021]), 
+                     np.array([1.76383582, 1.60512655]))),
+        ([0, 1, 0], (np.array([1.05721982, 1.09881856]), 
+                     np.array([1.97488301, 1.61887046]))),
+        ([0, 0 ,1], (np.array([1.14159266, 0.99999999]), 
+                     np.array([1.71238897, 1.71238897])))
+        ])
+    def test_calc_hexagonal_up(ori_quat_list_valid, direction, expectedOutput):
+        returnColours = Quat.calc_fund_dirs(quats=ori_quat_list_valid,
+                                              sym_group='hexagonal',
+                                              direction=direction,
+                                              triangle='up')
+        assert np.allclose(returnColours, expectedOutput)
+
+    @staticmethod
+    @pytest.mark.parametrize("direction, expectedOutput", [
+        ([1, 0, 0], (np.array([0.69952609, 0.78403021]), 
+                     np.array([1.37775683, 1.5364661 ]))),
+        ([0, 1, 0], (np.array([1.05721982, 1.09881856]), 
+                     np.array([1.16670964, 1.5227222 ]))),
+        ([0, 0 ,1], (np.array([1.14159266, 0.99999999]), 
+                     np.array([1.42920368, 1.42920368])))
+        ])
+    def test_calc_hexagonal_down(ori_quat_list_valid, direction, expectedOutput):
+        returnColours = Quat.calc_fund_dirs(quats=ori_quat_list_valid,
+                                              sym_group='hexagonal',
+                                              direction=direction,
+                                              triangle='down')
+        assert np.allclose(returnColours, expectedOutput)
 
 
 
@@ -644,7 +700,6 @@ calc_sym_eqvs(quats, symGroup, dtype=np.float)
 calc_average_ori(quatComps)
 calcMisOri(quatComps, refOri)
 polar_angles(x, y, z)
-calc_fund_dirs(quats, direction, symGroup, dtype=np.float)
 '''
 
 
