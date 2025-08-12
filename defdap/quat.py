@@ -872,7 +872,7 @@ class Quat(object):
         num_quats = len(quats)
 
         alpha_fund, beta_fund = Quat.calc_fund_dirs(
-            quats, direction, sym_group, triangle = 'ipf_map', dtype=dtype
+            quats, direction, sym_group, triangle='up', dtype=dtype
         )
 
         # revert to cartesians
@@ -882,13 +882,19 @@ class Quat(object):
         dirvec[2, :] = np.cos(alpha_fund)
 
         if sym_group == 'cubic':
-            pole_directions = np.array([[0, 0, 1], 
-                                        [1, 0, 1]/np.sqrt(2), 
-                                        [1, 1, 1]/np.sqrt(3)], dtype=dtype)
-        if sym_group == 'hexagonal':
-            pole_directions = np.array([[0, 0, 1], 
-                                        [np.sqrt(3), 1, 0]/np.sqrt(4), 
-                                        [1, 0, 0]], dtype=dtype)
+            pole_directions = np.array([
+                [0, 0, 1],
+                [0, 1, 1]/np.sqrt(2),
+                [-1, 1, 1]/np.sqrt(3)
+            ], dtype=dtype)
+        elif sym_group == 'hexagonal':
+            pole_directions = np.array([
+                [0, 0, 1],
+                [0, 1, 0],
+                [-0.5, np.sqrt(3)/2, 0]
+            ], dtype=dtype)
+        else:
+            raise ValueError(f'Unknown sym_group `{sym_group}`')
 
         rvect = np.broadcast_to(pole_directions[0].reshape((-1, 1)), (3, num_quats))
         gvect = np.broadcast_to(pole_directions[1].reshape((-1, 1)), (3, num_quats))
@@ -1039,10 +1045,7 @@ class Quat(object):
 
         # find the poles in the fundamental triangle
         if sym_group == "cubic":
-            if triangle == 'ipf_map':
-                beta_range = (0, np.pi / 4, 3)
-            else:
-                beta_range = (np.pi / 2, 3/4 * np.pi, 3)
+            beta_range = (np.pi / 2, 3/4 * np.pi, 3)
 
         elif sym_group == "hexagonal":
             if triangle is None:
@@ -1052,8 +1055,6 @@ class Quat(object):
                 beta_range = (np.pi / 2, 2/3 * np.pi, 1)
             elif triangle == 'down':
                 beta_range = (1/3 * np.pi, np.pi / 2, 1)
-            elif triangle == 'ipf_map':
-                beta_range = (0, np.pi / 6, 1)
             else:
                 ValueError("`triangle` must be 'up' or 'down'")
         else:
