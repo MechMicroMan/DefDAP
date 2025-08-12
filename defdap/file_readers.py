@@ -834,7 +834,7 @@ class OpenPivBinaryLoader(DICDataLoader):
 
 class PyValeLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
-        """ Load from PyVale csv file.
+        """ Load from PyVale csv or binary file.
 
         Parameters
         ----------
@@ -882,23 +882,25 @@ class PyValeLoader(DICDataLoader):
 
         # shape of map (from data)
         yx_array = structured_to_unstructured(data[['y', 'x']])
-        shape = yx_array.max(axis=0) - yx_array.min(axis=0)
+        yx_min = yx_array.min(axis=0)
+        yx_max = yx_array.max(axis=0)
+        shape = yx_max - yx_min
         assert np.allclose(shape % binning, 0.)
         shape = tuple((shape // binning + 1).tolist())
         self.loaded_metadata['shape'] = shape
 
         self.checkMetadata()
 
-        index_array = (yx_array - yx_array.min(axis=0)) // binning
+        index_array = (yx_array - yx_min) // binning
         disp_dense = np.zeros(shape + (2,))
         disp_dense[index_array[:, 0], index_array[:, 1]] = (
             structured_to_unstructured(data[['u', 'v']]))
         disp_dense = disp_dense.transpose((2, 0, 1))
 
-        coord_dense = np.mgrid[
-            *(slice(mn, mx+binning, binning)
-              for mn, mx in zip(yx_array.min(axis=0), yx_array.max(axis=0)))
-        ][::-1]
+        coord_dense = np.array(np.meshgrid(
+            *(np.arange(mn, mx+binning, binning) 
+              for mn, mx in zip(yx_min[::-1], yx_max[::-1]))
+        ))
 
         self.loaded_data.coordinate = coord_dense
         self.loaded_data.displacement = disp_dense
