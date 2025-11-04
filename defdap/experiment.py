@@ -281,14 +281,14 @@ class Frame(object):
         """
         # get the selected point
         sel_point = plot.img_layers[plot.points_layer_ids[1]].get_offsets()[0]
-        if sel_point[0] is None or sel_point[1] is None:
+        if any(np.isnan(sel_point)) or sel_point[0] is None or sel_point[1] is None:
             return
 
         # remove selected point from plot
         plot.add_points([None], [None], update_layer=1)
 
         # then scale and add to homog points list
-        sel_point = tuple((sel_point / binning).round().astype(int))
+        sel_point = tuple((sel_point / binning).round().astype(int).tolist())
         self.homog_points.append(sel_point)
 
         # update the plotted homog points

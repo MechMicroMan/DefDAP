@@ -120,7 +120,7 @@ class Map(ABC):
         return map_data
 
     def set_homog_point(self, **kwargs):
-        self.frame.set_homog_point(self, **kwargs)
+        return self.frame.set_homog_point(self, **kwargs)
 
     def plot_grain_numbers(self, dilate_boundaries=False, ax=None, **kwargs):
         """Plot a map with grains numbered.
