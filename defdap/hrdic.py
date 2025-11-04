@@ -171,8 +171,8 @@ class Map(base.Map):
             cropped=True
         )
 
-        self.plot_default = lambda *args, **kwargs: self.plot_map(map_name='max_shear',
-            plot_gbs=True, *args, **kwargs
+        self.plot_default = lambda *args, **kwargs: self.plot_map(
+            map_name='max_shear', plot_gbs=True, *args, **kwargs
         )
         self.homog_map_name = 'max_shear'
 

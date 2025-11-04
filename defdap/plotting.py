@@ -68,6 +68,9 @@ class Plot(object):
         if title is not None:
             self.set_title(title)
 
+    def set_empty_state(self):
+        pass
+
     def check_interactive(self):
         """Checks if current plot is interactive.
 
@@ -296,6 +299,7 @@ class Plot(object):
             self.colour_bar.remove()
             self.colour_bar = None
         self.ax.clear()
+        self.set_empty_state()
         self.draw()
 
     def draw(self):
@@ -328,6 +332,7 @@ class MapPlot(Plot):
             If true, make interactive
         kwargs
             Other arguments passed to :class:`defdap.plotting.Plot`.
+
         """
         super(MapPlot, self).__init__(
             ax, ax_params=ax_params, fig=fig, make_interactive=make_interactive,
@@ -335,6 +340,9 @@ class MapPlot(Plot):
         )
 
         self.calling_map = calling_map
+        self.set_empty_state()
+
+    def set_empty_state(self):
         self.img_layers = []
         self.highlights_layer_id = None
         self.points_layer_ids = []
@@ -723,6 +731,9 @@ class GrainPlot(Plot):
         )
 
         self.calling_grain = calling_grain
+        self.set_empty_state()
+
+    def set_empty_state(self):
         self.img_layers = []
 
         self.ax.set_xticks([])

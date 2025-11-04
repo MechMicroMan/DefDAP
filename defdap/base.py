@@ -171,6 +171,8 @@ class Map(ABC):
             # click handler loaded in as parameter. Pass current map
             # object to it.
             plot.add_event_handler('button_press_event', click_event)
+        if display_grain:
+            self.grain_plot = None
 
         return plot
 
