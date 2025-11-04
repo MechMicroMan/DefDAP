@@ -278,7 +278,7 @@ class Plot(object):
             self.fig.canvas.draw_idle()
 
             if action is not None:
-                action(plot=self, startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
+                action(plot=self, start_end=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
 
     @property
     def exists(self):
@@ -1333,12 +1333,12 @@ class HistPlot(Plot):
         if axes_type in ["linear", "logy", "logx", "loglog"]:
             self.axes_type = axes_type
         else:
-            raise ValueError("plotType must be linear or log.")
+            raise ValueError("plot_type must be linear or log.")
 
         if plot_type in ['scatter', 'bar', 'step']:
             self.plot_type = plot_type
         else:
-            raise ValueError("plotType must be scatter, bar or step.")
+            raise ValueError("plot_type must be scatter, bar or step.")
 
         self.density = bool(density)
 
@@ -1453,7 +1453,7 @@ class HistPlot(Plot):
 
         """
         if plot is None:
-            plot = cls(axesType=axes_type, plotType=plot_type, density=density, fig=fig, ax=ax,
+            plot = cls(axes_type=axes_type, plot_type=plot_type, density=density, fig=fig, ax=ax,
                        ax_params=ax_params, make_interactive=make_interactive,
                        **fig_params)
         plot.add_hist(hist_data, bins=bins, range=range, line=line,
