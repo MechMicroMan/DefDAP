@@ -3,8 +3,21 @@ Papers
 
 Here is a list of papers which have used the DefDAP Python library.
 
+2025
+------
+
+* `B.Yang, X.Xu, D.Lunt, F.Zhang, M.D.Atkinson, Y.Li, J.LLorca, X.Zhou. Grain size dependence of microscopic strain distribution in a high entropy alloy at the onset of plastic deformation. Acta Materialia. Volume 285, Feb 2025, 120682. <https://doi.org/10.1016/j.actamat.2024.120682>`_
+
+* `D.Hu, A.D.Smith, D.Lunt, R.Thomas, M.D.Atkinson, X.Liu, Ö.Koç, J.M.Donoghue, Z.Zhang, J.Quinta da Fonseca, M.Preuss, Tracking the onset of plasticity in a Ni-base superalloy using in-situ High-Resolution Digital Image Correlation. Materialia. Volume 220, Feb 2025, 114654. <https://doi.org/10.1016/j.matchar.2024.114654>`_
+
 2024
 ------
+
+* `S.Cao, R.Thomas, A.D.Smith, P.Zhang, L.Meng, H.Liu, J.Guo, J.Donoghue, D.Lunt. The effect of a keyhole defect on strain localisation in an additive manufactured titanium alloy. Journal of Materials Research and Technology. Volume 33, Nov–Dec 2024. Pages 9664-9673.  <https://doi.org/10.1016/j.jmrt.2024.11.237>`_
+
+* `B.Poole, A.Marsh, D.Lunt, C.Hardie, M.Gorley, C.Hamelin, A.Harte. Nanoscale speckle patterning for combined high-resolution strain and orientation mapping of environmentally sensitive materials. Strain. Volume 60. Issue 6. Dec 2024. <https://doi.org/10.1111/str.12477>`_
+
+* `R.Nia, C.J.Boehlert, Y.Zenga, B.Chen, S.Huang, J.Zheng, H.Zhou, Q.Wang, D.Yin. Automated analysis framework of strain partitioning and deformation mechanisms via multimodal fusion and computer vision. International Journal of Plasticity. Volume 182. 2024. 104119. <https://doi.org/10.1016/j.ijplas.2024.104119>`_
 
 * `E. Nieto-Valeiras, A. Orozco-Caballero, M. Sarebanzadeh, J. Sun, J. LLorca. Analysis of slip transfer across grain boundaries in Ti via diffraction contrast tomography and high-resolution digital image correlation: When the geometrical criteria are not sufficient. Volume 175, April 2024, 103941. <https://doi.org/10.1016/j.ijplas.2024.103941>`_
 

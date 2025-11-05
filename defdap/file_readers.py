@@ -1,4 +1,4 @@
-# Copyright 2023 Mechanics of Microstructures Group
+# Copyright 2025 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -606,7 +606,8 @@ class DICDataLoader(ABC):
     """Class containing methods for loading and checking HRDIC data
 
     """
-    def __init__(self) -> None:
+    def __init__(self, file_type : str = '') -> None:
+        self.file_type = file_type
         self.loaded_metadata = {
             'format': '',
             'version': '',
@@ -637,15 +638,19 @@ class DICDataLoader(ABC):
         if data_type is None:
             data_type = "Davis"
 
-        data_type = data_type.lower()
+        data_type = data_type.lower().split('-')
+        data_subtype = '' if len(data_type) == 1 else data_type[1]
+        data_type = data_type[0]
         try:
             loader = {
                 'davis': DavisLoader,
-                'openpiv': OpenPivLoader,
+                'openpiv': OpenPivTextLoader,    #Backwards compatability
+                'openpivtext': OpenPivTextLoader,
+                'openpivbinary': OpenPivBinaryLoader
             }[data_type]
         except KeyError:
             raise ValueError(f"No loader for DIC data of type {data_type}.")
-        return loader()
+        return loader(file_type=data_subtype)
 
     def checkMetadata(self) -> None:
         return
@@ -741,7 +746,7 @@ class DavisLoader(DICDataLoader):
         return np.array(data)
 
 
-class OpenPivLoader(DICDataLoader):
+class OpenPivTextLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
         """ Load from Open PIV .txt file.
 
@@ -777,16 +782,128 @@ class OpenPivLoader(DICDataLoader):
 
         # shape of map (from header)
         shape = data[:, [col['y'], col['x']]].max(axis=0) + binning / 2
-        assert np.allclose(shape % binning, 0.)
         shape = tuple((shape / binning).astype(int).tolist())
         self.loaded_metadata['shape'] = shape
 
         self.checkMetadata()
-
-        data = data.reshape(shape + (-1,))[::-1].transpose((2, 0, 1))
+        
+        # if y descending, flip
+        if np.all(np.diff(data[:, col['y']].reshape(shape)[:,0])) > 0:
+            data = data.reshape(shape + (-1,))[::-1].transpose((2, 0, 1))
 
         self.loaded_data.coordinate = data[[col['x'], col['y']]]
         self.loaded_data.displacement = data[[col['u'], col['v']]]
+
+        self.check_data()
+
+class OpenPivBinaryLoader(DICDataLoader):
+    def load(self, file_name: pathlib.Path) -> None:
+        """ Load from Open PIV .npz file.
+
+        Parameters
+        ----------
+        file_name
+            Path to file
+
+        """
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
+
+        data = np.load(file_name)
+
+        # Software name and version
+        self.loaded_metadata['format'] = data['format']
+        self.loaded_metadata['version'] = data['version']
+
+        # Load binning and shape
+        self.loaded_metadata['binning'] = data['binning']
+        self.loaded_metadata['shape'] = tuple(data['shape'])
+
+        self.checkMetadata()
+        
+        # if y descending, flip
+        if np.all(np.diff(data['y'][:,0])) > 0:
+            self.loaded_data.coordinate = np.array([data['x'][::-1], data['y'][::-1]])
+            self.loaded_data.displacement = np.array([data['u'][::-1], data['v'][::-1]])
+        else:
+            self.loaded_data.coordinate = np.array([data['x'], data['y']])
+            self.loaded_data.displacement = np.array([data['u'], data['v']])
+
+        self.check_data()
+
+
+class PyValeLoader(DICDataLoader):
+    def load(self, file_name: pathlib.Path) -> None:
+        """ Load from PyVale csv or binary file.
+
+        Parameters
+        ----------
+        file_name
+            Path to file
+
+        """
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
+        
+        int_type = 'int32'
+        double_type = 'double'
+        data_format = np.dtype([
+            ('x', int_type),
+            ('y', int_type),
+            ('u', double_type),
+            ('v', double_type),
+            ('displacement_mag', double_type),
+            ('converged', 'uint8'),
+            ('cost', double_type),
+            ('ftol', double_type),
+            ('xtol', double_type),
+            ('num_iterations', int_type),
+        ])
+        
+        if self.file_type == 'csv':
+            with open(str(file_name), 'r') as f:
+                header = f.readline()[1:].split()
+                data = np.loadtxt(f, delimiter=',', dtype=data_format)
+        elif self.file_type == 'binary':
+            data = np.fromfile(str(file_name), data_format, count=-1)
+        else:
+            raise ValueError(f"Unknown pyvale file type {self.file_type}")
+
+        # Software name and version
+        self.loaded_metadata['format'] = 'PyVale'
+        self.loaded_metadata['version'] = 'n/a'
+
+        # Sub-window width in pixels
+        binning_x = int(np.min(np.abs(np.diff(data['x']))))
+        binning_y = int(np.max(np.abs(np.diff(data['y']))))
+        assert binning_x == binning_y
+        binning = binning_x
+        self.loaded_metadata['binning'] = binning
+
+        # shape of map (from data)
+        yx_array = structured_to_unstructured(data[['y', 'x']])
+        yx_min = yx_array.min(axis=0)
+        yx_max = yx_array.max(axis=0)
+        shape = yx_max - yx_min
+        assert np.allclose(shape % binning, 0.)
+        shape = tuple((shape // binning + 1).tolist())
+        self.loaded_metadata['shape'] = shape
+
+        self.checkMetadata()
+
+        index_array = (yx_array - yx_min) // binning
+        disp_dense = np.zeros(shape + (2,))
+        disp_dense[index_array[:, 0], index_array[:, 1]] = (
+            structured_to_unstructured(data[['u', 'v']]))
+        disp_dense = disp_dense.transpose((2, 0, 1))
+
+        coord_dense = np.array(np.meshgrid(
+            *(np.arange(mn, mx+binning, binning) 
+              for mn, mx in zip(yx_min[::-1], yx_max[::-1]))
+        ))
+
+        self.loaded_data.coordinate = coord_dense
+        self.loaded_data.displacement = disp_dense
 
         self.check_data()
 

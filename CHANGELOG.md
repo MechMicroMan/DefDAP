@@ -5,16 +5,19 @@
 
 ### Added
 - Each grain is assigned a phase and slip systems are automatically loaded 
-  for a given phase based on crystal structure 
+  for a given phase based on crystal structure. 
   - This means that unit cells and slip traces plot correctly for grains
   in a multi-phase EBSD map
-- Add reader for EDAX .ang EBSD files
 - Add slip system file for FCC but in same order as DAMASK
 - Use example_notebook to generate a 'How To Use' page in the documentation
+- Add reader for EDAX .ang EBSD files, pyvale .csv files and openPIV-XL .npx files
+- Added a `plot_map` function for grains
+- Added more testing
 
 ### Changed
 - All functions and arguments are now in snake_case instead of CamelCase
 - Cropping and masking are now performed upon access to data
+- Changed function names from CamelCase to snake_case
 - Overhaul of data storage in the Map classes
 - RDR calculation `calcRDR` in grain inspector is faster and more robust
 - Improve formatting of grain inspector and RDR plot window
@@ -25,6 +28,7 @@
 - Fix bug in grain inspector (`None` passed to `corrAngle` inadvertently)
 - Fix EBSD grain linker
 - Remove `IPython` and `jupyter` as requirements
+- Bug in IPF traiangle plotting now fixed with options for `up` triangle (like MTEX) and `down` triangle (like OI)
 
 
 ## 0.93.5 (20-11-2023)
@@ -42,7 +46,7 @@
 ## 0.93.5 (07-03-2022)
 
 ### Added
-- Add equality check for Quat
+- Add equality check for `Quat`
 
 ### Fixed
 - Fix bug in boundary line warping
@@ -77,7 +81,7 @@
 ## 0.93.2 (16-04-2021)
 
 ### Added
-- Reading of Channel project files that contain EDX data
+- Reading of Channel5 project files that contain EDX data
 
 ### Fixed
 - Plotting unit cells
@@ -93,21 +97,21 @@
 
 ### Changed
 - Speed up EBSD map data rotation 
-- Speed up 'warp' grain finding
+- Speed up `warp` grain finding
 - Store band slope and MAD arrays from EBSD
-- Update nCorrToDavis.m script
+- Update `nCorrToDavis.m` script
   - Better description of how to use the function
   - Sub-window size is subset radius * 2, as defined in nCorr
   - Subset spacing is subset spacing, as defined in nCorr
 - Generate phase boundary points and lines at same time as grain boundaries
 - Improve histogram plotting
-  - Options for scatter (as before), step and bar
-  - Options for logx, logy, loglog and linear
+  - Options for scatter (as before), `step` and `bar`
+  - Options for `logx`, `logy`, `loglog` and `linear`
 - Updates to example notebook
 
 ### Fixed 
 - Fixed docstring links
-- Fix bug in 'warp' grain finding algorithm
+- Fix bug in `warp` grain finding algorithm
 
 
 ## 0.93.0 (20-02-2021)
@@ -126,7 +130,7 @@
 - Add misorientation calculation between neighbouring EBSD grains.
 - Add a `BoundarySegment` class to represent a section of grain boundary between 2 grain in an EBSD map. Objects of this class are assigned to edges of the neighbour network and contain all the boundary points between the grains.
 - Add Kuwahara filter for EBSD map noise reduction.
-- Add shape property to maps.
+- Add `shape` property to maps.
 - Read EBSD phases from file.
 - Add classes to represent phases and crystal structures.
 
@@ -143,7 +147,7 @@
 - Change docs over to readthedocs.
 - Move version number to own file.
 - Update neighbour network to use grains as nodes.
-- Store grainID in grain objects.
+- Store `grainID` in grain objects.
 - Split plotGrainDataMap into separate array construction and plotting function.
 - Update neighbour network construction to use new EBSD boundary definition.
 - Update flood fill algorithm for grain finding in a EBSD map.

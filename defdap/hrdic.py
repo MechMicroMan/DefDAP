@@ -1,4 +1,4 @@
-# Copyright 2023 Mechanics of Microstructures Group
+# Copyright 2025 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -213,7 +213,7 @@ class Map(base.Map):
 
         # write final status
         yield (f"Loaded {self.format} {self.version} data "
-               f"(dimensions: {self.xdim} x {self.xdim} pixels, "
+               f"(dimensions: {self.xdim} x {self.ydim} pixels, "
                f"sub-window size: {self.binning} x {self.binning} pixels)")
 
     def load_corr_val_data(self, file_name, data_type=None):
@@ -765,34 +765,10 @@ class Grain(base.Grain):
         self.points_list = []            # Lines drawn for STA
         self.groups_list = []            # Unique angles drawn for STA
 
-        self.plot_default = lambda *args, **kwargs: self.plot_max_shear(
-            plot_colour_bar=True, plot_scale_bar=True, plot_slip_traces=True,
-            plot_slip_bands=True, *args, **kwargs
+        self.plot_default = lambda *args, **kwargs: self.plot_map(
+            'max_shear', plot_colour_bar=True, plot_scale_bar=True, 
+            plot_slip_traces=True, plot_slip_bands=True, *args, **kwargs
         )
-
-    def plot_max_shear(self, **kwargs):
-        """Plot a maximum shear map for a grain.
-
-        Parameters
-        ----------
-        kwargs
-            All arguments are passed to :func:`defdap.base.plot_grain_data`.
-
-        Returns
-        -------
-        defdap.plotting.GrainPlot
-
-        """
-        # Set default plot parameters then update with any input
-        plot_params = {
-            'plot_colour_bar': True,
-            'clabel': "Effective shear strain"
-        }
-        plot_params.update(kwargs)
-
-        plot = self.plot_grain_data(grain_data=self.data.max_shear, **plot_params)
-
-        return plot
 
     @property
     def ref_ori(self):

@@ -1,4 +1,4 @@
-# Copyright 2023 Mechanics of Microstructures Group
+# Copyright 2025 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,6 +67,9 @@ class Plot(object):
 
         if title is not None:
             self.set_title(title)
+
+    def set_empty_state(self):
+        pass
 
     def check_interactive(self):
         """Checks if current plot is interactive.
@@ -278,7 +281,7 @@ class Plot(object):
             self.fig.canvas.draw_idle()
 
             if action is not None:
-                action(plot=self, startEnd=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
+                action(plot=self, start_end=(self.p1[0], self.p1[1], self.p2[0], self.p2[1]))
 
     @property
     def exists(self):
@@ -296,6 +299,7 @@ class Plot(object):
             self.colour_bar.remove()
             self.colour_bar = None
         self.ax.clear()
+        self.set_empty_state()
         self.draw()
 
     def draw(self):
@@ -328,6 +332,7 @@ class MapPlot(Plot):
             If true, make interactive
         kwargs
             Other arguments passed to :class:`defdap.plotting.Plot`.
+
         """
         super(MapPlot, self).__init__(
             ax, ax_params=ax_params, fig=fig, make_interactive=make_interactive,
@@ -335,6 +340,9 @@ class MapPlot(Plot):
         )
 
         self.calling_map = calling_map
+        self.set_empty_state()
+
+    def set_empty_state(self):
         self.img_layers = []
         self.highlights_layer_id = None
         self.points_layer_ids = []
@@ -723,6 +731,9 @@ class GrainPlot(Plot):
         )
 
         self.calling_grain = calling_grain
+        self.set_empty_state()
+
+    def set_empty_state(self):
         self.img_layers = []
 
         self.ax.set_xticks([])
@@ -783,8 +794,8 @@ class GrainPlot(Plot):
 
         """
         if scale is None:
-            scale = self.calling_grain.owner_map.scale * 1e-6
-        self.ax.add_artist(ScaleBar(scale))
+            scale = self.calling_grain.owner_map.scale
+        self.ax.add_artist(ScaleBar(scale * 1e-6))
 
     def add_traces(self, angles, colours, top_only=False, pos=None, **kwargs):
         """Add slip trace angles to grain plot. Illustrated by lines
@@ -1333,12 +1344,12 @@ class HistPlot(Plot):
         if axes_type in ["linear", "logy", "logx", "loglog"]:
             self.axes_type = axes_type
         else:
-            raise ValueError("plotType must be linear or log.")
+            raise ValueError("plot_type must be linear or log.")
 
         if plot_type in ['scatter', 'bar', 'step']:
             self.plot_type = plot_type
         else:
-            raise ValueError("plotType must be scatter, bar or step.")
+            raise ValueError("plot_type must be scatter, bar or step.")
 
         self.density = bool(density)
 
@@ -1453,7 +1464,7 @@ class HistPlot(Plot):
 
         """
         if plot is None:
-            plot = cls(axesType=axes_type, plotType=plot_type, density=density, fig=fig, ax=ax,
+            plot = cls(axes_type=axes_type, plot_type=plot_type, density=density, fig=fig, ax=ax,
                        ax_params=ax_params, make_interactive=make_interactive,
                        **fig_params)
         plot.add_hist(hist_data, bins=bins, range=range, line=line,

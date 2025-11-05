@@ -1,3 +1,18 @@
+# Copyright 2025 Mechanics of Microstructures Group
+#    at The University of Manchester
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 from skimage import transform as tf
 from skimage import morphology as mph
@@ -281,14 +296,14 @@ class Frame(object):
         """
         # get the selected point
         sel_point = plot.img_layers[plot.points_layer_ids[1]].get_offsets()[0]
-        if sel_point[0] is None or sel_point[1] is None:
+        if any(np.isnan(sel_point)) or sel_point[0] is None or sel_point[1] is None:
             return
 
         # remove selected point from plot
         plot.add_points([None], [None], update_layer=1)
 
         # then scale and add to homog points list
-        sel_point = tuple((sel_point / binning).round().astype(int))
+        sel_point = tuple((sel_point / binning).round().astype(int).tolist())
         self.homog_points.append(sel_point)
 
         # update the plotted homog points
