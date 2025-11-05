@@ -17,6 +17,7 @@ import numpy as np
 from scipy.stats import linregress
 from skimage.draw import line as skimage_line
 import ast
+import pandas as pd
 
 from defdap.plotting import Plot, GrainPlot
 from defdap import hrdic

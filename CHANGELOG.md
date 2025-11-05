@@ -43,7 +43,19 @@
 - set_window_title has been moved from figure.canvas to figure.canvas.manager
 
 
-## 0.93.5 (07-03-2022)
+## 0.93.5 (20-11-2023)
+
+### Added
+- Add more options for colouring lines
+
+### Fixed
+- Fix bug with accessing slip systems in grain inspector
+- Replace `np.float` with python `float`
+- Remove `in_place` argument to `skimage.morphology.remove_small_objects`
+- `set_window_title` has been moved from `figure.canvas` to `figure.canvas.manager`
+
+
+## 0.93.5 (17-01-2023)
 
 ### Added
 - Add equality check for `Quat`
