@@ -444,14 +444,14 @@ class Map(base.Map):
             **kwargs
         )
 
-    def calc_mask(self, mask="unset_mask", dilation=0):
+    def calc_mask(self, mask=None, dilation=0):
         """
         Generate a dilated mask, based on a boolean array.
 
         Parameters
         ----------
-        mask: numpy.array(bool) or str('unset_mask')
-            A boolean array where points to be removed are True. Set to string 'unset_mask' to disable masking.
+        mask: numpy.array(bool) or None
+            A boolean array where points to be removed are True. Set to None to disable masking.
         dilation: int, optional
             Number of pixels to dilate the mask by. Useful to remove anomalous points
             around masked values. No dilation applied if not specified.
@@ -461,7 +461,7 @@ class Map(base.Map):
         
         To disable masking:
 
-        >>> mask = 'unset_mask'
+        >>> mask = None
                
         To remove data points in dic_map where `max_shear` is above 0.8, use:
         
@@ -479,7 +479,8 @@ class Map(base.Map):
         see :func:`defdap.hrdic.load_corr_val_data`
 
         """
-        if type(mask) == str and mask == "unset_mask":
+        if mask is None:
+            self.data.mask = None
             return mask
         
         if not isinstance(mask, np.ndarray) or mask.shape != self.shape:
@@ -493,14 +494,16 @@ class Map(base.Map):
         num_total = self.shape[0] * self.shape[1]
         frac_removed = num_removed / num_total * 100
         print(f'Masking will mask {num_removed} out of {num_total} '
-              f'({frac_removed:.3f} %) datapoints in cropped map.')
+              f'({frac_removed:.2f} %) datapoints in cropped map.')
         
+        self.data.mask = mask
+
         return mask
 
     def mask(self, map_data):
         """ Values set to False in mask will be set to nan in map.
         """
-        if self.data.mask == 'unset_mask':
+        if self.data.mask is None:
             return map_data
         else:
             return np.ma.array(map_data, 
