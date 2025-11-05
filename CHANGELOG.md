@@ -1,7 +1,18 @@
 # Change Log
 
-
 ## Current
+
+### Added
+
+
+### Changed
+
+
+### Fixed
+
+
+## 1.0.0 (05-11-2025)
+This was a overhaul of large sections of the code and many changes/additions have been missed from the chnagelog.
 
 ### Added
 - Each grain is assigned a phase and slip systems are automatically loaded 
