@@ -1,3 +1,5 @@
+from defdap.experiment import Experiment
+
 defaults = {
     # Convention to use when attaching an orthonormal frame to a crystal
     # structure. 'hkl' or 'tsl'
@@ -14,6 +16,10 @@ defaults = {
     'slip_system_file': {
         'FCC': 'cubic_fcc',
         'BCC': 'cubic_bcc',
-        'HCP': 'hexagonal_noca',
+        'HCP': 'hexagonal_withca',
     },
+    # up or down
+    'ipf_triangle_convention': 'up'
 }
+
+anonymous_experiment = Experiment()

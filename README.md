@@ -17,7 +17,7 @@
 
 ## How to install
 - DefDAP can be installed from PyPI using the command `pip install defdap`
-- If you use conda as your package manager (https://www.anaconda.com/), the prerequisite packages that are available from anaconda can be installed using the command `conda install scipy numpy matplotlib scikit-image pandas networkx jupyter ipython` (Anaconda3-2020.02 has been tested)
+- If you use conda as your package manager (https://www.anaconda.com/), the prerequisite packages that are available from anaconda can be installed using the command `conda install scipy numpy matplotlib scikit-image pandas networkx` (Anaconda3-2020.02 has been tested)
 - For more information, see the [documentation](https://defdap.readthedocs.io/en/latest/installation.html)
 
 ## How to use
@@ -43,8 +43,6 @@ The software uses the following open source packages:
 - [pandas](http://pandas.pydata.org)
 - [peakutils](https://peakutils.readthedocs.io/en/latest/)
 - [matplotlib_scalebar](https://pypi.org/project/matplotlib-scalebar/)
-- [IPython](https://ipython.org/)
-- [jupyter](https://jupyter.org/)
 
 ## License
 [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0)

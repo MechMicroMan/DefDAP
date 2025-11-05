@@ -1,4 +1,4 @@
-# Copyright 2021 Mechanics of Microstructures Group
+# Copyright 2025 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,81 +19,83 @@ from numpy.linalg import norm
 
 from defdap import defaults
 from defdap.quat import Quat
+from defdap.crystal_utils import *
 
 
 class Phase(object):
-    def __init__(self, name, laueGroup, spaceGroup, latticeParams):
+    def __init__(self, name, laue_group, space_group, lattice_params):
         """
         Parameters
         ----------
         name : str
             Name of the phase
-        laueGroup : int
+        laue_group : int
             Laue group
-        spaceGroup : int
+        space_group : int
             Space group
-        latticeParams : tuple
+        lattice_params : tuple
             Lattice parameters in order (a,b,c,alpha,beta,gamma)
 
         """
         self.name = name
-        self.laueGroup = laueGroup
-        self.spaceGroup = spaceGroup
-        self.latticeParams = latticeParams
+        self.laue_group = laue_group
+        self.spaceGroup = space_group
+        self.lattice_params = lattice_params
 
         try:
-            self.crystalStructure = {
+            self.crystal_structure = {
                 9: crystalStructures['hexagonal'],
                 11: crystalStructures['cubic'],
-            }[laueGroup]
+            }[laue_group]
         except KeyError:
-            raise ValueError(f"Unknown Laue group key: {laueGroup}")
+            raise ValueError(f"Unknown Laue group key: {laue_group}")
 
-        if self.crystalStructure is crystalStructures['hexagonal']:
+        if self.crystal_structure is crystalStructures['hexagonal']:
             self.ss_file = defaults['slip_system_file']['HCP']
         else:
             try:
                 self.ss_file = defaults['slip_system_file'][
-                    {225: 'FCC', 229: 'BCC'}[spaceGroup]
+                    {225: 'FCC', 229: 'BCC'}[space_group]
+                    # See http://pd.chem.ucl.ac.uk/pdnn/symm3/allsgp.htm
                 ]
             except KeyError:
                 self.ss_file = None
 
         if self.ss_file is None:
-            self.slipSystems = None
-            self.slipTraceColours = None
+            self.slip_systems = None
+            self.slip_trace_colours = None
         else:
-            self.slipSystems, self.slipTraceColours = SlipSystem.load(
-                self.ss_file, self.crystalStructure, cOverA=self.cOverA
+            self.slip_systems, self.slip_trace_colours = SlipSystem.load(
+                self.ss_file, self.crystal_structure, c_over_a=self.c_over_a
             )
 
     def __str__(self):
         text = ("Phase: {:}\n  Crystal structure: {:}\n  Lattice params: "
                 "({:.2f}, {:.2f}, {:.2f}, {:.0f}, {:.0f}, {:.0f})\n"
                 "  Slip systems: {:}")
-        return text.format(self.name, self.crystalStructure.name,
-                           *self.latticeParams[:3],
-                           *np.array(self.latticeParams[3:])*180/np.pi,
+        return text.format(self.name, self.crystal_structure.name,
+                           *self.lattice_params[:3],
+                           *np.array(self.lattice_params[3:]) * 180 / np.pi,
                            self.ss_file)
 
     @property
-    def cOverA(self):
-        if self.crystalStructure is crystalStructures['hexagonal']:
-            return self.latticeParams[2] / self.latticeParams[0]
+    def c_over_a(self):
+        if self.crystal_structure is crystalStructures['hexagonal']:
+            return self.lattice_params[2] / self.lattice_params[0]
         return None
 
-    def printSlipSystems(self):
+    def print_slip_systems(self):
         """Print a list of slip planes (with colours) and slip directions.
 
         """
         # TODO: this should be moved to static method of the SlipSystem class
-        for i, (ssGroup, colour) in enumerate(zip(self.slipSystems,
-                                                  self.slipTraceColours)):
+        for i, (ss_group, colour) in enumerate(zip(self.slip_systems,
+                                                  self.slip_trace_colours)):
             print('Plane {0}: {1}\tColour: {2}'.format(
-                i, ssGroup[0].slipPlaneLabel, colour
+                i, ss_group[0].slip_plane_label, colour
             ))
-            for j, ss in enumerate(ssGroup):
-                print('  Direction {0}: {1}'.format(j, ss.slipDirLabel))
+            for j, ss in enumerate(ss_group):
+                print('  Direction {0}: {1}'.format(j, ss.slip_dir_label))
 
 
 class CrystalStructure(object):
@@ -103,83 +105,11 @@ class CrystalStructure(object):
         self.vertices = vertices
         self.faces = faces
 
-    # TODO: Move these to the phase class where the lattice parameters
-    #  can be accessed
-    @staticmethod
-    def lMatrix(a, b, c, alpha, beta, gamma, convention=None):
-        """ Construct L matrix based on Page 22 of
-        Randle and Engle - Introduction to texture analysis"""
-        lMatrix = np.zeros((3, 3))
 
-        cosAlpha = np.cos(alpha)
-        cosBeta = np.cos(beta)
-        cosGamma = np.cos(gamma)
-
-        sinGamma = np.sin(gamma)
-
-        lMatrix[0, 0] = a
-        lMatrix[0, 1] = b * cosGamma
-        lMatrix[0, 2] = c * cosBeta
-
-        lMatrix[1, 1] = b * sinGamma
-        lMatrix[1, 2] = c * (cosAlpha - cosBeta * cosGamma) / sinGamma
-
-        lMatrix[2, 2] = c * np.sqrt(
-            1 + 2 * cosAlpha * cosBeta * cosGamma -
-            cosAlpha**2 - cosBeta**2 - cosGamma**2
-        ) / sinGamma
-
-        # OI/HKL convention - x // [10-10],     y // a2 [-12-10]
-        # TSL    convention - x // a1 [2-1-10], y // [01-10]
-        if convention is None:
-            convention = defaults['crystal_ortho_conv']
-
-        if convention.lower() in ['hkl', 'oi']:
-            # Swap 00 with 11 and 01 with 10 due to how OI orthonormalises
-            # From Brad Wynne
-            t1 = lMatrix[0, 0]
-            t2 = lMatrix[1, 0]
-
-            lMatrix[0, 0] = lMatrix[1, 1]
-            lMatrix[1, 0] = lMatrix[0, 1]
-
-            lMatrix[1, 1] = t1
-            lMatrix[0, 1] = t2
-
-        elif convention.lower() != 'tsl':
-            raise ValueError(
-                f"Unknown convention '{convention}' for orthonormalisation of "
-                f"crystal structure, can be 'hkl' or 'tsl'"
-            )
-
-        # Set small components to 0
-        lMatrix[np.abs(lMatrix) < 1e-10] = 0
-
-        return lMatrix
-
-    @staticmethod
-    def qMatrix(lMatrix):
-        """ Construct matrix of reciprocal lattice vectors to transform
-        plane normals See C. T. Young and J. L. Lytton, J. Appl. Phys.,
-        vol. 43, no. 4, pp. 1408–1417, 1972."""
-        a = lMatrix[:, 0]
-        b = lMatrix[:, 1]
-        c = lMatrix[:, 2]
-
-        volume = abs(np.dot(a, np.cross(b, c)))
-        aStar = np.cross(b, c) / volume
-        bStar = np.cross(c, a) / volume
-        cStar = np.cross(a, b) / volume
-
-        qMatrix = np.stack((aStar, bStar, cStar), axis=1)
-
-        return qMatrix
-
-
-overRoot2 = np.sqrt(2) / 2
+over_root2 = np.sqrt(2) / 2
 sqrt3over2 = np.sqrt(3) / 2
 # Use ideal ratio as only used for plotting unit cell
-cOverA = 1.633 / 2
+c_over_a = 1.633 / 2
 
 crystalStructures = {
     "cubic": CrystalStructure(
@@ -189,23 +119,23 @@ crystalStructures = {
             Quat(1.0, 0.0, 0.0, 0.0),
 
             # cubic tetrads(100)
-            Quat(overRoot2, overRoot2, 0.0, 0.0),
+            Quat(over_root2, over_root2, 0.0, 0.0),
             Quat(0.0, 1.0, 0.0, 0.0),
-            Quat(overRoot2, -overRoot2, 0.0, 0.0),
-            Quat(overRoot2, 0.0, overRoot2, 0.0),
+            Quat(over_root2, -over_root2, 0.0, 0.0),
+            Quat(over_root2, 0.0, over_root2, 0.0),
             Quat(0.0, 0.0, 1.0, 0.0),
-            Quat(overRoot2, 0.0, -overRoot2, 0.0),
-            Quat(overRoot2, 0.0, 0.0, overRoot2),
+            Quat(over_root2, 0.0, -over_root2, 0.0),
+            Quat(over_root2, 0.0, 0.0, over_root2),
             Quat(0.0, 0.0, 0.0, 1.0),
-            Quat(overRoot2, 0.0, 0.0, -overRoot2),
+            Quat(over_root2, 0.0, 0.0, -over_root2),
 
             # cubic dyads (110)
-            Quat(0.0, overRoot2, overRoot2, 0.0),
-            Quat(0.0, -overRoot2, overRoot2, 0.0),
-            Quat(0.0, overRoot2, 0.0, overRoot2),
-            Quat(0.0, -overRoot2, 0.0, overRoot2),
-            Quat(0.0, 0.0, overRoot2, overRoot2),
-            Quat(0.0, 0.0, -overRoot2, overRoot2),
+            Quat(0.0, over_root2, over_root2, 0.0),
+            Quat(0.0, -over_root2, over_root2, 0.0),
+            Quat(0.0, over_root2, 0.0, over_root2),
+            Quat(0.0, -over_root2, 0.0, over_root2),
+            Quat(0.0, 0.0, over_root2, over_root2),
+            Quat(0.0, 0.0, -over_root2, over_root2),
 
             # cubic triads (111)
             Quat(0.5, 0.5, 0.5, 0.5),
@@ -259,18 +189,18 @@ crystalStructures = {
             Quat(0.0, -sqrt3over2, -0.5, 0.0)
         ],
         np.array([
-            [1, 0, -cOverA],
-            [0.5, sqrt3over2, -cOverA],
-            [-0.5, sqrt3over2, -cOverA],
-            [-1, 0, -cOverA],
-            [-0.5, -sqrt3over2, -cOverA],
-            [0.5, -sqrt3over2, -cOverA],
-            [1, 0, cOverA],
-            [0.5, sqrt3over2, cOverA],
-            [-0.5, sqrt3over2, cOverA],
-            [-1, 0, cOverA],
-            [-0.5, -sqrt3over2, cOverA],
-            [0.5, -sqrt3over2, cOverA]
+            [1, 0, -c_over_a],
+            [0.5, sqrt3over2, -c_over_a],
+            [-0.5, sqrt3over2, -c_over_a],
+            [-1, 0, -c_over_a],
+            [-0.5, -sqrt3over2, -c_over_a],
+            [0.5, -sqrt3over2, -c_over_a],
+            [1, 0, c_over_a],
+            [0.5, sqrt3over2, c_over_a],
+            [-0.5, sqrt3over2, c_over_a],
+            [-1, 0, c_over_a],
+            [-0.5, -sqrt3over2, c_over_a],
+            [0.5, -sqrt3over2, c_over_a]
         ]),
         [
             [0, 1, 2, 3, 4, 5],
@@ -290,74 +220,74 @@ class SlipSystem(object):
     """Class used for defining and performing operations on a slip system.
 
     """
-    def __init__(self, slipPlane, slipDir, crystalStructure, cOverA=None):
+    def __init__(self, slip_plane, slip_dir, crystal_structure, c_over_a=None):
         """Initialise a slip system object.
 
         Parameters
         ----------
-        slipPlane: nunpy.ndarray
+        slip_plane: numpy.ndarray
             Slip plane.
-        slipDir: numpy.ndarray
+        slip_dir: numpy.ndarray
             Slip direction.
-        crystalStructure : defdap.crystal.CrystalStructure
+        crystal_structure : defdap.crystal.CrystalStructure
             Crystal structure of the slip system.
-        cOverA : float, optional
+        c_over_a : float, optional
             C over a ratio for hexagonal crystals.
 
         """
-        self.crystalStructure = crystalStructure
+        self.crystal_structure = crystal_structure
 
         # Stored as Miller indices (Miller-Bravais for hexagonal)
-        self.planeIdc = tuple(slipPlane)
-        self.dirIdc = tuple(slipDir)
+        self.plane_idc = tuple(slip_plane)
+        self.dir_idc = tuple(slip_dir)
 
         # Stored as vectors in a cartesian basis
-        if self.crystalStructure.name == "cubic":
-            self.slipPlane = slipPlane / norm(slipPlane)
-            self.slipDir = slipDir / norm(slipDir)
-            self.cOverA = None
-        elif self.crystalStructure.name == "hexagonal":
-            if cOverA is None:
+        if self.crystal_structure.name == "cubic":
+            self.slip_plane = slip_plane / norm(slip_plane)
+            self.slip_dir = slip_dir / norm(slip_dir)
+            self.c_over_a = None
+        elif self.crystal_structure.name == "hexagonal":
+            if c_over_a is None:
                 raise Exception("No c over a ratio given")
-            self.cOverA = cOverA
+            self.c_over_a = c_over_a
 
             # Convert plane and dir from Miller-Bravais to Miller
-            slipPlaneM = convertIdc('mb', plane=slipPlane)
-            slipDirM = convertIdc('mb', dir=slipDir)
+            slip_plane_m = convert_idc('mb', plane=slip_plane)
+            slip_dir_m = convert_idc('mb', dir=slip_dir)
 
             # Transformation from crystal to orthonormal coords
-            lMatrix = CrystalStructure.lMatrix(
-                1, 1, cOverA, np.pi / 2, np.pi / 2, np.pi * 2 / 3
+            l_matrix = create_l_matrix(
+                1, 1, c_over_a, np.pi / 2, np.pi / 2, np.pi * 2 / 3
             )
             # Q matrix for transforming planes
-            qMatrix = CrystalStructure.qMatrix(lMatrix)
+            q_matrix = create_q_matrix(l_matrix)
 
             # Transform into orthonormal basis and then normalise
-            self.slipPlane = np.matmul(qMatrix, slipPlaneM)
-            self.slipPlane /= norm(self.slipPlane)
-            self.slipDir = np.matmul(lMatrix, slipDirM)
-            self.slipDir /= norm(self.slipDir)
+            self.slip_plane = np.matmul(q_matrix, slip_plane_m)
+            self.slip_plane /= norm(self.slip_plane)
+            self.slip_dir = np.matmul(l_matrix, slip_dir_m)
+            self.slip_dir /= norm(self.slip_dir)
         else:
             raise Exception("Only cubic and hexagonal currently supported.")
 
     def __eq__(self, right):
         # or one divide the other should be a constant for each place.
-        return (posIdc(self.planeIdc) == posIdc(right.planeIdc) and
-                posIdc(self.dirIdc) == posIdc(right.dirIdc))
+        return (pos_idc(self.plane_idc) == pos_idc(right.plane_idc) and
+                pos_idc(self.dir_idc) == pos_idc(right.dir_idc))
 
     def __hash__(self):
-        return hash(posIdc(self.planeIdc) + posIdc(self.dirIdc))
+        return hash(pos_idc(self.plane_idc) + pos_idc(self.dir_idc))
 
     def __str__(self):
-        return self.slipPlaneLabel + self.slipDirLabel
+        return self.slip_plane_label + self.slip_dir_label
 
     def __repr__(self):
-        return (f"SlipSystem(slipPlane={self.slipPlaneLabel}, "
-                f"slipDir={self.slipDirLabel}, "
-                f"symmetry={self.crystalStructure.name})")
+        return (f"SlipSystem(slipPlane={self.slip_plane_label}, "
+                f"slipDir={self.slip_dir_label}, "
+                f"symmetry={self.crystal_structure.name})")
 
     @property
-    def slipPlaneLabel(self):
+    def slip_plane_label(self):
         """Return the slip plane label. For example '(111)'.
 
         Returns
@@ -366,10 +296,10 @@ class SlipSystem(object):
             Slip plane label.
 
         """
-        return '(' + ''.join(map(strIdx, self.planeIdc)) + ')'
+        return idc_to_string(self.plane_idc, '()')
 
     @property
-    def slipDirLabel(self):
+    def slip_dir_label(self):
         """Returns the slip direction label. For example '[110]'.
 
         Returns
@@ -378,9 +308,9 @@ class SlipSystem(object):
             Slip direction label.
 
         """
-        return '[' + ''.join(map(strIdx, self.dirIdc)) + ']'
+        return idc_to_string(self.dir_idc, '[]')
 
-    def generateFamily(self):
+    def generate_family(self):
         """Generate the family of slip systems which this system belongs to.
 
         Returns
@@ -390,50 +320,50 @@ class SlipSystem(object):
 
         """
         #
-        symms = self.crystalStructure.symmetries
+        symms = self.crystal_structure.symmetries
 
         ss_family = set()  # will not preserve order
 
-        plane = self.planeIdc
-        dir = self.dirIdc
+        plane = self.plane_idc
+        dir = self.dir_idc
 
-        if self.crystalStructure.name == 'hexagonal':
+        if self.crystal_structure.name == 'hexagonal':
             # Transformation from crystal to orthonormal coords
-            lMatrix = CrystalStructure.lMatrix(
-                1, 1, self.cOverA, np.pi / 2, np.pi / 2, np.pi * 2 / 3
+            l_matrix = create_l_matrix(
+                1, 1, self.c_over_a, np.pi / 2, np.pi / 2, np.pi * 2 / 3
             )
             # Q matrix for transforming planes
-            qMatrix = CrystalStructure.qMatrix(lMatrix)
+            q_matrix = create_q_matrix(l_matrix)
 
             # Transform into orthonormal basis
-            plane = np.matmul(qMatrix, convertIdc('mb', plane=plane))
-            dir = np.matmul(lMatrix, convertIdc('mb', dir=dir))
+            plane = np.matmul(q_matrix, convert_idc('mb', plane=plane))
+            dir = np.matmul(l_matrix, convert_idc('mb', dir=dir))
 
         for i, symm in enumerate(symms):
             symm = symm.conjugate
 
-            plane_symm = symm.transformVector(plane)
-            dir_symm = symm.transformVector(dir)
+            plane_symm = symm.transform_vector(plane)
+            dir_symm = symm.transform_vector(dir)
 
-            if self.crystalStructure.name == 'hexagonal':
-                # qMatrix inverse is equal to lMatrix transposed and vice-versa
-                plane_symm = reduceIdc(convertIdc(
-                    'm', plane=safeIntCast(np.matmul(lMatrix.T, plane_symm))
+            if self.crystal_structure.name == 'hexagonal':
+                # q_matrix inverse is equal to l_matrix transposed and vice-versa
+                plane_symm = reduce_idc(convert_idc(
+                    'm', plane=safe_int_cast(np.matmul(l_matrix.T, plane_symm))
                 ))
-                dir_symm = reduceIdc(convertIdc(
-                    'm', dir=safeIntCast(np.matmul(qMatrix.T, dir_symm))
+                dir_symm = reduce_idc(convert_idc(
+                    'm', dir=safe_int_cast(np.matmul(q_matrix.T, dir_symm))
                 ))
 
             ss_family.add(SlipSystem(
-                posIdc(safeIntCast(plane_symm)),
-                posIdc(safeIntCast(dir_symm)),
-                self.crystalStructure, cOverA=self.cOverA
+                pos_idc(safe_int_cast(plane_symm)),
+                pos_idc(safe_int_cast(dir_symm)),
+                self.crystal_structure, c_over_a=self.c_over_a
             ))
 
         return ss_family
 
     @staticmethod
-    def load(name, crystalStructure, cOverA=None, groupBy='plane'):
+    def load(name, crystal_structure, c_over_a=None, group_by='plane'):
         """
         Load in slip systems from file. 3 integers for slip plane
         normal and 3 for slip direction. Returns a list of list of slip
@@ -444,11 +374,11 @@ class SlipSystem(object):
         name : str
             Name of the slip system file (without file extension)
             stored in the defdap install dir or path to a file.
-        crystalStructure : defdap.crystal.CrystalStructure
+        crystal_structure : defdap.crystal.CrystalStructure
             Crystal structure of the slip systems.
-        cOverA : float, optional
+        c_over_a : float, optional
             C over a ratio for hexagonal crystals.
-        groupBy : str, optional
+        group_by : str, optional
             How to group the slip systems, either by slip plane ('plane')
             or slip system family ('family') or don't group (None).
 
@@ -465,60 +395,60 @@ class SlipSystem(object):
         """
         # try and load from package dir first
         try:
-            fileExt = ".txt"
-            packageDir, _ = os.path.split(__file__)
-            filepath = f"{packageDir}/slip_systems/{name}{fileExt}"
+            file_ext = ".txt"
+            package_dir, _ = os.path.split(__file__)
+            filepath = f"{package_dir}/slip_systems/{name}{file_ext}"
 
-            slipSystemFile = open(filepath)
+            slip_system_file = open(filepath)
 
         except FileNotFoundError:
             # if it doesn't exist in the package dir, try and load the path
             try:
                 filepath = name
 
-                slipSystemFile = open(filepath)
+                slip_system_file = open(filepath)
 
             except FileNotFoundError:
                 raise(FileNotFoundError("Couldn't find the slip systems file"))
 
-        slipSystemFile.readline()
-        slipTraceColours = slipSystemFile.readline().strip().split(',')
-        slipSystemFile.close()
+        slip_system_file.readline()
+        slip_trace_colours = slip_system_file.readline().strip().split(',')
+        slip_system_file.close()
 
-        if crystalStructure.name == "hexagonal":
-            vectSize = 4
+        if crystal_structure.name == "hexagonal":
+            vect_size = 4
         else:
-            vectSize = 3
+            vect_size = 3
 
-        ssData = np.loadtxt(filepath, delimiter='\t', skiprows=2,
+        ss_data = np.loadtxt(filepath, delimiter='\t', skiprows=2,
                             dtype=np.int8)
-        if ssData.shape[1] != 2 * vectSize:
+        if ss_data.shape[1] != 2 * vect_size:
             raise IOError("Slip system file not valid")
 
         # Create list of slip system objects
-        slipSystems = []
-        for row in ssData:
-            slipSystems.append(SlipSystem(
-                row[0:vectSize], row[vectSize:2 * vectSize],
-                crystalStructure, cOverA=cOverA
+        slip_systems = []
+        for row in ss_data:
+            slip_systems.append(SlipSystem(
+                row[0:vect_size], row[vect_size:2 * vect_size],
+                crystal_structure, c_over_a=c_over_a
             ))
 
         # Group slip systems is required
-        if groupBy is not None:
-            slipSystems = SlipSystem.group(slipSystems, groupBy)
+        if group_by is not None:
+            slip_systems = SlipSystem.group(slip_systems, group_by)
 
-        return slipSystems, slipTraceColours
+        return slip_systems, slip_trace_colours
 
     @staticmethod
-    def group(slipSystems, groupBy):
+    def group(slip_systems, group_by):
         """
         Groups slip systems by their slip plane.
 
         Parameters
         ----------
-        slipSystems : list of SlipSystem
+        slip_systems : list of SlipSystem
             A list of slip systems.
-        groupBy : str
+        group_by : str
             How to group the slip systems, either by slip plane ('plane')
             or slip system family ('family').
 
@@ -528,200 +458,40 @@ class SlipSystem(object):
             A list of list of grouped slip systems.
 
         """
-        if groupBy.lower() == 'plane':
+        if group_by.lower() == 'plane':
             # Group by slip plane and keep slip plane order from file
-            groupedSlipSystems = [[slipSystems[0]]]
-            for ss in slipSystems[1:]:
-                for i, ssGroup in enumerate(groupedSlipSystems):
-                    if posIdc(ss.planeIdc) == posIdc(ssGroup[0].planeIdc):
-                        groupedSlipSystems[i].append(ss)
+            grouped_slip_systems = [[slip_systems[0]]]
+            for ss in slip_systems[1:]:
+                for i, ssGroup in enumerate(grouped_slip_systems):
+                    if pos_idc(ss.plane_idc) == pos_idc(ssGroup[0].plane_idc):
+                        grouped_slip_systems[i].append(ss)
                         break
                 else:
-                    groupedSlipSystems.append([ss])
+                    grouped_slip_systems.append([ss])
 
-        elif groupBy.lower() == 'family':
-            groupedSlipSystems = []
+        elif group_by.lower() == 'family':
+            grouped_slip_systems = []
             ssFamilies = []
-            for ss in slipSystems:
+            for ss in slip_systems:
                 for i, ssFamily in enumerate(ssFamilies):
                     if ss in ssFamily:
-                        groupedSlipSystems[i].append(ss)
+                        grouped_slip_systems[i].append(ss)
                         break
                 else:
-                    groupedSlipSystems.append([ss])
-                    ssFamilies.append(ss.generateFamily())
+                    grouped_slip_systems.append([ss])
+                    ssFamilies.append(ss.generate_family())
 
         else:
             raise ValueError("Slip systems can be grouped by plane or family")
 
-        return groupedSlipSystems
+        return grouped_slip_systems
 
     @staticmethod
-    def printSlipSystemDirectory():
+    def print_slip_system_directory():
         """
         Prints the location where slip system definition files are stored.
 
         """
-        packageDir, _ = os.path.split(__file__)
+        package_dir, _ = os.path.split(__file__)
         print("Slip system definition files are stored in directory:")
-        print(f"{packageDir}/slip_systems/")
-
-
-def convertIdc(inType, *, dir=None, plane=None):
-    """
-    Convert between Miller and Miller-Bravais indices.
-
-    Parameters
-    ----------
-    inType : str {'m', 'mb'}
-        Type of indices provided. If 'm' converts from Miller to
-        Miller-Bravais, opposite for 'mb'.
-    dir : tuple of int or equivalent, optional
-        Direction to convert. This OR `plane` must me provided.
-    plane : tuple of int or equivalent, optional
-        Plane to convert. This OR `direction` must me provided.
-
-    Returns
-    -------
-    tuple of int
-        The converted plane or direction.
-
-    """
-    if dir is None and plane is None:
-        raise ValueError("One of either `direction` or `plane` must be "
-                         "provided.")
-    if dir is not None and plane is not None:
-        raise ValueError("One of either `direction` or `plane` must be "
-                         "provided, not both.")
-
-    def checkLen(val, length):
-        if len(val) != length:
-            raise ValueError(f"Vector must have {length} values.")
-
-    if inType.lower() == 'm':
-        if dir is None:
-            # plane M->MB
-            checkLen(plane, 3)
-            out = np.array(plane)[[0, 1, 0, 2]]
-            out[2] += plane[1]
-            out[2] *= -1
-
-        else:
-            # direction M->MB
-            checkLen(dir, 3)
-            u, v, w = dir
-            out = np.array([2*u-v, 2*v-u, -u-v, 3*w]) / 3
-            try:
-                # Attempt to cast to integers
-                out = safeIntCast(out)
-            except ValueError:
-                pass
-
-    elif inType.lower() == 'mb':
-        if dir is None:
-            # plane MB->M
-            checkLen(plane, 4)
-            out = np.array(plane)[[0, 1, 3]]
-
-        else:
-            # direction MB->M
-            checkLen(dir, 4)
-            out = np.array(dir)[[0, 1, 3]]
-            out[[0, 1]] -= dir[2]
-
-    else:
-        raise ValueError("`inType` must be either 'm' or 'mb'.")
-
-    return tuple(out)
-
-
-def posIdc(vec):
-    """
-    Return a consistent positive version of a set of indices.
-
-    Parameters
-    ----------
-    vec : tuple of int or equivalent
-        Indices to convert.
-
-    Returns
-    -------
-    tuple of int
-        Positive version of indices.
-
-    """
-    for idx in vec:
-        if idx == 0:
-            continue
-        if idx > 0:
-            return tuple(vec)
-        else:
-            return tuple(-np.array(vec))
-
-
-def reduceIdc(vec):
-    """
-    Reduce indices to lowest integers
-
-    Parameters
-    ----------
-    vec : tuple of int or equivalent
-        Indices to reduce.
-
-    Returns
-    -------
-    tuple of int
-        The reduced indices.
-
-    """
-    return tuple((np.array(vec) / np.gcd.reduce(vec)).astype(np.int8))
-
-
-def safeIntCast(vec, tol=1e-3):
-    """
-    Cast a tuple of floats to integers, raising an error if rounding is
-    over a tolerance.
-
-    Parameters
-    ----------
-    vec : tuple of float or equivalent
-        Vector to cast.
-    tol : float
-        Tolerance above which an error is raised.
-
-    Returns
-    -------
-    tuple of int
-
-    Raises
-    ------
-    ValueError
-        If the rounding is over the tolerance for any value.
-
-    """
-    vec = np.array(vec)
-    vec_rounded = vec.round()
-
-    if np.any(np.abs(vec - vec_rounded) > tol):
-        raise ValueError('Rounding too large', np.abs(vec - vec_rounded))
-
-    return tuple(vec_rounded.astype(np.int8))
-
-
-def strIdx(idx):
-    """
-    String representation of an index with overbars.
-
-    Parameters
-    ----------
-    idx : int
-
-    Returns
-    -------
-    str
-
-    """
-    if not isinstance(idx, (int, np.integer)):
-        raise ValueError("Index must be an integer.")
-
-    return str(idx) if idx >= 0 else str(-idx) + u'\u0305'
+        print(f"{package_dir}/slip_systems/")

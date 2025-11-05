@@ -9,8 +9,7 @@ from defdap.quat import Quat
 # Initialisation tests
 
 
-@pytest.mark.parametrize('inputLength',
-                         [2, 5, 6])
+@pytest.mark.parametrize('inputLength', [2, 5, 6])
 def testInitDimension(inputLength):
     """Quat initialisation should raise a DimensionError if not length
     1, 3, 4"""
@@ -33,35 +32,35 @@ def testInitDimension(inputLength):
     (-np.pi, -np.pi, -np.pi, [0, -1., 0, 0]),
 ])
 def testInitEuler(ph1, phi, ph2, expectedOutput):
-    """Check quatCoef is correct after initialisation with Eulers"""
-    returnedQuat = Quat.fromEulerAngles(ph1, phi, ph2)
-    assert np.allclose(returnedQuat.quatCoef, expectedOutput, atol=1e-4)
+    """Check quat_coef is correct after initialisation with Eulers"""
+    returnedQuat = Quat.from_euler_angles(ph1, phi, ph2)
+    assert np.allclose(returnedQuat.quat_coef, expectedOutput, atol=1e-4)
 
 
-# Check quatCoef is correct after initialisation with quat array
+# Check quat_coef is correct after initialisation with quat array
 @pytest.mark.parametrize('testValues, expectedOutput', [
     ([0, 0, 0, 0], [0, 0, 0, 0]),
     ([1., 2., 3., 4.], [1., 2., 3., 4.])
 ])
 def testInitArray(testValues, expectedOutput):
-    returnedQuat = Quat(testValues).quatCoef
+    returnedQuat = Quat(testValues).quat_coef
     assert np.allclose(returnedQuat, expectedOutput, atol=1e-4)
 
 
-# Check quatCoef is correct after initialisation with quat coeffs
+# Check quat_coef is correct after initialisation with quat coeffs
 @pytest.mark.parametrize('a1, a2, a3, a4, expectedOutput', [
     (0, 0, 0, 0, [0, 0, 0, 0]),
     (1, 2, 3, 4, [1, 2, 3, 4])
 ])
 def testInitCoeffs(a1, a2, a3, a4, expectedOutput):
     returnedQuat = Quat(a1, a2, a3, a4)
-    assert np.allclose(returnedQuat.quatCoef, expectedOutput, atol=1e-4)
+    assert np.allclose(returnedQuat.quat_coef, expectedOutput, atol=1e-4)
 
 
 def testFlipToNorthernHemisphere():
     expectedOutput = [0.5, 0.5, -0.5, 0.5]
     returnedQuat = Quat(-0.5, -0.5, 0.5, -0.5)
-    assert np.allclose(returnedQuat.quatCoef, expectedOutput, atol=1e-4)
+    assert np.allclose(returnedQuat.quat_coef, expectedOutput, atol=1e-4)
 
 
 # Check quat initialisation with an array that's too short
@@ -92,8 +91,8 @@ def testInitStrEul(ph1, phi, ph2):
         Quat(ph1, phi, ph2)
 
 
-## fromAxisAngle
-# Check quatCoef is correct for given axis and angle
+## from_axis_angle
+# Check quat_coef is correct for given axis and angle
 @pytest.mark.parametrize('axis, angle, expectedOutput', [
     ([1, 0, 0], np.pi, [0, -1, 0, 0]),
     ([1, 1, 0], -np.pi/2, [np.sin(np.pi/4), 0.5, 0.5, 0]),
@@ -101,7 +100,7 @@ def testInitStrEul(ph1, phi, ph2):
     ([1, -1, -1], -np.pi/2, [np.sin(np.pi/4), 0.4082483, -0.4082483, -0.4082483])
 ])
 def testFromAxisAngle(axis, angle, expectedOutput):
-    returnedQuat = Quat.fromAxisAngle(axis, angle).quatCoef
+    returnedQuat = Quat.from_axis_angle(axis, angle).quat_coef
     assert np.allclose(returnedQuat, expectedOutput, atol=1e-4)
 
 
@@ -111,7 +110,7 @@ def testFromAxisAngle(axis, angle, expectedOutput):
 ])
 def testFromAxisAngleStr(axis, angle):
     with pytest.raises(ValueError):
-        Quat.fromAxisAngle(axis, angle)
+        Quat.from_axis_angle(axis, angle)
 
 
 # String in angle should give error
@@ -120,7 +119,7 @@ def testFromAxisAngleStr(axis, angle):
 ])
 def testFromAxisAngleStr2(axis, angle):
     with pytest.raises(TypeError):
-        Quat.fromAxisAngle(axis, angle)
+        Quat.from_axis_angle(axis, angle)
 
 
 @pytest.fixture
@@ -157,28 +156,28 @@ class TestEulerAngles:
 
     @staticmethod
     def test_return_type(single_quat):
-        returnEulers = single_quat.eulerAngles()
+        returnEulers = single_quat.euler_angles()
 
         assert type(returnEulers) is np.ndarray
         assert returnEulers.shape == (3, )
 
     @staticmethod
     def test_calc(single_quat):
-        returnEulers = single_quat.eulerAngles()
+        returnEulers = single_quat.euler_angles()
 
         assert np.allclose(returnEulers*180/np.pi, [20., 10., 40.])
 
     @staticmethod
     def test_calc_chi_q12_0():
         in_quat = Quat(0.70710678, 0., 0., 0.70710678)
-        returnEulers = in_quat.eulerAngles()
+        returnEulers = in_quat.euler_angles()
 
         assert np.allclose(returnEulers, [4.71238898, 0., 0.])
 
     @staticmethod
     def test_calc_chi_q03_0():
         in_quat = Quat(0., 0.70710678, 0.70710678, 0.)
-        returnEulers = in_quat.eulerAngles()
+        returnEulers = in_quat.euler_angles()
 
         assert np.allclose(returnEulers, [1.57079633, 3.14159265, 0.])
 
@@ -187,14 +186,14 @@ class TestRotMatrix:
 
     @staticmethod
     def test_return_type(single_quat):
-        returnMatrix = single_quat.rotMatrix()
+        returnMatrix = single_quat.rot_matrix()
 
         assert type(returnMatrix) is np.ndarray
         assert returnMatrix.shape == (3, 3)
 
     @staticmethod
     def test_calc(single_quat):
-        returnMatrix = single_quat.rotMatrix()
+        returnMatrix = single_quat.rot_matrix()
 
         expectedMatrix = np.array([
             [ 0.50333996,  0.85684894,  0.1116189 ],
@@ -221,7 +220,7 @@ class TestMul:
     def test_calc(single_quat, single_quat2):
         result = single_quat * single_quat2
 
-        assert np.allclose(result.quatCoef,
+        assert np.allclose(result.quat_coef,
                            [0.8365163, 0.28678822, -0.40957602, 0.22414387])
 
     @staticmethod
@@ -263,7 +262,7 @@ class TestAdd:
     def test__calc(single_quat, single_quat2):
         result = single_quat + single_quat2
 
-        assert np.allclose(result.quatCoef,
+        assert np.allclose(result.quat_coef,
                            [1.44195788, 0.43400514, -0.22726944, 0.08113062])
 
     @staticmethod
@@ -286,7 +285,7 @@ class TestIadd:
     def test_calc(single_quat, single_quat2):
         single_quat += single_quat2
 
-        assert np.allclose(single_quat.quatCoef,
+        assert np.allclose(single_quat.quat_coef,
                            [1.44195788, 0.43400514, -0.22726944, 0.08113062])
 
     @staticmethod
@@ -315,19 +314,19 @@ class TestSetitem:
     @staticmethod
     def test_val(single_quat):
         single_quat[0] = 0.1
-        assert np.allclose(single_quat.quatCoef,
+        assert np.allclose(single_quat.quat_coef,
                            [0.1, -0.08583165, 0.01513444, -0.49809735])
 
         single_quat[1] = 0.2
-        assert np.allclose(single_quat.quatCoef,
+        assert np.allclose(single_quat.quat_coef,
                            [0.1, 0.2, 0.01513444, -0.49809735])
 
         single_quat[2] = 0.3
-        assert np.allclose(single_quat.quatCoef,
+        assert np.allclose(single_quat.quat_coef,
                            [0.1, 0.2, 0.3, -0.49809735])
 
         single_quat[3] = 0.4
-        assert np.allclose(single_quat.quatCoef, [0.1, 0.2, 0.3, 0.4])
+        assert np.allclose(single_quat.quat_coef, [0.1, 0.2, 0.3, 0.4])
 
 
 class TestNorm:
@@ -351,7 +350,7 @@ class TestNormalise:
     def test_calc(single_quat_not_unit):
         single_quat_not_unit.normalise()
 
-        assert np.allclose(single_quat_not_unit.quatCoef,
+        assert np.allclose(single_quat_not_unit.quat_coef,
                            [0.18257419, 0.36514837, -0.54772256, 0.73029674])
 
 
@@ -368,7 +367,7 @@ class TestConjugate:
     def test_calc(single_quat):
         result = single_quat.conjugate
 
-        assert np.allclose(result.quatCoef,
+        assert np.allclose(result.quat_coef,
                            [0.86272992, 0.08583165, -0.01513444, 0.49809735])
 
 
@@ -376,24 +375,24 @@ class TestTransformVector:
 
     @staticmethod
     def test_return_type(single_quat):
-        result = single_quat.transformVector(np.array([1., 2., 3.]))
+        result = single_quat.transform_vector(np.array([1., 2., 3.]))
 
         assert type(result) is np.ndarray
         assert result.shape == (3,)
 
     @staticmethod
     def test_calc(single_quat):
-        result = single_quat.transformVector(np.array([1., 2., 3.]))
+        result = single_quat.transform_vector(np.array([1., 2., 3.]))
 
         assert np.allclose(result, [2.55189453, 0.5151495, 2.68746261])
 
     @staticmethod
     def test_bad_in_type(single_quat):
         with pytest.raises(TypeError):
-            single_quat.transformVector(10)
+            single_quat.transform_vector(10)
 
         with pytest.raises(TypeError):
-            single_quat.transformVector(np.array([1., 2., 3., 4.]))
+            single_quat.transform_vector(np.array([1., 2., 3., 4.]))
 
 
 class TestMisOriCases:
@@ -439,7 +438,7 @@ class TestMisOri:
     @staticmethod
     @parametrize_with_cases("ins, outs", cases=TestMisOriCases)
     def test_return_type(ins, outs):
-        result = ins[0].misOri(*ins[1:])
+        result = ins[0].mis_ori(*ins[1:])
 
         if ins[3] == 1:
             assert type(result) is Quat
@@ -454,41 +453,41 @@ class TestMisOri:
     @staticmethod
     @parametrize_with_cases("ins, outs", cases=TestMisOriCases)
     def test_calc(ins, outs):
-        result = ins[0].misOri(*ins[1:])
+        result = ins[0].mis_ori(*ins[1:])
 
         if ins[3] == 1:
-            assert np.allclose(result.quatCoef, outs[1])
+            assert np.allclose(result.quat_coef, outs[1])
         elif ins[3] == 2:
             assert result[0] == approx(outs[0])
-            assert np.allclose(result[1].quatCoef, outs[1])
+            assert np.allclose(result[1].quat_coef, outs[1])
         else:
             assert result == approx(outs[0])
 
     @staticmethod
     def test_bad_in_type(single_quat):
         with pytest.raises(TypeError):
-            single_quat.misOri(4, "blah")
+            single_quat.mis_ori(4, "blah")
 
 
 class TestMisOriAxis:
 
     @staticmethod
     def test_return_type(single_quat, single_quat2):
-        result = single_quat.misOriAxis(single_quat2)
+        result = single_quat.mis_ori_axis(single_quat2)
 
         assert type(result) is np.ndarray
         assert result.shape == (3,)
 
     @staticmethod
     def test_calc(single_quat, single_quat2):
-        result = single_quat.misOriAxis(single_quat2)
+        result = single_quat.mis_ori_axis(single_quat2)
 
         assert np.allclose(result, [1.10165762, -1.21828737, 2.285256])
 
     @staticmethod
     def test_bad_in_type(single_quat):
         with pytest.raises(TypeError):
-            single_quat.misOriAxis(4)
+            single_quat.mis_ori_axis(4)
 
 
 class TestExtractQuatComps:
@@ -579,7 +578,7 @@ class TestSymEqv:
     @staticmethod
     @parametrize_with_cases("ins, outs", cases=TestSymEqvCases)
     def test_return_type(ins, outs):
-        syms = Quat.symEqv(*ins)
+        syms = Quat.sym_eqv(*ins)
 
         assert type(syms) is list
         assert len(syms) == len(outs[0])
@@ -588,30 +587,154 @@ class TestSymEqv:
     @staticmethod
     @parametrize_with_cases("ins, outs", cases=TestSymEqvCases)
     def test_calc(ins, outs):
-        syms = Quat.symEqv(*ins)
+        syms = Quat.sym_eqv(*ins)
 
-        assert all([np.allclose(sym.quatCoef, row) for sym, row
+        assert all([np.allclose(sym.quat_coef, row) for sym, row
                     in zip(syms, outs[0])])
 
+class TestIpfColour:
+
+    @staticmethod
+    def test_return_type(ori_quat_list_valid):
+        ipfColours = Quat.calc_ipf_colours(quats=ori_quat_list_valid, 
+                                           sym_group='cubic',
+                                           direction=[1,0,0])
+
+        assert type(ipfColours) is np.ndarray
+        assert ipfColours.shape == (3, len(ori_quat_list_valid))
+
+    @staticmethod
+    @pytest.mark.parametrize("direction, expectedOutput", [
+        ([1, 0, 0], np.array([[0.35420787, 0.12277055, 1.        ],
+                              [0.15471244, 0.48918578, 1.        ]])),
+        ([0, 1, 0], np.array([[0.64776397, 1.        , 0.31802678],
+                              [0.44914624, 0.09666619, 1.        ]])),
+        ([0, 0 ,1], np.array([[1.        , 0.8721636 , 0.4601925 ],
+                              [0.46039796, 1.        , 0.3333338 ]])),
+        ([1, 1, 0], np.array([[1.        , 0.06317326, 0.43581754],
+                              [1.        , 0.2596875 , 0.04771856]])),
+        ([0, 1, 1], np.array([[0.07652159, 0.06402589, 1.        ],
+                              [0.6563855, 1.        , 0.17397234]])),
+        ([1, 0 ,1], np.array([[1.       , 0.01245505, 0.60290754],
+                               [0.9608291, 0.04005751, 1.        ]]))
+    ])
+    def test_calc_cubic(ori_quat_list_valid, direction, expectedOutput):
+        returnColours = Quat.calc_ipf_colours(quats=ori_quat_list_valid,
+                                              sym_group='cubic',
+                                              direction=direction)
+        assert np.allclose(returnColours, expectedOutput.T, atol=1e-4)
+
+    @staticmethod
+    @pytest.mark.parametrize("direction, expectedOutput", [
+        ([1, 0, 0], np.array([[1.        , 0.5744279 , 0.35764635],
+                              [1.        , 0.95659405, 0.08325193]])),
+        ([0, 1, 0], np.array([[0.5724089 , 0.32813743, 1.        ],
+                              [0.4527689 , 1.        , 0.11840012]])),
+        ([0, 0 ,1], np.array([[0.46313933, 1.        , 0.39832234],
+                              [0.7022287 , 1.        , 0.40724975]])),
+        ([1, 1, 0], np.array([[0.2315231 , 0.79978704, 1.        ],
+                              [0.1326262 , 0.05264888, 1.        ]])),
+        ([0, 1, 1], np.array([[1.        , 0.64148784, 0.8374021 ],
+                              [0.04142377, 0.05431259, 1.        ]])),
+        ([1, 0 ,1], np.array([[0.33415037, 0.9863902 , 1.        ],
+                              [1.        , 0.27872643, 0.23925099]]))
+        ])
+    def test_calc_hexagonal(ori_quat_list_valid, direction, expectedOutput):
+        returnColours = Quat.calc_ipf_colours(quats=ori_quat_list_valid,
+                                              sym_group='hexagonal',
+                                              direction=direction)
+        assert np.allclose(returnColours, expectedOutput.T, atol=1e-4)
 
 
+class TestFundDirs:
 
+    @staticmethod
+    def test_return_type(ori_quat_list_valid):
+        fundDirs = Quat.calc_fund_dirs(quats=ori_quat_list_valid, 
+                                           direction=[1,0,0],
+                                           sym_group='cubic')
+
+        assert type(fundDirs) is tuple
+        assert len(fundDirs) == 2
+
+    @staticmethod
+    @pytest.mark.parametrize("direction, expectedOutput", [
+        ([1, 0, 0], (np.array([0.69952609, 0.78403021]), 
+                     np.array([2.2874346 , 2.12872533]))),
+        ([0, 1, 0], (np.array([0.52608403, 0.65695865]), 
+                     np.array([1.7791031 , 2.30187058]))),
+        ([0, 0 ,1], (np.array([0.45057319, 0.58619799]), 
+                     np.array([1.86989854, 1.78713809]))),
+        ([1, 1, 0], (np.array([0.30188751, 0.18179439]), 
+                     np.array([2.28007559, 1.70378284]))),
+        ([0, 1, 1], (np.array([0.8741375 , 0.5004212]), 
+                     np.array([2.31714169, 1.69736755]))),
+        ([1, 0 ,1], (np.array([0.36088574, 0.48914496]), 
+                     np.array([2.3446426 , 2.33373084])))
+        ])
+    def test_calc_cubic(ori_quat_list_valid, direction, expectedOutput):
+        returnDirs = Quat.calc_fund_dirs(quats=ori_quat_list_valid,
+                                              sym_group='cubic',
+                                              direction=direction)
+        assert np.allclose(returnDirs, expectedOutput, atol=1e-4)
+
+    @staticmethod
+    @pytest.mark.parametrize("direction, expectedOutput", [
+        ([1, 0, 0], (np.array([0.69952609, 0.78403021]), 
+                     np.array([1.76383582, 1.60512655]))),
+        ([0, 1, 0], (np.array([1.05721982, 1.09881856]), 
+                     np.array([1.97488301, 1.61887046]))),
+        ([0, 0 ,1], (np.array([1.14159266, 0.99999999]), 
+                     np.array([1.71238897, 1.71238897]))),
+        ([1, 1, 0], (np.array([1.37592272, 1.39062481]), 
+                     np.array([1.8623474 , 2.07002582]))),
+        ([0, 1, 1], (np.array([0.8741375 , 1.510193 ]), 
+                     np.array([1.87164852, 2.06784385]))),
+        ([1, 0 ,1], (np.array([1.32143956, 0.48914496]), 
+                     np.array([1.83444972, 1.81013206])))
+        ])
+    def test_calc_hexagonal_up(ori_quat_list_valid, direction, expectedOutput):
+        returnColours = Quat.calc_fund_dirs(quats=ori_quat_list_valid,
+                                              sym_group='hexagonal',
+                                              direction=direction,
+                                              triangle='up')
+        assert np.allclose(returnColours, expectedOutput, atol=1e-4)
+
+    @staticmethod
+    @pytest.mark.parametrize("direction, expectedOutput", [
+        ([1, 0, 0], (np.array([0.69952609, 0.78403021]), 
+                     np.array([1.37775683, 1.5364661 ]))),
+        ([0, 1, 0], (np.array([1.05721982, 1.09881856]), 
+                     np.array([1.16670964, 1.5227222 ]))),
+        ([0, 0 ,1], (np.array([1.14159266, 0.99999999]), 
+                     np.array([1.42920368, 1.42920368]))),
+        ([1, 1, 0], (np.array([1.37592272, 1.39062481]), 
+                     np.array([1.27924525, 1.07156684]))),
+        ([0, 1, 1], (np.array([0.8741375,  1.510193  ]), 
+                     np.array([1.26994414, 1.0737488 ]))),
+        ([1, 0 ,1], (np.array([1.32143956, 0.48914496]), 
+                     np.array([1.30714293, 1.33146059])))
+        ])
+    def test_calc_hexagonal_down(ori_quat_list_valid, direction, expectedOutput):
+        returnColours = Quat.calc_fund_dirs(quats=ori_quat_list_valid,
+                                              sym_group='hexagonal',
+                                              direction=direction,
+                                              triangle='down')
+        assert np.allclose(returnColours, expectedOutput, atol=1e-4)
 
 
 
 ''' Functions left to test
 __repr__(self):
 __str__(self):
-plotIPF
+plot_ipf
 plotUnitCell
 
-createManyQuats(eulerArray)
-calcSymEqvs(quats, symGroup, dtype=np.float)
-calcAverageOri(quatComps)
+create_many_quats(eulerArray)
+calc_sym_eqvs(quats, symGroup, dtype=np.float)
+calc_average_ori(quatComps)
 calcMisOri(quatComps, refOri)
-polarAngles(x, y, z)
-calcIPFcolours(quats, direction, symGroup)
-calcFundDirs(quats, direction, symGroup, dtype=np.float)
+polar_angles(x, y, z)
 '''
 
 

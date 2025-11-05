@@ -1,4 +1,4 @@
-# Copyright 2021 Mechanics of Microstructures Group
+# Copyright 2025 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import numpy as np
+from numpy.lib.recfunctions import structured_to_unstructured
 import pandas as pd
+from abc import ABC, abstractmethod
 import pathlib
 import re
 
@@ -22,141 +24,148 @@ from typing import TextIO, Dict, List, Callable, Any, Type, Optional
 
 from defdap.crystal import Phase
 from defdap.quat import Quat
+from defdap.utils import Datastore
 
 
-class EBSDDataLoader(object):
+class EBSDDataLoader(ABC):
     """Class containing methods for loading and checking EBSD data
 
     """
     def __init__(self) -> None:
-        self.loadedMetadata = {
-            'xDim': 0,
-            'yDim': 0,
-            'stepSize': 0.,
-            'acquisitionRotation': Quat(1.0, 0.0, 0.0, 0.0),
-            'phases': []
+        # required metadata
+        self.loaded_metadata = {
+            'shape': (0, 0),
+            'step_size': 0.,
+            'acquisition_rotation': Quat(1.0, 0.0, 0.0, 0.0),
+            'phases': [],
+            'edx': {'Count': 0},
         }
-        self.loadedData = {
-            'phase': None,
-            'eulerAngle': None,
-            'bandContrast': None
-        }
-        self.dataFormat = None
+        # required data
+        self.loaded_data = Datastore()
+        self.loaded_data.add(
+            'phase', None, unit='', type='map', order=0,
+            comment='1-based, 0 is non-indexed points',
+            plot_params={
+                'vmin': 0,
+            }
+        )
+        self.loaded_data.add(
+            'euler_angle', None, unit='rad', type='map', order=1,
+            default_component='all_euler'
+        )
+        self.data_format = None
 
     @staticmethod
-    def getLoader(dataType: str) -> 'Type[EBSDDataLoader]':
-        if dataType is None:
-            dataType = "OxfordBinary"
+    def get_loader(data_type: str, file_name: pathlib.Path) -> 'Type[EBSDDataLoader]':
+        if data_type is None:
+            data_type = {
+                '.crc': 'oxfordbinary',
+                '.cpr': 'oxfordbinary',
+                '.ctf': 'oxfordtext',
+                '.ang': 'edaxang',
+            }.get(file_name.suffix, 'oxfordbinary')
 
-        if dataType == "OxfordBinary":
-            return OxfordBinaryLoader()
-        elif dataType == "OxfordText":
-            return OxfordTextLoader()
-        elif dataType == "PythonDict":
-            return PythonDictLoader()
-        else:
-            raise ValueError(f"No loader for EBSD data of type {dataType}.")
+        data_type = data_type.lower()
+        try:
+            loader = {
+                'oxfordbinary': OxfordBinaryLoader,
+                'oxfordtext': OxfordTextLoader,
+                'edaxang': EdaxAngLoader,
+                'pythondict': PythonDictLoader,
+            }[data_type]
+        except KeyError:
+            raise ValueError(f"No loader for EBSD data of type {data_type}.")
+        return loader()
 
-    def checkMetadata(self) -> None:
+    def check_metadata(self) -> None:
         """
         Checks that the number of phases from metadata matches
         the amount of phases loaded.
 
         """
-        for phase in self.loadedMetadata['phases']:
+        for phase in self.loaded_metadata['phases']:
             assert type(phase) is Phase
 
-    def checkData(self) -> None:
-        mapShape = (self.loadedMetadata['yDim'], self.loadedMetadata['xDim'])
+    def check_data(self) -> None:
+        shape = self.loaded_metadata['shape']
 
-        assert self.loadedData['phase'].shape == mapShape
-        assert self.loadedData['eulerAngle'].shape == (3,) + mapShape
-        assert self.loadedData['bandContrast'].shape == mapShape
+        assert self.loaded_data.phase.shape == shape
+        assert self.loaded_data.euler_angle.shape == (3,) + shape
+        # assert self.loaded_data['bandContrast'].shape == mapShape
+
+    @abstractmethod
+    def load(self, file_name: pathlib.Path) -> None:
+        pass
 
 
 class OxfordTextLoader(EBSDDataLoader):
-    def load(
-        self,
-        fileName: str,
-        fileDir: str = ""
-    ) -> None:
+    def load(self, file_name: pathlib.Path) -> None:
         """ Read an Oxford Instruments .ctf file, which is a HKL single
         orientation file.
 
         Parameters
         ----------
-        fileName
-            File name.
-        fileDir
-            Path to file.
-
-        Returns
-        -------
-        dict, dict
-            EBSD metadata and EBSD data.
+        file_name
+            Path to file
 
         """
         # open data file and read in metadata
-        fileName = "{}.ctf".format(fileName)
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
 
-        def parsePhase() -> Phase:
-            lineSplit = line.split('\t')
-            dims = lineSplit[0].split(';')
+        def parse_phase() -> Phase:
+            line_split = line.split('\t')
+            dims = line_split[0].split(';')
             dims = tuple(round(float(s), 3) for s in dims)
-            angles = lineSplit[1].split(';')
+            angles = line_split[1].split(';')
             angles = tuple(round(float(s), 3) * np.pi / 180 for s in angles)
-            latticeParams = dims + angles
+            lattice_params = dims + angles
             phase = Phase(
-                lineSplit[2],
-                int(lineSplit[3]),
-                int(lineSplit[4]),
-                latticeParams
+                line_split[2],
+                int(line_split[3]),
+                int(line_split[4]),
+                lattice_params
             )
             return phase
 
         # default values for acquisition rotation in case missing in in file
-        acqEulers = [0., 0., 0.]
-        with open(str(filePath), 'r') as ctfFile:
-            for i, line in enumerate(ctfFile):
+        acq_eulers = [0., 0., 0.]
+        with open(str(file_name), 'r') as ctf_file:
+            for i, line in enumerate(ctf_file):
                 if 'XCells' in line:
-                    xDim = int(line.split()[-1])
-                    self.loadedMetadata['xDim'] = xDim
+                    x_dim = int(line.split()[-1])
                 elif 'YCells' in line:
-                    yDim = int(line.split()[-1])
-                    self.loadedMetadata['yDim'] = yDim
+                    y_dim = int(line.split()[-1])
                 elif 'XStep' in line:
-                    self.loadedMetadata['stepSize'] = float(line.split()[-1])
+                    self.loaded_metadata['step_size'] = float(line.split()[-1])
                 elif 'AcqE1' in line:
-                    acqEulers[0] = float(line.split()[-1])
+                    acq_eulers[0] = float(line.split()[-1])
                 elif 'AcqE2' in line:
-                    acqEulers[1] = float(line.split()[-1])
+                    acq_eulers[1] = float(line.split()[-1])
                 elif 'AcqE3' in line:
-                    acqEulers[2] = float(line.split()[-1])
+                    acq_eulers[2] = float(line.split()[-1])
                 elif 'Phases' in line:
-                    numPhases = int(line.split()[-1])
-                    for j in range(numPhases):
-                        line = next(ctfFile)
-                        self.loadedMetadata['phases'].append(parsePhase())
+                    num_phases = int(line.split()[-1])
+                    self.loaded_data['phase', 'plot_params']['vmax'] = num_phases
+                    for j in range(num_phases):
+                        line = next(ctf_file)
+                        self.loaded_metadata['phases'].append(parse_phase())
                     # phases are last in the header, so read the column
                     # headings then break out the loop
-                    headerText = next(ctfFile)
-                    numHeaderLines = i + j + 3
+                    header_text = next(ctf_file)
+                    num_header_lines = i + j + 3
                     break
 
-        self.loadedMetadata['acquisitionRotation'] = Quat.fromEulerAngles(
-            *(np.array(acqEulers) * np.pi / 180)
+        shape = (y_dim, x_dim)
+        self.loaded_metadata['shape'] = shape
+        self.loaded_metadata['acquisition_rotation'] = Quat.from_euler_angles(
+            *(np.array(acq_eulers) * np.pi / 180)
         )
 
-        # TODO: Load EDX data from .ctf file, if it's accesible
-        self.loadedMetadata['EDX Windows'] = {'Count': int(0)}
-
-        self.checkMetadata()
+        self.check_metadata()
 
         # Construct data format from table header
-        fieldLookup = {
+        field_lookup = {
             'Phase': ('phase', 'uint8'),
             'X': ('x', 'float32'),
             'Y': ('y', 'float32'),
@@ -170,165 +179,308 @@ class OxfordTextLoader(EBSDDataLoader):
             'BS': ('BS', 'uint8'),      # Band Slope
         }
 
-        keepColNames = ('phase', 'ph1', 'phi', 'ph2', 'BC', 'BS', 'MAD')
-        dataFormat = []
-        loadCols = []
+        keep_col_names = ('phase', 'ph1', 'phi', 'ph2', 'BC', 'BS', 'MAD')
+        data_format = []
+        load_cols = []
         try:
-            for i, colTitle in enumerate(headerText.split()):
-                if fieldLookup[colTitle][0] in keepColNames:
-                    dataFormat.append(fieldLookup[colTitle])
-                    loadCols.append(i)
+            for i, col_title in enumerate(header_text.split()):
+                if field_lookup[col_title][0] in keep_col_names:
+                    data_format.append(field_lookup[col_title])
+                    load_cols.append(i)
         except KeyError:
             raise TypeError("Unknown data in EBSD file.")
-        self.dataFormat = np.dtype(dataFormat)
+        self.data_format = np.dtype(data_format)
 
         # now read the data from file
-        binData = np.loadtxt(
-            str(filePath), self.dataFormat, usecols=loadCols,
-            skiprows=numHeaderLines
+        data = np.loadtxt(
+            str(file_name), dtype=self.data_format, usecols=load_cols,
+            skiprows=num_header_lines
         )
 
-        self.loadedData['bandContrast'] = np.reshape(
-            binData['BC'], (yDim, xDim)
-        )
-        self.loadedData['bandSlope'] = np.reshape(
-            binData['BS'], (yDim, xDim)
-        )
-        self.loadedData['meanAngularDeviation'] = np.reshape(
-            binData['MAD'], (yDim, xDim)
-        )
-        self.loadedData['phase'] = np.reshape(
-            binData['phase'], (yDim, xDim)
-        )
-        eulerAngles = np.reshape(
-            binData[['ph1', 'phi', 'ph2']], (yDim, xDim)
-        )
-        # flatten the structures so that the Euler angles are stored
-        # into a normal array
-        eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
-        self.loadedData['eulerAngle'] = eulerAngles * np.pi / 180.
+        self.loaded_data.add(
+            'band_contrast', data['BC'].reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'cmap': 'gray',
+                'clabel': 'Band contrast',
+            }
 
-        self.checkData()
+        )
+        self.loaded_data.add(
+            'band_slope', data['BS'].reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'cmap': 'gray',
+                'clabel': 'Band slope',
+            }
+        )
+        self.loaded_data.add(
+            'mean_angular_deviation', data['MAD'].reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Mean angular deviation',
+            }
+        )
+        self.loaded_data.phase = data['phase'].reshape(shape)
+
+        euler_angle = structured_to_unstructured(
+            data[['ph1', 'phi', 'ph2']].reshape(shape)).transpose((2, 0, 1))
+        euler_angle *= np.pi / 180
+        self.loaded_data.euler_angle = euler_angle
+
+        self.check_data()
+
+
+class EdaxAngLoader(EBSDDataLoader):
+    def load(self, file_name: pathlib.Path) -> None:
+        """ Read an EDAX .ang file.
+
+        Parameters
+        ----------
+        file_name
+            Path to file
+
+        """
+        # open data file and read in metadata
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
+
+        i_phase = 1
+        # parse header lines (starting with #)
+        with open(str(file_name), 'r') as ang_file:
+            while True:
+                line = ang_file.readline()
+
+                if not line.startswith('#'):
+                    # end of header
+                    break
+                # remove #
+                line = line[1:].strip()
+
+                if line.startswith('Phase'):
+                    if int(line.split()[1]) != i_phase:
+                        raise ValueError('Phases not sequential in file?')
+
+                    phase_lines = read_until_string(
+                        ang_file, '#', exact=True,
+                        line_process=lambda l: l[1:].strip()
+                    )
+                    self.loaded_metadata['phases'].append(
+                        EdaxAngLoader.parse_phase(phase_lines)
+                    )
+                    i_phase += 1
+
+                elif line.startswith('GRID'):
+                    if line.split()[-1] != 'SqrGrid':
+                        raise ValueError('Only square grids supported')
+                elif line.startswith('XSTEP'):
+                    self.loaded_metadata['step_size'] = float(line.split()[-1])
+                elif line.startswith('NCOLS_ODD'):
+                    xdim = int(line.split()[-1])
+                elif line.startswith('NROWS'):
+                    ydim = int(line.split()[-1])
+
+        shape = (ydim, xdim)
+        self.loaded_metadata['shape'] = shape
+
+        self.check_metadata()
+
+        # Construct fixed data format
+        self.data_format = np.dtype([
+            ('ph1', 'float32'),
+            ('phi', 'float32'),
+            ('ph2', 'float32'),
+            # ('x', 'float32'),
+            # ('y', 'float32'),
+            ('IQ', 'float32'),
+            ('CI', 'float32'),
+            ('phase', 'uint8'),
+            # ('SE_signal', 'float32'),
+            ('FF', 'float32'),
+        ])
+        load_cols = (0, 1, 2, 5, 6, 7, 8, 9)
+
+        # now read the data from file
+        data = np.loadtxt(
+            str(file_name), dtype=self.data_format, comments='#',
+            usecols=load_cols
+        )
+
+        self.loaded_data.add(
+            'image_quality', data['IQ'].reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Image quality',
+            }
+        )
+        self.loaded_data.add(
+            'confidence_index', data['CI'].reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Confidence index',
+            }
+        )
+        self.loaded_data.add(
+            'fit_factor', data['FF'].reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Fit factor',
+            }
+        )
+        self.loaded_data.phase = data['phase'].reshape(shape) + 1
+        self.loaded_data['phase', 'plot_params']['vmax'] = len(self.loaded_metadata['phases'])
+
+        # flatten the structured dtype
+        euler_angle = structured_to_unstructured(
+            data[['ph1', 'phi', 'ph2']].reshape(shape)).transpose((2, 0, 1))
+        euler_angle[0] -= np.pi / 2
+        euler_angle[0, euler_angle[0] < 0.] += 2 * np.pi
+        self.loaded_data.euler_angle = euler_angle
+
+        self.check_data()
+
+    @staticmethod
+    def parse_phase(lines) -> Phase:
+        for line in lines:
+            line = line.split()
+
+            if line[0] == 'MaterialName':
+                name = line[1]
+            if line[0] == 'Symmetry':
+                point_group = line[1]
+                if point_group in ('43', 'm3m'):
+                    # cubic high
+                    laue_group = 11
+                    # can't determine but set to BCC for now
+                    space_group = 229
+                elif point_group == '6/mmm':
+                    # hex high
+                    laue_group = 9
+                    space_group = None
+                else:
+                    raise ValueError(f'Unknown crystal symmetry {point_group}')
+            elif line[0] == 'LatticeConstants':
+                dims = line[1:4]
+                dims = tuple(round(float(s), 3) for s in dims)
+                angles = line[4:7]
+                angles = tuple(round(float(s), 3) * np.pi / 180
+                               for s in angles)
+                lattice_params = dims + angles
+
+        return Phase(name, laue_group, space_group, lattice_params)
 
 
 class OxfordBinaryLoader(EBSDDataLoader):
-    def load(
-        self,
-        fileName: str,
-        fileDir: str = ""
-    ) -> None:
+    def load(self, file_name: pathlib.Path) -> None:
         """Read Oxford Instruments .cpr/.crc file pair.
 
         Parameters
         ----------
-        fileName
-            File name.
-        fileDir
-            Path to file.
-
-        Returns
-        -------
-        dict, dict
-            EBSD metadata and EBSD data.
+        file_name
+            Path to file
 
         """
-        self.loadOxfordCPR(fileName, fileDir=fileDir)
-        self.loadOxfordCRC(fileName, fileDir=fileDir)
+        self.load_oxford_cpr(file_name)
+        self.load_oxford_crc(file_name)
 
-    def loadOxfordCPR(self, fileName: str, fileDir: str = "") -> None:
+    def load_oxford_cpr(self, file_name: pathlib.Path) -> None:
         """
         Read an Oxford Instruments .cpr file, which is a metadata file
         describing EBSD data.
 
         Parameters
         ----------
-        fileName
-            File name.
-        fileDir
-            Path to file.
+        file_name
+            Path to file
 
         """
-        commentChar = ';'
+        comment_char = ';'
 
-        fileName = "{}.cpr".format(fileName)
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
+        file_name = file_name.with_suffix('.cpr')
+        if not file_name.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_name))
 
         # CPR file is split into groups, load each group into a
         # hierarchical dict
 
         metadata = dict()
-        groupPat = re.compile("\[(.+)\]")
+        group_pat = re.compile(r"\[(.+)\]")
 
-        def parseLine(line: str, groupDict: Dict) -> None:
+        def parse_line(line: str, group_dict: Dict) -> None:
             try:
                 key, val = line.strip().split('=')
-                groupDict[key] = val
+                group_dict[key] = val
             except ValueError:
                 pass
 
-        with open(str(filePath), 'r') as cprFile:
+        with open(str(file_name), 'r') as cpr_file:
             while True:
-                line = cprFile.readline()
+                line = cpr_file.readline()
                 if not line:
                     # End of file
                     break
-                if line.strip() == '' or line.strip()[0] == commentChar:
+                if line.strip() == '' or line.strip()[0] == comment_char:
                     # Skip comment or empty line
                     continue
 
-                groupName = groupPat.match(line.strip()).group(1)
-                groupDict = dict()
-                readUntilString(cprFile, '[', commentChar=commentChar,
-                                lineProcess=lambda l: parseLine(l, groupDict))
-                metadata[groupName] = groupDict
+                group_name = group_pat.match(line.strip()).group(1)
+                group_dict = dict()
+                read_until_string(cpr_file, '[', comment_char=comment_char,
+                                  line_process=lambda l: parse_line(l, group_dict))
+                metadata[group_name] = group_dict
 
         # Create phase objects and move metadata to object metadata dict
 
-        self.loadedMetadata['xDim'] = int(metadata['Job']['xCells'])
-        self.loadedMetadata['yDim'] = int(metadata['Job']['yCells'])
-        self.loadedMetadata['stepSize'] = float(metadata['Job']['GridDistX'])
-        self.loadedMetadata['acquisitionRotation'] = Quat.fromEulerAngles(
+        x_dim = int(metadata['Job']['xCells'])
+        y_dim = int(metadata['Job']['yCells'])
+        self.loaded_metadata['shape'] = (y_dim, x_dim)
+        self.loaded_metadata['step_size'] = float(metadata['Job']['GridDistX'])
+        self.loaded_metadata['acquisition_rotation'] = Quat.from_euler_angles(
             float(metadata['Acquisition Surface']['Euler1']) * np.pi / 180.,
             float(metadata['Acquisition Surface']['Euler2']) * np.pi / 180.,
             float(metadata['Acquisition Surface']['Euler3']) * np.pi / 180.
         )
-        numPhases = int(metadata['Phases']['Count'])
+        num_phases = int(metadata['Phases']['Count'])
 
-        for i in range(numPhases):
-            phaseMetadata = metadata['Phase{:}'.format(i + 1)]
-            self.loadedMetadata['phases'].append(Phase(
-                phaseMetadata['StructureName'],
-                int(phaseMetadata['LaueGroup']),
-                int(phaseMetadata['SpaceGroup']),
+        for i in range(num_phases):
+            phase_metadata = metadata['Phase{:}'.format(i + 1)]
+            self.loaded_metadata['phases'].append(Phase(
+                phase_metadata['StructureName'],
+                int(phase_metadata['LaueGroup']),
+                int(phase_metadata.get('SpaceGroup', 0)),
                 (
-                    round(float(phaseMetadata['a']), 3),
-                    round(float(phaseMetadata['b']), 3),
-                    round(float(phaseMetadata['c']), 3),
-                    round(float(phaseMetadata['alpha']), 3) * np.pi / 180,
-                    round(float(phaseMetadata['beta']), 3) * np.pi / 180,
-                    round(float(phaseMetadata['gamma']), 3) * np.pi / 180
+                    round(float(phase_metadata['a']), 3),
+                    round(float(phase_metadata['b']), 3),
+                    round(float(phase_metadata['c']), 3),
+                    round(float(phase_metadata['alpha']), 3) * np.pi / 180,
+                    round(float(phase_metadata['beta']), 3) * np.pi / 180,
+                    round(float(phase_metadata['gamma']), 3) * np.pi / 180
                 )
             ))
- 
+        self.loaded_data['phase', 'plot_params']['vmax'] = num_phases
+
         # Deal with EDX data
         edx_fields = {}
         if 'EDX Windows' in metadata:
-            self.loadedMetadata['EDX Windows'] = metadata['EDX Windows']
-            edx_fields = {}
-            for i in range(1, int(self.loadedMetadata['EDX Windows']['Count']) + 1):
-                name = self.loadedMetadata['EDX Windows'][f"Window{i}"]
+            self.loaded_metadata['edx'] = metadata['EDX Windows']
+            count = int(self.loaded_metadata['edx']['Count'])
+            self.loaded_metadata['edx']['Count'] = count
+            for i in range(1, count + 1):
+                name = self.loaded_metadata['edx'][f"Window{i}"]
                 edx_fields[100+i] = (f'EDX {name}', 'float32')
-        else:
-            self.loadedMetadata['EDX Windows'] = {'Count': int(0)}
 
-        self.checkMetadata()
+        self.check_metadata()
 
         # Construct binary data format from listed fields
         unknown_field_count = 0
-        dataFormat = [('phase', 'uint8')]
-        fieldLookup = {
+        data_format = [('phase', 'uint8')]
+        field_lookup = {
             3: ('ph1', 'float32'),
             4: ('phi', 'float32'),
             5: ('ph2', 'float32'),
@@ -339,231 +491,245 @@ class OxfordBinaryLoader(EBSDDataLoader):
             11: ('AFI', 'uint8'),  # Advanced Fit index. legacy
             12: ('IB6', 'float32')  # ?
         }
-        fieldLookup.update(edx_fields)
+        field_lookup.update(edx_fields)
         try:
             for i in range(int(metadata['Fields']['Count'])):
-                fieldID = int(metadata['Fields']['Field{:}'.format(i + 1)])
-                dataFormat.append(fieldLookup[fieldID])
+                field_id = int(metadata['Fields']['Field{:}'.format(i + 1)])
+                data_format.append(field_lookup[field_id])
         except KeyError:
-            print(f'\nUnknown field in file with key {fieldID}. '
-                  f'Assumming float32 data.')
+            print(f'\nUnknown field in file with key {field_id}. '
+                  f'Assuming float32 data.')
             unknown_field_count += 1
-            dataFormat.append((f'unknown_{unknown_field_count}', 'float32'))
+            data_format.append((f'unknown_{unknown_field_count}', 'float32'))
 
-        self.dataFormat = np.dtype(dataFormat)
+        self.data_format = np.dtype(data_format)
 
-    def loadOxfordCRC(self, fileName: str, fileDir: str = "") -> None:
+    def load_oxford_crc(self, file_name: pathlib.Path) -> None:
         """Read binary EBSD data from an Oxford Instruments .crc file
 
         Parameters
         ----------
-        fileName
-            File name.
-        fileDir
-            Path to file.
+        file_name
+            Path to file
 
         """
-        xDim = self.loadedMetadata['xDim']
-        yDim = self.loadedMetadata['yDim']
+        shape = self.loaded_metadata['shape']
 
-        fileName = "{}.crc".format(fileName)
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
+        file_name = file_name.with_suffix('.crc')
+        if not file_name.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_name))
 
         # load binary data from file
-        binData = np.fromfile(str(filePath), self.dataFormat, count=-1)
+        data = np.fromfile(str(file_name), self.data_format, count=-1)
 
-        self.loadedData['bandContrast'] = np.reshape(
-            binData['BC'], (yDim, xDim)
+        self.loaded_data.add(
+            'band_contrast', data['BC'].reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'cmap': 'gray',
+                'clabel': 'Band contrast',
+            }
         )
-        self.loadedData['bandSlope'] = np.reshape(
-            binData['BS'], (yDim, xDim)
+        self.loaded_data.add(
+            'band_slope', data['BS'].reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'cmap': 'gray',
+                'clabel': 'Band slope',
+            }
         )
-        self.loadedData['meanAngularDeviation'] = np.reshape(
-            binData['MAD'], (yDim, xDim)
+        self.loaded_data.add(
+            'mean_angular_deviation',
+            data['MAD'].reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Mean angular deviation',
+            }
         )
-        self.loadedData['phase'] = np.reshape(
-            binData['phase'], (yDim, xDim)
-        )
-        eulerAngles = np.reshape(
-            binData[['ph1', 'phi', 'ph2']], (yDim, xDim)
-        )
+        self.loaded_data.phase = data['phase'].reshape(shape)
 
-        # Load EDX data into a dict
-        if int(self.loadedMetadata['EDX Windows']['Count']) > 0:
-            EDXFields = [key for key in binData.dtype.fields.keys() if key.startswith('EDX')]        
-            self.loadedData['EDXDict'] = dict(
-                [(field[4:], np.reshape(binData[field], (yDim, xDim))) for field in EDXFields]
-                )
+        # flatten the structured dtype
+        self.loaded_data.euler_angle = structured_to_unstructured(
+            data[['ph1', 'phi', 'ph2']].reshape(shape)).transpose((2, 0, 1))
 
-        # flatten the structures so that the Euler angles are stored
-        # into a normal array
-        eulerAngles = np.array(eulerAngles.tolist()).transpose((2, 0, 1))
-        self.loadedData['eulerAngle'] = eulerAngles
+        if self.loaded_metadata['edx']['Count'] > 0:
+            EDXFields = [key for key in data.dtype.fields.keys() if key.startswith('EDX')]
+            for field in EDXFields:
+                self.loaded_data.add(
+                    field,
+                    data[field].reshape(shape),
+                    unit='counts', type='map', order=0,
+                    plot_params={
+                        'plot_colour_bar': True,
+                        'clabel': field + ' counts',
+                    }
+            )
 
-        self.checkData()
+        self.check_data()
 
 
 class PythonDictLoader(EBSDDataLoader):
-    def load(self, dataDict: Dict[str, Any]) -> None:
+    def load(self, data_dict: Dict[str, Any]) -> None:
         """Construct EBSD data from a python dictionary.
 
         Parameters
         ----------
-        dataDict
+        data_dict
             Dictionary with keys:
-                'stepSize'
+                'step_size'
                 'phases'
                 'phase'
-                'eulerAngle'
-                'bandContrast'
+                'euler_angle'
+                'band_contrast'
 
         """
-        self.loadedMetadata['xDim'] = dataDict['phase'].shape[1]
-        self.loadedMetadata['yDim'] = dataDict['phase'].shape[0]
-        self.loadedMetadata['stepSize'] = dataDict['stepSize']
-        assert type(dataDict['phases']) is list
-        self.loadedMetadata['phases'] = dataDict['phases']
-        self.loadedMetadata['EDX Windows'] = {'Count': int(0)}
+        self.loaded_metadata['shape'] = data_dict['phase'].shape
+        self.loaded_metadata['step_size'] = data_dict['step_size']
+        assert type(data_dict['phases']) is list
+        self.loaded_metadata['phases'] = data_dict['phases']
+        self.check_metadata()
 
-        self.checkMetadata()
+        self.loaded_data.add(
+            'band_contrast', data_dict['band_contrast'],
+            unit='', type='map', order=0
+        )
+        self.loaded_data.phase = data_dict['phase']
+        self.loaded_data['phase', 'plot_params']['vmax'] = len(self.loaded_metadata['phases'])
+        self.loaded_data.euler_angle = data_dict['euler_angle']
+        self.check_data()
 
-        self.loadedData['phase'] = dataDict['phase']
-        self.loadedData['eulerAngle'] = dataDict['eulerAngle']
-        self.loadedData['bandContrast'] = dataDict['bandContrast']
 
-        self.checkData()
-
-
-class DICDataLoader(object):
+class DICDataLoader(ABC):
     """Class containing methods for loading and checking HRDIC data
 
     """
-    def __init__(self) -> None:
-        self.loadedMetadata = {
-            'format': "",
-            'version': "",
-            'binning': "",
-            'xDim': 0,
-            'yDim': 0
+    def __init__(self, file_type : str = '') -> None:
+        self.file_type = file_type
+        self.loaded_metadata = {
+            'format': '',
+            'version': '',
+            'binning': '',
+            'shape': (0, 0),
         }
-        self.loadedData = {
-            'xc': None,
-            'yc': None,
-            'xd': None,
-            'yd': None
-        }
+        # required data
+        self.loaded_data = Datastore()
+        self.loaded_data.add(
+            'coordinate', None, unit='px', type='map', order=1,
+            default_component='magnitude',
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Coordinate',
+            }
+        )
+        self.loaded_data.add(
+            'displacement', None, unit='px', type='map', order=1,
+            default_component='magnitude',
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Displacement',
+            }
+        )
+
+    @staticmethod
+    def get_loader(data_type: str) -> 'Type[DICDataLoader]':
+        if data_type is None:
+            data_type = "Davis"
+
+        data_type = data_type.lower().split('-')
+        data_subtype = '' if len(data_type) == 1 else data_type[1]
+        data_type = data_type[0]
+        try:
+            loader = {
+                'davis': DavisLoader,
+                'openpiv': OpenPivTextLoader,    #Backwards compatability
+                'openpivtext': OpenPivTextLoader,
+                'openpivbinary': OpenPivBinaryLoader
+            }[data_type]
+        except KeyError:
+            raise ValueError(f"No loader for DIC data of type {data_type}.")
+        return loader(file_type=data_subtype)
 
     def checkMetadata(self) -> None:
         return
 
-    def checkData(self) -> None:
+    def check_data(self) -> None:
         """ Calculate size of map from loaded data and check it matches
         values from metadata.
 
         """
-        coords = self.loadedData['xc']
-        xdim = int(
-            (coords.max() - coords.min()) / min(abs(np.diff(coords))) + 1
-        )
+        # check binning
+        binning = self.loaded_metadata['binning']
+        binning_x = min(abs(np.diff(self.loaded_data.coordinate[0].flat)))
+        binning_y = max(abs(np.diff(self.loaded_data.coordinate[1].flat)))
+        if not (binning_x == binning_y == binning):
+            raise ValueError(
+                f'Binning of data and header do not match `{binning_x}`, '
+                f'`{binning_y}`, `{binning}`'
+            )
 
-        coords = self.loadedData['yc']
-        ydim = int(
-            (coords.max() - coords.min()) / max(abs(np.diff(coords))) + 1
-        )
+        # check shape
+        coord = self.loaded_data.coordinate
+        shape = (coord.max(axis=(1, 2)) - coord.min(axis=(1, 2))) / binning + 1
+        shape = tuple(shape[::-1].astype(int))
+        if shape != self.loaded_metadata['shape']:
+            raise ValueError(
+                f'Dimensions of data and header do not match `{shape}, '
+                f'`{self.loaded_metadata["shape"]}`'
+            )
 
-        assert xdim == self.loadedMetadata['xDim'], "Dimensions of data and header do not match"
-        assert ydim == self.loadedMetadata['yDim'], "Dimensions of data and header do not match"
+    @abstractmethod
+    def load(self, file_name: pathlib.Path) -> None:
+        pass
 
-    def loadDavisMetadata(self,
-        fileName: str,
-        fileDir: str = ""
-    ) -> Dict[str, Any]:
-        """ Load DaVis metadata from Davis .txt file.
+
+class DavisLoader(DICDataLoader):
+    def load(self, file_name: pathlib.Path) -> None:
+        """ Load from Davis .txt file.
 
         Parameters
         ----------
-        fileName
-            File name.
-        fileDir
-            Path to file.
-
-        Returns
-        -------
-        dict
-            Davis metadata.
+        file_name
+            Path to file
 
         """
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
+        if not file_name.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_name))
 
-        with open(str(filePath), 'r') as f:
+        with open(str(file_name), 'r') as f:
             header = f.readline()
         metadata = header.split()
 
         # Software name and version
-        self.loadedMetadata['format'] = metadata[0].strip('#')
-        self.loadedMetadata['version'] = metadata[1]
+        self.loaded_metadata['format'] = metadata[0].strip('#')
+        self.loaded_metadata['version'] = metadata[1]
         # Sub-window width in pixels
-        self.loadedMetadata['binning'] = int(metadata[3])
-        # size of map along x and y (from header)
-        self.loadedMetadata['xDim'] = int(metadata[5])
-        self.loadedMetadata['yDim'] = int(metadata[4])
+        self.loaded_metadata['binning'] = int(metadata[3])
+        # shape of map (from header)
+        self.loaded_metadata['shape'] = (int(metadata[4]), int(metadata[5]))
 
         self.checkMetadata()
 
-        return self.loadedMetadata
+        data = pd.read_table(str(file_name), delimiter='\t', skiprows=1,
+                             header=None).values
+        data = data.reshape(self.loaded_metadata['shape'] + (-1,))
+        data = data.transpose((2, 0, 1))
 
-    def loadDavisData(
-        self,
-        fileName: str,
-        fileDir: str = ""
-    ) -> Dict[str, Any]:
-        """Load displacement data from Davis .txt file containing x and
-        y coordinates and x and y displacements for each coordinate.
+        self.loaded_data.coordinate = data[:2]
+        self.loaded_data.displacement = data[2:]
 
-        Parameters
-        ----------
-        fileName
-            File name.
-        fileDir
-            Path to file.
-
-        Returns
-        -------
-        dict
-            Coordinates and displacements.
-
-        """
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
-
-        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1,
-                             header=None)
-        # x and y coordinates
-        self.loadedData['xc'] = data.values[:, 0]
-        self.loadedData['yc'] = data.values[:, 1]
-        # x and y displacement
-        self.loadedData['xd'] = data.values[:, 2]
-        self.loadedData['yd'] = data.values[:, 3]
-
-        self.checkData()
-
-        return self.loadedData
+        self.check_data()
 
     @staticmethod
-    def loadDavisImageData(fileName: str, fileDir: str = "") -> np.ndarray:
+    def load_davis_image_data(file_name: pathlib.Path) -> np.ndarray:
         """ A .txt file from DaVis containing a 2D image
 
         Parameters
         ----------
-        fileName
-            File name.
-        fileDir
-            Path to file.
+        file_name
+            Path to file
 
         Returns
         -------
@@ -571,39 +737,200 @@ class DICDataLoader(object):
             Array of data.
 
         """
-        filePath = pathlib.Path(fileDir) / pathlib.Path(fileName)
-        if not filePath.is_file():
-            raise FileNotFoundError("Cannot open file {}".format(filePath))
+        if not file_name.is_file():
+            raise FileNotFoundError("Cannot open file {}".format(file_name))
 
-        data = pd.read_table(str(filePath), delimiter='\t', skiprows=1,
+        data = pd.read_table(str(file_name), delimiter='\t', skiprows=1,
                              header=None)
-       
-        # x and y coordinates
-        loadedData = np.array(data)
 
-        return loadedData
+        return np.array(data)
 
 
-def readUntilString(
+class OpenPivTextLoader(DICDataLoader):
+    def load(self, file_name: pathlib.Path) -> None:
+        """ Load from Open PIV .txt file.
+
+        Parameters
+        ----------
+        file_name
+            Path to file
+
+        """
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
+
+        with open(str(file_name), 'r') as f:
+            header = f.readline()[1:].split()
+            data = np.loadtxt(f)
+        col = {
+            'x': 0,
+            'y': 1,
+            'u': 2,
+            'v': 3,
+        }
+
+        # Software name and version
+        self.loaded_metadata['format'] = 'OpenPIV'
+        self.loaded_metadata['version'] = 'n/a'
+
+        # Sub-window width in pixels
+        binning_x = int(np.min(np.abs(np.diff(data[:, col['x']]))))
+        binning_y = int(np.max(np.abs(np.diff(data[:, col['y']]))))
+        assert binning_x == binning_y
+        binning = binning_x
+        self.loaded_metadata['binning'] = binning
+
+        # shape of map (from header)
+        shape = data[:, [col['y'], col['x']]].max(axis=0) + binning / 2
+        shape = tuple((shape / binning).astype(int).tolist())
+        self.loaded_metadata['shape'] = shape
+
+        self.checkMetadata()
+        
+        # if y descending, flip
+        if np.all(np.diff(data[:, col['y']].reshape(shape)[:,0])) > 0:
+            data = data.reshape(shape + (-1,))[::-1].transpose((2, 0, 1))
+
+        self.loaded_data.coordinate = data[[col['x'], col['y']]]
+        self.loaded_data.displacement = data[[col['u'], col['v']]]
+
+        self.check_data()
+
+class OpenPivBinaryLoader(DICDataLoader):
+    def load(self, file_name: pathlib.Path) -> None:
+        """ Load from Open PIV .npz file.
+
+        Parameters
+        ----------
+        file_name
+            Path to file
+
+        """
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
+
+        data = np.load(file_name)
+
+        # Software name and version
+        self.loaded_metadata['format'] = data['format']
+        self.loaded_metadata['version'] = data['version']
+
+        # Load binning and shape
+        self.loaded_metadata['binning'] = data['binning']
+        self.loaded_metadata['shape'] = tuple(data['shape'])
+
+        self.checkMetadata()
+        
+        # if y descending, flip
+        if np.all(np.diff(data['y'][:,0])) > 0:
+            self.loaded_data.coordinate = np.array([data['x'][::-1], data['y'][::-1]])
+            self.loaded_data.displacement = np.array([data['u'][::-1], data['v'][::-1]])
+        else:
+            self.loaded_data.coordinate = np.array([data['x'], data['y']])
+            self.loaded_data.displacement = np.array([data['u'], data['v']])
+
+        self.check_data()
+
+
+class PyValeLoader(DICDataLoader):
+    def load(self, file_name: pathlib.Path) -> None:
+        """ Load from PyVale csv or binary file.
+
+        Parameters
+        ----------
+        file_name
+            Path to file
+
+        """
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
+        
+        int_type = 'int32'
+        double_type = 'double'
+        data_format = np.dtype([
+            ('x', int_type),
+            ('y', int_type),
+            ('u', double_type),
+            ('v', double_type),
+            ('displacement_mag', double_type),
+            ('converged', 'uint8'),
+            ('cost', double_type),
+            ('ftol', double_type),
+            ('xtol', double_type),
+            ('num_iterations', int_type),
+        ])
+        
+        if self.file_type == 'csv':
+            with open(str(file_name), 'r') as f:
+                header = f.readline()[1:].split()
+                data = np.loadtxt(f, delimiter=',', dtype=data_format)
+        elif self.file_type == 'binary':
+            data = np.fromfile(str(file_name), data_format, count=-1)
+        else:
+            raise ValueError(f"Unknown pyvale file type {self.file_type}")
+
+        # Software name and version
+        self.loaded_metadata['format'] = 'PyVale'
+        self.loaded_metadata['version'] = 'n/a'
+
+        # Sub-window width in pixels
+        binning_x = int(np.min(np.abs(np.diff(data['x']))))
+        binning_y = int(np.max(np.abs(np.diff(data['y']))))
+        assert binning_x == binning_y
+        binning = binning_x
+        self.loaded_metadata['binning'] = binning
+
+        # shape of map (from data)
+        yx_array = structured_to_unstructured(data[['y', 'x']])
+        yx_min = yx_array.min(axis=0)
+        yx_max = yx_array.max(axis=0)
+        shape = yx_max - yx_min
+        assert np.allclose(shape % binning, 0.)
+        shape = tuple((shape // binning + 1).tolist())
+        self.loaded_metadata['shape'] = shape
+
+        self.checkMetadata()
+
+        index_array = (yx_array - yx_min) // binning
+        disp_dense = np.zeros(shape + (2,))
+        disp_dense[index_array[:, 0], index_array[:, 1]] = (
+            structured_to_unstructured(data[['u', 'v']]))
+        disp_dense = disp_dense.transpose((2, 0, 1))
+
+        coord_dense = np.array(np.meshgrid(
+            *(np.arange(mn, mx+binning, binning) 
+              for mn, mx in zip(yx_min[::-1], yx_max[::-1]))
+        ))
+
+        self.loaded_data.coordinate = coord_dense
+        self.loaded_data.displacement = disp_dense
+
+        self.check_data()
+
+
+def read_until_string(
     file: TextIO,
-    termString: str,
-    commentChar: str = '*',
-    lineProcess: Optional[Callable[[str], Any]] = None
+    term_string: str,
+    comment_char: str = '*',
+    line_process: Optional[Callable[[str], Any]] = None,
+    exact: bool = False
 ) -> List[Any]:
     """Read lines in a file until a line starting with the `termString`
-    is encounted. The file position is returned before the line starting
+    is encountered. The file position is returned before the line starting
     with the `termString` when found. Comment and empty lines are ignored.
 
     Parameters
     ----------
     file
         An open python text file object.
-    termString
+    term_string
         String to terminate reading.
-    commentChar
+    comment_char
         Character at start of a comment line to ignore.
-    lineProcess
+    line_process
         Function to apply to each line when loaded.
+    exact
+        A line must exactly match `termString` to stop.
 
     Returns
     -------
@@ -613,15 +940,17 @@ def readUntilString(
     """
     lines = []
     while True:
-        currPos = file.tell()  # save position in file
+        curr_pos = file.tell()  # save position in file
         line = file.readline()
-        if not line or line.strip().startswith(termString):
-            file.seek(currPos)  # return to before prev line
+        if (not line
+                or (exact and line.strip() == term_string)
+                or (not exact and line.strip().startswith(term_string))):
+            file.seek(curr_pos)  # return to before prev line
             break
-        if line.strip() == '' or line.strip()[0] == commentChar:
+        if line.strip() == '' or line.strip()[0] == comment_char:
             # Skip comment or empty line
             continue
-        if lineProcess is not None:
-            line = lineProcess(line)
+        if line_process is not None:
+            line = line_process(line)
         lines.append(line)
     return lines

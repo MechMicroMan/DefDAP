@@ -1,4 +1,4 @@
-# Copyright 2021 Mechanics of Microstructures Group
+# Copyright 2025 Mechanics of Microstructures Group
 #    at The University of Manchester
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,26 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import numpy as np
 from matplotlib.pyplot import imread
 import inspect
 
 from skimage import transform as tf
-from skimage import morphology as mph
+from skimage import measure
 
 from scipy.stats import mode
 from scipy.ndimage import binary_dilation
 
 import peakutils
 
-from defdap.file_readers import DICDataLoader
+from defdap._accelerated import flood_fill_dic
+from defdap.utils import Datastore
+from defdap.file_readers import DICDataLoader, DavisLoader
 from defdap import base
-from defdap.quat import Quat
 
 from defdap import defaults
 from defdap.plotting import MapPlot, GrainPlot
 from defdap.inspector import GrainInspector
-from defdap.utils import reportProgress
+from defdap.utils import report_progress
 
 
 class Map(base.Map):
@@ -52,73 +55,51 @@ class Map(base.Map):
         Size of map along x (from header).
     ydim : int
         Size of map along y (from header).
-    xc : numpy.ndarray
-        X coordinates.
-    yc : numpy.ndarray
-        Y coordinates.
-    xd : numpy.ndarray
-        X displacement.
-    yd : numpy.ndarray
-        Y displacement.
+    shape : tuple
+        Size of map (after cropping, like *Dim).
     corrVal : numpy.ndarray
         Correlation value.
-    ebsdMap : defdap.ebsd.Map
+    ebsd_map : defdap.ebsd.Map
         EBSD map linked to DIC map.
-    ebsdTransform : various
-        Transform from EBSD to DIC coordinates.
-    ebsdTransformInv : various
-        Transform from DIC to EBSD coordinates.
-    ebsdGrainIds : list
-        EBSD grain IDs corresponding to DIC map grain IDs.
-    patternImPath : str
-        Path to BSE image of map.
-    plotHomog :
-        Map to use for defining homologous points (defaults to plotMaxShear).
-    highlightAlpha : float
+    highlight_alpha : float
         Alpha (transparency) of grain highlight.
     bseScale : float
         Size of a pixel in the correlated images.
-    patScale : float
-        Size of pixel in loaded pattern relative to pixel size of dic data i.e 1 means they
-        are the same size and 2 means the pixels in the pattern are half the size of the dic data.
     path : str
         File path.
     fname : str
         File name.
-    xDim : int
-        Size of map along x (after cropping).
-    yDim : int
-        Size of map along y (after cropping).
-    self.x_map : numpy.ndarray
-        Map of u displacement component along x.
-    self.y_map : numpy.ndarray
-        Map of v displacement component along x.
-    f11, f22, f12, f21 ; numpy.ndarray
-        Components of the deformation gradient, where 1=x and 2=y.
-    e11, e22, e12 : numpy.ndarray
-        Components of the green strain , where 1=x and 2=y.
-    eMaxShear : numpy.ndarray
-        Max shear component np.sqrt(((e11 - e22) / 2.)**2 + e12**2).
-    cropDists : numpy.ndarray
+    crop_dists : numpy.ndarray
         Crop distances (default all zeros).
 
+    data : defdap.utils.Datastore
+        Must contain after loading data (maps):
+            coordinate : numpy.ndarray
+                X and Y coordinates
+            displacement : numpy.ndarray
+                X and Y displacements
+        Generated data:
+            f : numpy.ndarray
+                Components of the deformation gradient (0=x, 1=y).
+            e : numpy.ndarray
+                Components of the green strain (0=x, 1=y).
+            max_shear : numpy.ndarray
+                Max shear component np.sqrt(((e11 - e22) / 2.)**2 + e12**2).
+        Derived data:
+            Grain list data to map data from all grains
+
     """
-    def __init__(self, path, fname, dataType=None):
+    MAPNAME = 'hrdic'
+
+    def __init__(self, *args, **kwargs):
         """Initialise class and import DIC data from file.
 
         Parameters
         ----------
-        path : str
-            Path to file.
-        fname : str
-            Name of file including extension.
-        dataType : str
-            Type of data file.
+        *args, **kwarg
+            Passed to base constructor
 
         """
-        # Call base class constructor
-        super(Map, self).__init__()
-
         # Initialise variables
         self.format = None      # Software name
         self.version = None     # Software version
@@ -126,227 +107,225 @@ class Map(base.Map):
         self.xdim = None        # size of map along x (from header)
         self.ydim = None        # size of map along y (from header)
 
-        self.xc = None          # x coordinates
-        self.yc = None          # y coordinates
-        self.xd = None          # x displacement
-        self.yd = None          # y displacement
-        
-        self.corrVal = None     # correlation value
+        # Call base class constructor
+        super(Map, self).__init__(*args, **kwargs)
 
-        self.ebsdMap = None                 # EBSD map linked to DIC map
-        self.ebsdTransform = None           # Transform from EBSD to DIC coordinates
-        self.ebsdTransformInv = None        # Transform from DIC to EBSD coordinates
-        self.ebsdGrainIds = None
-        self.patternImPath = None           # Path to BSE image of map
-        self.plotHomog = self.plotMaxShear  # Use max shear map for defining homologous points
-        self.highlightAlpha = 0.6
-        self.bseScale = None                # size of a pixel in the correlated images
-        self.patScale = None                # size of pixel in loaded
-        # pattern relative to pixel size of dic data i.e 1 means they
-        # are the same size and 2 means the pixels in the pattern are
-        # half the size of the dic data.
-        self.path = path                    # file path
-        self.fname = fname                  # file name
+        self.corr_val = None     # correlation value
 
-        self.loadData(path, fname, dataType=dataType)
-  
-        # *dim are full size of data. *Dim are size after cropping
-        self.xDim = self.xdim
-        self.yDim = self.ydim
-        
-        self.x_map = self._map(self.xd)     # u displacement component along x
-        self.y_map = self._map(self.yd)     # v displacement component along x
-        xDispGrad = self._grad(self.x_map)  #d/dy is first term, d/dx is second
-        yDispGrad = self._grad(self.y_map)
+        self.ebsd_map = None                 # EBSD map linked to DIC map
+        self.highlight_alpha = 0.6
+        self.bse_scale = None                # size of pixels in pattern images
+        self.bse_scale = None                # size of pixels in pattern images
+        self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
+
+        self.data.add_generator(
+            'mask', self.calc_mask, unit='', type='map', order=0,
+            cropped=True, apply_mask=False
+        )
 
         # Deformation gradient
-        self.f11 = xDispGrad[1] + 1
-        self.f22 = yDispGrad[0] + 1
-        self.f12 = xDispGrad[0]
-        self.f21 = yDispGrad[1]
-
+        f = np.gradient(self.data.displacement, self.binning, axis=(1, 2))
+        f = np.array(f).transpose((1, 0, 2, 3))[:, ::-1]
+        f[0, 0] += 1
+        f[1, 1] += 1
+        self.data.add(
+            'f', f, unit='', type='map', order=2, default_component=(0, 0),
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Deformation gradient',
+            },
+            apply_mask=True
+        )
         # Green strain
-        self.e11 = xDispGrad[1] + \
-                   0.5*(xDispGrad[1]*xDispGrad[1] + yDispGrad[1]*yDispGrad[1])
-        self.e22 = yDispGrad[0] + \
-                   0.5*(xDispGrad[0]*xDispGrad[0] + yDispGrad[0]*yDispGrad[0])
-        self.e12 = 0.5*(xDispGrad[0] + yDispGrad[1] +
-                        xDispGrad[1]*xDispGrad[0] + yDispGrad[1]*yDispGrad[0])
+        e = 0.5 * (np.einsum('ki...,kj...->ij...', f, f))
+        e[0, 0] -= 0.5
+        e[1, 1] -= 0.5
+        self.data.add(
+            'e', e, unit='', type='map', order=2, default_component=(0, 0),
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Green strain',
+            },
+            apply_mask=True
+        )
         # max shear component
-        self.eMaxShear = np.sqrt(((self.e11 - self.e22) / 2.)**2 + self.e12**2)
+        max_shear = np.sqrt(((e[0, 0] - e[1, 1]) / 2.) ** 2 + e[0, 1] ** 2)
+        self.data.add(
+            'max_shear', max_shear, unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Effective shear strain',
+            },
+            apply_mask=True
+        )
+        # pattern image
+        self.data.add_generator(
+            'pattern', self.load_pattern, unit='', type='map', order=0,
+            save=False, apply_mask=False,
+            plot_params={
+                'cmap': 'gray'
+            }
+        )
+        self.data.add_generator(
+            'grains', self.find_grains, unit='', type='map', order=0,
+            cropped=True, apply_mask=False
+        )
 
-        self.component = {'f11': self.f11, 'f12': self.f12, 'f21': self.f21, 'f22': self.f22,
-                         'e11': self.e11, 'e12': self.e12, 'e22': self.e22,
-                         'eMaxShear': self.eMaxShear,
-                         'x_map': self.x_map, 'y_map': self.y_map}
+        self.plot_default = lambda *args, **kwargs: self.plot_map(
+            map_name='max_shear', plot_gbs=True, *args, **kwargs
+        )
+        self.homog_map_name = 'max_shear'
 
-        # crop distances (default all zeros)
-        self.cropDists = np.array(((0, 0), (0, 0)), dtype=int)
-
-        self.plotDefault = lambda *args, **kwargs: self.plotMaxShear(plotGBs=True, *args, **kwargs)
-    
     @property
-    def crystalSym(self):
-        return self.ebsdMap.crystalSym
+    def original_shape(self):
+        return self.ydim, self.xdim
 
-    @reportProgress("loading HRDIC data")
-    def loadData(self, fileDir, fileName, dataType=None):
+    @property
+    def crystal_sym(self):
+        return self.ebsd_map.crystal_sym
+
+    @report_progress("loading HRDIC data")
+    def load_data(self, file_name, data_type=None):
         """Load DIC data from file.
 
         Parameters
         ----------
-        fileDir : str
-            Path to file.
-        fileName : str
+        file_name : pathlib.Path
             Name of file including extension.
-        dataType : str,  {'DavisText'}
+        data_type : str,  {'Davis', 'OpenPIV'}
             Type of data file.
 
         """
-        dataType = "DavisText" if dataType is None else dataType
+        data_loader = DICDataLoader.get_loader(data_type)
+        data_loader.load(file_name)
 
-        dataLoader = DICDataLoader()
-        if dataType == "DavisText":
-            metadataDict = dataLoader.loadDavisMetadata(fileName, fileDir)
-            dataDict = dataLoader.loadDavisData(fileName, fileDir)
-        else:
-            raise Exception("No loader found for this DIC data.")
+        metadata_dict = data_loader.loaded_metadata
+        self.format = metadata_dict['format']      # Software name
+        self.version = metadata_dict['version']    # Software version
+        self.binning = metadata_dict['binning']    # Sub-window width in pixels
+        # *dim are full size of data. shape (old *Dim) are size after cropping
+        # *dim are full size of data. shape (old *Dim) are size after cropping
+        self.shape = metadata_dict['shape']
+        self.xdim = metadata_dict['shape'][1]      # size of map along x (from header)
+        self.ydim = metadata_dict['shape'][0]      # size of map along y (from header)
 
-        self.format = metadataDict['format']      # Software name
-        self.version = metadataDict['version']    # Software version
-        self.binning = metadataDict['binning']    # Sub-window width in pixels
-        self.xdim = metadataDict['xDim']          # size of map along x (from header)
-        self.ydim = metadataDict['yDim']          # size of map along y (from header)
-
-        self.xc = dataDict['xc']    # x coordinates
-        self.yc = dataDict['yc']    # y coordinates
-        self.xd = dataDict['xd']    # x displacement
-        self.yd = dataDict['yd']    # y displacement
+        self.data.update(data_loader.loaded_data)
 
         # write final status
-        yield "Loaded {0} {1} data (dimensions: {2} x {3} pixels, " \
-              "sub-window size: {4} x {4} pixels)".format(
-            self.format, self.version, self.xdim, self.ydim, self.binning
-        )
-        
-    def loadCorrValData(self, fileDir, fileName, dataType=None):
+        yield (f"Loaded {self.format} {self.version} data "
+               f"(dimensions: {self.xdim} x {self.ydim} pixels, "
+               f"sub-window size: {self.binning} x {self.binning} pixels)")
+
+    def load_corr_val_data(self, file_name, data_type=None):
         """Load correlation value for DIC data
 
         Parameters
         ----------
-        fileDir : str
+        file_name : pathlib.Path or str
             Path to file.
-        fileName : str
-            Name of file including extension.
-        dataType : str,  {'DavisImage'}
+        data_type : str,  {'DavisImage'}
             Type of data file.
 
         """
-        dataType = "DavisImage" if dataType is None else dataType
+        data_type = "DavisImage" if data_type is None else data_type
 
-        dataLoader = DICDataLoader()
-        if dataType == "DavisImage":
-            loadedData = dataLoader.loadDavisImageData(fileName, fileDir)
+        data_loader = DavisLoader()
+        if data_type == "DavisImage":
+            loaded_data = data_loader.load_davis_image_data(Path(file_name))
         else:
             raise Exception("No loader found for this DIC data.")
             
-        self.corrVal = loadedData
+        self.corr_val = loaded_data
         
-        assert self.xdim == self.corrVal.shape[1], \
+        assert self.xdim == self.corr_val.shape[1], \
             "Dimensions of imported data and dic data do not match"
-        assert self.ydim == self.corrVal.shape[0], \
+        assert self.ydim == self.corr_val.shape[0], \
             "Dimensions of imported data and dic data do not match"
 
-    def _map(self, data_col):
-        data_map = np.reshape(np.array(data_col), (self.ydim, self.xdim))
-        return data_map
-
-    def _grad(self, data_map):
-        grad_step = min(abs((np.diff(self.xc))))
-        data_grad = np.gradient(data_map, grad_step, grad_step)
-        return data_grad
-
-    def retrieveName(self):
+    def retrieve_name(self):
         """Gets the first name assigned to the a map, as a string
 
         """
         for fi in reversed(inspect.stack()):
-            names = [var_name for var_name, var_val in fi.frame.f_locals.items() if var_val is self]
+            names = [key for key, val in fi.frame.f_locals.items() if val is self]
             if len(names) > 0:
                 return names[0]
 
-    def setScale(self, micrometrePerPixel):
+    def set_scale(self, scale):
         """Sets the scale of the map.
 
         Parameters
         ----------
-        micrometrePerPixel : float
+        scale : float
             Length of pixel in original BSE image in micrometres.
 
         """
-        self.bseScale = micrometrePerPixel
+        self.bse_scale = scale
 
     @property
     def scale(self):
         """Returns the number of micrometers per pixel in the DIC map.
 
         """
-        if self.bseScale is None:
-            raise ValueError("Map scale not set. Set with setScale()")
+        if self.bse_scale is None:
+            # raise ValueError("Map scale not set. Set with setScale()")
+            return None
 
-        return self.bseScale * self.binning
+        return self.bse_scale * self.binning
 
-    def printStatsTable(self, percentiles, components):
+    def print_stats_table(self, percentiles, components):
         """Print out a statistics table for a DIC map
 
         Parameters
         ----------
-        percentiles : list(float)
+        percentiles : list of float
             list of percentiles to print i.e. 0, 50, 99.
-        components : list(str)
-            list of map components to print i.e. e11, f11, eMaxShear, x_map.
+        components : list of str
+            list of map components to print i.e. e, f, max_shear.
 
         """
 
         # Check that components are valid
-        if set(components).issubset(self.component) is False:
-            strFormat = ('{}, ') * (len(self.component) - 1) + ('{}')
-            raise Exception("Components must be: " + strFormat.format(*self.component))
+        if not set(components).issubset(self.data):
+            str_format = '{}, ' * (len(self.data) - 1) + '{}'
+            raise Exception("Components must be: " + str_format.format(*self.data))
 
         # Print map info
         print('\033[1m', end=''),  # START BOLD
         print("{0} (dimensions: {1} x {2} pixels, sub-window size: {3} "
               "x {3} pixels, number of points: {4})\n".format(
-            self.retrieveName(), self.xDim, self.yDim,
-            self.binning, self.xDim * self.yDim
+            self.retrieve_name(), self.x_dim, self.y_dim,
+            self.binning, self.x_dim * self.y_dim
         ))
 
         # Print header
-        strFormat = ('{:10} ') + (len(percentiles)) * '{:12}'
-        print(strFormat.format(*(['Component'] + percentiles)))
+        str_format = '{:10} ' + '{:12}' * len(percentiles)
+        print(str_format.format('Component', *percentiles))
         print('\033[0m', end='')  # END BOLD
 
         # Print table
-        strFormat = ('{:10} ') + (len(percentiles)) * '{:12.4f}'
+        str_format = '{:10} ' + '{:12.4f}' * len(percentiles)
         for c in components:
-            # Get the values and print in table
-            per = [np.nanpercentile(self.crop(self.component[c]), p) for p in percentiles]
-            print(strFormat.format(*([c] + per)))
+            # Iterate over tensor components (i.e. e11, e22, e12)
+            for i in np.ndindex(self.data[c].shape[:len(np.shape(self.data[c]))-2]):
+                per = [np.nanpercentile(self.data[c][i], p) for p in percentiles]
+                print(str_format.format(c+''.join([str(t+1) for t in i]), *per))
 
-    def setCrop(self, xMin=None, xMax=None, yMin=None, yMax=None, updateHomogPoints=False):
+    def set_crop(self, *, left=None, right=None, top=None, bottom=None,
+                 update_homog_points=False):
         """Set a crop for the DIC map.
 
         Parameters
         ----------
-        xMin : int
-            Distance to crop from left in pixels.
-        xMax : int
-            Distance to crop from right in pixels.
-        yMin : int
-            Distance to crop from top in pixels.
-        yMax : int
-            Distance to crop from bottom in pixels.
-        updateHomogPoints : bool, optional
+        left : int
+            Distance to crop from left in pixels (formally `xMin`)
+        right : int
+            Distance to crop from right in pixels (formally `xMax`)
+        top : int
+            Distance to crop from top in pixels (formally `yMin`)
+        bottom : int
+            Distance to crop from bottom in pixels (formally `yMax`)
+        update_homog_points : bool, optional
             If true, change homologous points to reflect crop.
 
         """
@@ -355,126 +334,76 @@ class Map(base.Map):
         dy = 0
 
         # update crop distances
-        if xMin is not None:
-            if updateHomogPoints:
-                dx = self.cropDists[0, 0] - int(xMin)
-            self.cropDists[0, 0] = int(xMin)
-        if xMax is not None:
-            self.cropDists[0, 1] = int(xMax)
-        if yMin is not None:
-            if updateHomogPoints:
-                dy = self.cropDists[1, 0] - int(yMin)
-            self.cropDists[1, 0] = int(yMin)
-        if yMax is not None:
-            self.cropDists[1, 1] = int(yMax)
+        if left is not None:
+            left = int(left)
+            dx = self.crop_dists[0, 0] - left
+            self.crop_dists[0, 0] = left
+        if right is not None:
+            self.crop_dists[0, 1] = int(right)
+        if top is not None:
+            top = int(top)
+            dy = self.crop_dists[1, 0] - top
+            self.crop_dists[1, 0] = top
+        if bottom is not None:
+            self.crop_dists[1, 1] = int(bottom)
 
         # update homogo points if required
-        if updateHomogPoints and (dx != 0 or dy != 0):
-            self.updateHomogPoint(homogID=-1, delta=(dx, dy))
+        if update_homog_points and (dx != 0 or dy != 0):
+            self.frame.update_homog_points(homog_idx=-1, delta=(dx, dy))
 
         # set new cropped dimensions
-        self.xDim = self.xdim - self.cropDists[0, 0] - self.cropDists[0, 1]
-        self.yDim = self.ydim - self.cropDists[1, 0] - self.cropDists[1, 1]
+        x_dim = self.xdim - self.crop_dists[0, 0] - self.crop_dists[0, 1]
+        y_dim = self.ydim - self.crop_dists[1, 0] - self.crop_dists[1, 1]
+        self.shape = (y_dim, x_dim)
 
-    def crop(self, mapData, binned=True):
+    def crop(self, map_data, binning=None):
         """ Crop given data using crop parameters stored in map
         i.e. cropped_data = DicMap.crop(DicMap.data_to_crop).
 
         Parameters
         ----------
-        mapData : numpy.ndarray
+        map_data : numpy.ndarray
             Bap data to crop.
-        binned : bool
+        binning : int
             True if mapData is binned i.e. binned BSE pattern.
         """
-        if binned:
-            multiplier = 1
-        else:
-            multiplier = self.patScale
+        binning = 1 if binning is None else binning
 
-        minY = int(self.cropDists[1, 0] * multiplier)
-        maxY = int((self.ydim - self.cropDists[1, 1]) * multiplier)
+        min_y = int(self.crop_dists[1, 0] * binning)
+        max_y = int((self.ydim - self.crop_dists[1, 1]) * binning)
 
-        minX = int(self.cropDists[0, 0] * multiplier)
-        maxX = int((self.xdim - self.cropDists[0, 1]) * multiplier)
+        min_x = int(self.crop_dists[0, 0] * binning)
+        max_x = int((self.xdim - self.crop_dists[0, 1]) * binning)
 
-        return mapData[minY:maxY, minX:maxX]
+        return map_data[..., min_y:max_y, min_x:max_x]
 
-    def setHomogPoint(self, points=None, display=None, **kwargs):
-        """Set homologous points. Uses interactive GUI if points is None.
-
-        Parameters
-        ----------
-
-        points : list, optional
-            homologous points to set.
-        display : string, optional
-            Use max shear map if set to 'maxshear' or pattern if set to 'pattern'.
-
-        """        
-        if points is not None:
-            self.homogPoints = points
-            
-        if points is None:
-            if display is None:
-                display = "maxshear"
-
-            # Set plot dafault to display selected image
-            display = display.lower().replace(" ", "")
-            if display == "bse" or display == "pattern":
-                self.plotHomog = self.plotPattern
-                binSize = self.patScale
-            else:
-                self.plotHomog = self.plotMaxShear
-                binSize = 1
-
-            # Call set homog points from base class setting the bin size
-            super(type(self), self).setHomogPoint(binSize=binSize, points=points, **kwargs)
-
-    def linkEbsdMap(self, ebsdMap, transformType="affine", **kwargs):
+    def link_ebsd_map(self, ebsd_map, transform_type="affine", **kwargs):
         """Calculates the transformation required to align EBSD dataset to DIC.
 
         Parameters
         ----------
-        ebsdMap : defdap.ebsd.Map
+        ebsd_map : defdap.ebsd.Map
             EBSD map object to link.
-        transformType : str, optional
+        transform_type : str, optional
             affine, piecewiseAffine or polynomial.
         kwargs
             All arguments are passed to `estimate` method of the transform.
 
         """
-        self.ebsdMap = ebsdMap
-        calc_inv = False
-        if transformType.lower() == "piecewiseaffine":
-            self.ebsdTransform = tf.PiecewiseAffineTransform()
-        elif transformType.lower() == "projective":
-            self.ebsdTransform = tf.ProjectiveTransform()
-        elif transformType.lower() == "polynomial":
-            calc_inv = True
-            self.ebsdTransform = tf.PolynomialTransform()
-            self.ebsdTransformInv = tf.PolynomialTransform()
-        else:
-            # default to using affine
-            self.ebsdTransform = tf.AffineTransform()
-
-        # calculate transform from EBSD to DIC frame
-        self.ebsdTransform.estimate(
-            np.array(self.homogPoints),
-            np.array(self.ebsdMap.homogPoints),
-            **kwargs
+        self.ebsd_map = ebsd_map
+        kwargs.update({'type': transform_type.lower()})
+        self.experiment.link_frames(self.frame, ebsd_map.frame, kwargs)
+        self.data.add_derivative(
+            self.ebsd_map.data,
+            lambda boundaries: BoundarySet.from_ebsd_boundaries(
+                self, boundaries
+            ),
+            in_props={
+                'type': 'boundaries'
+            }
         )
-        # Calculate inverse if required
-        if calc_inv:
-            self.ebsdTransformInv.estimate(
-                np.array(self.ebsdMap.homogPoints),
-                np.array(self.homogPoints),
-                **kwargs
-            )
-        else:
-            self.ebsdTransformInv = self.ebsdTransform.inverse
 
-    def checkEbsdLinked(self):
+    def check_ebsd_linked(self):
         """Check if an EBSD map has been linked.
 
         Returns
@@ -488,23 +417,19 @@ class Map(base.Map):
             If EBSD map not linked.
 
         """
-        if self.ebsdMap is None:
+        if self.ebsd_map is None:
             raise Exception("No EBSD map linked.")
         return True
 
-    def warpToDicFrame(self, mapData, cropImage=True, order=1, preserve_range=False):
+    def warp_to_dic_frame(self, map_data, **kwargs):
         """Warps a map to the DIC frame.
 
         Parameters
         ----------
-        mapData : numpy.ndarray
+        map_data : numpy.ndarray
             Data to warp.
-        cropImage : bool, optional
-            Crop to size of DIC map if true.
-        order : int, optional
-            Order of interpolation (0: Nearest-neighbor, 1: Bi-linear...).
-        preserve_range: bool, optional
-            Keep the original range of values.
+        kwargs
+            All other arguments passed to :func:`defdap.experiment.Experiment.warp_map`.
 
         Returns
         ----------
@@ -513,292 +438,111 @@ class Map(base.Map):
 
         """
         # Check a EBSD map is linked
-        self.checkEbsdLinked()
+        self.check_ebsd_linked()
+        return self.experiment.warp_image(
+            map_data, self.ebsd_map.frame, self.frame, output_shape=self.shape,
+            **kwargs
+        )
 
-        if (cropImage or type(self.ebsdTransform) is not tf.AffineTransform):
-            # crop to size of DIC map
-            outputShape = (self.yDim, self.xDim)
-            # warp the map
-            warpedMap = tf.warp(
-                mapData, self.ebsdTransform,
-                output_shape=outputShape,
-                order=order, preserve_range=preserve_range
-            )
-        else:
-            # copy ebsd transform and change translation to give an extra
-            # 5% border to show the entire image after rotation/shearing
-            tempEbsdTransform = tf.AffineTransform(matrix=np.copy(self.ebsdTransform.params))
-            tempEbsdTransform.params[0:2, 2] = -0.05 * np.array(mapData.shape)
-
-            # output the entire warped image with 5% border (add some
-            # extra to fix a bug)
-            outputShape = np.array(mapData.shape) * 1.4 / tempEbsdTransform.scale
-
-            # warp the map
-            warpedMap = tf.warp(
-                mapData, tempEbsdTransform,
-                output_shape=outputShape.astype(int),
-                order=order, preserve_range=preserve_range
-            )
-
-        return warpedMap
-
-    def warp_lines_to_dic_frame(self, lines):
-        """Warp a set of lines to the DIC reference frame.
+    def calc_mask(self, mask=None, dilation=0):
+        """
+        Generate a dilated mask, based on a boolean array.
 
         Parameters
         ----------
-        lines : list of tuples
-            Lines to warp. Each line is represented as a tuple of start
-            and end coordinates (x, y).
-
-        Returns
-        -------
-        list of tuples
-            List of warped lines with same representation as input.
-
-        """
-        # Flatten to coord list
-        lines = np.array(lines).reshape(-1, 2)
-        # Transform & reshape back
-        lines = self.ebsdTransformInv(lines).reshape(-1, 2, 2)
-        # Round to nearest
-        lines = np.round(lines - 0.5) + 0.5
-        lines = [(tuple(l[0]), tuple(l[1])) for l in lines]
-
-        return lines
-
-    @property
-    def boundaries(self):
-        """Returns EBSD map grain boundaries warped to DIC frame.
-
-        """
-        # Check a EBSD map is linked
-        self.checkEbsdLinked()
-
-        # image is returned cropped if a piecewise transform is being used
-        boundaries = self.ebsdMap.boundaries
-        boundaries = self.warpToDicFrame(
-            -boundaries.astype(float), cropImage=False
-        )
-        boundaries = boundaries > 0.1
-        boundaries = mph.skeletonize(boundaries)
-        boundaries = mph.remove_small_objects(
-            boundaries, min_size=10, connectivity=2
-        )
-
-        # crop image if it is a simple affine transform
-        if type(self.ebsdTransform) is tf.AffineTransform:
-            # need to apply the translation of ebsd transform and
-            # remove 5% border
-            crop = np.copy(self.ebsdTransform.params[0:2, 2])
-            crop += 0.05 * np.array(self.ebsdMap.boundaries.shape)
-            # the crop is defined in EBSD coords so need to transform it
-            transformMatrix = np.copy(self.ebsdTransform.params[0:2, 0:2])
-            crop = np.matmul(np.linalg.inv(transformMatrix), crop)
-            crop = crop.round().astype(int)
-
-            boundaries = boundaries[crop[1]:crop[1] + self.yDim,
-                                    crop[0]:crop[0] + self.xDim]
-
-        return -boundaries.astype(int)
-
-    @property
-    def boundaryLines(self):
-        return self.warp_lines_to_dic_frame(self.ebsdMap.boundaryLines)
-
-    @property
-    def phaseBoundaryLines(self):
-        return self.warp_lines_to_dic_frame(self.ebsdMap.phaseBoundaryLines)
-
-    def generateThresholdMask(self, mask, dilation=0, preview=True):
-        """
-        Generate a dilated mask, based on a boolean array and previews the appication of
-        this mask to the max shear map.
-
-        Parameters
-        ----------
-        mask: numpy.array(bool)
-            A boolean array where points to be removed are True
+        mask: numpy.array(bool) or None
+            A boolean array where points to be removed are True. Set to None to disable masking.
         dilation: int, optional
             Number of pixels to dilate the mask by. Useful to remove anomalous points
             around masked values. No dilation applied if not specified.
-        preview: bool
-            If true, show the mask and preview the masked effective shear strain map.
 
         Examples
         ----------
-        To remove data points in dicMap where eMaxShear is above 0.8, use:
+        
+        To disable masking:
 
-        >>> mask = dicMap.eMaxShear > 0.8
+        >>> mask = None
+               
+        To remove data points in dic_map where `max_shear` is above 0.8, use:
+        
+        >>> mask = dic_map.data.max_shear > 0.8
 
-        To remove data points in dicMap where e11 is above 1 or less than -1, use:
+        To remove data points in dic_map where e11 is above 1 or less than -1, use:
 
-        >>> mask = (dicMap.e11 > 1) | (dicMap.e11 < -1)
+        >>> mask = (dic_map.data.e[0, 0] > 1) | (dic_map.data.e[0, 0] < -1)
 
-        To remove data points in dicMap where corrVal is less than 0.4, use:
+        To remove data points in dic_map where corrVal is less than 0.4, use:
 
-        >>> mask = dicMap.corrVal < 0.4
+        >>> mask = dic_map.corr_val < 0.4
 
         Note: correlation value data needs to be loaded seperately from the DIC map,
-        see :func:`defdap.hrdic.loadCorrValData`
+        see :func:`defdap.hrdic.load_corr_val_data`
 
         """
-        self.mask = mask
+        if mask is None:
+            self.data.mask = None
+            return mask
+        
+        if not isinstance(mask, np.ndarray) or mask.shape != self.shape:
+            raise ValueError('The mask must be a numpy array the same shape as '
+                             'the cropped map.')
 
         if dilation != 0:
-            self.mask = binary_dilation(self.mask, iterations=dilation)
+            mask = binary_dilation(mask, iterations=dilation)
 
-        numRemoved = np.sum(self.mask)
-        numTotal = self.xdim * self.ydim
-        numRemovedCrop = np.sum(self.crop(self.mask))
-        numTotalCrop = self.xDim * self.yDim
+        num_removed = np.sum(mask)
+        num_total = self.shape[0] * self.shape[1]
+        frac_removed = num_removed / num_total * 100
+        print(f'Masking will mask {num_removed} out of {num_total} '
+              f'({frac_removed:.2f} %) datapoints in cropped map.')
+        
+        self.data.mask = mask
 
-        print('Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in map'
-              .format(numRemoved, numTotal, (numRemoved / numTotal) * 100))
-        print(
-            'Filtering will remove {0} \ {1} ({2:.3f} %) datapoints in cropped map'
-            .format(numRemovedCrop, numTotalCrop,
-                    (numRemovedCrop / numTotalCrop * 100)))
+        return mask
 
-        if preview == True:
-            plot1 = MapPlot.create(self, self.crop(self.mask), cmap='binary')
-            plot1.setTitle('Removed datapoints in black')
-            plot2 = MapPlot.create(self,
-                                   self.crop(
-                                       np.where(self.mask == True, np.nan,
-                                                self.eMaxShear)),
-                                   plotColourBar='True',
-                                   clabel="Effective shear strain")
-            plot2.setTitle('Effective shear strain preview')
-        print(
-            'Use applyThresholdMask function to apply this filtering to data')
-
-    def applyThresholdMask(self):
-        """ Apply mask to all DIC map data by setting masked values to nan.
-
+    def mask(self, map_data):
+        """ Values set to False in mask will be set to nan in map.
         """
-        self.eMaxShear = np.where(self.mask == True, np.nan, self.eMaxShear)
+        if self.data.mask is None:
+            return map_data
+        else:
+            return np.ma.array(map_data, 
+                            mask=np.broadcast_to(self.data.mask, np.shape(map_data)))
 
-        self.e11 = np.where(self.mask == True, np.nan, self.e11)
-        self.e12 = np.where(self.mask == True, np.nan, self.e12)
-        self.e22 = np.where(self.mask == True, np.nan, self.e22)
-
-        self.f11 = np.where(self.mask == True, np.nan, self.f11)
-        self.f12 = np.where(self.mask == True, np.nan, self.f12)
-        self.f22 = np.where(self.mask == True, np.nan, self.f22)
-
-        self.x_map = np.where(self.mask == True, np.nan, self.x_map)
-        self.y_map = np.where(self.mask == True, np.nan, self.y_map)
-
-        self.component = {'f11': self.f11, 'f12': self.f12, 'f21': self.f21,
-                          'f22': self.f22,
-                          'e11': self.e11, 'e12': self.e12, 'e22': self.e22,
-                          'eMaxShear': self.eMaxShear,
-                          'x_map': self.x_map, 'y_map': self.y_map}
-
-    def setPatternPath(self, filePath, windowSize):
+    def set_pattern(self, img_path, window_size):
         """Set the path to the image of the pattern.
 
         Parameters
         ----------
-        filePath : str
+        path : str
             Path to image.
-        windowSize : float
+        window_size : int
             Size of pixel in pattern image relative to pixel size of DIC data
             i.e 1 means they  are the same size and 2 means the pixels in
             the pattern are half the size of the dic data.
 
         """
-        self.patternImPath = self.path + filePath
-        self.patScale = windowSize
+        path = self.file_name.parent / img_path
+        self.data['pattern', 'path'] = path
+        self.data['pattern', 'binning'] = window_size
 
-    def plotPattern(self, **kwargs):
-        """Plot BSE image of Map. For use with setting homog points.
+    def load_pattern(self):
+        print('Loading img')
+        path = self.data.get_metadata('pattern', 'path')
+        binning = self.data.get_metadata('pattern', 'binning', 1)
+        if path is None:
+            raise FileNotFoundError("First set path to pattern image.")
 
-        Parameters
-        ----------
-        kwargs
-            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+        img = imread(path)
+        exp_shape = tuple(v * binning for v in self.original_shape)
+        if img.shape != exp_shape:
+            raise ValueError(
+                f'Incorrect size of pattern image. For binning of {binning} '
+                f'expected size {exp_shape[::-1]} but got {img.shape[::-1]}'
+            )
+        return img
 
-        Returns
-        -------
-        defdap.plotting.MapPlot
-
-        """
-        # Set default plot parameters then update with any input
-        plotParams = {
-            'cmap': 'gray'
-        }
-        try:
-            plotParams['scale'] = self.scale / self.patScale * 1e-6
-        except(ValueError):
-            pass
-        plotParams.update(kwargs)
-
-        # Check image path is set
-        if self.patternImPath is None:
-            raise Exception("First set path to pattern image.")
-
-        bseImage = imread(self.patternImPath)
-        bseImage = self.crop(bseImage, binned=False)
-
-        plot = MapPlot.create(self, bseImage, **plotParams)
-
-        return plot
-
-    def plotMap(self, component, **kwargs):
-        """Plot a map from the DIC data.
-
-        Parameters
-        ----------
-        component
-            Map component to plot i.e. e11, f11, eMaxShear.
-        kwargs
-            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
-
-        Returns
-        -------
-        defdap.plotting.MapPlot
-            Plot containing map.
-
-        """
-        # Set default plot parameters then update with any input
-        plotParams = {
-            'plotColourBar': True,
-            'clabel': component
-        }
-        plotParams.update(kwargs)
-
-        plot = MapPlot.create(self, self.crop(self.component[component]), **plotParams)
-
-        return plot
-
-    def plotMaxShear(self, **kwargs):
-        """Plot a map of maximum shear strain.
-
-        Parameters
-        ----------
-        kwargs
-            All arguments are passed to :func:`defdap.hrdic.plotMap`.
-
-        Returns
-        -------
-        defdap.plotting.MapPlot
-            Plot containing map.
-
-        """
-
-        params = {
-            'clabel': 'Effective Shear Strain'
-        }
-        params.update(kwargs)
-
-        plot = self.plotMap('eMaxShear', **params)
-
-        return plot
-
-    def plotGrainAvMaxShear(self, **kwargs):
+    def plot_grain_av_max_shear(self, **kwargs):
         """Plot grain map with grains filled with average value of max shear.
         This uses the max shear values stored in grain objects, to plot other data
         use :func:`~defdap.hrdic.Map.plotGrainAv`.
@@ -806,108 +550,112 @@ class Map(base.Map):
         Parameters
         ----------
         kwargs
-            All arguments are passed to :func:`defdap.base.Map.plotGrainDataMap`.
+            All arguments are passed to :func:`defdap.base.Map.plot_grain_data_map`.
 
         """
         # Set default plot parameters then update with any input
-        plotParams = {
+        plot_params = {
             'clabel': "Effective shear strain"
         }
-        plotParams.update(kwargs)
+        plot_params.update(kwargs)
 
-        plot = self.plotGrainDataMap(
-            mapData=self.crop(self.eMaxShear), **plotParams
+        plot = self.plot_grain_data_map(
+            map_data=self.data.max_shear, **plot_params
         )
 
         return plot
 
-    @reportProgress("finding grains")
-    def findGrains(self, algorithm=None, minGrainSize=10):
+    @report_progress("finding grains")
+    def find_grains(self, algorithm=None, min_grain_size=10):
         """Finds grains in the DIC map.
 
         Parameters
         ----------
         algorithm : str {'warp', 'floodfill'}
             Use floodfill or warp algorithm.
-        minGrainSize : int
+        min_grain_size : int
             Minimum grain area in pixels for floodfill algorithm.
         """
         # Check a EBSD map is linked
-        self.checkEbsdLinked()
+        self.check_ebsd_linked()
 
         if algorithm is None:
             algorithm = defaults['hrdic_grain_finding_method']
+        algorithm = algorithm.lower()
+
+        grain_list = []
+        group_id = Datastore.generate_id()
 
         if algorithm == 'warp':
             # Warp EBSD grain map to DIC frame
-            self.grains = self.warpToDicFrame(self.ebsdMap.grains, cropImage=True,
-                                              order=0, preserve_range=True)
+            grains = self.warp_to_dic_frame(
+                self.ebsd_map.data.grains, order=0, preserve_range=True
+            )
 
             # Find all unique values (these are the EBSD grain IDs in the DIC area, sorted)
-            self.ebsdGrainIds = np.array([int(i) for i in np.unique(self.grains) if i>0])
-
-            # Make a new list of sequential IDs of same length as number of grains
-            dicGrainIds = np.arange(1, len(self.ebsdGrainIds)+1)
+            ebsd_grain_ids = np.unique(grains)
+            neg_vals = ebsd_grain_ids[ebsd_grain_ids <= 0]
+            ebsd_grain_ids = ebsd_grain_ids[ebsd_grain_ids > 0]
 
             # Map the EBSD IDs to the DIC IDs (keep the same mapping for values <= 0)
-            negVals = np.array([i for i in np.unique(self.grains) if i<=0])
-            old = np.concatenate((negVals, self.ebsdGrainIds))
-            new = np.concatenate((negVals, dicGrainIds))
-            index = np.digitize(self.grains.ravel(), old, right=True)
-            self.grains = new[index].reshape(self.grains.shape)
+            old = np.concatenate((neg_vals, ebsd_grain_ids))
+            new = np.concatenate((neg_vals, np.arange(1, len(ebsd_grain_ids) + 1)))
+            index = np.digitize(grains.ravel(), old, right=True)
+            grains = new[index].reshape(self.shape)
+            grainprops = measure.regionprops(grains)
+            props_dict = {prop.label: prop for prop in grainprops}
 
-            self.grainList = []
-            for i, (dicGrainId, ebsdGrainId) in enumerate(zip(dicGrainIds, self.ebsdGrainIds)):
-                yield i / len(dicGrainIds)          # Report progress
+            for dic_grain_id, ebsd_grain_id in enumerate(ebsd_grain_ids):
+                yield dic_grain_id / len(ebsd_grain_ids)
 
                 # Make grain object
-                currentGrain = Grain(grainID=dicGrainId, dicMap=self)
+                grain = Grain(dic_grain_id, self, group_id)
 
                 # Find (x,y) coordinates and corresponding max shears of grain
-                coords = np.argwhere(self.grains == dicGrainId)       # (y,x)
-                currentGrain.coordList = np.flip(coords, axis=1)      # (x,y)
-                currentGrain.maxShearList = self.eMaxShear[coords[:,0]+ self.cropDists[1, 0], 
-                                                           coords[:,1]+ self.cropDists[0, 0]]
+                coords = props_dict[dic_grain_id + 1].coords  # (y, x)
+                grain.data.point = np.flip(coords, axis=1)  # (x, y)
 
                 # Assign EBSD grain ID to DIC grain and increment grain list
-                currentGrain.ebsdGrainId = ebsdGrainId - 1
-                currentGrain.ebsdGrain = self.ebsdMap.grainList[ebsdGrainId - 1]
-                currentGrain.ebsdMap = self.ebsdMap
-                self.grainList.append(currentGrain)
+                grain.ebsd_grain = self.ebsd_map[ebsd_grain_id - 1]
+                grain.ebsd_map = self.ebsd_map
+                grain_list.append(grain)
 
         elif algorithm == 'floodfill':
             # Initialise the grain map
-            self.grains = np.copy(self.boundaries)
-
-            self.grainList = []
+            grains = -np.copy(self.data.grain_boundaries.image.astype(int))
 
             # List of points where no grain has been set yet
-            points_left = self.grains == 0
+            points_left = grains == 0
+            coords_buffer = np.zeros((points_left.size, 2), dtype=np.intp)
             total_points = points_left.sum()
             found_point = 0
             next_point = points_left.tobytes().find(b'\x01')
 
             # Start counter for grains
-            grainIndex = 1
-
+            grain_index = 1
             # Loop until all points (except boundaries) have been assigned
             # to a grain or ignored
             i = 0
             while found_point >= 0:
                 # Flood fill first unknown point and return grain object
-                idx = np.unravel_index(next_point, self.grains.shape)
-                currentGrain = self.floodFill(idx[1], idx[0], grainIndex,
-                                              points_left)
+                seed = np.unravel_index(next_point, self.shape)
 
-                if len(currentGrain) < minGrainSize:
+                grain = Grain(grain_index - 1, self, group_id)
+                grain.data.point = flood_fill_dic(
+                    (seed[1], seed[0]), grain_index, points_left,
+                    grains, coords_buffer
+                )
+                coords_buffer = coords_buffer[len(grain.data.point):]
+
+                if len(grain) < min_grain_size:
                     # if grain size less than minimum, ignore grain and set
                     # values in grain map to -2
-                    for coord in currentGrain.coordList:
-                        self.grains[coord[1], coord[0]] = -2
+                    for point in grain.data.point:
+                        grains[point[1], point[0]] = -2
                 else:
                     # add grain to list and increment grain index
-                    self.grainList.append(currentGrain)
-                    grainIndex += 1
+                    grain_list.append(grain)
+                    grain_index += 1
 
                 # find next search point
                 points_left_sub = points_left.reshape(-1)[next_point + 1:]
@@ -922,113 +670,55 @@ class Map(base.Map):
 
             # Now link grains to those in ebsd Map
             # Warp DIC grain map to EBSD frame
-            dicGrains = self.grains
-            warpedDicGrains = tf.warp(
-                np.ascontiguousarray(dicGrains.astype(float)),
-                self.ebsdTransformInv,
-                output_shape=(self.ebsdMap.yDim, self.ebsdMap.xDim),
-                order=0
+            warped_dic_grains = self.experiment.warp_image(
+                grains.astype(float), self.frame, self.ebsd_map.frame,
+                output_shape=self.ebsd_map.shape, order=0
             ).astype(int)
-
-            # Initialise list to store ID of corresponding grain in EBSD map.
-            # Also stored in grain objects
-            self.ebsdGrainIds = []
-
-            for i in range(len(self)):
+            for i, grain in enumerate(grain_list):
                 # Find grain by masking the native ebsd grain image with
                 # selected grain from the warped dic grain image. The modal
                 # value is the EBSD grain label.
-                modeId, _ = mode(self.ebsdMap.grains[warpedDicGrains == i + 1], keepdims=False)
-                ebsd_grain_idx = modeId - 1
-                self.ebsdGrainIds.append(ebsd_grain_idx)
-                self[i].ebsdGrainId = ebsd_grain_idx
-                self[i].ebsdGrain = self.ebsdMap[ebsd_grain_idx]
-                self[i].ebsdMap = self.ebsdMap
+                mode_id, _ = mode(
+                    self.ebsd_map.data.grains[warped_dic_grains == i+1],
+                    keepdims=False
+                )
+                grain.ebsd_grain = self.ebsd_map[mode_id - 1]
+                grain.ebsd_map = self.ebsd_map
 
         else:
             raise ValueError(f"Unknown grain finding algorithm '{algorithm}'.")
 
-    def floodFill(self, x, y, grainIndex, points_left):
-        """Flood fill algorithm that uses the combined x and y boundary array 
-        to fill a connected area around the seed point. The points are inserted
-        into a grain object and the grain map array is updated.
+        ## TODO: this will get duplicated if find grains called again
+        self.data.add_derivative(
+            grain_list[0].data, self.grain_data_to_map, pass_ref=True,
+            in_props={
+                'type': 'list'
+            },
+            out_props={
+                'type': 'map'
+            }
+        )
 
-        Parameters
-        ----------
-        x : int
-            Seed point x for flood fill
-        y : int
-            Seed point y for flood fill
-        grainIndex : int
-            Value to fill in grain map
-        points_left : numpy.ndarray
-            Boolean map of the points that have not been assigned a grain yet
+        self._grains = grain_list
+        return grains
 
-        Returns
-        -------
-        currentGrain : defdap.hrdic.Grain
-            New grain object with points added
-
-        """
-        # create new grain
-        currentGrain = Grain(grainIndex - 1, self)
-
-        # add first point to the grain
-        currentGrain.addPoint((x, y), self.eMaxShear[y + self.cropDists[1, 0],
-                                                     x + self.cropDists[0, 0]])
-        self.grains[y, x] = grainIndex
-        points_left[y, x] = False
-        edge = [(x, y)]
-
-        while edge:
-            x, y = edge.pop(0)
-
-            moves = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
-            # get rid of any that go out of the map area
-            if x <= 0:
-                moves.pop(1)
-            elif x >= self.xDim - 1:
-                moves.pop(0)
-            if y <= 0:
-                moves.pop(-1)
-            elif y >= self.yDim - 1:
-                moves.pop(-2)
-
-            for (s, t) in moves:
-                addPoint = False
-
-                if self.grains[t, s] == 0:
-                    addPoint = True
-                    edge.append((s, t))
-
-                elif self.grains[t, s] == -1 and (s > x or t > y):
-                    addPoint = True
-
-                if addPoint:
-                    currentGrain.addPoint(
-                        (s, t),
-                        self.eMaxShear[t + self.cropDists[1, 0],
-                                       s + self.cropDists[0, 0]]
-                    )
-                    self.grains[t, s] = grainIndex
-                    points_left[t, s] = False
-
-        return currentGrain
-
-    def runGrainInspector(self, vmax=0.1, corrAngle=0):
+    def grain_inspector(self, vmax=0.1, correction_angle=0, rdr_line_length=3):
         """Run the grain inspector interactive tool.
 
         Parameters
         ----------
         vmax : float
             Maximum value of the colour map.
-        corrAngle: float
+        correction_angle: float
             Correction angle in degrees to subtract from measured angles to account
             for small rotation between DIC and EBSD frames. Approximately the rotation
             component of affine transform.
+        rdr_line_length: int
+            Length of lines perpendicular to slip trace used to calculate RDR.
 
         """
-        GrainInspector(currMap=self, vmax=vmax, corrAngle=corrAngle)
+        GrainInspector(selected_dic_map=self, vmax=vmax, correction_angle=correction_angle,
+                       rdr_line_length=rdr_line_length)
 
 
 class Grain(base.Grain):
@@ -1044,67 +734,44 @@ class Grain(base.Grain):
         DIC map this grain is a member of
     maxShearList : list
         List of maximum shear values for grain.
-    ebsdGrain : defdap.ebsd.Grain
+    ebsd_grain : defdap.ebsd.Grain
         EBSD grain ID that this DIC grain corresponds to.
-    ebsdMap : defdap.ebsd.Map
+    ebsd_map : defdap.ebsd.Map
         EBSD map that this DIC grain belongs to.
-    pointsList : numpy.ndarray
+    points_list : numpy.ndarray
         Start and end points for lines drawn using defdap.inspector.GrainInspector.
-    groupsList :
+    groups_list :
         Groups, angles and slip systems detected for
         lines drawn using defdap.inspector.GrainInspector.
 
+    data : defdap.utils.Datastore
+        Must contain after creating:
+            point : list of tuples
+                (x, y) in cropped map
+        Generated data:
+
+        Derived data:
+            Map data to list data from the map the grain is part of
+
     """
-    def __init__(self, grainID, dicMap):
+    def __init__(self, grain_id, dicMap, group_id):
         # Call base class constructor
-        super(Grain, self).__init__(grainID, dicMap)
+        super(Grain, self).__init__(grain_id, dicMap, group_id)
 
-        self.dicMap = self.ownerMap     # DIC map this grain is a member of
-        self.maxShearList = []
-        self.ebsdGrain = None
-        self.ebsdMap = None
+        self.dic_map = self.owner_map     # DIC map this grain is a member of
+        self.ebsd_grain = None
+        self.ebsd_map = None
 
-        self.pointsList = []            # Lines drawn for STA
-        self.groupsList = []            # Unique angles drawn for STA
+        self.points_list = []            # Lines drawn for STA
+        self.groups_list = []            # Unique angles drawn for STA
 
-    @property
-    def plotDefault(self):
-        return lambda *args, **kwargs: self.plotMaxShear(
-            plotColourBar=True, plotScaleBar=True, plotSlipTraces=True,
-            plotSlipBands=True, *args, **kwargs
+        self.plot_default = lambda *args, **kwargs: self.plot_map(
+            'max_shear', plot_colour_bar=True, plot_scale_bar=True, 
+            plot_slip_traces=True, plot_slip_bands=True, *args, **kwargs
         )
 
-    # coord is a tuple (x, y)
-    def addPoint(self, coord, maxShear):
-        self.coordList.append(coord)
-        self.maxShearList.append(maxShear)
-
-    def plotMaxShear(self, **kwargs):
-        """Plot a maximum shear map for a grain.
-
-        Parameters
-        ----------
-        kwargs
-            All arguments are passed to :func:`defdap.base.plotGrainData`.
-
-        Returns
-        -------
-        defdap.plotting.GrainPlot
-
-        """
-        # Set default plot parameters then update with any input
-        plotParams = {
-            'plotColourBar': True,
-            'clabel': "Effective shear strain"
-        }
-        plotParams.update(kwargs)
-
-        plot = self.plotGrainData(grainData=self.maxShearList, **plotParams)
-
-        return plot
-
     @property
-    def refOri(self):
+    def ref_ori(self):
         """Returns average grain orientation.
 
         Returns
@@ -1112,10 +779,10 @@ class Grain(base.Grain):
         defdap.quat.Quat
 
         """
-        return self.ebsdGrain.refOri
+        return self.ebsd_grain.ref_ori
 
     @property
-    def slipTraces(self):
+    def slip_traces(self):
         """Returns list of slip trace angles based on EBSD grain orientation.
 
         Returns
@@ -1123,24 +790,24 @@ class Grain(base.Grain):
         list
 
         """
-        return self.ebsdGrain.slipTraces
+        return self.ebsd_grain.slip_traces
 
-    def calcSlipTraces(self, slipSystems=None):
+    def calc_slip_traces(self, slip_systems=None):
         """Calculates list of slip trace angles based on EBSD grain orientation.
 
         Parameters
         -------
-        slipSystems : defdap.crystal.SlipSystem, optional
+        slip_systems : defdap.crystal.SlipSystem, optional
 
         """
-        self.ebsdGrain.calcSlipTraces(slipSystems=slipSystems)
+        self.ebsd_grain.calc_slip_traces(slip_systems=slip_systems)
 
-    def calcSlipBands(self, grainMapData, thres=None, min_dist=None):
+    def calc_slip_bands(self, grain_map_data, thres=None, min_dist=None):
         """Use Radon transform to detect slip band angles.
 
         Parameters
         ----------
-        grainMapData : numpy.ndarray
+        grain_map_data : numpy.ndarray
             Data to find bands in.
         thres : float, optional
             Normalised threshold for peaks.
@@ -1157,35 +824,71 @@ class Grain(base.Grain):
             thres = 0.3
         if min_dist is None:
             min_dist = 30
-        grainMapData = np.nan_to_num(grainMapData)
+        grain_map_data = np.nan_to_num(grain_map_data)
 
-        if grainMapData.min() < 0:
+        if grain_map_data.min() < 0:
             print("Negative values in data, taking absolute value.")
-            # grainMapData = grainMapData**2
-            grainMapData = np.abs(grainMapData)
-        suppGMD = np.zeros(grainMapData.shape) #array to hold shape / support of grain
-        suppGMD[grainMapData!=0]=1
-        sin_map = tf.radon(grainMapData, circle=False)
+            # grain_map_data = grain_map_data**2
+            grain_map_data = np.abs(grain_map_data)
+        # array to hold shape / support of grain
+        supp_gmd = np.zeros(grain_map_data.shape)
+        supp_gmd[grain_map_data != 0]=1
+        sin_map = tf.radon(grain_map_data, circle=False)
         #profile = np.max(sin_map, axis=0) # old method
-        supp_map = tf.radon(suppGMD, circle=False)
+        supp_map = tf.radon(supp_gmd, circle=False)
         supp_1 = np.zeros(supp_map.shape)
         supp_1[supp_map>0]=1
-        mindiam = np.min(np.sum(supp_1, axis=0), axis=0) # minimum diameter of grain
+        # minimum diameter of grain
+        mindiam = np.min(np.sum(supp_1, axis=0), axis=0)
         crop_map = np.zeros(sin_map.shape)
-        # only consider radon rays that cut grain with mindiam*2/3 or more, and scale by length of the cut
-        crop_map[supp_map>mindiam*2/3] = sin_map[supp_map>mindiam*2/3]/supp_map[supp_map>mindiam*2/3] 
+        # only consider radon rays that cut grain with mindiam*2/3 or more, 
+        # and scale by length of the cut
+        selection = supp_map > mindiam * 2 / 3
+        crop_map[selection] = sin_map[selection] / supp_map[selection] 
         supp_crop = np.zeros(crop_map.shape)
         supp_crop[crop_map>0] = 1
-        profile = np.sum(crop_map**4, axis=0) / np.sum(supp_crop, axis=0) # raise to power to accentuate local peaks
+
+        # raise to power to accentuate local peaks
+        profile = np.sum(crop_map**4, axis=0) / np.sum(supp_crop, axis=0)
 
         x = np.arange(180)
 
-        # indexes = peakutils.indexes(profile, thres=thres, min_dist=min_dist, thres_abs=False)
         indexes = peakutils.indexes(profile, thres=thres, min_dist=min_dist)
         peaks = x[indexes]
         # peaks = peakutils.interpolate(x, profile, ind=indexes)
         print("Number of bands detected: {:}".format(len(peaks)))
 
-        slipBandAngles = peaks
-        slipBandAngles = slipBandAngles * np.pi / 180
-        return slipBandAngles
+        slip_band_angles = peaks
+        slip_band_angles = slip_band_angles * np.pi / 180
+        return slip_band_angles
+
+
+class BoundarySet(object):
+    def __init__(self, dic_map, points, lines):
+        self.dic_map = dic_map
+        self.points = set(points)
+        self.lines = lines
+
+    @classmethod
+    def from_ebsd_boundaries(cls, dic_map, ebsd_boundaries):
+        if len(ebsd_boundaries.points) == 0:
+            return cls(dic_map, [], [])
+
+        points = dic_map.experiment.warp_points(
+            ebsd_boundaries.image.astype(float),
+            dic_map.ebsd_map.frame, dic_map.frame,
+            output_shape=dic_map.shape
+        )
+        lines = dic_map.experiment.warp_lines(
+            ebsd_boundaries.lines, dic_map.ebsd_map.frame, dic_map.frame
+        )
+        return cls(dic_map, points, lines)
+
+    def _image(self, points):
+        image = np.zeros(self.dic_map.shape, dtype=bool)
+        image[tuple(zip(*points))[::-1]] = True
+        return image
+
+    @property
+    def image(self):
+        return self._image(self.points)
