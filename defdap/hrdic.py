@@ -118,9 +118,10 @@ class Map(base.Map):
         self.bse_scale = None                # size of pixels in pattern images
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
 
-        ## TODO: cropping, have metadata to state if saved data is cropped, if
-        ## not cropped then crop on accesss. Maybe mark cropped data as invalid
-        ## if crop distances change
+        self.data.add_generator(
+            'mask', self.calc_mask, unit='', type='map', order=0,
+            cropped=True, apply_mask=False
+        )
 
         # Deformation gradient
         f = np.gradient(self.data.displacement, self.binning, axis=(1, 2))
@@ -132,9 +133,9 @@ class Map(base.Map):
             plot_params={
                 'plot_colour_bar': True,
                 'clabel': 'Deformation gradient',
-            }
+            },
+            apply_mask=True
         )
-
         # Green strain
         e = 0.5 * (np.einsum('ki...,kj...->ij...', f, f))
         e[0, 0] -= 0.5
@@ -144,9 +145,9 @@ class Map(base.Map):
             plot_params={
                 'plot_colour_bar': True,
                 'clabel': 'Green strain',
-            }
+            },
+            apply_mask=True
         )
-
         # max shear component
         max_shear = np.sqrt(((e[0, 0] - e[1, 1]) / 2.) ** 2 + e[0, 1] ** 2)
         self.data.add(
@@ -154,21 +155,20 @@ class Map(base.Map):
             plot_params={
                 'plot_colour_bar': True,
                 'clabel': 'Effective shear strain',
-            }
+            },
+            apply_mask=True
         )
-
         # pattern image
         self.data.add_generator(
             'pattern', self.load_pattern, unit='', type='map', order=0,
-            save=False,
+            save=False, apply_mask=False,
             plot_params={
                 'cmap': 'gray'
             }
         )
-
         self.data.add_generator(
             'grains', self.find_grains, unit='', type='map', order=0,
-            cropped=True
+            cropped=True, apply_mask=False
         )
 
         self.plot_default = lambda *args, **kwargs: self.plot_map(
@@ -444,26 +444,27 @@ class Map(base.Map):
             **kwargs
         )
 
-    # TODO: fix component stuff
-    def generate_threshold_mask(self, mask, dilation=0, preview=True):
+    def calc_mask(self, mask=None, dilation=0):
         """
-        Generate a dilated mask, based on a boolean array and previews the appication of
-        this mask to the max shear map.
+        Generate a dilated mask, based on a boolean array.
 
         Parameters
         ----------
-        mask: numpy.array(bool)
-            A boolean array where points to be removed are True
+        mask: numpy.array(bool) or None
+            A boolean array where points to be removed are True. Set to None to disable masking.
         dilation: int, optional
             Number of pixels to dilate the mask by. Useful to remove anomalous points
             around masked values. No dilation applied if not specified.
-        preview: bool
-            If true, show the mask and preview the masked effective shear strain map.
 
         Examples
         ----------
-        To remove data points in dic_map where `max_shear` is above 0.8, use:
+        
+        To disable masking:
 
+        >>> mask = None
+               
+        To remove data points in dic_map where `max_shear` is above 0.8, use:
+        
         >>> mask = dic_map.data.max_shear > 0.8
 
         To remove data points in dic_map where e11 is above 1 or less than -1, use:
@@ -478,46 +479,35 @@ class Map(base.Map):
         see :func:`defdap.hrdic.load_corr_val_data`
 
         """
-        self.mask = mask
+        if mask is None:
+            self.data.mask = None
+            return mask
+        
+        if not isinstance(mask, np.ndarray) or mask.shape != self.shape:
+            raise ValueError('The mask must be a numpy array the same shape as '
+                             'the cropped map.')
 
         if dilation != 0:
-            self.mask = binary_dilation(self.mask, iterations=dilation)
+            mask = binary_dilation(mask, iterations=dilation)
 
-        num_removed = np.sum(self.mask)
-        num_total = self.xdim * self.ydim
-        num_removed_crop = np.sum(self.crop(self.mask))
-        num_total_crop = self.x_dim * self.y_dim
+        num_removed = np.sum(mask)
+        num_total = self.shape[0] * self.shape[1]
+        frac_removed = num_removed / num_total * 100
+        print(f'Masking will mask {num_removed} out of {num_total} '
+              f'({frac_removed:.2f} %) datapoints in cropped map.')
+        
+        self.data.mask = mask
 
-        print('Filtering will remove {0} / {1} ({2:.3f} %) datapoints in map'
-              .format(num_removed, num_total, (num_removed / num_total) * 100))
-        print(
-            'Filtering will remove {0} / {1} ({2:.3f} %) datapoints in cropped map'
-            .format(num_removed_crop, num_total_crop,
-                    (num_removed_crop / num_total_crop * 100)))
+        return mask
 
-        if preview == True:
-            plot1 = MapPlot.create(self, self.crop(self.mask), cmap='binary')
-            plot1.set_title('Removed datapoints in black')
-            plot2 = MapPlot.create(self,
-                                   self.crop(
-                                       np.where(self.mask == True, np.nan,
-                                                self.data.max_shear)),
-                                   plot_colour_bar='True',
-                                   clabel="Effective shear strain")
-            plot2.set_title('Effective shear strain preview')
-        print(
-            'Use apply_threshold_mask function to apply this filtering to data')
-
-    def apply_threshold_mask(self):
-        """ Apply mask to all DIC map data by setting masked values to nan.
-
+    def mask(self, map_data):
+        """ Values set to False in mask will be set to nan in map.
         """
-        for comp in ('max_shear',
-                     'e11', 'e12', 'e22',
-                     'f11', 'f12', 'f21', 'e22',
-                     'x_map', 'y_map'):
-            # self.data[comp] = np.where(self.mask == True, np.nan, self.data[comp])
-            self.data[comp][self.mask] = np.nan
+        if self.data.mask is None:
+            return map_data
+        else:
+            return np.ma.array(map_data, 
+                            mask=np.broadcast_to(self.data.mask, np.shape(map_data)))
 
     def set_pattern(self, img_path, window_size):
         """Set the path to the image of the pattern.

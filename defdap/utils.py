@@ -99,6 +99,7 @@ class Datastore(object):
         '_derivatives',
         '_group_id',
         '_crop_func',
+        '_mask_func'
     ]
     _been_to = None
 
@@ -106,12 +107,13 @@ class Datastore(object):
     def generate_id():
         return uuid4()
 
-    def __init__(self, group_id=None, crop_func=None):
+    def __init__(self, group_id=None, crop_func=None, mask_func=None):
         self._store = {}
         self._generators = {}
         self._derivatives = []
         self._group_id = self.generate_id() if group_id is None else group_id
         self._crop_func = (lambda x, **kwargs: x) if crop_func is None else crop_func
+        self._mask_func = (lambda x, **kwargs: x) if mask_func is None else mask_func
 
     def __len__(self):
         """Number of data in the store, including data not yet generated."""
@@ -171,10 +173,12 @@ class Datastore(object):
                 # No generator found
                 pass
 
-        if (attr == 'data' and self.get_metadata(key, 'type') == 'map' and
-                not self.get_metadata(key, 'cropped', False)):
-            binning = self.get_metadata(key, 'binning', 1)
-            val = self._crop_func(val, binning=binning)
+        if attr == 'data' and self.get_metadata(key, 'type') == 'map':
+            if not self.get_metadata(key, 'cropped', False):
+                binning = self.get_metadata(key, 'binning', 1)
+                val = self._crop_func(val, binning=binning)
+            if self.get_metadata(key, 'apply_mask', True):
+                val = self._mask_func(val)
 
         return val
 
