@@ -100,11 +100,14 @@ class GrainInspector:
         self.grain_info_axis = self.plot.add_axes((div_frac, 0.86, 0.25, 0.06))
         self.line_info_axis = self.plot.add_axes((div_frac, 0.55, 0.25, 0.3))
         self.groups_info_axis = self.plot.add_axes((div_frac, 0.15, 0.25, 0.3))
-        self.grain_plot = self.selected_dic_map[self.grain_id].plot_max_shear(fig=self.plot.fig,
-                                                                              ax=self.max_shear_axis,
-                                                                              vmax=self.vmax,
-                                                                              plot_scale_bar=True,
-                                                                              plot_colour_bar=True)
+        self.grain_plot = self.selected_dic_map[self.grain_id].plot_map(
+            'max_shear', 
+            fig=self.plot.fig,
+            ax=self.max_shear_axis,
+            vmax=self.vmax,
+            plot_scale_bar=True,
+            plot_colour_bar=True
+        )
         self.plot.ax.axis('off')
 
         # Draw the stuff that will need to be redrawn often in a separate function
@@ -248,8 +251,10 @@ class GrainInspector:
 
         # Plot max shear for grain
         self.max_shear_axis.clear()
-        self.grain_plot = self.selected_dic_map[self.grain_id].plot_max_shear(
-            fig=self.plot.fig, ax=self.max_shear_axis, vmax=self.vmax, plot_colour_bar=False, plot_scale_bar=True)
+        self.grain_plot = self.selected_dic_map[self.grain_id].plot_map(
+            'max_shear', fig=self.plot.fig, ax=self.max_shear_axis, 
+            vmax=self.vmax, plot_colour_bar=False, plot_scale_bar=True
+        )
 
         # Draw unit cell
         self.unit_cell_axis.clear()

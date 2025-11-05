@@ -775,34 +775,10 @@ class Grain(base.Grain):
         self.points_list = []            # Lines drawn for STA
         self.groups_list = []            # Unique angles drawn for STA
 
-        self.plot_default = lambda *args, **kwargs: self.plot_max_shear(
-            plot_colour_bar=True, plot_scale_bar=True, plot_slip_traces=True,
-            plot_slip_bands=True, *args, **kwargs
+        self.plot_default = lambda *args, **kwargs: self.plot_map(
+            'max_shear', plot_colour_bar=True, plot_scale_bar=True, 
+            plot_slip_traces=True, plot_slip_bands=True, *args, **kwargs
         )
-
-    def plot_max_shear(self, **kwargs):
-        """Plot a maximum shear map for a grain.
-
-        Parameters
-        ----------
-        kwargs
-            All arguments are passed to :func:`defdap.base.plot_grain_data`.
-
-        Returns
-        -------
-        defdap.plotting.GrainPlot
-
-        """
-        # Set default plot parameters then update with any input
-        plot_params = {
-            'plot_colour_bar': True,
-            'clabel': "Effective shear strain"
-        }
-        plot_params.update(kwargs)
-
-        plot = self.plot_grain_data(grain_data=self.data.max_shear, **plot_params)
-
-        return plot
 
     @property
     def ref_ori(self):

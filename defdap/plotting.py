@@ -794,8 +794,8 @@ class GrainPlot(Plot):
 
         """
         if scale is None:
-            scale = self.calling_grain.owner_map.scale * 1e-6
-        self.ax.add_artist(ScaleBar(scale))
+            scale = self.calling_grain.owner_map.scale
+        self.ax.add_artist(ScaleBar(scale * 1e-6))
 
     def add_traces(self, angles, colours, top_only=False, pos=None, **kwargs):
         """Add slip trace angles to grain plot. Illustrated by lines

@@ -534,7 +534,7 @@ class Map(ABC):
         raise ValueError(f'Invalid component `{comp}`')
 
     def plot_map(self, map_name, component=None, **kwargs):
-        """Plot a map from the DIC data.
+        """Plot a map of the data.
 
         Parameters
         ----------
@@ -1048,3 +1048,154 @@ class Grain(ABC):
         plot = GrainPlot.create(self, grain_map_data, **plot_params)
 
         return plot
+    
+    def _validate_list(self, list_name):
+        """Check the name exists and is a list data.
+
+        Parameters
+        ----------
+        list_name : str
+
+        """
+        if list_name not in self.data:
+            raise ValueError(f'`{list_name}` does not exist.')
+        if (self.data.get_metadata(list_name, 'type') != 'list' or
+                self.data.get_metadata(list_name, 'order') is None):
+            raise ValueError(f'`{list_name}` is not a valid data.')
+
+    def _validate_component(self, map_name, comp):
+        """
+
+        Parameters
+        ----------
+        map_name : str
+        comp : int or tuple of int or str
+            Component of the map data. This is either the
+            tensor component (tuple of ints) or the name of a calculation
+            to be applied e.g. 'norm', 'all_euler' or 'IPF_x'.
+
+        Returns
+        -------
+        tuple of int or str
+
+        """
+        order = self.data[map_name, 'order']
+        if comp is None:
+            comp = self.data.get_metadata(map_name, 'default_component')
+            if comp is not None:
+                print(f'Using default component: `{comp}`')
+
+        if comp is None:
+            if order != 0:
+                raise ValueError('`comp` must be specified.')
+            else:
+                return comp
+
+        if isinstance(comp, int):
+            comp = (comp,)
+        if isinstance(comp, tuple) and len(comp) != order:
+            raise ValueError(f'Component length does not match data, expected '
+                             f'{self.data[map_name, "order"]} values but got '
+                             f'{len(comp)}.')
+
+        return comp
+    
+    def _extract_component(self, map_data, comp):
+        """Extract a component from the data.
+
+        Parameters
+        ----------
+        map_data : numpy.ndarray
+            Map data to extract from.
+        comp : tuple of int or str
+            Component of the map data to extract. This is either the
+            tensor component (tuple of ints) or the name of a calculation
+            to be applied e.g. 'norm', 'all_euler' or 'IPF_x'.
+
+        Returns
+        -------
+        numpy.ndarray
+
+        """
+        if comp is None:
+            return map_data
+        if isinstance(comp, tuple):
+            return map_data[comp]
+        if isinstance(comp, str):
+            comp = comp.lower()
+            if comp == 'norm':
+                if len(map_data.shape) == 2:
+                    axis = 0
+                elif len(map_data.shape) == 3:
+                    axis = (0, 1)
+                else:
+                    raise ValueError('Unsupported data for norm.')
+
+                return np.linalg.norm(map_data, axis=axis)
+
+            if comp == 'all_euler':
+                return self.calc_euler_colour(map_data)
+
+            if comp.startswith('ipf'):
+                direction = comp.split('_')[1]
+                direction = {
+                    'x': np.array([1, 0, 0]),
+                    'y': np.array([0, 1, 0]),
+                    'z': np.array([0, 0, 1]),
+                }[direction]
+                return self.calc_ipf_colour(map_data, direction)
+
+        raise ValueError(f'Invalid component `{comp}`')
+
+    def plot_map(self, map_name, component=None, **kwargs):
+        """Plot a map of the data.
+
+        Parameters
+        ----------
+        map_name : str
+            Map data name to plot i.e. e, max_shear, euler_angle, orientation.
+        component : int or tuple of int or str
+            Component of the map data to plot. This is either the tensor
+            component (int or tuple of ints) or the name of a calculation
+            to be applied e.g. 'norm', 'all_euler' or 'IPF_x'.
+        kwargs
+            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+
+        Returns
+        -------
+        defdap.plotting.MapPlot
+            Plot containing map.
+
+        """
+        self._validate_list(map_name)
+        comp = self._validate_component(map_name, component)
+
+        # Set default plot parameters then update with any input
+        plot_params = {}   # should load default plotting params
+        plot_params.update(self.data.get_metadata(map_name, 'plot_params', {}))
+
+        # Add extra info to label
+        clabel = plot_params.get('clabel')
+        if clabel is not None:
+            # tensor component
+            if isinstance(comp, tuple):
+                comp_fmt = ' (' + '{}' * len(comp) + ')'
+                clabel += comp_fmt.format(*(i+1 for i in comp))
+            elif isinstance(comp, str):
+                clabel += f' ({comp.replace("_", " ")})'
+            # unit
+            unit = self.data.get_metadata(map_name, 'unit')
+            if unit is not None and unit != '':
+                clabel += f' ({unit})'
+
+            plot_params['clabel'] = clabel
+
+        if self.owner_map.scale is not None:
+            binning = self.data.get_metadata(map_name, 'binning', 1)
+            plot_params['scale'] = self.owner_map.scale / binning
+
+        plot_params.update(kwargs)
+
+        list_data = self._extract_component(self.data[map_name], comp)
+
+        return self.plot_grain_data(grain_data=list_data, **plot_params)
