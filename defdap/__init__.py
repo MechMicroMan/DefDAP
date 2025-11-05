@@ -18,6 +18,8 @@ defaults = {
         'BCC': 'cubic_bcc',
         'HCP': 'hexagonal_withca',
     },
+    # up or down
+    'ipf_triangle_convention': 'up'
 }
 
 anonymous_experiment = Experiment()
