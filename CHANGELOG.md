@@ -4,9 +4,12 @@
 
 ### Added
 
-
 ### Changed
 
+### Fixed
+
+
+## 1.0.1 (03-12-2025)
 
 ### Fixed
 - Plotting slip traces for ebsd grain with colours from phase
