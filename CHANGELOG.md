@@ -9,6 +9,7 @@
 
 
 ### Fixed
+- Plotting slip traces for ebsd grain with colours from phase
 
 
 ## 1.0.0 (05-11-2025)

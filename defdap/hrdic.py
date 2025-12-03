@@ -780,6 +780,17 @@ class Grain(base.Grain):
 
         """
         return self.ebsd_grain.ref_ori
+    
+    @property
+    def phase(self):
+        """Returns the phase of the linked ebsd grain.
+
+        Returns
+        -------
+        defdap.crystal.Phase
+
+        """
+        return self.ebsd_grain.phase
 
     @property
     def slip_traces(self):

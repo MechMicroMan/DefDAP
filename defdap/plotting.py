@@ -846,61 +846,52 @@ class GrainPlot(Plot):
             )
             self.draw()
 
-    def add_slip_traces(self, top_only=False, colours=None, pos=None, **kwargs):
+    def add_slip_traces(self, colours=None, **kwargs):
         """Add slip traces to plot, based on the calling grain's slip systems.
 
         Parameters
         ----------
         colours : list
-            Colours to plot.
+            Colours of each trace.
         top_only : bool, optional
             If true, plot only a semicircle instead of a circle.
-        pos : tuple
-            Position of slip traces.
         kwargs
-            Other arguments are passed to :func:`matplotlib.pyplot.quiver`
+            Other arguments are passed to :func:`defdap.plotting.GrainPlot.add_traces`
 
         """
-
         if colours is None:
-            colours = self.calling_grain.ebsd_grain.phase.slip_trace_colours
+            colours = self.calling_grain.phase.slip_trace_colours
         slip_trace_angles = self.calling_grain.slip_traces
 
-        self.add_traces(slip_trace_angles, colours, top_only, pos=pos, **kwargs)
+        self.add_traces(slip_trace_angles, colours, **kwargs)
 
-    def add_slip_bands(self, top_only=False, grain_map_data=None, angles=None, pos=None,
-                       thres=None, min_dist=None, **kwargs):
+    def add_slip_bands(self, grain_map_data, colour=None, thres=None, 
+                       min_dist=None, **kwargs):
         """Add lines representing slip bands detected by Radon transform
         in :func:`~defdap.hrdic.grain.calc_slip_bands`.
 
         Parameters
         ----------
-        top_only : bool, optional
-            If true, plot only a semicircle instead of a circle.
         grain_map_data :
             Map data to pass to :func:`~defdap.hrdic.Grain.calc_slip_bands`.
-        angles : list(float), optional
-            List of angles to plot, otherwise, use angles
-            detected in :func:`~defdap.hrdic.Grain.calc_slip_bands`.
-        pos : tuple
-            Position in which to plot slip traces.
+        colour : str
+            Colour of traces.
         thres : float
             Threshold to use in :func:`~defdap.hrdic.Grain.calc_slip_bands`.
         min_dist :
             Minimum angle between bands in :func:`~defdap.hrdic.Grain.calc_slip_bands`.
         kwargs
-            Other arguments are passed to :func:`matplotlib.pyplot.quiver`.
+            Other arguments are passed to :func:`defdap.plotting.GrainPlot.add_traces`.
 
         """
-
-        if angles is None:
-            slip_band_angles = self.calling_grain.calc_slip_bands(grain_map_data,
-                                                                  thres=thres,
-                                                                  min_dist=min_dist)
-        else:
-            slip_band_angles = angles
-
-        self.add_traces(slip_band_angles, ["black"], top_only, pos=pos, **kwargs)
+        if colour is None:
+            colour = "black"
+        slip_band_angles = self.calling_grain.calc_slip_bands(
+            grain_map_data,
+            thres=thres,
+            min_dist=min_dist
+        )
+        self.add_traces(slip_band_angles, [colour], **kwargs)
 
     @classmethod
     def create(
@@ -972,7 +963,7 @@ class GrainPlot(Plot):
             plot.add_slip_traces()
 
         if plot_slip_bands:
-            plot.add_slip_bands(grain_map_data=map_data)
+            plot.add_slip_bands(map_data)
 
         return plot
 
