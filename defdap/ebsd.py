@@ -1306,7 +1306,28 @@ class Grain(base.Grain):
         misori_axis = (2 * dq[1:4] * np.arccos(dq[0])) / np.sqrt(1 - dq[0]**2)
 
         return misori, misori_axis
+    
+    def calc_ipf_colour(self, grain_data, direction, bg_colour=None):
 
+        grain_colours = Quat.calc_ipf_colours(
+            grain_data, direction, self.phase.crystal_structure.name
+        ).T
+
+        return grain_colours
+    
+    def calc_euler_colour(self, grain_data, bg_colour=None):
+
+        if self.phase.crystal_structure.name == 'cubic':
+            norm = np.array([2 * np.pi, np.pi / 2, np.pi / 2])
+        elif self.phase.crystal_structure.name == 'hexagonal':
+            norm = np.array([np.pi, np.pi, np.pi / 3])
+        else:
+            ValueError("Only hexagonal and cubic symGroup supported")
+
+        grain_colours = grain_data.T / norm
+
+        return grain_colours
+    
     def plot_ref_ori(self, direction=np.array([0, 0, 1]), **kwargs):
         """Plot the average grain orientation on an IPF.
 

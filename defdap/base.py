@@ -950,8 +950,13 @@ class Grain(ABC):
                 grain_data = self.grain_data(map_data)
         x0, y0, xmax, ymax = self.extreme_coords
 
-        grain_map_data = np.full((ymax - y0 + 1, xmax - x0 + 1), bg,
-                               dtype=type(grain_data[0]))
+        # To support 3D array (ie RGB)
+        map_shape = (ymax - y0 + 1, xmax - x0 + 1)
+        if grain_data.ndim > 1:
+            map_shape = map_shape + grain_data.shape[1:]
+        
+        # Create output array with appropriate dtype
+        grain_map_data = np.full(map_shape, bg, dtype=grain_data.dtype)
 
         for coord, data in zip(self.data.point, grain_data):
             grain_map_data[coord[1] - y0, coord[0] - x0] = data
