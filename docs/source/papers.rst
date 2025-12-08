@@ -3,6 +3,11 @@ Papers
 
 Here is a list of journal papers which have used the DefDAP Python library.
 
+2026
+------
+
+* `A.D.Smith, D.Lunt, M.Taylor, A.Davis, R.Thomas, F.Martinez, A.Candeias, A.Gholinia, M.Preuss, J.M.Donoghue. A new approach to SEM in-situ thermomechanical experiments through automation. Ultramicroscopy. Vol. 280, Feb 2026, pp. 114244. <https://doi.org/10.1016/j.ultramic.2025.114244>`_
+
 2025
 ------
 
