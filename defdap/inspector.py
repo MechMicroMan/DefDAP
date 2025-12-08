@@ -419,8 +419,8 @@ class GrainInspector:
             y_list.extend(ymap - self.selected_dic_grain.extreme_coords[1])
 
             # Get u and v values at each coordinate
-            u = self.selected_dic_map.crop(self.selected_dic_map.data.displacement[0])[ymap, xmap]
-            v = self.selected_dic_map.crop(self.selected_dic_map.data.displacement[1])[ymap, xmap]
+            u = self.selected_dic_map.data.displacement[0][ymap, xmap]
+            v = self.selected_dic_map.data.displacement[1][ymap, xmap]
 
             # Subtract mean u and v value for each row
             u_list.extend(u - np.mean(u, axis=1)[:, None])
