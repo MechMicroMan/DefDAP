@@ -168,3 +168,4 @@ This was a overhaul of large sections of the code and many changes/additions hav
 - Fixes to quat class:
   - Construction from axis/angle now in passive sense not just a conversion.
   - Fix big with transform vector where -ve vector was returned in some cases due to intermediate quat being transformed to northern hemisphere.
+
