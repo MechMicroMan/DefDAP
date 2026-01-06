@@ -10,7 +10,7 @@ authors = [
   {name = "Rhys Thomas"},
   {name = "João Quinta da Fonseca"},
 ]
-license = "Apache-2.0"
+license = {text = "Apache-2.0"}
 description = "A python library for correlating EBSD and HRDIC data."
 readme = "README.md"
 keywords = ["EBSD", "HRDIC", "deformation", "crystal", "correlative analysis"]
