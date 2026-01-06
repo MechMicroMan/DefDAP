@@ -1,5 +1,15 @@
 # Change Log
 
+## v1.1.0 (2026-01-06)
+
+### Feat
+
+- Add IPF and Euler colours for EBSD grain
+
+### Fix
+
+- Inspector data was being cropped twice
+
 ## v1.0.1 (03-12-2025)
 
 ### Fixed
