@@ -10,7 +10,7 @@ authors = [
   {name = "Rhys Thomas"},
   {name = "João Quinta da Fonseca"},
 ]
-license = {text = "Apache 2.0 License"}
+license = {text = "Apache-2.0"}
 description = "A python library for correlating EBSD and HRDIC data."
 readme = "README.md"
 keywords = ["EBSD", "HRDIC", "deformation", "crystal", "correlative analysis"]
@@ -19,7 +19,6 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Information Analysis",
     "Development Status :: 5 - Production/Stable",
-    "License :: OSI Approved :: Apache Software License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
