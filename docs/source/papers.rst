@@ -1,10 +1,21 @@
 Papers
 ========
 
-Here is a list of papers which have used the DefDAP Python library.
+Here is a list of journal papers which have used the DefDAP Python library.
+
+2026
+------
+
+* `A.D.Smith, D.Lunt, M.Taylor, A.Davis, R.Thomas, F.Martinez, A.Candeias, A.Gholinia, M.Preuss, J.M.Donoghue. A new approach to SEM in-situ thermomechanical experiments through automation. Ultramicroscopy. Vol. 280, Feb 2026, pp. 114244. <https://doi.org/10.1016/j.ultramic.2025.114244>`_
 
 2025
 ------
+
+* `B.Yavuzyegit, K.Karali, S.Davis, B.Morrison, S.Karabal, K.Balandiz, N.Smith, S.Usov, P.Shashkov, R.Bonithon, G.Blunn. High-resolution DIC analysis of in situ strain and crack propagation in coated AZ31 magnesium alloys under mechanical loading. Journal of Materials Science. Vol. 60, Aug 2025, pp. 14708–14730. <https://doi.org/10.1007/s10853-025-11243-4>`_
+
+* `Z.Yang, R.Thomas, J.Donoghue, A.Smith, M.Preuss, A.Gholinia. In situ and correlative study of dislocation density and deformation mechanisms in Inconel 690. Materials Characterization. Volume 230, Part A, December 2025, 115699. <https://doi.org/10.1016/j.matchar.2025.115699>`_
+
+* `G.Zhou, D.T.Fullwood, R.H.Wagoner, S.R.Niezgoda, T.Russell, D.Lunt. Slip mode analysis in BCC tantalum with HRDIC. Materials Science and Engineering: A. Volume 947, December 2025, 149179. <https://doi.org/10.1016/j.msea.2025.149179>`_
 
 * `B.Yang, X.Xu, D.Lunt, F.Zhang, M.D.Atkinson, Y.Li, J.LLorca, X.Zhou. Grain size dependence of microscopic strain distribution in a high entropy alloy at the onset of plastic deformation. Acta Materialia. Volume 285, Feb 2025, 120682. <https://doi.org/10.1016/j.actamat.2024.120682>`_
 
