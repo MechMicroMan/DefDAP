@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=61.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "DefDAP"
+version = "1.0.1"
+authors = [
+  {name = "Michael D. Atkinson", email = "michael.atkinson@ukaea.uk"},
+  {name = "Rhys Thomas"},
+  {name = "João Quinta da Fonseca"},
+]
+license = {text = "Apache 2.0 License"}
+description = "A python library for correlating EBSD and HRDIC data."
+readme = "README.md"
+keywords = ["EBSD", "HRDIC", "deformation", "crystal", "correlative analysis"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Framework :: IPython",
+    "Framework :: Jupyter",
+    "Framework :: Matplotlib",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "scipy>=1.9",
+    "numpy",
+    "matplotlib>=3.0.0",
+    "scikit-image>=0.19",
+    "pandas",
+    "peakutils",
+    "matplotlib_scalebar",
+    "networkx",
+    "numba",
+]
+
+[project.urls]
+    GitHub = "https://github.com/MechMicroMan/DefDAP"
+    Documentation = "https://defdap.readthedocs.io/en/latest"
+
+[project.optional-dependencies]
+testing = [
+    "pytest<8",
+    "coverage",
+    "pytest-cov",
+    "pytest_cases",
+]
+docs = [
+    "sphinx==5.0.2",
+    "sphinx_rtd_theme==0.5.0",
+    "sphinx_autodoc_typehints==1.11.1",
+    "nbsphinx==0.9.3",
+    "ipykernel",
+    "pandoc",
+    "ipympl",
+]
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+exclude = ["tests"]
+
+[tool.setuptools.package-data]
+defdap = ["slip_systems/*.txt"]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "1.0.1"
+tag_format = "v$version"
+version_files = [
+    "pyproject.toml:version",
+    "defdap/_version.py",
+]
+bump_message = "bump: $current_version → $new_version [skip ci]"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=defdap"
