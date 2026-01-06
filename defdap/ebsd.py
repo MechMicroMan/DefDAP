@@ -1190,6 +1190,9 @@ class Grain(base.Grain):
         self.ref_ori = None                      # (quat) average ori of grain
         self.average_mis_ori = None               # average mis_ori of grain
 
+        self.phase_id = None
+        self.phase = None
+
         self.average_schmid_factors = None        # list of list Schmid factors (grouped by slip plane)
         self.slip_trace_angles = None             # list of slip trace angles
         self.slip_trace_inclinations = None
@@ -1383,7 +1386,7 @@ class Grain(base.Grain):
             All other arguments are passed to :func:`defdap.quat.Quat.plot_unit_cell`.
 
         """
-        crystal_structure = self.ebsd_map.phases[self.phase_id].crystal_structure
+        crystal_structure = self.phase.crystal_structure
         plot = Quat.plot_unit_cell(self.ref_ori, fig=fig, ax=ax, plot=plot,
                                    crystal_structure=crystal_structure, **kwargs)
 

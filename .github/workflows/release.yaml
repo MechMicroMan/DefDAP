@@ -1,0 +1,62 @@
+name: Release DefDAP
+concurrency: release
+
+on:
+  pull_request_target:
+    branches: [master]
+    types: [closed]
+
+jobs:
+  bump_version:
+    if: github.event.pull_request.merged == true && !startsWith(github.event.head_commit.message, 'bump:')
+    runs-on: ubuntu-latest
+    name: Bump version, update changelog and create release
+    permissions:
+      contents: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Create bump and changelog
+        uses: commitizen-tools/commitizen-action@master
+        with:
+          github_token: ${{ github.token }}
+          changelog_increment_filename: CHANGELOG_incremental.md
+      - name: Edit incremental changelog
+        run: |
+          sed -i -e '1,2d' -e '/^[^#-]/d' CHANGELOG_incremental.md
+          sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' CHANGELOG_incremental.md
+          echo "" >> CHANGELOG_incremental.md
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG_incremental.md
+          tag_name: v${{ env.REVISION }}
+
+  publish:
+    needs: bump_version
+    runs-on: ubuntu-latest
+    name: Build distribution and publish to PyPI
+    environment:
+      name: pypi
+      url: https://pypi.org/p/defdap
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: master    # Get from master branch to include bump commit
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install pypa/build
+        run: python3 -m pip install build --user
+      - name: Build a binary wheel and a source tarball
+        run: python3 -m build
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
