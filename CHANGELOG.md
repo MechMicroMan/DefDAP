@@ -1,5 +1,11 @@
 # Change Log
 
+## v1.1.1 (2026-01-06)
+
+### Fix
+
+- Update license name
+
 ## v1.1.0 (2026-01-06)
 
 ### Feat

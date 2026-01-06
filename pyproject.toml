@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "DefDAP"
-version = "1.1.0"
+version = "1.1.1"
 authors = [
   {name = "Michael D. Atkinson", email = "michael.atkinson@ukaea.uk"},
   {name = "Rhys Thomas"},
@@ -75,7 +75,7 @@ defdap = ["slip_systems/*.txt"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.1.0"
+version = "1.1.1"
 tag_format = "v$version"
 version_files = [
     "pyproject.toml:version",
