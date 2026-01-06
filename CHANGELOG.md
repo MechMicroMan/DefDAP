@@ -1,21 +1,11 @@
 # Change Log
 
-## Current
-
-### Added
-
-### Changed
-
-### Fixed
-
-
-## 1.0.1 (03-12-2025)
+## v1.0.1 (03-12-2025)
 
 ### Fixed
 - Plotting slip traces for ebsd grain with colours from phase
 
-
-## 1.0.0 (05-11-2025)
+## v1.0.0 (05-11-2025)
 This was a overhaul of large sections of the code and many changes/additions have been missed from the chnagelog.
 
 ### Added
@@ -45,8 +35,7 @@ This was a overhaul of large sections of the code and many changes/additions hav
 - Remove `IPython` and `jupyter` as requirements
 - Bug in IPF traiangle plotting now fixed with options for `up` triangle (like MTEX) and `down` triangle (like OI)
 
-
-## 0.93.5 (20-11-2023)
+## v0.93.5 (20-11-2023)
 
 ### Added
 - Add more options for colouring lines
@@ -57,8 +46,7 @@ This was a overhaul of large sections of the code and many changes/additions hav
 - Remove in_place argument to skimage.morphology.remove_small_objects
 - set_window_title has been moved from figure.canvas to figure.canvas.manager
 
-
-## 0.93.5 (20-11-2023)
+## v0.93.5 (20-11-2023)
 
 ### Added
 - Add more options for colouring lines
@@ -69,8 +57,7 @@ This was a overhaul of large sections of the code and many changes/additions hav
 - Remove `in_place` argument to `skimage.morphology.remove_small_objects`
 - `set_window_title` has been moved from `figure.canvas` to `figure.canvas.manager`
 
-
-## 0.93.5 (17-01-2023)
+## v0.93.5 (17-01-2023)
 
 ### Added
 - Add equality check for `Quat`
@@ -78,8 +65,7 @@ This was a overhaul of large sections of the code and many changes/additions hav
 ### Fixed
 - Fix bug in boundary line warping
 
-
-## 0.93.4 (07-03-2022)
+## v0.93.4 (07-03-2022)
 
 ### Changed
 - Update BCC slip system file and add a separate FCC file with same ordering as in DAMASK
@@ -92,8 +78,7 @@ This was a overhaul of large sections of the code and many changes/additions hav
 ### Fixed
 - Fix ebsd grain linker so it works again
 
-
-## 0.93.3 (23-08-2021)
+## v0.93.3 (23-08-2021)
 
 ### Added
 - Store EDX data as a dictionary called `EDX` accessible from the EBSD `Map` object
@@ -104,8 +89,7 @@ This was a overhaul of large sections of the code and many changes/additions hav
 - Fix issue with plotting Schmid factor maps
 - Fix bug with maps `component` not updating after masking
 
-
-## 0.93.2 (16-04-2021)
+## v0.93.2 (16-04-2021)
 
 ### Added
 - Reading of Channel5 project files that contain EDX data
@@ -114,8 +98,7 @@ This was a overhaul of large sections of the code and many changes/additions hav
 - Plotting unit cells
 - Plotting lines with grain inspector
 
-
-## 0.93.1 (12-04-2021)
+## v0.93.1 (12-04-2021)
 
 ### Added
 - Started adding type hinting
@@ -140,8 +123,7 @@ This was a overhaul of large sections of the code and many changes/additions hav
 - Fixed docstring links
 - Fix bug in `warp` grain finding algorithm
 
-
-## 0.93.0 (20-02-2021)
+## v0.93.0 (20-02-2021)
 
 ### Added
 - Add EBSD file writing to CTF format.
