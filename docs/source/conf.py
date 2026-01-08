@@ -6,12 +6,18 @@ import os
 import shutil
 import sys
 
-# -- Path setup --------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Path setup
+# -----------------------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../../')) 	# Reference the root directory so autodocs can find the python modules
+
+# -----------------------------------------------------------------------------
+# Generate 'how to use' page from example notebook
+# -----------------------------------------------------------------------------
 
 # Copy the example notebook into the docs source
 shutil.copyfile('../../notebooks/example_notebook.ipynb', 'howtouse.ipynb')
@@ -34,12 +40,26 @@ new_text = new_text.replace('This notebook', r'These pages')
 with open('howtouse.ipynb', "w") as f:
     f.write(new_text)
 
-# -- Project information -----------------------------------------------------
+nbsphinx_allow_errors = True
+nbsphinx_execute = 'always'
+nbsphinx_kernel_name = 'python3'
+
+nbsphinx_prolog = """
+This page was built from the example_notebook Jupyter notebook available on `Github <https://github.com/MechMicroMan/DefDAP>`_
+
+.. image:: https://mybinder.org/badge_logo.svg
+   :target: https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb
+
+----
+"""
+
+# -----------------------------------------------------------------------------
+# Project information
+# -----------------------------------------------------------------------------
 
 project = 'DefDAP'
 copyright = '2023, Mechanics of Microstructures Group at The University of Manchester'
 author = 'Michael D. Atkinson, Rhys Thomas, João Quinta da Fonseca'
-
 
 def get_version():
     ver_path = '../../defdap/_version.py'
@@ -55,40 +75,27 @@ release = get_version()
 # The short X.Y version
 version = '.'.join(release.split('.')[:2])
 
-# -- General configuration ---------------------------------------------------
-
-# If your documentation needs a minimal Sphinx version, state it here.
-#
-# needs_sphinx = '1.0'
+# -----------------------------------------------------------------------------
+# General configuration
+# -----------------------------------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.apidoc',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.autosummary',
     'sphinx_autodoc_typehints',
-    'sphinx_rtd_theme',
+    'pydata_sphinx_theme',
     'nbsphinx'
 ]
-
-nbsphinx_allow_errors = True
-nbsphinx_execute = 'always'
-nbsphinx_kernel_name = 'python3'
-
-nbsphinx_prolog = """
-This page was built from the example_notebook Jupyter notebook available on `Github <https://github.com/MechMicroMan/DefDAP>`_
-
-.. image:: https://mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb
-
-----
-"""
 
 napoleon_use_param = True
 
@@ -118,66 +125,85 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'defdap/defdap.rst']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+# -----------------------------------------------------------------------------
+# Options for HTML these
+# -----------------------------------------------------------------------------
 
-# -- Options for HTML output -------------------------------------------------
+html_theme = "pydata_sphinx_theme"
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-html_theme = "sphinx_rtd_theme"
-
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
 html_theme_options = {
-    'collapse_navigation': False,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/MechMicroMan/DefDAP",  
+            "icon": "fa-brands fa-square-github",
+            "type": "fontawesome"
+        },        
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/defdap",
+            "icon": "fa-custom fa-pypi",              # defined in file `_static/custom-icons.js`
+        }
+        ],
+    "use_edit_page_button": True,
   }
 
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
+html_context = {
+    "github_user": "MechMicroMan",
+    "github_repo": "DefDAP",
+    "github_version": "master",
+    "doc_path": "docs/source",
+}
+
+html_static_path = ["_static"]
+html_js_files = [
+   ("custom-icons.js", {"defer": "defer"}),
+]
+
 html_static_path = ['_static']
 
+html_copy_source = False
 
-# -- Options for HTMLHelp output ---------------------------------------------
+# -----------------------------------------------------------------------------
+# Options for HTMLHelp output
+# -----------------------------------------------------------------------------
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'DefDAPdoc'
 
-
-# -- Generate API docs during sphinx-build (for readthedocs) ------------------
-
-# Determine if on RTD
-ON_RTD = (os.environ.get('READTHEDOCS') == 'True')
-
-def run_apidoc(_):
-
-    from sphinx.ext import apidoc
-
-    api_args = [
-            '--force',
-            '--separate',                   # Put each module on seperate page
-            '--no-toc',                     # No table of contents
-            '../../defdap',                 # Module path
-            '-o',                           # Directory to output..
-            '../source/defdap'              # here
-            ]
-
-    # Invoke apidoc
-    apidoc.main(api_args)  
-
-def setup(app):
-    if ON_RTD:
-        app.connect('builder-inited', run_apidoc)
-
-# -- Extension configuration -------------------------------------------------
+# -----------------------------------------------------------------------------
+# Autodoc
+# -----------------------------------------------------------------------------
 
 autodoc_member_order = 'bysource'
+autodoc_default_options = {
+    'inherited-members': True,
+}
+
+# -----------------------------------------------------------------------------
+# Apidoc
+# -----------------------------------------------------------------------------
+
+apidoc_modules = [
+    {
+        'path': '../../defdap',
+        'destination': 'defdap',
+        'separate_modules': True,
+        'module_first': False,
+        'automodule_options': {'members', 'show-inheritance', 'undoc-members'}
+        }
+]
+
+# -----------------------------------------------------------------------------
+# Autosummary
+# -----------------------------------------------------------------------------
+
+autosummary_generate = True
+
+# -----------------------------------------------------------------------------
+# Intersphinx
+# -----------------------------------------------------------------------------
+
 intersphinx_mapping = {'python': ('https://docs.python.org/3.7/', None),
                        'numpy': ('https://numpy.org/doc/stable/', None),
                        'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),

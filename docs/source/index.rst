@@ -31,5 +31,5 @@ Contents
    howtouse
    contributing
    papers
-   license
    modules
+   license
