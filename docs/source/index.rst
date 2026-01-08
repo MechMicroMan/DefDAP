@@ -27,8 +27,7 @@ Contents
 .. toctree::
    :maxdepth: 1
    
-   installation
-   howtouse
+   userguide
    contributing
    papers
    modules

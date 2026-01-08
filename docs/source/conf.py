@@ -20,24 +20,24 @@ sys.path.insert(0, os.path.abspath('../../')) 	# Reference the root directory so
 # -----------------------------------------------------------------------------
 
 # Copy the example notebook into the docs source
-shutil.copyfile('../../notebooks/example_notebook.ipynb', 'howtouse.ipynb')
+shutil.copyfile('../../notebooks/example_notebook.ipynb', 'userguide/howtouse.ipynb')
 
 # Open file
-with open('howtouse.ipynb') as f:
+with open('userguide/howtouse.ipynb') as f:
     old_text = f.read()
 
 # change %matplotlib to inline
 new_text = old_text.replace('%matplotlib tk', r'%matplotlib inline')
 
 # change directory so that paths still work
-new_text = new_text.replace('../tests/data/', r'../../tests/data/')
+new_text = new_text.replace('../tests/data/', r'../../../tests/data/')
 
 # Change title to 'How to use'
 new_text = new_text.replace('DefDAP Example notebook', r'How to use')
 new_text = new_text.replace('This notebook', r'These pages')
 
 # Write back to notebook
-with open('howtouse.ipynb', "w") as f:
+with open('userguide/howtouse.ipynb', "w") as f:
     f.write(new_text)
 
 nbsphinx_allow_errors = True
@@ -58,7 +58,7 @@ This page was built from the example_notebook Jupyter notebook available on `Git
 # -----------------------------------------------------------------------------
 
 project = 'DefDAP'
-copyright = '2023, Mechanics of Microstructures Group at The University of Manchester'
+copyright = '2026, Mechanics of Microstructures Group at The University of Manchester'
 author = 'Michael D. Atkinson, Rhys Thomas, João Quinta da Fonseca'
 
 def get_version():
@@ -94,7 +94,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_autodoc_typehints',
     'pydata_sphinx_theme',
-    'nbsphinx'
+    'nbsphinx',
+    'sphinx_design'
 ]
 
 napoleon_use_param = True
@@ -178,6 +179,7 @@ htmlhelp_basename = 'DefDAPdoc'
 autodoc_member_order = 'bysource'
 autodoc_default_options = {
     'inherited-members': True,
+    'exclude_patterns': ['*base*'],
 }
 
 # -----------------------------------------------------------------------------
@@ -188,6 +190,7 @@ apidoc_modules = [
     {
         'path': '../../defdap',
         'destination': 'defdap',
+        'exclude_patterns': ['*base*'],
         'separate_modules': True,
         'module_first': False,
         'automodule_options': {'members', 'show-inheritance', 'undoc-members'}
