@@ -646,7 +646,8 @@ class DICDataLoader(ABC):
                 'davis': DavisLoader,
                 'openpiv': OpenPivTextLoader,    #Backwards compatability
                 'openpivtext': OpenPivTextLoader,
-                'openpivbinary': OpenPivBinaryLoader
+                'openpivbinary': OpenPivBinaryLoader,
+                'pyvale': PyValeLoader
             }[data_type]
         except KeyError:
             raise ValueError(f"No loader for DIC data of type {data_type}.")
