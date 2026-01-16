@@ -1,5 +1,11 @@
 # Change Log
 
+## v1.1.2 (2026-01-16)
+
+### Fix
+
+- Added pyvale to list of loaders so pyvale files can actually be loaded
+
 ## v1.1.1 (2026-01-06)
 
 ### Fix
