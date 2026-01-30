@@ -289,6 +289,8 @@ class EdaxAngLoader(EBSDDataLoader):
         self.check_metadata()
 
         # Construct fixed data format
+        # .ang format seems to take all sorts of forms, only columns that seem
+        # to be agreed on by most files are loaded
         self.data_format = np.dtype([
             ('ph1', 'float32'),
             ('phi', 'float32'),
@@ -298,10 +300,8 @@ class EdaxAngLoader(EBSDDataLoader):
             ('IQ', 'float32'),
             ('CI', 'float32'),
             ('phase', 'uint8'),
-            # ('SE_signal', 'float32'),
-            ('FF', 'float32'),
         ])
-        load_cols = (0, 1, 2, 5, 6, 7, 8, 9)
+        load_cols = (0, 1, 2, 5, 6, 7)
 
         # now read the data from file
         data = np.loadtxt(
@@ -325,15 +325,8 @@ class EdaxAngLoader(EBSDDataLoader):
                 'clabel': 'Confidence index',
             }
         )
-        self.loaded_data.add(
-            'fit_factor', data['FF'].reshape(shape),
-            unit='', type='map', order=0,
-            plot_params={
-                'plot_colour_bar': True,
-                'clabel': 'Fit factor',
-            }
-        )
-        self.loaded_data.phase = data['phase'].reshape(shape) + 1
+        add_phase = 1 if data['phase'].min() == 0 else 0
+        self.loaded_data.phase = data['phase'].reshape(shape) + add_phase
         self.loaded_data['phase', 'plot_params']['vmax'] = len(self.loaded_metadata['phases'])
 
         # flatten the structured dtype
