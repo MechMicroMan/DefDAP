@@ -45,10 +45,7 @@ nbsphinx_execute = 'always'
 nbsphinx_kernel_name = 'python3'
 
 nbsphinx_prolog = """
-This page was built from the example_notebook Jupyter notebook available on `Github <https://github.com/MechMicroMan/DefDAP>`_
-
-.. image:: https://mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb
+This page was built from the example_notebook Jupyter notebook available on `Github <https://github.com/MechMicroMan/DefDAP/blob/master/notebooks/example_notebook.ipynb>`_
 
 ----
 """

@@ -6,8 +6,7 @@ We welcome any improvements made to this package, but please follow the guidelin
 Coding style
 -----------------
 
-In this project we (try) to follow the PEP8 standard for formatting python code with 2 notable exceptions:
-- Function and variable names are in mixed case e.g myFirstFunction
+In this project we (try) to follow the PEP8 standard for formatting python code with a notable exceptions:
 - The 79 character line length limit is seen more as a guideline than rule. Code is split across lines where possible and to improve readability. Line length should never excede 119 characters. All documentation should be split to lines of less than 73 characters.
 
 Repository Structure
