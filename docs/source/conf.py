@@ -33,7 +33,7 @@ new_text = old_text.replace('%matplotlib tk', r'%matplotlib inline')
 new_text = new_text.replace('../tests/data/', r'../../../tests/data/')
 
 # Change title to 'How to use'
-new_text = new_text.replace('DefDAP Example notebook', r'How to use')
+new_text = new_text.replace('DefDAP Example notebook', r'Example notebook')
 new_text = new_text.replace('This notebook', r'These pages')
 
 # Write back to notebook
@@ -88,7 +88,6 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.autosummary',
     'sphinx_autodoc_typehints',
     'pydata_sphinx_theme',
     'nbsphinx',
@@ -194,11 +193,6 @@ apidoc_modules = [
         }
 ]
 
-# -----------------------------------------------------------------------------
-# Autosummary
-# -----------------------------------------------------------------------------
-
-autosummary_generate = True
 
 # -----------------------------------------------------------------------------
 # Intersphinx

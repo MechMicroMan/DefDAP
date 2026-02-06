@@ -1,10 +1,11 @@
 User Guide
 =================
 
-Guide on how to install and use DefDAP.
+This is a narrative guide on how to install DefDAP and hwo to use the various classes.
 
 .. toctree::
-   :glob:
+   :maxdepth: 1
 
    userguide/installation
+   userguide/hrdic
    userguide/howtouse

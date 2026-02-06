@@ -1,4 +1,4 @@
-API Documentation
+API reference
 =================
 
 Information on specific functions, classes, and methods.
