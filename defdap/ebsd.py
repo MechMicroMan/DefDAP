@@ -50,31 +50,37 @@ class Map(base.Map):
     origin : tuple(int)
         Map origin (x, y). Used by linker class where origin is a
         homologue point of the maps.
-
     data : defdap.utils.Datastore
+        Data storage object containing:
+
         Must contain after loading data (maps):
-            phase : numpy.ndarray
-                1-based, 0 is non-indexed points
-            euler_angle : numpy.ndarray
-                stored as (3, y_dim, x_dim) in radians
+
+        - phase : numpy.ndarray
+            1-based, 0 is non-indexed points
+        - euler_angle : numpy.ndarray
+            stored as (3, y_dim, x_dim) in radians
+
         Generated data:
-            orientation : numpy.ndarray of defdap.quat.Quat
-                Quaterion for each point of map. Shape (y_dim, x_dim).
-            grain_boundaries : BoundarySet
-            phase_boundaries : BoundarySet
-            grains : numpy.ndarray of int
-                Map of grains. Grain numbers start at 1 here but everywhere else
-                grainID starts at 0. Regions that are smaller than the minimum
-                grain size are given value -2. Remnant boundary points are -1.
-            KAM : numpy.ndarray
-                Kernal average misorientaion map.
-            GND : numpy.ndarray
-                GND scalar map.
-            Nye_tensor : numpy.ndarray
-                3x3 Nye tensor at each point.
+
+        - orientation : numpy.ndarray of defdap.quat.Quat
+            Quaterion for each point of map. Shape (y_dim, x_dim).
+        - grain_boundaries : BoundarySet
+        - phase_boundaries : BoundarySet
+        - grains : numpy.ndarray of int
+            Map of grains. Grain numbers start at 1 here but everywhere else
+            grainID starts at 0. Regions that are smaller than the minimum
+            grain size are given value -2. Remnant boundary points are -1.
+        - KAM : numpy.ndarray
+            Kernal average misorientaion map.
+        - GND : numpy.ndarray
+            GND scalar map.
+        - Nye_tensor : numpy.ndarray
+            3x3 Nye tensor at each point.
+
         Derived data:
-            grain_data_to_map : numpy.ndarray
-                Grain list data to map data from all grains
+
+        - grain_data_to_map : numpy.ndarray
+            Grain list data to map data from all grains
 
     """
     MAPNAME = 'ebsd'

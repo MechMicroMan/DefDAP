@@ -166,7 +166,7 @@ class GrainInspector:
         self.redraw_line()
 
     def group_lines(self,
-                    grain: 'defdap.hrdic.Grain' = None):
+                    grain: 'hrdic.Grain' = None):
         """
         Group the lines drawn in the current grain item using a mean shift algorithm,
         save the average angle and then detect the active slip planes.

@@ -18,7 +18,12 @@ import numpy as np
 from defdap import plotting
 from defdap import defaults
 
-from typing import Union, Tuple, List, Optional
+from typing import Union, Tuple, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import matplotlib.figure
+    import matplotlib.axes
+    import defdap.crystal as crystal
 
 
 class Quat(object):
@@ -513,7 +518,7 @@ class Quat(object):
 
     def plot_unit_cell(
         self,
-        crystal_structure: 'defdap.crystal.CrystalStructure',
+        crystal_structure: 'crystal.CrystalStructure',
         OI: Optional[bool] = True,
         plot: Optional['plotting.CrystalPlot'] = None,
         fig: Optional['matplotlib.figure.Figure'] = None,

@@ -37,7 +37,7 @@ class EBSDDataWriter(object):
         self.data_format = None
 
     @staticmethod
-    def get_writer(datatype: str) -> "Type[EBSDDataLoader]":
+    def get_writer(datatype: str) -> "Type[EBSDDataWriter]":
         if datatype is None:
             datatype = "OxfordText"
 

@@ -56,7 +56,7 @@ class Map(base.Map):
     ydim : int
         Size of map along y (from header).
     shape : tuple
-        Size of map (after cropping, like *Dim).
+        Size of map (after cropping, like ``*Dim``).
     corrVal : numpy.ndarray
         Correlation value.
     ebsd_map : defdap.ebsd.Map
@@ -740,15 +740,17 @@ class Grain(base.Grain):
         EBSD map that this DIC grain belongs to.
     points_list : numpy.ndarray
         Start and end points for lines drawn using defdap.inspector.GrainInspector.
-    groups_list :
+    groups_list : list
         Groups, angles and slip systems detected for
         lines drawn using defdap.inspector.GrainInspector.
-
     data : defdap.utils.Datastore
         Must contain after creating:
+
             point : list of tuples
                 (x, y) in cropped map
+
         Generated data:
+            None
 
         Derived data:
             Map data to list data from the map the grain is part of
