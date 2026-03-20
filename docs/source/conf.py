@@ -128,6 +128,8 @@ pygments_style = 'sphinx'
 
 html_theme = "pydata_sphinx_theme"
 
+html_static_path = ["_static"]
+
 html_theme_options = {
     "icon_links": [
         {
@@ -152,14 +154,13 @@ html_context = {
     "doc_path": "docs/source",
 }
 
-html_static_path = ["_static"]
 html_js_files = [
    ("custom-icons.js", {"defer": "defer"}),
 ]
 
-html_static_path = ['_static']
-
 html_copy_source = False
+
+html_favicon = '_static/favicon.png'
 
 # -----------------------------------------------------------------------------
 # Options for HTMLHelp output

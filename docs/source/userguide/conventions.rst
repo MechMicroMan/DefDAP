@@ -24,13 +24,9 @@ IPF Triangle
 --------------
 
 The orientation of the hexagonal IPF triangle can be set in ``defdap/__init__.py`` by changing the ``ipf_triangle_convention`` argument. 
-The ``up`` convention looks lke this:
+The ``up`` and ``down`` conventions looks lke this:
 
-.. image:: /_static/IPF_up.png
-
-The ``down`` convention looks like this:
-
-.. image:: /_static/IPF_down.png
+.. image:: /_static/IPF_up_down.png
 
 Slip systems
 ----------------------

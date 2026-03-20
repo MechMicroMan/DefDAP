@@ -24,9 +24,12 @@ DefDAP supports loading data from various commercial and open-source software pa
     * - ``openpivtext``
       - ``.txt``
       - OpenPIV text files
-    * - ``pyvale``
+    * - ``pyvale-csv``
       - ``.csv``
       - PyVale text files
+    * - ``pyvale-binary``
+      - ``.2ddic``
+      - PyVale binary files
 
 .. note::
 
