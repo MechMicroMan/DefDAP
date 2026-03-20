@@ -33,8 +33,28 @@ __all__ = [
 
 
 def create_l_matrix(a, b, c, alpha, beta, gamma, convention=None):
-    """ Construct L matrix based on Page 22 of
-    Randle and Engle - Introduction to texture analysis"""
+    """  Construct L matrix.
+
+    Parameters
+    ----------
+    a, b, c : float
+        Lattice parameters in angstroms.
+    alpha, beta, gamma : float
+        Interaxial lattice angles in radians.
+    convention : str {'hkl', 'oi', 'tsl'}, optional
+        Orthonormalisation convention. If omitted, uses
+        ``defaults['crystal_ortho_conv']``.
+
+    Returns
+    -------
+    numpy.ndarray
+        A ``(3, 3)`` L matrix for transforming crystal directions.
+
+    References
+    ----------
+    Page 22 of Randle and Engle - Introduction to Texture Analysis
+
+    """
     l_matrix = np.zeros((3, 3))
 
     cos_alpha = np.cos(alpha)
@@ -85,9 +105,23 @@ def create_l_matrix(a, b, c, alpha, beta, gamma, convention=None):
 
 
 def create_q_matrix(l_matrix):
-    """ Construct matrix of reciprocal lattice vectors to transform
-    plane normals See C. T. Young and J. L. Lytton, J. Appl. Phys.,
-    vol. 43, no. 4, pp. 1408–1417, 1972."""
+    """Construct matrix of reciprocal lattice vectors to transform plane normals
+
+    Parameters
+    ----------
+    l_matrix : numpy.ndarray
+        Direct-lattice transform matrix of shape ``(3, 3)``.
+
+    Returns
+    -------
+    numpy.ndarray
+        A ``(3, 3)`` Q matrix whose columns are reciprocal lattice vectors.
+
+    References
+    ----------
+    C. T. Young and J. L. Lytton, J. Appl. Phys., vol. 43, no. 4, pp. 1408–1417, 1972.
+
+    """
     a = l_matrix[:, 0]
     b = l_matrix[:, 1]
     c = l_matrix[:, 2]
@@ -103,6 +137,21 @@ def create_q_matrix(l_matrix):
 
 
 def check_len(val, length):
+    """Validate that a vector-like object has the expected length.
+
+    Parameters
+    ----------
+    val : collection
+        Value to validate.
+    length : int
+        Required number of elements.
+
+    Raises
+    ------
+    ValueError
+        If ``val`` does not contain exactly ``length`` elements.
+
+    """
     if len(val) != length:
         raise ValueError(f"Vector must have {length} values.")
 
@@ -117,9 +166,9 @@ def convert_idc(in_type, *, dir=None, plane=None):
         Type of indices provided. If 'm' converts from Miller to
         Miller-Bravais, opposite for 'mb'.
     dir : tuple of int or equivalent, optional
-        Direction to convert. This OR `plane` must me provided.
+        Direction to convert. This OR ``plane`` must be provided.
     plane : tuple of int or equivalent, optional
-        Plane to convert. This OR `direction` must me provided.
+        Plane to convert. This OR ``dir`` must be provided.
 
     Returns
     -------
@@ -180,6 +229,30 @@ def equavlent_indicies(
     c_over_a=None, 
     in_type=None
 ):
+    """Generate crystallographically equivalent planes or directions.
+
+    Parameters
+    ----------
+    crystal_symm : str
+        Crystal symmetry name, e.g. ``'hexagonal'``.
+    symmetries : iterable
+        Symmetry operators.
+    dir : tuple of int, optional
+        Direction indices. Provide either ``dir`` or ``plane``.
+    plane : tuple of int, optional
+        Plane indices. Provide either ``plane`` or ``dir``.
+    c_over_a : float, optional
+        Hexagonal ``c/a`` ratio.
+    in_type : str {'m', 'mb'}, optional
+        Input index basis. Defaults to ``'mb'`` for hexagonal crystals,
+        otherwise ``'m'``.
+
+    Returns
+    -------
+    list[tuple[int, ...]]
+        Equivalent indices in the requested basis.
+
+    """
     if dir is None and plane is None:
         raise ValueError("One of either `direction` or `plane` must be "
                          "provided.")
@@ -252,16 +325,19 @@ def project_to_orth(c_over_a, *, dir=None, plane=None, in_type='mb'):
 
     Parameters
     ----------
-    in_type : str {'m', 'mb'}
-        Type of indices provided
+    c_over_a : float
+        Hexagonal lattice ratio ``c/a``.
     dir : tuple of int or equivalent, optional
-        Direction to convert. This OR `plane` must me provided.
+        Direction to convert. This OR ``plane`` must be provided.
     plane : tuple of int or equivalent, optional
-        Plane to convert. This OR `direction` must me provided.
+        Plane to convert. This OR ``dir`` must be provided.
+    in_type : str {'m', 'mb'}
+        Type of indices provided.
 
     Returns
     -------
-
+    numpy.ndarray
+        Projected direction or plane normal.
 
     """
     if dir is None and plane is None:
@@ -270,7 +346,6 @@ def project_to_orth(c_over_a, *, dir=None, plane=None, in_type='mb'):
     if dir is not None and plane is not None:
         raise ValueError("One of either `direction` or `plane` must be "
                          "provided, not both.")
-    
     if in_type == 'mb':
         if dir is None:
             check_len(plane, 4)
@@ -322,7 +397,7 @@ def pos_idc(vec):
 
 def reduce_idc(vec):
     """
-    Reduce indices to lowest integers
+    Reduce indices to lowest integers.
 
     Parameters
     ----------
@@ -371,7 +446,7 @@ def safe_int_cast(vec, tol=1e-3):
 
 def idc_to_string(idc, brackets=None, str_type='unicode'):
     """
-    String representation of a set of indicies.
+    String representation of a set of indices.
 
     Parameters
     ----------
@@ -399,10 +474,17 @@ def str_idx(idx, str_type='unicode'):
     ----------
     idx : int
     str_type : str {'unicode', 'tex'}
+        Output format. ``'unicode'`` uses combining overbars for negative
+        values, while ``'tex'`` returns TeX math markup.
 
     Returns
     -------
     str
+
+    Raises
+    ------
+    ValueError
+        If ``idx`` is not an integer.
 
     """
     if not isinstance(idx, (int, np.integer)):

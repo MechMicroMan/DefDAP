@@ -230,6 +230,14 @@ class Map(base.Map):
 
     @property
     def num_phases(self):
+        """Number of phases in the EBSD map.
+
+        Returns
+        -------
+        int or None
+            Number of phases, or ``None`` if no phases are defined.
+
+        """
         return len(self.phases) or None
 
     @property
@@ -246,6 +254,7 @@ class Map(base.Map):
 
     @property
     def scale(self):
+        """Spatial scale of the map in microns per pixel."""
         return self.step_size
 
     @report_progress("rotating EBSD data")
@@ -270,6 +279,23 @@ class Map(base.Map):
         yield 1.
 
     def calc_euler_colour(self, map_data, phases=None, bg_colour=None):
+        """Calculate RGB colours using Euler colouring.
+
+        Parameters
+        ----------
+        map_data : numpy.ndarray
+            Euler-angle map data with shape ``(3, y, x)``.
+        phases : list of int, optional
+            Phase IDs to include. If omitted, include all phases.
+        bg_colour : numpy.ndarray, optional
+            Background RGB colour used where phases are excluded.
+
+        Returns
+        -------
+        numpy.ndarray
+            RGB map array with shape ``(y, x, 3)``.
+
+        """
         if phases is None:
             phases = self.phases
             phase_ids = range(len(phases))
@@ -298,6 +324,25 @@ class Map(base.Map):
 
     def calc_ipf_colour(self, map_data, direction, phases=None,
                         bg_colour=None):
+        """Calculate RGB colours from IPF colouring.
+
+        Parameters
+        ----------
+        map_data : numpy.ndarray
+            Orientation data as quaternion objects.
+        direction : numpy.ndarray
+            Sample reference direction for IPF colouring.
+        phases : list of int, optional
+            Phase IDs to include. If omitted, include all phases.
+        bg_colour : numpy.ndarray, optional
+            Background RGB colour used where phases are excluded.
+
+        Returns
+        -------
+        numpy.ndarray
+            RGB map array with shape ``(y, x, 3)``.
+
+        """
         if phases is None:
             phases = self.phases
             phase_ids = range(len(phases))
@@ -586,6 +631,19 @@ class Map(base.Map):
         return quats
 
     def filter_data(self, misori_tol=5):
+        """Apply a Kuwahara-style quaternion filter.
+
+        Parameters
+        ----------
+        misori_tol : float, optional
+            Misorientation tolerance in degrees.
+
+        Returns
+        -------
+        numpy.ndarray
+            Last processed quadrant quaternion subset.
+
+        """
         # Kuwahara filter
         print("8 quadrants")
         misori_tol *= np.pi / 180
@@ -757,6 +815,7 @@ class Map(base.Map):
 
     @report_progress("constructing neighbour network")
     def build_neighbour_network(self):
+        """Construct the grain-neighbour network from boundary pixels."""
         # create network
         nn = nx.Graph()
         nn.add_nodes_from(self.grains)
@@ -1228,7 +1287,7 @@ class Grain(base.Grain):
 
     @property
     def crystal_sym(self):
-        """Temporary"""
+        """Crystal symmetry name of the grain phase."""
         return self.phase.crystal_structure.name
 
     def calc_average_ori(self):
@@ -1291,6 +1350,14 @@ class Grain(base.Grain):
                 self.mis_ori_axis_list.append(row)
 
     def calc_grod(self):
+        """Calculate GROD magnitude and axis for all grain points.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            GROD magnitudes and GROD axis vectors.
+
+        """
         quat_comps = Quat.calc_sym_eqvs(self.data.orientation, self.crystal_sym)
 
         if self.ref_ori is None:
@@ -1316,7 +1383,22 @@ class Grain(base.Grain):
 
         return misori, misori_axis
     
-    def calc_ipf_colour(self, grain_data, direction, bg_colour=None):
+    def calc_ipf_colour(self, grain_data, direction):
+        """Calculate grain colours from IPF colouring.
+
+        Parameters
+        ----------
+        grain_data : numpy.ndarray
+            Grain orientation data as quaternions.
+        direction : numpy.ndarray
+            Sample reference direction for IPF colouring.
+
+        Returns
+        -------
+        numpy.ndarray
+            RGB colour array for the grain.
+
+        """
 
         grain_colours = Quat.calc_ipf_colours(
             grain_data, direction, self.phase.crystal_structure.name
@@ -1324,7 +1406,20 @@ class Grain(base.Grain):
 
         return grain_colours
     
-    def calc_euler_colour(self, grain_data, bg_colour=None):
+    def calc_euler_colour(self, grain_data):
+        """Calculate grain colours from normalised Euler angles.
+
+        Parameters
+        ----------
+        grain_data : numpy.ndarray
+            Euler-angle data with shape ``(3, n_points)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            RGB colour array for the grain.
+
+        """
 
         if self.phase.crystal_structure.name == 'cubic':
             norm = np.array([2 * np.pi, np.pi / 2, np.pi / 2])
@@ -1577,17 +1672,20 @@ class Grain(base.Grain):
 
 
 class BoundarySet(object):
+    """Container for phase and grain boundary point sets."""
     # boundaries : numpy.ndarray
     #     Map of boundaries. -1 for a boundary, 0 otherwise.
     # phaseBoundaries : numpy.ndarray
     #     Map of phase boundaries. -1 for boundary, 0 otherwise.
     def __init__(self, ebsd_map, points_x, points_y):
+        """Initialise a boundary set from horizontal and vertical points."""
         self.ebsd_map = ebsd_map
         self.points_x = set(points_x)
         self.points_y = set(points_y)
 
     @classmethod
     def from_image(cls, ebsd_map, image_x, image_y):
+        """Create a boundary set from boolean boundary images."""
         return cls(
             ebsd_map,
             zip(*image_x.transpose().nonzero()),
@@ -1596,6 +1694,7 @@ class BoundarySet(object):
 
     @classmethod
     def from_boundary_segments(cls, b_segs):
+        """Create a boundary set from boundary segments."""
         points_x = []
         points_y = []
         for b_seg in b_segs:
@@ -1606,27 +1705,33 @@ class BoundarySet(object):
 
     @property
     def points(self):
+        """Combined boundary points from horizontal and vertical sets."""
         return self.points_x.union(self.points_y)
 
     def _image(self, points):
+        """Convert a point collection to a boolean map image."""
         image = np.zeros(self.ebsd_map.shape, dtype=bool)
         image[tuple(zip(*points))[::-1]] = True
         return image
 
     @property
     def image_x(self):
+        """Boolean image of horizontal boundary points."""
         return self._image(self.points_x)
 
     @property
     def image_y(self):
+        """Boolean image of vertical boundary points."""
         return self._image(self.points_y)
 
     @property
     def image(self):
+        """Boolean image of all boundary points."""
         return self._image(self.points)
 
     @property
     def lines(self):
+        """Line segments representing all boundary points."""
         _, _, lines = self.boundary_points_to_lines(
             boundary_points_x=self.points_x,
             boundary_points_y=self.points_y
@@ -1636,6 +1741,21 @@ class BoundarySet(object):
     @staticmethod
     def boundary_points_to_lines(*, boundary_points_x=None,
                                  boundary_points_y=None):
+        """Convert boundary points to line segments for plotting.
+
+        Parameters
+        ----------
+        boundary_points_x : iterable of tuple, optional
+            Horizontal boundary points.
+        boundary_points_y : iterable of tuple, optional
+            Vertical boundary points.
+
+        Returns
+        -------
+        list or tuple
+            Line-segment collections for provided boundary directions.
+
+        """
         boundary_data = {}
         if boundary_points_x is not None:
             boundary_data['x'] = boundary_points_x
@@ -1666,7 +1786,10 @@ class BoundarySet(object):
 
 
 class BoundarySegment(object):
+    """Boundary segment between two neighbouring grains."""
+
     def __init__(self, ebsdMap, grain1, grain2):
+        """Initialise a boundary segment for a grain pair."""
         self.ebsdMap = ebsdMap
 
         self.grain1 = grain1
@@ -1694,6 +1817,18 @@ class BoundarySegment(object):
         return len(self.boundary_points_x) + len(self.boundary_points_y)
 
     def addBoundaryPoint(self, point, kind, owner_grain):
+        """Add a boundary point and its owner grain.
+
+        Parameters
+        ----------
+        point : tuple[int, int]
+            Boundary point coordinates.
+        kind : int
+            Boundary type: ``0`` for horizontal, ``1`` for vertical.
+        owner_grain
+            Grain that owns the point side.
+
+        """
         if kind == 0:
             self.boundary_points_x.append(point)
             self.boundary_point_owners_x.append(owner_grain is self.grain1)
@@ -1750,6 +1885,14 @@ class BoundarySegment(object):
         return lines
 
     def misorientation(self):
+        """Calculate misorientation angle and axis between neighbouring grains.
+
+        Returns
+        -------
+        tuple[float, numpy.ndarray]
+            Misorientation angle (radians) and unit rotation axis.
+
+        """
         mis_ori, minSymm = self.grain1.ref_ori.mis_ori(
             self.grain2.ref_ori, self.ebsdMap.crystal_sym, return_quat=2
         )

@@ -178,10 +178,12 @@ class Map(base.Map):
 
     @property
     def original_shape(self):
+        """Original map shape before cropping as ``(y, x)``."""
         return self.ydim, self.xdim
 
     @property
     def crystal_sym(self):
+        """Crystal symmetry of the linked EBSD map."""
         return self.ebsd_map.crystal_sym
 
     @report_progress("loading HRDIC data")
@@ -217,7 +219,7 @@ class Map(base.Map):
                f"sub-window size: {self.binning} x {self.binning} pixels)")
 
     def load_corr_val_data(self, file_name, data_type=None):
-        """Load correlation value for DIC data
+        """Load correlation value map for the DIC data.
 
         Parameters
         ----------
@@ -243,7 +245,7 @@ class Map(base.Map):
             "Dimensions of imported data and dic data do not match"
 
     def retrieve_name(self):
-        """Gets the first name assigned to the a map, as a string
+        """Get the first variable name bound to this map instance.
 
         """
         for fi in reversed(inspect.stack()):
@@ -274,7 +276,7 @@ class Map(base.Map):
         return self.bse_scale * self.binning
 
     def print_stats_table(self, percentiles, components):
-        """Print out a statistics table for a DIC map
+        """Print a statistics table for selected DIC map components.
 
         Parameters
         ----------
@@ -363,9 +365,15 @@ class Map(base.Map):
         Parameters
         ----------
         map_data : numpy.ndarray
-            Bap data to crop.
-        binning : int
-            True if mapData is binned i.e. binned BSE pattern.
+            Map data to crop.
+        binning : int, optional
+            Scale factor applied to crop distances (for binned data).
+
+        Returns
+        -------
+        numpy.ndarray
+            Cropped map data.
+
         """
         binning = 1 if binning is None else binning
 
@@ -407,12 +415,12 @@ class Map(base.Map):
         """Check if an EBSD map has been linked.
 
         Returns
-        ----------
+        -------
         bool
             Returns True if EBSD map linked.
 
         Raises
-        ----------
+        ------
         Exception
             If EBSD map not linked.
 
@@ -422,7 +430,7 @@ class Map(base.Map):
         return True
 
     def warp_to_dic_frame(self, map_data, **kwargs):
-        """Warps a map to the DIC frame.
+        """Warp map data into the DIC frame.
 
         Parameters
         ----------
@@ -432,7 +440,7 @@ class Map(base.Map):
             All other arguments passed to :func:`defdap.experiment.Experiment.warp_map`.
 
         Returns
-        ----------
+        -------
         numpy.ndarray
             Map (i.e. EBSD map data) warped to the DIC frame.
 
@@ -501,7 +509,18 @@ class Map(base.Map):
         return mask
 
     def mask(self, map_data):
-        """ Values set to False in mask will be set to nan in map.
+        """Apply the current mask to map data.
+
+        Parameters
+        ----------
+        map_data : numpy.ndarray
+            Data to mask.
+
+        Returns
+        -------
+        numpy.ndarray or numpy.ma.MaskedArray
+            Input data if no mask is set, otherwise masked data.
+
         """
         if self.data.mask is None:
             return map_data
@@ -518,7 +537,8 @@ class Map(base.Map):
             Path to image.
         window_size : int
             Size of pixel in pattern image relative to pixel size of DIC data
-            i.e 1 means they  are the same size and 2 means the pixels in
+            
+        i.e 1 means they are the same size and 2 means the pixels in
             the pattern are half the size of the dic data.
 
         """
@@ -527,6 +547,22 @@ class Map(base.Map):
         self.data['pattern', 'binning'] = window_size
 
     def load_pattern(self):
+        """Load and validate the linked pattern image. Set a pattern image with 
+        :func:`defdap.hrdic.Map.set_pattern`.
+
+        Returns
+        -------
+        numpy.ndarray
+            Pattern image array.
+
+        Raises
+        ------
+        FileNotFoundError
+            If no pattern path has been configured.
+        ValueError
+            If image dimensions do not match expected binned size.
+
+        """
         print('Loading img')
         path = self.data.get_metadata('pattern', 'path')
         binning = self.data.get_metadata('pattern', 'binning', 1)
@@ -809,7 +845,7 @@ class Grain(base.Grain):
         """Calculates list of slip trace angles based on EBSD grain orientation.
 
         Parameters
-        -------
+        ----------
         slip_systems : defdap.crystal.SlipSystem, optional
 
         """
@@ -828,7 +864,7 @@ class Grain(base.Grain):
             Minimum angle between bands.
 
         Returns
-        ----------
+        -------
         list(float)
             Detected slip band angles
 
@@ -877,13 +913,28 @@ class Grain(base.Grain):
 
 
 class BoundarySet(object):
+    """Boundary points and line segments represented in DIC coordinates."""
+
     def __init__(self, dic_map, points, lines):
+        """Initialise a boundary set.
+
+        Parameters
+        ----------
+        dic_map : defdap.hrdic.Map
+            Parent DIC map.
+        points : iterable
+            Boundary point coordinates.
+        lines : iterable
+            Boundary line segments.
+
+        """
         self.dic_map = dic_map
         self.points = set(points)
         self.lines = lines
 
     @classmethod
     def from_ebsd_boundaries(cls, dic_map, ebsd_boundaries):
+        """Create DIC frame boundaries by warping EBSD boundaries."""
         if len(ebsd_boundaries.points) == 0:
             return cls(dic_map, [], [])
 
@@ -898,10 +949,12 @@ class BoundarySet(object):
         return cls(dic_map, points, lines)
 
     def _image(self, points):
+        """Convert boundary points to a boolean image."""
         image = np.zeros(self.dic_map.shape, dtype=bool)
         image[tuple(zip(*points))[::-1]] = True
         return image
 
     @property
     def image(self):
+        """Boolean image of all boundary points."""
         return self._image(self.points)

@@ -41,9 +41,9 @@ class Quat(object):
         Parameters
         ----------
         *args
-            Variable length argument list.
-        allow_southern
-            if False, move quat to northern hemisphere.
+            Either four quaternion coefficients or one length-4 iterable.
+        allow_southern : bool, optional
+            If ``False``, move the quaternion to the northern hemisphere.
 
         """
         # construct with array of quat coefficients
@@ -71,11 +71,11 @@ class Quat(object):
 
         Parameters
         ----------
-        ph1
+        ph1 : float
             First Euler angle, rotation around Z in radians.
-        phi
+        phi : float
             Second Euler angle, rotation around new X in radians.
-        ph2
+        ph2 : float
             Third Euler angle, rotation around new Z in radians.
 
         Returns
@@ -102,9 +102,9 @@ class Quat(object):
 
         Parameters
         ----------
-        axis
+        axis : numpy.ndarray
             Axis that the rotation is applied around.
-        angle
+        angle : float
             Magnitude of rotation in radians.
 
         Returns
@@ -259,11 +259,11 @@ class Quat(object):
         raise TypeError("{:} - {:}".format(type(self), type(right)))
 
     def dot(self, right: 'Quat') -> float:
-        """ Calculate dot product between two quaternions.
+        """Calculate the dot product between two quaternions.
 
         Parameters
         ----------
-        right
+        right : Quat
             Right hand quaternion.
 
         Returns
@@ -337,7 +337,7 @@ class Quat(object):
         vector: Union[Tuple, List, np.ndarray]
     ) -> np.ndarray:
         """
-        Transforms vector by the quaternion. For passive EBSD quaterions
+        Transforms a vector by the quaternion. For passive EBSD quaterions
         this is a transformation from sample space to crystal space.
         Perform on conjugate of quaternion for crystal to sample. For a
         quaternion representing a passive rotation from CS1 to CS2 and a
@@ -373,27 +373,25 @@ class Quat(object):
         sym_group: str,
         return_quat: Optional[int] = 0
     ) -> Tuple[float, 'Quat']:
-        """
-        Calculate misorientation angle between 2 orientations taking
-        into account the symmetries of the crystal structure.
-        Angle is 2*arccos(output).
+        """Calculate minimum misorientation between two quaternions,
+        accounting for crystal symmetry. The misorientation angle is 
+        ``2 * arccos(m)``, where ``m`` is the minimum misorientation 
+        value.
 
         Parameters
         ----------
-        right
+        right : Quat
             Orientation to find misorientation to.
-        sym_group
+        sym_group : str
             Crystal type (cubic, hexagonal).
-        return_quat
+        return_quat : int, optional
             What to return: 0 for minimum misorientation, 1 for
             symmetric equivalent with minimum misorientation, 2 for both.
 
         Returns
         -------
-        float
-            Minimum misorientation.
-        defdap.quat.Quat
-            Symmetric equivalent orientation with minimum misorientation.
+        float or Quat or tuple[float, Quat]
+            Return type depends on ``return_quat``.
 
         """
         if isinstance(right, type(self)):
@@ -453,19 +451,19 @@ class Quat(object):
         marker_size: Optional[float] = 40,
         **kwargs
     ) -> 'plotting.PolePlot':
-        """
-        Plot IPF of orientation, with relation to specified sample direction.
+        """Plot the orientation on an inverse pole figure, 
+        with relation to the specified sample direction.
 
         Parameters
         ----------
-        direction
+        direction : numpy.ndarray
             Sample reference direction for IPF.
-        sym_group
+        sym_group : str
             Crystal type (cubic, hexagonal).
-        projection
-             Projection to use. Either string (stereographic or lambert)
-             or a function.
-        plot
+        projection : str or callable, optional
+             Projection to use. Either a string (``stereographic`` or
+             ``lambert``) or a function.
+        plot : defdap.plotting.Plot, optional
             Defdap plot to plot on.
         fig
             Figure to plot on, if not provided the current
@@ -473,20 +471,25 @@ class Quat(object):
         ax
             Axis to plot on, if not provided the current
             active axis is used.
-        make_interactive
-            If true, make the plot interactive.
-        plot_colour_bar : bool
-            If true, plot a colour bar next to the map.
-        clabel : str
+        plot_colour_bar : bool, optional
+            If ``True``, plot a colour bar next to the map.
+        clabel : str, optional
             Label for the colour bar.
-        marker_colour: str or list of str
+        make_interactive : bool, optional
+            If ``True``, make the plot interactive.
+        marker_colour : str or list of str, optional
             Colour of markers (only used for half and half colouring,
             otherwise use argument c).
-        marker_size
+        marker_size : float, optional
             Size of markers (only used for half and half colouring,
             otherwise use argument s).
         kwargs
             All other arguments are passed to :func:`defdap.plotting.PolePlot.add_points`.
+
+        Returns
+        -------
+        defdap.plotting.PolePlot
+            Pole-figure plot object.
 
         """
         plot_params = {'marker': '+'}
@@ -526,24 +529,29 @@ class Quat(object):
         make_interactive: Optional[bool] = False,
         **kwargs
     ) -> 'plotting.CrystalPlot':
-        """Plots a unit cell.
+        """Plot a unit cell for the current orientation.
 
         Parameters
         ----------
         crystal_structure
             Crystal structure.
-        OI
-            True if using oxford instruments system.
-        plot
+        OI : bool, optional
+            If ``True``, use the Oxford Instruments convention.
+        plot : defdap.plotting.CrystalPlot, optional
             Plot object to plot to.
-        fig
+        fig : matplotlib.figure.Figure, optional
             Figure to plot on, if not provided the current active axis is used.
-        ax
+        ax : matplotlib.axes.Axes, optional
             Axis to plot on, if not provided the current active axis is used.
-        make_interactive
-            True to make the plot interactive.
+        make_interactive : bool, optional
+            If ``True``, make the plot interactive.
         kwargs
             All other arguments are passed to :func:`defdap.plotting.CrystalPlot.add_verts`.
+
+        Returns
+        -------
+        defdap.plotting.CrystalPlot
+            Crystal plot object.
 
         """
         # Set default plot parameters then update with any input
@@ -597,11 +605,11 @@ class Quat(object):
 
     @staticmethod
     def create_many_quats(eulerArray: np.ndarray) -> np.ndarray:
-        """Create a an array of quats from an array of Euler angles.
+        """Create an array of quaternions from Euler angles.
 
         Parameters
         ----------
-        eulerArray
+        eulerArray : numpy.ndarray
             Array of Bunge Euler angles of shape 3 x n x ... x m.
 
         Returns
@@ -631,18 +639,19 @@ class Quat(object):
 
     @staticmethod
     def multiply_many_quats(quats: List['Quat'], right: 'Quat') -> List['Quat']:
-        """ Multiply all quats in a list of quats, by a single quat.
+        """Multiply a list of quaternions by a single quaternion.
 
         Parameters
         ----------
-        quats
+        quats : list[Quat]
             List of quats to be operated on.
-        right
+        right : Quat
             Single quaternion to multiply with the list of quats.
 
         Returns
         -------
-        list(defdap.quat.Quat)
+        list[Quat]
+            Resulting multiplied quaternions.
 
         """
         quat_array = np.array([q.quat_coef for q in quats])
@@ -659,7 +668,7 @@ class Quat(object):
 
     @staticmethod
     def extract_quat_comps(quats: np.ndarray) -> np.ndarray:
-        """Return a NumPy array of the provided quaternion components
+        """Return quaternion components as a NumPy array.
 
         Input quaternions may be given as a list of Quat objects or any iterable
         whose items have 4 components which map to the quaternion.
@@ -667,12 +676,12 @@ class Quat(object):
         Parameters
         ----------
         quats : numpy.ndarray(defdap.quat.Quat)
-            A list of Quat objects to return the components of
+            Quaternions to extract components from.
 
         Returns
         -------
         numpy.ndarray
-            Array of quaternion components, shape (4, ..)
+            Array of quaternion components, shape ``(4, ...)``.
 
         """
         quats = np.array(quats)
@@ -694,15 +703,16 @@ class Quat(object):
         ----------
         quats : numpy.ndarray(defdap.quat.Quat)
             Array of quat objects.
-        sym_group
+        sym_group : str
             Crystal type (cubic, hexagonal).
-        dtype
-            Datatype used for calculation, defaults to `float`.
+        dtype : type, optional
+            Datatype used for calculation, defaults to ``float``.
 
         Returns
         -------
-        quat_comps: numpy.ndarray, shape: (numSym x 4 x numQuats)
-            Array containing all symmetrically equivalent quaternion components of input quaternions.
+        numpy.ndarray
+            Symmetrically equivalent quaternion components with shape
+            ``(num_sym, 4, num_quats)``.
 
         """
         syms = Quat.sym_eqv(sym_group)
@@ -775,23 +785,23 @@ class Quat(object):
     def calcMisOri(
         quat_comps: np.ndarray,
         ref_ori: 'Quat'
-    ) -> Tuple[np.ndarray, 'Quat']:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Calculate the misorientation between the quaternions and a reference quaternion.
 
         Parameters
         ----------
         quat_comps
             Array containing all symmetrically equivalent quaternion components of given quaternions
-            (shape: numSym x 4 x numQuats), can be calculated from quats with :func:`Quat.calc_sym_eqvs` .
+            (shape: numSym x 4 x numQuats), can be calculated from quats with :func:`Quat.calc_sym_eqvs`.
         ref_ori
             Reference orientation.
 
         Returns
         -------
-        min_mis_oris : numpy.ndarray, len numQuats
+        min_mis_oris : numpy.ndarray
             Minimum misorientation between quats and reference orientation.
-        min_quat_comps : defdap.quat.Quat
-            Quaternion components describing minimum misorientation between quats and reference orientation.
+        min_quat_comps : numpy.ndarray
+            Quaternion components describing minimum misorientation.
 
         """
         mis_oris = np.empty((quat_comps.shape[0], quat_comps.shape[2]))
@@ -826,7 +836,7 @@ class Quat(object):
 
         Returns
         -------
-        float, float
+        tuple[numpy.ndarray, numpy.ndarray]
             inclination angle and azimuthal angle (around z axis from x
             in anticlockwise as per ISO).
 
@@ -856,11 +866,11 @@ class Quat(object):
         ----------
         quats : numpy.ndarray(defdap.quat.Quat)
             Array of quat objects.
-        direction
+        direction : numpy.ndarray
             Direction in sample space.
-        sym_group
+        sym_group : str
             Crystal type (cubic, hexagonal).
-        dtype
+        dtype : type, optional
             Data type to use for calculation.
 
         Returns
@@ -969,17 +979,17 @@ class Quat(object):
 
         Parameters
         ----------
-        quats: array_like(defdap.quat.Quat)
+        quats : array_like[Quat]
             Array of quat objects.
-        direction
+        direction : numpy.ndarray
             Direction in sample space.
-        sym_group
+        sym_group : str
             Crystal type (cubic, hexagonal).
-        dtype
+        dtype : type, optional
             Data type to use for calculation.
-        triangle:  str, optional
+        triangle : str, optional
             Triangle convention to use for hexagonal symmetry (up, down). If None,
-            defaults to the value in `defaults['ipf_triangle_convention']`.
+            defaults to the value in ``defaults['ipf_triangle_convention']``.
 
         Returns
         -------

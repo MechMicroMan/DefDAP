@@ -26,29 +26,27 @@ from typing import List
 
 
 class GrainInspector:
-    """
-    Class containing the interactive grain inspector tool for slip trace analysis
-    and relative displacement ratio analysis.
-
-    """
+    """Interactive tool for slip-trace and relative displacement analysis."""
 
     def __init__(self,
                  selected_dic_map: 'hrdic.Map',
                  vmax: float,
                  correction_angle: float = 0,
                  rdr_line_length: int = 3):
-        """
+        """Initialise the grain inspector.
 
         Parameters
         ----------
-        selected_dic_map
+        selected_dic_map : hrdic.Map
             DIC map to run grain inspector on.
-        vmax
+        vmax : float
             Maximum effective shear strain in colour scale.
-        correction_angle
+        correction_angle : float, optional
             Angle (in degrees) to subtract from drawn line angle.
-        rdr_line_length
-            Length on lines perpendicular to slip trace (can be any odd number above default 3).
+        rdr_line_length : int, optional
+            Length of lines perpendicular to the slip trace used for RDR
+            calculation. Can be any odd number greater than or equal to 3.
+
         """
         # Initialise some values
         self.grain_id = 0
@@ -117,12 +115,14 @@ class GrainInspector:
     def goto_grain(self,
                    event: int,
                    plot):
-        """ Go to a specified grain ID.
+        """Go to a specified grain ID.
 
         Parameters
         ----------
-        event
+        event : int
             Grain ID to go to.
+        plot
+            Plot callback argument.
 
         """
         # Go to grain ID specified in event
@@ -135,12 +135,14 @@ class GrainInspector:
     def save_line(self,
                   event: np.ndarray,
                   plot):
-        """  Save the start point, end point and angle of drawn line into the grain.
+        """Save a drawn line to the selected grain.
 
         Parameters
         ----------
-        event
-            Start x, start y, end x, end y point of line passed from drawn line.
+        event : numpy.ndarray
+            Start and end coordinates passed from the drawn line callback.
+        plot
+            Plot callback argument.
 
         """
 
@@ -167,15 +169,12 @@ class GrainInspector:
 
     def group_lines(self,
                     grain: 'hrdic.Grain' = None):
-        """
-        Group the lines drawn in the current grain item using a mean shift algorithm,
-        save the average angle and then detect the active slip planes.
-
+        """Group drawn lines by angle and detect candidate slip planes.
         groups_list is a list of line groups: [id, angle, [slip plane id], [angular deviation]
 
         Parameters
         ----------
-        grain
+        grain : hrdic.Grain, optional
             Grain for which to group the slip lines.
 
         """
@@ -221,9 +220,7 @@ class GrainInspector:
     def clear_all_lines(self,
                         event,
                         plot):
-        """ Clear all lines in a given grain.
-
-        """
+        """Clear all saved lines and groups for the selected grain."""
 
         self.selected_dic_grain.points_list = []
         self.selected_dic_grain.groups_list = []
@@ -232,12 +229,14 @@ class GrainInspector:
     def remove_line(self,
                     event: int,
                     plot):
-        """  Remove single line [runs after submitting a text box].
+        """Remove a single saved line.
 
         Parameters
         ----------
-        event
+        event : int
             Line ID to remove.
+        plot
+            Plot callback argument.
 
         """
         # Remove single line
@@ -246,9 +245,7 @@ class GrainInspector:
         self.redraw()
 
     def redraw(self):
-        """Draw items which need to be redrawn when changing grain ID.
-
-        """
+        """Redraw the grain inspector for the currently selected grain."""
 
         # Plot max shear for grain
         self.max_shear_axis.clear()
@@ -279,10 +276,7 @@ class GrainInspector:
         self.redraw_line()
 
     def redraw_line(self):
-        """
-        Draw items which need to be redrawn when adding a line.
-
-        """
+        """Redraw line, group, and slip-trace overlays for the grain."""
         # Write lines text and draw lines
         title_text = 'List of lines'
         lines_text = 'ID  x0    y0    x1    y1    Angle   Group\n' \
@@ -336,12 +330,14 @@ class GrainInspector:
     def run_rdr_group(self,
                       event: int,
                       plot):
-        """  Run RDR on a specified group, upon submitting a text box.
+        """Run RDR for a specified line group.
 
         Parameters
         ----------
-        event
+        event : int
             Group ID specified from text box.
+        plot
+            Plot callback argument.
 
         """
         # Run RDR for group of lines
@@ -352,9 +348,7 @@ class GrainInspector:
     def batch_run_sta(self,
                       event,
                       plot):
-        """  Run slip trace analysis on all grains which hve slip trace lines drawn.
-
-        """
+        """Run slip-trace analysis for all grains with saved lines."""
 
         # Print header
         print("Grain\tEul1\tEul2\tEul3\tMaxSF\tGroup\tAngle\tSystem\tDev\tRDR")
@@ -375,16 +369,16 @@ class GrainInspector:
                  grain,
                  group: int,
                  show_plot: bool = True):
-        """ Calculates the relative displacement ratio for a given grain and group.
+        """Calculate the relative displacement ratio for a grain group.
 
         Parameters
         ----------
         grain
             DIC grain to run RDR on.
-        group
-            group ID to run RDR on.
-        show_plot
-            if True, show plot window.
+        group : int
+            Group ID to run RDR on.
+        show_plot : bool, optional
+            If ``True``, show the RDR plot window.
 
         """
 
@@ -443,25 +437,24 @@ class GrainInspector:
                  x_list: List[List[int]],
                  y_list: List[List[int]],
                  lin_reg_result: List):
-        """
-        Plot rdr figure, including location of perpendicular lines and scatter plot of ucentered vs vcentered.
+        """Plot the RDR calculation summary for a group of lines in a grain.
         
         Parameters
         ----------
         grain
             DIC grain to plot.
-        group
+        group : int
             Group ID to plot.
-        u_list
-            List of ucentered values.
-        v_list
-            List of vcentered values.
-        x_list
-            List of all x values.
-        y_list
-            List of all y values.
+        u_list : list of float
+            List of centred ``u`` values.
+        v_list : list of float
+            List of centred ``v`` values.
+        x_list : list of list of int
+            Sampled x coordinates.
+        y_list : list of list of int
+            Sampled y coordinates.
         lin_reg_result
-            Results from linear regression of ucentered vs vcentered 
+            Linear regression result for centred ``u`` against centred ``v``.
             {slope, intercept, rvalue, pvalue, stderr}.
 
         """
@@ -590,22 +583,33 @@ class GrainInspector:
     def update_filename(self,
                         event: str,
                         plot):
-        """  Update class variable filename, based on text input from textbox handler.
+        """Update the output filename from textbox input.
 
-        event: 
-            Text in textbox.
+        Parameters
+        ----------
+        event : str
+            Text entered in the textbox.
+        plot
+            Plot callback argument.
 
         """
 
         self.filename = event
 
-    def save_file(self,
-                  event,
-                  plot):
-        """  Save a file which contains definitions of slip lines drawn in grains
-            [(x0, y0, x1, y1), angle, groupID]
-            and groups of lines, defined by an average angle and identified sip plane
-            [groupID, angle, [slip plane id(s)], [angular deviation(s)]]
+    def save_file(self, event, plot):
+        """Save drawn line and group definitions to a text file.
+
+        Lines drawn are saved in the following format:
+        [(x0, y0, x1, y1), angle, groupID].
+        Groups of lines are saved in the following format:
+        [groupID, angle, [slip plane id(s)], [angular deviation(s)]].
+
+        Parameters
+        ----------
+        event
+            Plot callback event argument.
+        plot
+            Plot callback argument.
 
         """
 
@@ -630,10 +634,14 @@ class GrainInspector:
     def load_file(self,
                   event,
                   plot):
-        """  Load a file which contains definitions of slip lines drawn in grains
-            [(x0, y0, x1, y1), angle, groupID]
-            and groups of lines, defined by an average angle and identified sip plane
-            [groupID, angle, [slip plane id(s)], [angular deviation(s)]]
+        """Load drawn line and group definitions from a text file.
+
+        Parameters
+        ----------
+        event
+            Plot callback event argument.
+        plot
+            Plot callback argument.
 
         """
 

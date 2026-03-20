@@ -19,19 +19,49 @@ from skimage import morphology as mph
 
 
 class Experiment(object):
+    """Container for map increments and frame transformations."""
+
     def __init__(self):
+        """Initialise an empty experiment."""
         self.frame_relations = {}
         self.increments = []
 
     def __getitem__(self, key):
+        """Return an increment by index."""
         return self.increments[key]
 
     def add_increment(self, **kwargs):
+        """Create and append a new increment.
+
+        Parameters
+        ----------
+        **kwargs
+            Metadata stored on the increment.
+
+        Returns
+        -------
+        Increment
+            Newly created increment.
+
+        """
         inc = Increment(self, **kwargs)
         self.increments.append(inc)
         return inc
 
     def iter_over_maps(self, map_name):
+        """Iterate over increments containing a named map.
+
+        Parameters
+        ----------
+        map_name : str
+            Map name to look up.
+
+        Yields
+        ------
+        tuple[int, object]
+            Increment index and map object.
+
+        """
         for i, inc in enumerate(self.increments):
             map_obj = inc.maps.get(map_name)
             if map_obj is None:
@@ -39,9 +69,30 @@ class Experiment(object):
             yield i, map_obj
 
     def link_frames(self, frame_1, frame_2, transform_props):
+        """Store transformation properties between two frames."""
         self.frame_relations[(frame_1, frame_2)] = transform_props
 
     def get_frame_transform(self, frame_1, frame_2):
+        """Estimate the transform mapping ``frame_1`` to ``frame_2``.
+
+        Parameters
+        ----------
+        frame_1 : Frame
+            Source frame.
+        frame_2 : Frame
+            Target frame.
+
+        Returns
+        -------
+        skimage.transform._geometric.GeometricTransform
+            Estimated transform object.
+
+        Raises
+        ------
+        ValueError
+            If frames are not linked or relations are inconsistent.
+
+        """
         transform_lookup = {
             'piecewise_affine': tf.PiecewiseAffineTransform,
             'projective': tf.ProjectiveTransform,
@@ -76,7 +127,7 @@ class Experiment(object):
         return transform
 
     def warp_image(self, map_data, frame_1, frame_2, crop=True, **kwargs):
-        """Warps a map to the DIC frame.
+        """Warp image data from ``frame_1`` into ``frame_2``.
 
         Parameters
         ----------
@@ -88,9 +139,9 @@ class Experiment(object):
             All other arguments passed to :func:`skimage.transform.warp`.
 
         Returns
-        ----------
+        -------
         numpy.ndarray
-            Map (i.e. EBSD map data) warped to the DIC frame.
+            Warped map data.
 
         """
         transform = self.get_frame_transform(frame_2, frame_1)
@@ -130,6 +181,25 @@ class Experiment(object):
         return lines
 
     def warp_points(self, points_img, frame_1, frame_2, **kwargs):
+        """Warp point-image data between frames and return point coordinates.
+
+        Parameters
+        ----------
+        points_img : numpy.ndarray
+            Binary/float image containing points to warp.
+        frame_1 : Frame
+            Source frame.
+        frame_2 : Frame
+            Target frame.
+        **kwargs
+            Additional keyword arguments passed to ``warp_image``.
+
+        Returns
+        -------
+        iterator
+            Iterator of ``(x, y)`` point coordinates in the target frame.
+
+        """
         input_shape = np.array(points_img.shape)
         points_img = self.warp_image(points_img, frame_1, frame_2, crop=False,
                                      **kwargs)
@@ -154,8 +224,19 @@ class Experiment(object):
 
 
 class Increment(object):
-    # def __init__(self, experiment, **kwargs):
+    """A single experiment increment containing one or more maps."""
+
     def __init__(self, experiment, **kwargs):
+        """Initialise an increment.
+
+        Parameters
+        ----------
+        experiment : Experiment
+            Parent experiment.
+        **kwargs
+            Increment metadata.
+
+        """
 
         self.maps = {}
         # ex: (name, map, frame)
@@ -166,11 +247,15 @@ class Increment(object):
         self.metadata = kwargs
 
     def add_map(self, name, map_obj):
+        """Add a named map object to this increment."""
         self.maps[name] = map_obj
 
 
 class Frame(object):
+    """Frame containing homologous points for map registration."""
+
     def __init__(self):
+        """Initialise an empty frame."""
         # self.maps = []
         self.homog_points = []
 

@@ -45,14 +45,22 @@ class Map(ABC):
     """
     def __init__(self, file_name, data_type=None, experiment=None,
                  increment=None, frame=None, map_name=None):
-        """
+        """Initialize a Map object.
 
         Parameters
         ----------
         file_name : str
-            Path to EBSD file, including name, excluding extension.
-        data_type : str, {'OxfordBinary', 'OxfordText'}
-            Format of EBSD data file.
+            Path to data file.
+        data_type : str, optional
+            Format of data file.
+        experiment : defdap.experiment.Experiment, optional
+            Experiment object to associate with this map.
+        increment : defdap.experiment.Increment, optional
+            Increment object to associate with this map.
+        frame : defdap.experiment.Frame, optional
+            Frame object for coordinate transformations.
+        map_name : str, optional
+            Name for this map in the experiment structure.
 
         """
 
@@ -273,7 +281,10 @@ class Map(ABC):
 
     @report_progress("constructing neighbour network")
     def build_neighbour_network(self):
-        """Construct a list of neighbours
+        """Construct a network graph of neighbouring grains.
+
+        Creates a NetworkX graph where nodes are grains and edges connect
+        neighbouring grains that share a boundary.
 
         """
         ## TODO: fix HRDIC NN
@@ -439,11 +450,17 @@ class Map(ABC):
         return trial_distances.min(axis=0)
 
     def _validate_map(self, map_name):
-        """Check the name exists and is a map data.
+        """Check that the data name exists and that it contains map data.
 
         Parameters
         ----------
         map_name : str
+            Name of the map data to validate.
+
+        Raises
+        ------
+        ValueError
+            If the data name does not exist or is not map data.
 
         """
         if map_name not in self.data:
@@ -453,19 +470,26 @@ class Map(ABC):
             raise ValueError(f'`{map_name}` is not a valid map.')
 
     def _validate_component(self, map_name, comp):
-        """
+        """Validate component specification for map data.
 
         Parameters
         ----------
         map_name : str
-        comp : int or tuple of int or str
+            Name of the map data.
+        comp : int or tuple of int or str, optional
             Component of the map data. This is either the
             tensor component (tuple of ints) or the name of a calculation
             to be applied e.g. 'norm', 'all_euler' or 'IPF_x'.
 
         Returns
         -------
-        tuple of int or str
+        tuple of int or str or None
+            Validated component specification.
+
+        Raises
+        ------
+        ValueError
+            If component specification is invalid.
 
         """
         order = self.data[map_name, 'order']
@@ -590,14 +614,14 @@ class Map(ABC):
         return MapPlot.create(self, map_data, **plot_params)
 
     def calc_grain_average(self, map_data, grain_ids=-1):
-        """Calculate grain average of any DIC map data.
+        """Calculate grain average of map data.
 
         Parameters
         ----------
         map_data : numpy.ndarray
             Array of map data to grain average. This must be cropped!
-        grain_ids : list, optional
-            grain_ids to perform operation on, set to -1 for all grains.
+        grain_ids : list of int, optional
+            Grain IDs to perform operation on. Set to -1 for all grains.
 
         Returns
         -------
@@ -610,14 +634,27 @@ class Map(ABC):
 
         grain_average_data = np.zeros(len(grain_ids))
 
-        for i, grainId in enumerate(grain_ids):
-            grain = self[grainId]
-            grainData = grain.grain_data(map_data)
-            grain_average_data[i] = grainData.mean()
+        for i, grain_id in enumerate(grain_ids):
+            grain = self[grain_id]
+            grain_data = grain.grain_data(map_data)
+            grain_average_data[i] = grain_data.mean()
 
         return grain_average_data
 
     def grain_data_to_map(self, name):
+        """Convert grain list data to map data.
+
+        Parameters
+        ----------
+        name : str
+            Map name of the grain data to convert.
+
+        Returns
+        -------
+        numpy.ndarray
+            Map data created from grain data.
+
+        """
         map_data = np.zeros(self[0].data[name].shape[:-1] + self.shape)
         for grain in self:
             for i, point in enumerate(grain.data.point):
@@ -664,8 +701,8 @@ class Map(ABC):
                              "single value or RGB values per grain.")
 
         grain_map = np.full(mapShape, bg, dtype=grain_data.dtype)
-        for grainId, grain_value in zip(grain_ids, grain_data):
-            for point in self[grainId].data.point:
+        for grain_id, grain_value in zip(grain_ids, grain_data):
+            for point in self[grain_id].data.point:
                 grain_map[point[1], point[0]] = grain_value
 
         return grain_map
@@ -673,18 +710,18 @@ class Map(ABC):
     def plot_grain_data_map(
         self, map_data=None, grain_data=None, grain_ids=-1, bg=0, **kwargs
     ):
-        """Plot a grain map with grains coloured by given data. The data
-        can be provided as a list of values per grain or as a map which
-        a grain average will be applied.
+        """Plot a grain map with grains colored by given data. The data 
+        can be provided as a list of values per grain or as a map
+        from which grain averages will be calculated.
 
         Parameters
         ----------
         map_data : numpy.ndarray, optional
-            Array of map data. This must be cropped! Either mapData or 
+            Array of map data. This must be cropped! Either map_data or 
             grain_data must be supplied.
-        grain_data : list or np.array, optional
-            Grain values. This an be a single value per grain or RGB
-            values. You must supply either mapData or grain_data.
+        grain_data : list or numpy.ndarray, optional
+            Grain values. This can be a single value per grain or RGB
+            values. You must supply either map_data or grain_data.
         grain_ids: list of int or int, optional
             IDs of grains to plot for. Use -1 for all grains in the map.
         bg: int or real, optional
@@ -721,23 +758,28 @@ class Map(ABC):
         **kwargs
     ):
         """
-        Plot IPF of grain reference (average) orientations with
-        points coloured by grain average values from map data.
+        Plot IPF of grain verage orientations with points coloured 
+        by grain average values from map data.
 
         Parameters
         ----------
         direction : numpy.ndarray
             Vector of reference direction for the IPF.
-        map_data : numpy.ndarray
-            Array of map data. This must be cropped! Either mapData or
+        map_data : numpy.ndarray, optional
+            Array of map data. This must be cropped! Either map_data or
             grain_data must be supplied.
-        grain_data : list or np.array, optional
-            Grain values. This an be a single value per grain or RGB
-            values. You must supply either mapData or grain_data.
-        grain_ids: list of int or int, optional
+        grain_data : list or numpy.ndarray, optional
+            Grain values. This can be a single value per grain or RGB
+            values. You must supply either map_data or grain_data.
+        grain_ids : list of int, optional
             IDs of grains to plot for. Use -1 for all grains in the map.
         kwargs : dict, optional
             Keyword arguments passed to :func:`defdap.quat.Quat.plot_ipf`
+
+        Returns
+        -------
+        defdap.plotting.Plot
+            Plot object containing the IPF.
 
         """
         # Set default plot parameters then update with any input
@@ -781,6 +823,18 @@ class Grain(ABC):
 
     """
     def __init__(self, grain_id, owner_map, group_id):
+        """Initialize a Grain object.
+
+        Parameters
+        ----------
+        grain_id : int
+            Unique identifier for this grain.
+        owner_map : defdap.base.Map
+            The map that contains this grain.
+        group_id : uuid.UUID
+            Group identifier for the datastore.
+
+        """
         self.data = Datastore(group_id=group_id)
         self.data.add_derivative(
             owner_map.data, self.grain_data,
@@ -885,16 +939,17 @@ class Grain(ABC):
 
         Parameters
         ----------
-        ax : matplotlib.axes.Axes
-            axis to plot on, if not provided the current active axis is used.
-        plot_scale_bar : bool
-            plots the scale bar on the grain if true.
-        kwargs : dict
-            keyword arguments passed to :func:`defdap.plotting.GrainPlot.add_map`
+        ax : matplotlib.axes.Axes, optional
+            Axis to plot on. If not provided, the current active axis is used.
+        plot_scale_bar : bool, optional
+            If True, plots the scale bar on the grain.
+        kwargs : dict, optional
+            Keyword arguments passed to :func:`defdap.plotting.GrainPlot.add_map`
 
         Returns
         -------
         defdap.plotting.GrainPlot
+            Plot object containing the grain outline.
 
         """
         plot = plotting.GrainPlot(self, ax=ax)
@@ -926,15 +981,15 @@ class Grain(ABC):
 
         Parameters
         ----------
-        map_data : numpy.ndarray
-            Array of map data. This must be cropped! Either this or
-            'grain_data' must be supplied and 'grain_data' takes precedence.
-        grain_data : numpy.ndarray
+        map_data : numpy.ndarray, optional
+            Array of map data. Either this or grain_data must be supplied. 
+            grain_data takes precedence.
+        grain_data : numpy.ndarray, optional
             Array of data at each point in the grain. Either this or
-            'mapData' must be supplied and 'grain_data' takes precedence.
+            map_data must be supplied. grain_data takes precedence.
         bg : various, optional
             Value to fill the background with. Must be same dtype as
-            input array.
+            input array. Default is :obj:`numpy.nan`.
 
         Returns
         -------
@@ -944,7 +999,7 @@ class Grain(ABC):
         """
         if grain_data is None:
             if map_data is None:
-                raise ValueError("Either 'mapData' or 'grain_data' must "
+                raise ValueError("Either 'map_data' or 'grain_data' must "
                                  "be supplied.")
             else:
                 grain_data = self.grain_data(map_data)
@@ -966,29 +1021,29 @@ class Grain(ABC):
     def grain_map_data_coarse(self, map_data=None, grain_data=None,
                               kernel_size=2, bg=np.nan):
         """
-        Create a coarsened data map of this grain only from the given map
-        data. Data is coarsened using a kernel at each pixel in the
-        grain using only data in this grain.
+        Create a coarsened data map of this grain only from given map
+        or grain data. Pixel values are averaged within a kernel around each
+        pixel in the grain.
 
         Parameters
         ----------
-        map_data : numpy.ndarray
-            Array of map data. This must be cropped! Either this or
-            'grain_data' must be supplied and 'grain_data' takes precedence.
-        grain_data : numpy.ndarray
-            List of data at each point in the grain. Either this or
-            'mapData' must be supplied and 'grain_data' takes precedence.
+        map_data : numpy.ndarray, optional
+            Array of map data. Either this or grain_data must be supplied. 
+            grain_data takes precedence.
+        grain_data : numpy.ndarray, optional
+            Array of data at each point in the grain. Either this or
+            map_data must be supplied. grain_data takes precedence.
         kernel_size : int, optional
-            Size of kernel as the number of pixels to dilate by i.e 1
-            gives a 3x3 kernel.
+            Size of kernel as the number of pixels to dilate by. For example,
+            1 gives a 3x3 kernel. Default is 2 (5x5 kernel).
         bg : various, optional
             Value to fill the background with. Must be same dtype as
-            input array.
+            input array. Default is :obj:`numpy.nan`.
 
         Returns
         -------
         numpy.ndarray
-            Map of this grains coarsened data.
+            Coarsened data map for this grain.
 
         """
         grain_map_data = self.grain_map_data(map_data=map_data, grain_data=grain_data)
@@ -1032,19 +1087,23 @@ class Grain(ABC):
         return grain_map_data_coarse
 
     def plot_grain_data(self, map_data=None, grain_data=None, **kwargs):
-        """
-        Plot a map of this grain from the given map data.
+        """Plot a map of this grain from the given map or grain data.
 
         Parameters
         ----------
-        map_data : numpy.ndarray
-            Array of map data. This must be cropped! Either this or
-            'grain_data' must be supplied and 'grain_data' takes precedence.
-        grain_data : numpy.ndarray
-            List of data at each point in the grain. Either this or
-            'mapData' must be supplied and 'grain_data' takes precedence.
+        map_data : numpy.ndarray, optional
+            Array of map data. Either this or grain_data must be supplied. 
+            grain_data takes precedence.
+        grain_data : numpy.ndarray, optional
+            Array of data at each point in the grain. Either this or
+            map_data must be supplied. grain_data takes precedence.
         kwargs : dict, optional
             Keyword arguments passed to :func:`defdap.plotting.GrainPlot.create`
+
+        Returns
+        -------
+        defdap.plotting.GrainPlot
+            Plot object containing the grain data map.
 
         """
         # Set default plot parameters then update with any input
@@ -1058,11 +1117,17 @@ class Grain(ABC):
         return plot
     
     def _validate_list(self, list_name):
-        """Check the name exists and is a list data.
+        """Check that data name exists and is valid list data.
 
         Parameters
         ----------
         list_name : str
+            Name of the list data to validate.
+
+        Raises
+        ------
+        ValueError
+            If the data name does not exist or is not list data.
 
         """
         if list_name not in self.data:
@@ -1072,19 +1137,26 @@ class Grain(ABC):
             raise ValueError(f'`{list_name}` is not a valid data.')
 
     def _validate_component(self, map_name, comp):
-        """
+        """Validate and normalize component specification for grain data.
 
         Parameters
         ----------
         map_name : str
-        comp : int or tuple of int or str
-            Component of the map data. This is either the
+            Name of the data.
+        comp : int or tuple of int or str, optional
+            Component of the data. This is either the
             tensor component (tuple of ints) or the name of a calculation
             to be applied e.g. 'norm', 'all_euler' or 'IPF_x'.
 
         Returns
         -------
-        tuple of int or str
+        tuple of int or str or None
+            Validated component specification.
+
+        Raises
+        ------
+        ValueError
+            If component specification is invalid.
 
         """
         order = self.data[map_name, 'order']
@@ -1162,12 +1234,12 @@ class Grain(ABC):
         ----------
         map_name : str
             Map data name to plot i.e. e, max_shear, euler_angle, orientation.
-        component : int or tuple of int or str
+        component : int or tuple of int or str, optional
             Component of the map data to plot. This is either the tensor
             component (int or tuple of ints) or the name of a calculation
             to be applied e.g. 'norm', 'all_euler' or 'IPF_x'.
-        kwargs
-            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+        kwargs : dict, optional
+            Keyword arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
         Returns
         -------

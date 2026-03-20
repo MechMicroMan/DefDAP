@@ -23,13 +23,18 @@ def report_progress(message: str = ""):
 
     Parameters
     ----------
-    message
-        Message to display (prefixed by 'Starting ', progress percentage
-        and then 'Finished '
+    message : str, optional
+        Message to display (prefixed by ``Starting``, progress percentage,
+        and then ``Finished``).
+
+    Returns
+    -------
+    callable
+        Decorator wrapping a generator function that yields progress values.
 
     References
     ----------
-    Inspiration from :
+    Inspiration from:
     https://gist.github.com/Garfounkel/20aa1f06234e1eedd419efe93137c004
 
     """
@@ -106,6 +111,14 @@ class Datastore(object):
 
     @staticmethod
     def generate_id():
+        """Generate a unique identifier for datastore grouping.
+
+        Returns
+        -------
+        uuid.UUID
+            Generated group identifier.
+
+        """
         return uuid4()
 
     def __init__(self, group_id=None, crop_func=None, mask_func=None):
@@ -138,7 +151,7 @@ class Datastore(object):
         return key in self.keys()
 
     def __getitem__(self, key):
-        """Get data or metadata
+        """Get data or metadata.
 
         Parameters
         ----------
@@ -207,15 +220,11 @@ class Datastore(object):
         self._store[key][attr] = val
 
     def __getattr__(self, key):
-        """Get data
-
-        """
+        """Get data for attributes via datastore lookup."""
         return self[key]
 
     def __setattr__(self, key, val):
-        """Set data of item that already exists.
-
-        """
+        """Set known attributes or route unknown ones to datastore items."""
         if key in self.__slots__:
             super().__setattr__(key, val)
         else:
@@ -240,6 +249,19 @@ class Datastore(object):
         return keys
 
     def lookup_derivative_keys(self, derivative):
+        """Return source keys whose metadata matches a derivative definition.
+
+        Parameters
+        ----------
+        derivative : dict
+            Derivative definition created by ``add_derivative``.
+
+        Returns
+        -------
+        list[str]
+            Matching source keys.
+
+        """
         root_call = False
         if Datastore._been_to is None:
             root_call = True
@@ -263,6 +285,26 @@ class Datastore(object):
         return matched_keys
 
     def _get_derived_item(self, key, attr):
+        """Retrieve derived data or metadata for a key.
+
+        Parameters
+        ----------
+        key : str
+            Name of the requested derived item.
+        attr : str
+            Attribute to access, typically ``'data'`` or metadata name.
+
+        Returns
+        -------
+        any
+            Requested derived value.
+
+        Raises
+        ------
+        KeyError
+            If no matching derivative exists for ``key``.
+
+        """
         for derivative in self._derivatives:
             if key in self.lookup_derivative_keys(derivative):
                 break
@@ -347,6 +389,23 @@ class Datastore(object):
 
     def add_derivative(self, datastore, derive_func, in_props=None,
                        out_props=None, pass_ref=False):
+        """Register or update a derived-data relationship.
+
+        Parameters
+        ----------
+        datastore : Datastore
+            Source datastore for derived values.
+        derive_func : callable
+            Function used to derive output values.
+        in_props : dict, optional
+            Metadata filters required on source items.
+        out_props : dict, optional
+            Metadata values exposed on derived items.
+        pass_ref : bool, optional
+            If ``True``, pass source key reference into ``derive_func``
+            instead of source data.
+
+        """
         if in_props is None:
             in_props = {}
         if out_props is None:
@@ -412,7 +471,8 @@ class Datastore(object):
         Parameters
         ----------
         other : defdap.utils.Datastore
-        priority : str
+            Datastore providing additional data items.
+        priority : str, optional
             Which datastore to keep an item from if the same name exists
             in both. Default is to prioritise `other`.
 
