@@ -55,13 +55,13 @@ testing = [
     "pytest_cases",
 ]
 docs = [
-    "sphinx==9.1.0",
+    "sphinx==8.1.3",   # Max version avaialble from readthedocs - Rhys running 8.2.3 locally
     "pydata_sphinx_theme",
     "sphinx_autodoc_typehints==3.6.2",
     "nbsphinx==0.9.8",
     "ipykernel",
     "pandoc",
-    "ipympl",
+    "ipympl"
 ]
 
 [tool.setuptools]
