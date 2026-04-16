@@ -81,7 +81,7 @@ version = '.'.join(release.split('.')[:2])
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.apidoc',
+    #'sphinx.ext.apidoc',   # Need sphinx.ext.apidoc for this, which needs sphinx 8.2.3, which needs python 3.11
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
@@ -179,20 +179,46 @@ autodoc_default_options = {
     'exclude_patterns': ['*base*'],
 }
 
+# -- Generate API docs during sphinx-build (for readthedocs) ------------------
+
+# Determine if on RTD
+ON_RTD = (os.environ.get('READTHEDOCS') == 'True')
+
+def run_apidoc(_):
+
+    from sphinx.ext import apidoc
+
+    api_args = [
+            '--force',
+            '--separate',                   # Put each module on seperate page
+            '--no-toc',                     # No table of contents
+            '../../defdap',                 # Module path
+            '-o',                           # Directory to output..
+            '../source/defdap'              # here
+            ]
+
+    # Invoke apidoc
+    apidoc.main(api_args)  
+
+def setup(app):
+    if ON_RTD:
+        app.connect('builder-inited', run_apidoc)
+
 # -----------------------------------------------------------------------------
 # Apidoc
+# Need sphinx.ext.apidoc for this, which needs sphinx 8.2.3, which needs python 3.11
 # -----------------------------------------------------------------------------
 
-apidoc_modules = [
-    {
-        'path': '../../defdap',
-        'destination': 'defdap',
-        'exclude_patterns': ['*base*'],
-        'separate_modules': True,
-        'module_first': False,
-        'automodule_options': {'members', 'show-inheritance', 'undoc-members'}
-        }
-]
+# apidoc_modules = [
+#     {
+#         'path': '../../defdap',
+#         'destination': 'defdap',
+#         'exclude_patterns': ['*base*'],
+#         'separate_modules': True,
+#         'module_first': False,
+#         'automodule_options': {'members', 'show-inheritance', 'undoc-members'}
+#         }
+# ]
 
 
 # -----------------------------------------------------------------------------
