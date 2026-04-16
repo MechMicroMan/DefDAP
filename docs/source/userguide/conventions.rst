@@ -41,4 +41,4 @@ By default, the HCP slip systems are defined in ``hexagonal_withca.txt``, basal 
 Slip trace angles
 ----------------------
 
-These are calculated 
+These are calculated with the convention that 0 degrees corresponds to a slip trace pointing upwards, and angles increase anticlockwise.
