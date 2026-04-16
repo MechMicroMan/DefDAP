@@ -62,7 +62,7 @@ docs = [
     "ipykernel",
     "pandoc",
     "ipympl",
-    "sphinx_design"==0.6.1
+    "sphinx_design==0.6.1"
 ]
 
 [tool.setuptools]
