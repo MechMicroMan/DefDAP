@@ -905,6 +905,14 @@ class PyValeLoader(DICDataLoader):
 
         self.loaded_data.coordinate = coord_dense
         self.loaded_data.displacement = disp_dense
+        self.loaded_data.add(
+            'cost', data['cost'].reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Cost',
+            }
+        )
 
         self.check_data()
 
