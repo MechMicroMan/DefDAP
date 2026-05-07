@@ -41,6 +41,7 @@ dependencies = [
     "matplotlib_scalebar",
     "networkx",
     "numba",
+    "tqdm"
 ]
 
 [project.urls]

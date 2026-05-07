@@ -16,7 +16,28 @@
 import functools
 from datetime import datetime
 from uuid import uuid4
+import numpy as np
 
+
+def subplot_grid(n):
+    """
+    Compute near-square subplot grid (rows, cols) for n items.
+
+    Parameters
+    ----------
+    n : int
+        Number of subplots.
+
+    Returns
+    -------
+    tuple of int
+        (rows, cols) forming a compact grid.
+    """
+
+    rows = int(np.floor(np.sqrt(n)))
+    cols = int(np.ceil(n / rows))
+
+    return rows, cols
 
 def report_progress(message: str = ""):
     """Decorator for reporting progress of given function
