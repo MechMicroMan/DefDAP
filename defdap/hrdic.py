@@ -36,6 +36,7 @@ from defdap import defaults
 from defdap.plotting import MapPlot, GrainPlot
 from defdap.inspector import GrainInspector
 from defdap.utils import report_progress
+from defdap.ebsd import Map as ebsd_Map
 
 
 class Map(base.Map):
@@ -112,7 +113,7 @@ class Map(base.Map):
 
         self.corr_val = None     # correlation value
 
-        self.ebsd_map = None                 # EBSD map linked to DIC map
+        # self.ebsd_map = None                 # EBSD map linked to DIC map
         self.highlight_alpha = 0.6
         self.bse_scale = None                # size of pixels in pattern images
         self.bse_scale = None                # size of pixels in pattern images
@@ -179,6 +180,17 @@ class Map(base.Map):
     @property
     def original_shape(self):
         return self.ydim, self.xdim
+    
+    @property
+    def ebsd_map(self):
+        ebsd_maps = self.frame.get_linked_maps(map_type=ebsd_Map)
+
+        if len(ebsd_maps) > 1:
+            raise LookupError("More than one possible EBSD maps to link.")
+        if len(ebsd_maps) == 0:
+            raise LookupError("No linked EBSD map.")
+
+        return ebsd_maps[0]
 
     @property
     def crystal_sym(self):
@@ -377,7 +389,7 @@ class Map(base.Map):
 
         return map_data[..., min_y:max_y, min_x:max_x]
 
-    def link_ebsd_map(self, ebsd_map, transform_type="affine", **kwargs):
+    def link_ebsd_map(self, ebsd_map, transform_type=None, **kwargs):
         """Calculates the transformation required to align EBSD dataset to DIC.
 
         Parameters
@@ -390,9 +402,10 @@ class Map(base.Map):
             All arguments are passed to `estimate` method of the transform.
 
         """
-        self.ebsd_map = ebsd_map
-        kwargs.update({'type': transform_type.lower()})
-        self.experiment.link_frames(self.frame, ebsd_map.frame, kwargs)
+        # self.ebsd_map = ebsd_map
+        self.frame.link_frames(
+            ebsd_map.frame, transform_type=transform_type, **kwargs
+        )
         self.data.add_derivative(
             self.ebsd_map.data,
             lambda boundaries: BoundarySet.from_ebsd_boundaries(
@@ -403,24 +416,6 @@ class Map(base.Map):
             }
         )
 
-    def check_ebsd_linked(self):
-        """Check if an EBSD map has been linked.
-
-        Returns
-        ----------
-        bool
-            Returns True if EBSD map linked.
-
-        Raises
-        ----------
-        Exception
-            If EBSD map not linked.
-
-        """
-        if self.ebsd_map is None:
-            raise Exception("No EBSD map linked.")
-        return True
-
     def warp_to_dic_frame(self, map_data, **kwargs):
         """Warps a map to the DIC frame.
 
@@ -429,7 +424,7 @@ class Map(base.Map):
         map_data : numpy.ndarray
             Data to warp.
         kwargs
-            All other arguments passed to :func:`defdap.experiment.Experiment.warp_map`.
+            All other arguments passed to :func:`defdap.experiment.Frame.warp_map`.
 
         Returns
         ----------
@@ -438,10 +433,8 @@ class Map(base.Map):
 
         """
         # Check a EBSD map is linked
-        self.check_ebsd_linked()
-        return self.experiment.warp_image(
-            map_data, self.ebsd_map.frame, self.frame, output_shape=self.shape,
-            **kwargs
+        return self.ebsd_map.frame.warp_image(
+            map_data, self.frame, output_shape=self.shape, **kwargs
         )
 
     def calc_mask(self, mask=None, dilation=0):
@@ -575,10 +568,8 @@ class Map(base.Map):
             Use floodfill or warp algorithm.
         min_grain_size : int
             Minimum grain area in pixels for floodfill algorithm.
-        """
-        # Check a EBSD map is linked
-        self.check_ebsd_linked()
 
+        """
         if algorithm is None:
             algorithm = defaults['hrdic_grain_finding_method']
         algorithm = algorithm.lower()
@@ -670,8 +661,8 @@ class Map(base.Map):
 
             # Now link grains to those in ebsd Map
             # Warp DIC grain map to EBSD frame
-            warped_dic_grains = self.experiment.warp_image(
-                grains.astype(float), self.frame, self.ebsd_map.frame,
+            warped_dic_grains = self.frame.warp_image(
+                grains.astype(float), self.ebsd_map.frame,
                 output_shape=self.ebsd_map.shape, order=0
             ).astype(int)
             for i, grain in enumerate(grain_list):
@@ -885,13 +876,12 @@ class BoundarySet(object):
         if len(ebsd_boundaries.points) == 0:
             return cls(dic_map, [], [])
 
-        points = dic_map.experiment.warp_points(
-            ebsd_boundaries.image.astype(float),
-            dic_map.ebsd_map.frame, dic_map.frame,
+        points = dic_map.ebsd_map.frame.warp_points(
+            ebsd_boundaries.image.astype(float), dic_map.frame,
             output_shape=dic_map.shape
         )
-        lines = dic_map.experiment.warp_lines(
-            ebsd_boundaries.lines, dic_map.ebsd_map.frame, dic_map.frame
+        lines = dic_map.ebsd_map.frame.warp_lines(
+            ebsd_boundaries.lines, dic_map.frame
         )
         return cls(dic_map, points, lines)
 

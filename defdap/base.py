@@ -27,7 +27,6 @@ from defdap.plotting import Plot, MapPlot, GrainPlot
 from skimage.measure import profile_line
 
 from defdap.utils import report_progress, Datastore
-from defdap.experiment import Frame
 
 
 class Map(ABC):
@@ -55,21 +54,29 @@ class Map(ABC):
             Format of EBSD data file.
 
         """
-
         self.data = Datastore(crop_func=self.crop, mask_func=self.mask)
-        self.frame = frame if frame is not None else Frame()
+
+        experiments = []
+        if experiment is not None:
+            experiments.append(experiment)
         if increment is not None:
-            self.increment = increment
-            self.experiment = self.increment.experiment
-            if experiment is not None:
-                assert self.experiment is experiment
+            experiments.append(increment.experiment)
+        if frame is not None:
+            experiments.append(frame.experiment)
+        if len(experiments) == 0:
+            self.experiment = defdap.anonymous_experiment
         else:
-            self.experiment = experiment
-            if experiment is None:
-                self.experiment = defdap.anonymous_experiment
-            self.increment = self.experiment.add_increment()
+            if any(experiments[0] != x for x in experiments[1:]):
+                raise ValueError('Experiments not equal for inputs.')
+            self.experiment = experiments[0]
+            
+        self.frame = frame if frame is not None else self.experiment.add_frame()
+        self.increment = (increment if increment is not None 
+                          else self.experiment.add_increment())
+
         map_name = self.MAPNAME if map_name is None else map_name
         self.increment.add_map(map_name, self)
+        self.frame.add_map(self)
 
         self.shape = (0, 0)
 

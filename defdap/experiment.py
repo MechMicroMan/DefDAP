@@ -16,11 +16,12 @@
 import numpy as np
 from skimage import transform as tf
 from skimage import morphology as mph
+import networkx as nx
 
 
 class Experiment(object):
     def __init__(self):
-        self.frame_relations = {}
+        self.frame_relations = nx.Graph()
         self.increments = []
 
     def __getitem__(self, key):
@@ -30,6 +31,9 @@ class Experiment(object):
         inc = Increment(self, **kwargs)
         self.increments.append(inc)
         return inc
+    
+    def add_frame(self):
+        return Frame(self)
 
     def iter_over_maps(self, map_name):
         for i, inc in enumerate(self.increments):
@@ -37,120 +41,6 @@ class Experiment(object):
             if map_obj is None:
                 continue
             yield i, map_obj
-
-    def link_frames(self, frame_1, frame_2, transform_props):
-        self.frame_relations[(frame_1, frame_2)] = transform_props
-
-    def get_frame_transform(self, frame_1, frame_2):
-        transform_lookup = {
-            'piecewise_affine': tf.PiecewiseAffineTransform,
-            'projective': tf.ProjectiveTransform,
-            'polynomial': tf.PolynomialTransform,
-            'affine': tf.AffineTransform,
-        }
-
-        forward = (frame_1, frame_2) in self.frame_relations
-        reverse = (frame_2, frame_1) in self.frame_relations
-        if forward and reverse:
-            raise ValueError('Why are frame relations in both senses stored?')
-        if not (forward or reverse):
-            raise ValueError('Frames are not linked.')
-
-        frames = (frame_1, frame_2) if forward else (frame_2, frame_1)
-        transform_props = self.frame_relations[frames]
-        calc_inverse = transform_props['type'] == 'polynomial'
-        transform = transform_lookup[transform_props['type']]()
-
-        if reverse and calc_inverse:
-            frames = frames[::-1]
-
-        transform.estimate(
-            np.array(frames[0].homog_points),
-            np.array(frames[1].homog_points),
-            **{k: v for k, v in transform_props.items() if k != 'type'}
-        )
-
-        if reverse and not calc_inverse:
-            transform = transform.inverse
-
-        return transform
-
-    def warp_image(self, map_data, frame_1, frame_2, crop=True, **kwargs):
-        """Warps a map to the DIC frame.
-
-        Parameters
-        ----------
-        map_data : numpy.ndarray
-            Data to warp.
-        crop : bool, optional
-            Crop to size of DIC map if true.
-        kwargs
-            All other arguments passed to :func:`skimage.transform.warp`.
-
-        Returns
-        ----------
-        numpy.ndarray
-            Map (i.e. EBSD map data) warped to the DIC frame.
-
-        """
-        transform = self.get_frame_transform(frame_2, frame_1)
-
-        if not crop and isinstance(transform, tf.AffineTransform):
-            # copy transform and change translation to give an extra
-            # 5% border to show the entire image after rotation/shearing
-            input_shape = np.array(map_data.shape)
-            transform = tf.AffineTransform(matrix=np.copy(transform.params))
-            transform.params[0:2, 2] = -0.05 * input_shape
-            output_shape = input_shape * 1.4 / transform.scale
-            kwargs['output_shape'] = output_shape.astype(int)
-
-        return tf.warp(map_data, transform, **kwargs)
-
-    def warp_lines(self, lines, frame_1, frame_2):
-        """Warp a set of lines to the DIC reference frame.
-
-        Parameters
-        ----------
-        lines : list of tuples
-            Lines to warp. Each line is represented as a tuple of start
-            and end coordinates (x, y).
-
-        Returns
-        -------
-        list of tuples
-            List of warped lines with same representation as input.
-
-        """
-        # Transform
-        transform = self.get_frame_transform(frame_1, frame_2)
-        lines = transform(np.array(lines).reshape(-1, 2)).reshape(-1, 2, 2)
-        # Round to nearest
-        lines = np.round(lines - 0.5) + 0.5
-        lines = [(tuple(line[0]), tuple(line[1])) for line in lines]
-        return lines
-
-    def warp_points(self, points_img, frame_1, frame_2, **kwargs):
-        input_shape = np.array(points_img.shape)
-        points_img = self.warp_image(points_img, frame_1, frame_2, crop=False,
-                                     **kwargs)
-
-        points_img = mph.skeletonize(points_img > 0.1)
-        mph.remove_small_objects(points_img, min_size=10, connectivity=2,
-                                 out=points_img)
-
-        # remove 5% border if required
-        transform = self.get_frame_transform(frame_2, frame_1)
-        if isinstance(transform, tf.AffineTransform):
-            # the crop is defined in EBSD coords so need to transform it
-            crop = np.matmul(
-                np.linalg.inv(transform.params[0:2, 0:2]),
-                transform.params[0:2, 2] + 0.05*input_shape
-            )
-            crop = crop.round().astype(int)
-            points_img = points_img[crop[1]:crop[1] + kwargs['output_shape'][0],
-                                    crop[0]:crop[0] + kwargs['output_shape'][1]]
-
-        return zip(*points_img.transpose().nonzero())
 
 
 class Increment(object):
@@ -170,9 +60,150 @@ class Increment(object):
 
 
 class Frame(object):
-    def __init__(self):
-        # self.maps = []
+    def __init__(self, experiment):
+        self.experiment = experiment
+        self.maps = []
         self.homog_points = []
+
+    def add_map(self, map_obj):
+        self.maps.append(map_obj)
+
+    def link_frames(self, other, transform_type=None, **kwargs):
+        if self.experiment != other.experiment:
+            raise ValueError('Frames are in different experiments.')
+        
+        if transform_type is None:
+            transform_type = "affine"
+        kwargs.update({'type': transform_type.lower()})
+
+        edge_props = {
+            'start': self,
+            'transform_props': kwargs,
+        }
+        if self.experiment.frame_relations.has_edge(self, other):
+            if edge_props != self.experiment.frame_relations[self][other]:
+                print("Overwriting transform")
+        self.experiment.frame_relations.add_edge(self, other, **edge_props)
+
+    def get_frame_transform(self, other):
+        transform_lookup = {
+            'piecewise_affine': tf.PiecewiseAffineTransform,
+            'projective': tf.ProjectiveTransform,
+            'polynomial': tf.PolynomialTransform,
+            'affine': tf.AffineTransform,
+        }
+
+        try:
+            frame_relation = self.experiment.frame_relations[self][other]
+        except KeyError:
+            raise ValueError('Frames are not linked.')
+        
+        transform_props = frame_relation['transform_props']
+        transform = transform_lookup[transform_props['type']]()
+
+        frames = (self, other)
+        invert = (frame_relation['start'] is not self 
+                  and transform_props['type'] != 'polynomial')
+        if invert:
+            frames = frames[::-1]
+        transform.estimate(
+            np.array(frames[0].homog_points),
+            np.array(frames[1].homog_points),
+            **{k: v for k, v in transform_props.items() if k != 'type'}
+        )
+        if invert:
+            transform = transform.inverse
+        
+        return transform
+    
+    def get_linked_frames(self):
+        try:
+            return list(self.experiment.frame_relations[self])
+        except KeyError:
+            return []
+
+    def get_linked_maps(self, map_type=None):
+        if map_type is None:
+            map_type = object
+
+        return [m for f in self.get_linked_frames() for m in f.maps 
+                if isinstance(m, map_type)]
+
+    def warp_image(self, map_data, other, crop=True, **kwargs):
+        """Warps a map to the DIC frame.
+
+        Parameters
+        ----------
+        map_data : numpy.ndarray
+            Data to warp.
+        crop : bool, optional
+            Crop to size of DIC map if true.
+        kwargs
+            All other arguments passed to :func:`skimage.transform.warp`.
+
+        Returns
+        ----------
+        numpy.ndarray
+            Map (i.e. EBSD map data) warped to the DIC frame.
+
+        """
+        transform = other.get_frame_transform(self)
+
+        if not crop and isinstance(transform, tf.AffineTransform):
+            # copy transform and change translation to give an extra
+            # 5% border to show the entire image after rotation/shearing
+            input_shape = np.array(map_data.shape)
+            transform = tf.AffineTransform(matrix=np.copy(transform.params))
+            transform.params[0:2, 2] = -0.05 * input_shape
+            output_shape = input_shape * 1.4 / transform.scale
+            kwargs['output_shape'] = output_shape.astype(int)
+
+        return tf.warp(map_data, transform, **kwargs)
+
+    def warp_lines(self, lines, other):
+        """Warp a set of lines to the DIC reference frame.
+
+        Parameters
+        ----------
+        lines : list of tuples
+            Lines to warp. Each line is represented as a tuple of start
+            and end coordinates (x, y).
+
+        Returns
+        -------
+        list of tuples
+            List of warped lines with same representation as input.
+
+        """
+        # Transform
+        transform = self.get_frame_transform(other)
+        lines = transform(np.array(lines).reshape(-1, 2)).reshape(-1, 2, 2)
+        # Round to nearest
+        lines = np.round(lines - 0.5) + 0.5
+        lines = [(tuple(line[0]), tuple(line[1])) for line in lines]
+        return lines
+
+    def warp_points(self, points_img, other, **kwargs):
+        input_shape = np.array(points_img.shape)
+        points_img = self.warp_image(points_img, other, crop=False, **kwargs)
+
+        points_img = mph.skeletonize(points_img > 0.1)
+        mph.remove_small_objects(points_img, min_size=10, connectivity=2,
+                                 out=points_img)
+
+        # remove 5% border if required
+        transform = other.get_frame_transform(self)
+        if isinstance(transform, tf.AffineTransform):
+            # the crop is defined in EBSD coords so need to transform it
+            crop = np.matmul(
+                np.linalg.inv(transform.params[0:2, 0:2]),
+                transform.params[0:2, 2] + 0.05*input_shape
+            )
+            crop = crop.round().astype(int)
+            points_img = points_img[crop[1]:crop[1] + kwargs['output_shape'][0],
+                                    crop[0]:crop[0] + kwargs['output_shape'][1]]
+
+        return zip(*points_img.transpose().nonzero())
 
     def set_homog_points(self, points):
         """
