@@ -174,7 +174,7 @@ class GrainInspector:
 
         Parameters
         ----------
-        grain : hrdic.Grain, optional
+        grain : defdap.hrdic.Grain, optional
             Grain for which to group the slip lines.
 
         """

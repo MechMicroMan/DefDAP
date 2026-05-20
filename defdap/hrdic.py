@@ -450,28 +450,6 @@ class Map(base.Map):
             Number of pixels to dilate the mask by. Useful to remove anomalous points
             around masked values. No dilation applied if not specified.
 
-        Examples
-        ----------
-        
-        To disable masking:
-
-        >>> mask = None
-               
-        To remove data points in dic_map where `max_shear` is above 0.8, use:
-        
-        >>> mask = dic_map.data.max_shear > 0.8
-
-        To remove data points in dic_map where e11 is above 1 or less than -1, use:
-
-        >>> mask = (dic_map.data.e[0, 0] > 1) | (dic_map.data.e[0, 0] < -1)
-
-        To remove data points in dic_map where corrVal is less than 0.4, use:
-
-        >>> mask = dic_map.corr_val < 0.4
-
-        Note: correlation value data needs to be loaded seperately from the DIC map,
-        see :func:`defdap.hrdic.load_corr_val_data`
-
         """
         if mask is None:
             self.data.mask = None
@@ -566,7 +544,7 @@ class Map(base.Map):
     def plot_grain_av_max_shear(self, **kwargs):
         """Plot grain map with grains filled with average value of max shear.
         This uses the max shear values stored in grain objects, to plot other data
-        use :func:`~defdap.hrdic.Map.plotGrainAv`.
+        use :func:`defdap.base.Map.plot_grain_data_map`.
 
         Parameters
         ----------
@@ -841,7 +819,7 @@ class Grain(base.Grain):
 
         Returns
         -------
-        list(float)
+        list of float
             Detected slip band angles
 
         """
