@@ -95,6 +95,7 @@ extensions = [
 ]
 
 napoleon_use_param = True
+napoleon_preprocess_types = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -176,7 +177,6 @@ htmlhelp_basename = 'DefDAPdoc'
 autodoc_member_order = 'bysource'
 autodoc_default_options = {
     'inherited-members': True,
-    'exclude_patterns': ['*base*'],
 }
 
 # -- Generate API docs during sphinx-build (for readthedocs) ------------------

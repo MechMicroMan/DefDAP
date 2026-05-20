@@ -390,7 +390,7 @@ class Quat(object):
 
         Returns
         -------
-        float or Quat or tuple[float, Quat]
+        float or Quat or tuple of float and Quat
             Return type depends on ``return_quat``.
 
         """
@@ -614,7 +614,7 @@ class Quat(object):
 
         Returns
         -------
-        quats : numpy.ndarray(defdap.quat.Quat)
+        quats : numpy.ndarray of defdap.quat.Quat
             Array of quat objects of shape n x ... x m.
 
         """
@@ -643,14 +643,14 @@ class Quat(object):
 
         Parameters
         ----------
-        quats : list[Quat]
+        quats
             List of quats to be operated on.
-        right : Quat
+        right
             Single quaternion to multiply with the list of quats.
 
         Returns
         -------
-        list[Quat]
+        list of Quat
             Resulting multiplied quaternions.
 
         """
@@ -675,7 +675,7 @@ class Quat(object):
 
         Parameters
         ----------
-        quats : numpy.ndarray(defdap.quat.Quat)
+        quats : numpy.ndarray of defdap.quat.Quat
             Quaternions to extract components from.
 
         Returns
@@ -701,7 +701,7 @@ class Quat(object):
 
         Parameters
         ----------
-        quats : numpy.ndarray(defdap.quat.Quat)
+        quats : numpy.ndarray of defdap.quat.Quat
             Array of quat objects.
         sym_group : str
             Crystal type (cubic, hexagonal).
@@ -827,16 +827,16 @@ class Quat(object):
 
         Parameters
         ----------
-        x : numpy.ndarray(float)
+        x : numpy.ndarray of float
             x coordinate.
-        y : numpy.ndarray(float)
+        y : numpy.ndarray of float
             y coordinate.
-        z : numpy.ndarray(float)
+        z : numpy.ndarray of float
             z coordinate.
 
         Returns
         -------
-        tuple[numpy.ndarray, numpy.ndarray]
+        tuple of numpy.ndarray, len 2
             inclination angle and azimuthal angle (around z axis from x
             in anticlockwise as per ISO).
 
@@ -864,9 +864,9 @@ class Quat(object):
 
         Parameters
         ----------
-        quats : numpy.ndarray(defdap.quat.Quat)
+        quats : numpy.ndarray of defdap.quat.Quat
             Array of quat objects.
-        direction : numpy.ndarray
+        direction : numpy.ndarray of float, len 3
             Direction in sample space.
         sym_group : str
             Crystal type (cubic, hexagonal).
@@ -979,9 +979,9 @@ class Quat(object):
 
         Parameters
         ----------
-        quats : array_like[Quat]
+        quats : numpy.ndarray of defdap.quat.Quat
             Array of quat objects.
-        direction : numpy.ndarray
+        direction : numpy.ndarray of float, len 3
             Direction in sample space.
         sym_group : str
             Crystal type (cubic, hexagonal).

@@ -42,7 +42,7 @@ class Phase(object):
         where lengths are in angstrom and angles are in radians.
     crystal_structure : defdap.crystal.CrystalStructure
         Crystal structure object for the phase.
-    slip_systems : list or list of list of SlipSystem, optional
+    slip_systems : list of list of SlipSystem or list of SlipSystem, optional
         Slip systems for the phase.
     slip_trace_colours : list of str, optional
         Colors for slip plane traces.
@@ -419,13 +419,10 @@ class SlipSystem(object):
 
         Returns
         -------
-        tuple
-            Slip systems and trace colors.
-
-            - slip_systems : list of list of SlipSystem objects, 
-              optionally grouped based on `group_by`.
-            - slip_trace_colours : list of str
-              RGB color codes for each slip plane group.
+        list of list of SlipSystem or list of SlipSystem
+            Slip systems, optionally grouped according to `group_by`.
+        list of str
+            RGB color codes for each slip-plane group.
 
         Raises
         ------

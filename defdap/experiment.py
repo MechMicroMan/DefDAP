@@ -58,7 +58,7 @@ class Experiment(object):
 
         Yields
         ------
-        tuple[int, object]
+        tuple of int and :obj:`defdap.base.Map`
             Increment index and map object.
 
         """
@@ -84,7 +84,10 @@ class Experiment(object):
 
         Returns
         -------
-        skimage.transform._geometric.GeometricTransform
+        :class:`skimage.transform.PiecewiseAffineTransform` or \
+        :class:`skimage.transform.ProjectiveTransform` or \
+        :class:`skimage.transform.PolynomialTransform` or \
+        :class:`skimage.transform.AffineTransform`
             Estimated transform object.
 
         Raises
@@ -162,13 +165,13 @@ class Experiment(object):
 
         Parameters
         ----------
-        lines : list of tuples
+        lines : list of tuple
             Lines to warp. Each line is represented as a tuple of start
-            and end coordinates (x, y).
+            and end coordinates ``(x, y)``.
 
         Returns
         -------
-        list of tuples
+        list of tuple
             List of warped lines with same representation as input.
 
         """
@@ -192,7 +195,7 @@ class Experiment(object):
         frame_2 : Frame
             Target frame.
         **kwargs
-            Additional keyword arguments passed to ``warp_image``.
+            Additional keyword arguments passed to :func:`warp_image`.
 
         Returns
         -------
@@ -281,7 +284,7 @@ class Frame(object):
         points : numpy.ndarray, optional
             Array of (x,y) homologous points to set explicitly.
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.base.Map.plotHomog`
+            Keyword arguments passed to :func:`defdap.base.Map.plot_map`
 
         """
         if map_name is None:
@@ -403,11 +406,11 @@ class Frame(object):
         Parameters
         ----------
         homog_idx : int
-            ID (place in list) of point to update or -1 for all.
+            ID (place in list) of point to update or ``-1`` for all.
         new_point : tuple, optional
-            (x, y) coordinates of new point.
+            ``(x, y)`` coordinates of new point.
         delta : tuple, optional
-            Increments to current point (dx, dy).
+            Increments to current point ``(dx, dy)``.
 
         """
         if type(homog_idx) is not int:

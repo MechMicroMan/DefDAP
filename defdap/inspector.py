@@ -450,9 +450,9 @@ class GrainInspector:
         v_list : list of float
             List of centred ``v`` values.
         x_list : list of list of int
-            Sampled x coordinates.
+            Sampled ``x`` coordinates.
         y_list : list of list of int
-            Sampled y coordinates.
+            Sampled ``y`` coordinates.
         lin_reg_result
             Linear regression result for centred ``u`` against centred ``v``.
             {slope, intercept, rvalue, pvalue, stderr}.
@@ -600,9 +600,9 @@ class GrainInspector:
         """Save drawn line and group definitions to a text file.
 
         Lines drawn are saved in the following format:
-        [(x0, y0, x1, y1), angle, groupID].
+        ``[(x0, y0, x1, y1), angle, groupID]``.
         Groups of lines are saved in the following format:
-        [groupID, angle, [slip plane id(s)], [angular deviation(s)]].
+        ``[groupID, angle, [slip plane id(s)], [angular deviation(s)]]``.
 
         Parameters
         ----------

@@ -39,7 +39,7 @@ class Map(ABC):
 
     _grains : list of defdap.base.Grain
         List of grains.
-    sel_grain : defdap.base.grain
+    sel_grain : defdap.base.Grain
         The last selected grain
 
     """
@@ -139,11 +139,11 @@ class Map(ABC):
         Parameters
         ----------
         dilate_boundaries : bool, optional
-            Set to true to dilate boundaries.
+            Set to ``True`` to dilate boundaries.
         ax : matplotlib.axes.Axes, optional
             axis to plot on, if not provided the current active axis is used.
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.plotting.MapPlot.add_grain_numbers`
+            Keyword arguments passed to :func:`defdap.plotting.MapPlot.add_grain_numbers`.
 
         Returns
         -------
@@ -165,9 +165,9 @@ class Map(ABC):
         click_event : optional
             Click handler to use.
         display_grain : bool, optional
-            If true, plot slip traces for grain selected by click.
+            If ``True``, plot slip traces for grain selected by click.
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.base.Map.plot_default`
+            Keyword arguments passed to `plot_default`.
 
         """
         # reset current selected grain and plot euler map with click handler
@@ -197,7 +197,7 @@ class Map(ABC):
         plot : defdap.plotting.MapPlot
             Plot to capture clicks from.
         display_grain : bool
-            If true, plot the selected grain alone in pop-out window.
+            If ``True``, plot the selected grain alone in pop-out window.
 
         """
         # check if click was on the map
@@ -230,7 +230,7 @@ class Map(ABC):
         Parameters
         ----------
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.base.Map.plot_default`
+            Keyword arguments passed to `plot_default`.
 
         """
         plot = self.plot_default(make_interactive=True, **kwargs)
@@ -250,10 +250,10 @@ class Map(ABC):
         ----------
         plot : defdap.plotting.MapPlot
             Plot to calculate the line profile for.
-        start_end : array_like
-            Selected points (x0, y0, x1, y1).
+        start_end : numpy.ndarray, shape 4
+            Selected points ``(x0, y0, x1, y1)``.
         kwargs : dict, optional
-            Keyword arguments passed to :func:`matplotlib.pyplot.plot`
+            Keyword arguments passed to :func:`matplotlib.pyplot.plot`.
 
         """
         x0, y0 = start_end[0:2]
@@ -570,9 +570,9 @@ class Map(ABC):
         component : int or tuple of int or str
             Component of the map data to plot. This is either the tensor
             component (int or tuple of ints) or the name of a calculation
-            to be applied e.g. 'norm', 'all_euler' or 'IPF_x'.
+            to be applied e.g. ``norm``, ``all_euler`` or ``IPF_x``.
         kwargs
-            All arguments are passed to :func:`defdap.plotting.MapPlot.create`.
+            All other arguments are passed to :func:`defdap.plotting.MapPlot.create`.
 
         Returns
         -------
@@ -621,7 +621,7 @@ class Map(ABC):
         map_data : numpy.ndarray
             Array of map data to grain average. This must be cropped!
         grain_ids : list of int, optional
-            Grain IDs to perform operation on. Set to -1 for all grains.
+            Grain IDs to perform operation on. Set to ``-1`` for all grains.
 
         Returns
         -------
@@ -672,8 +672,8 @@ class Map(ABC):
             Grain values. This can be a single value per grain or RGB
             values.
         grain_ids : list of int or int, optional
-            IDs of grains to plot for. Use -1 for all grains in the map.
-        bg : int or real, optional
+            IDs of grains to plot for. Use ``-1`` for all grains in the map.
+        bg : int or float, optional
             Value to fill the background with.
 
         Returns
@@ -717,17 +717,17 @@ class Map(ABC):
         Parameters
         ----------
         map_data : numpy.ndarray, optional
-            Array of map data. This must be cropped! Either map_data or 
-            grain_data must be supplied.
+            Array of map data. This must be cropped! Either ``map_data`` or 
+            ``grain_data`` must be supplied.
         grain_data : list or numpy.ndarray, optional
             Grain values. This can be a single value per grain or RGB
-            values. You must supply either map_data or grain_data.
+            values. You must supply either ``map_data`` or ``grain_data``.
         grain_ids: list of int or int, optional
-            IDs of grains to plot for. Use -1 for all grains in the map.
-        bg: int or real, optional
+            IDs of grains to plot for. Use ``-1`` for all grains in the map.
+        bg: int or float, optional
             Value to fill the background with.
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.plotting.MapPlot.create`
+            Keyword arguments passed to :func:`defdap.plotting.MapPlot.create`.
 
         Returns
         -------
@@ -758,7 +758,7 @@ class Map(ABC):
         **kwargs
     ):
         """
-        Plot IPF of grain verage orientations with points coloured 
+        Plot IPF of grain average orientations with points coloured 
         by grain average values from map data.
 
         Parameters
@@ -766,15 +766,15 @@ class Map(ABC):
         direction : numpy.ndarray
             Vector of reference direction for the IPF.
         map_data : numpy.ndarray, optional
-            Array of map data. This must be cropped! Either map_data or
-            grain_data must be supplied.
+            Array of map data. This must be cropped! Either ``map_data`` or
+            ``grain_data`` must be supplied.
         grain_data : list or numpy.ndarray, optional
             Grain values. This can be a single value per grain or RGB
-            values. You must supply either map_data or grain_data.
+            values. You must supply either ``map_data`` or ``grain_data``.
         grain_ids : list of int, optional
-            IDs of grains to plot for. Use -1 for all grains in the map.
+            IDs of grains to plot for. Use ``-1`` for all grains in the map.
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.quat.Quat.plot_ipf`
+            Keyword arguments passed to :func:`defdap.quat.Quat.plot_ipf`.
 
         Returns
         -------
@@ -881,11 +881,11 @@ class Grain(ABC):
         Parameters
         ----------
         centre_type : str, optional, {'box', 'com'}
-            Set how to calculate the centre. Either 'box' for centre of
-            bounding box or 'com' for centre of mass. Default is 'box'.
+            Set how to calculate the centre. Either ``box`` for centre of
+            bounding box or ``com`` for centre of mass. Default is ``box``.
         grain_coords : bool, optional
-            If set True the centre is returned in the grain coordinates
-            otherwise in the map coordinates. Defaults is grain.
+            If ``True``, the centre is returned in the grain coordinates
+            otherwise in the map coordinates. Defaults is ``grain``.
 
         Returns
         -------
@@ -921,7 +921,7 @@ class Grain(ABC):
         Returns
         -------
         numpy.ndarray
-            Bounding box for grain with :obj:`~numpy.nan` outside the grain and given number within.
+            Bounding box for grain with ``nan`` outside the grain and given number within.
 
         """
         x0, y0, xmax, ymax = self.extreme_coords
@@ -942,9 +942,9 @@ class Grain(ABC):
         ax : matplotlib.axes.Axes, optional
             Axis to plot on. If not provided, the current active axis is used.
         plot_scale_bar : bool, optional
-            If True, plots the scale bar on the grain.
+            If ``True``, plots the scale bar on the grain.
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.plotting.GrainPlot.add_map`
+            Keyword arguments passed to :func:`defdap.plotting.GrainPlot.add_map`.
 
         Returns
         -------
@@ -982,14 +982,14 @@ class Grain(ABC):
         Parameters
         ----------
         map_data : numpy.ndarray, optional
-            Array of map data. Either this or grain_data must be supplied. 
-            grain_data takes precedence.
+            Array of map data. Either this or ``grain_data`` must be supplied. 
+            ``grain_data`` takes precedence.
         grain_data : numpy.ndarray, optional
             Array of data at each point in the grain. Either this or
-            map_data must be supplied. grain_data takes precedence.
+            ``map_data`` must be supplied. ``grain_data`` takes precedence.
         bg : various, optional
             Value to fill the background with. Must be same dtype as
-            input array. Default is :obj:`numpy.nan`.
+            input array. Default is ``nan``.
 
         Returns
         -------
@@ -1028,17 +1028,17 @@ class Grain(ABC):
         Parameters
         ----------
         map_data : numpy.ndarray, optional
-            Array of map data. Either this or grain_data must be supplied. 
-            grain_data takes precedence.
+            Array of map data. Either this or ``grain_data`` must be supplied. 
+            ``grain_data`` takes precedence.
         grain_data : numpy.ndarray, optional
             Array of data at each point in the grain. Either this or
-            map_data must be supplied. grain_data takes precedence.
+            ``map_data`` must be supplied. ``grain_data`` takes precedence.
         kernel_size : int, optional
             Size of kernel as the number of pixels to dilate by. For example,
             1 gives a 3x3 kernel. Default is 2 (5x5 kernel).
         bg : various, optional
             Value to fill the background with. Must be same dtype as
-            input array. Default is :obj:`numpy.nan`.
+            input array. Default is numpy.nan.
 
         Returns
         -------
@@ -1092,13 +1092,13 @@ class Grain(ABC):
         Parameters
         ----------
         map_data : numpy.ndarray, optional
-            Array of map data. Either this or grain_data must be supplied. 
-            grain_data takes precedence.
+            Array of map data. Either this or ``grain_data`` must be supplied. 
+            ``grain_data`` takes precedence.
         grain_data : numpy.ndarray, optional
             Array of data at each point in the grain. Either this or
-            map_data must be supplied. grain_data takes precedence.
+            ``map_data`` must be supplied. ``grain_data`` takes precedence.
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.plotting.GrainPlot.create`
+            Keyword arguments passed to :func:`defdap.plotting.GrainPlot.create`.
 
         Returns
         -------
@@ -1233,7 +1233,7 @@ class Grain(ABC):
         Parameters
         ----------
         map_name : str
-            Map data name to plot i.e. e, max_shear, euler_angle, orientation.
+            Map data name to plot i.e. ``e``, ``max_shear``, ``euler_angle``, ``orientation``.
         component : int or tuple of int or str, optional
             Component of the map data to plot. This is either the tensor
             component (int or tuple of ints) or the name of a calculation

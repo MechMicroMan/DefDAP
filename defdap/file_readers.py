@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 import pathlib
 import re
 
-from typing import TextIO, Dict, List, Callable, Any, Type, Optional
+from typing import TextIO, Dict, List, Callable, Any, Optional
 
 from defdap.crystal import Phase
 from defdap.quat import Quat
@@ -54,7 +54,7 @@ class EBSDDataLoader(ABC):
         self.data_format = None
 
     @staticmethod
-    def get_loader(data_type: str, file_name: pathlib.Path) -> 'Type[EBSDDataLoader]':
+    def get_loader(data_type: str, file_name: pathlib.Path) -> 'EBSDDataLoader':
         if data_type is None:
             data_type = {
                 '.crc': 'oxfordbinary',
@@ -394,7 +394,7 @@ class EdaxAngLoader(EBSDDataLoader):
 
 class OxfordBinaryLoader(EBSDDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
-        """Read Oxford Instruments .cpr/.crc file pair.
+        """Read Oxford Instruments ``.cpr``/``.crc`` file pair.
 
         Parameters
         ----------
@@ -407,7 +407,7 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
     def load_oxford_cpr(self, file_name: pathlib.Path) -> None:
         """
-        Read an Oxford Instruments .cpr file, which is a metadata file
+        Read an Oxford Instruments ``.cpr`` file, which is a metadata file
         describing EBSD data.
 
         Parameters
@@ -595,11 +595,11 @@ class PythonDictLoader(EBSDDataLoader):
         ----------
         data_dict : dict
             Dictionary with keys:
-                'step_size'
-                'phases'
-                'phase'
-                'euler_angle'
-                'band_contrast'
+                ``step_size``, 
+                ``phases``, 
+                ``phase``, 
+                ``euler_angle``, 
+                ``band_contrast``
 
         """
         self.loaded_metadata['shape'] = data_dict['phase'].shape
@@ -648,7 +648,7 @@ class DICDataLoader(ABC):
         )
 
     @staticmethod
-    def get_loader(data_type: str) -> 'Type[DICDataLoader]':
+    def get_loader(data_type: str) -> 'DICDataLoader':
         if data_type is None:
             data_type = "Davis"
 
@@ -761,7 +761,7 @@ class DavisLoader(DICDataLoader):
 
 class OpenPivTextLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
-        """Load an OpenPIV .txt file.
+        """Load an OpenPIV ``.txt`` file.
 
         Parameters
         ----------
@@ -928,9 +928,9 @@ def read_until_string(
     line_process: Optional[Callable[[str], Any]] = None,
     exact: bool = False
 ) -> List[Any]:
-    """Read lines in a file until a line starting with the `termString`
+    """Read lines in a file until a line starting with the ``termString``
     is encountered. The file position is returned before the line starting
-    with the `termString` when found. Comment and empty lines are ignored.
+    with the ``termString`` when found. Comment and empty lines are ignored.
 
     Parameters
     ----------
@@ -940,7 +940,7 @@ def read_until_string(
         String to terminate reading.
     comment_char : str, optional
         Character at start of a comment line to ignore.
-    line_process : callable, optional
+    line_process : Callable, optional
         Function to apply to each line when loaded.
     exact : bool, optional
         If ``True``, a line must exactly match ``term_string`` to stop.

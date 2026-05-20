@@ -71,22 +71,8 @@ class Map(base.Map):
         File name.
     crop_dists : numpy.ndarray
         Crop distances (default all zeros).
-
     data : defdap.utils.Datastore
-        Must contain after loading data (maps):
-            coordinate : numpy.ndarray
-                X and Y coordinates
-            displacement : numpy.ndarray
-                X and Y displacements
-        Generated data:
-            f : numpy.ndarray
-                Components of the deformation gradient (0=x, 1=y).
-            e : numpy.ndarray
-                Components of the green strain (0=x, 1=y).
-            max_shear : numpy.ndarray
-                Max shear component np.sqrt(((e11 - e22) / 2.)**2 + e12**2).
-        Derived data:
-            Grain list data to map data from all grains
+        Data store.
 
     """
     MAPNAME = 'hrdic'
@@ -281,9 +267,9 @@ class Map(base.Map):
         Parameters
         ----------
         percentiles : list of float
-            list of percentiles to print i.e. 0, 50, 99.
+            list of percentiles to print i.e. ``[0, 50, 99]``.
         components : list of str
-            list of map components to print i.e. e, f, max_shear.
+            list of map components to print i.e. ``[e, f, max_shear]``.
 
         """
 
@@ -320,15 +306,15 @@ class Map(base.Map):
         Parameters
         ----------
         left : int
-            Distance to crop from left in pixels (formally `xMin`)
+            Distance to crop from left in pixels (was ``xMin``)
         right : int
-            Distance to crop from right in pixels (formally `xMax`)
+            Distance to crop from right in pixels (was ``xMax``)
         top : int
-            Distance to crop from top in pixels (formally `yMin`)
+            Distance to crop from top in pixels (was  ``yMin``)
         bottom : int
-            Distance to crop from bottom in pixels (formally `yMax`)
+            Distance to crop from bottom in pixels (was ``yMax``)
         update_homog_points : bool, optional
-            If true, change homologous points to reflect crop.
+            If ``True``, change homologous points to reflect crop.
 
         """
         # changes in homog points
@@ -393,9 +379,9 @@ class Map(base.Map):
         ebsd_map : defdap.ebsd.Map
             EBSD map object to link.
         transform_type : str, optional
-            affine, piecewiseAffine or polynomial.
+            ``affine``, ``piecewiseAffine`` or ``polynomial``.
         kwargs
-            All arguments are passed to `estimate` method of the transform.
+            All arguments are passed to ``estimate`` method of the transform.
 
         """
         self.ebsd_map = ebsd_map
@@ -417,7 +403,7 @@ class Map(base.Map):
         Returns
         -------
         bool
-            Returns True if EBSD map linked.
+            Returns ``True`` if EBSD map linked.
 
         Raises
         ------
@@ -437,7 +423,7 @@ class Map(base.Map):
         map_data : numpy.ndarray
             Data to warp.
         kwargs
-            All other arguments passed to :func:`defdap.experiment.Experiment.warp_map`.
+            All other arguments passed to :func:`defdap.experiment.Experiment.warp_image`.
 
         Returns
         -------
@@ -458,7 +444,7 @@ class Map(base.Map):
 
         Parameters
         ----------
-        mask: numpy.array(bool) or None
+        mask: numpy.array of bool or None
             A boolean array where points to be removed are True. Set to None to disable masking.
         dilation: int, optional
             Number of pixels to dilate the mask by. Useful to remove anomalous points
@@ -537,9 +523,8 @@ class Map(base.Map):
             Path to image.
         window_size : int
             Size of pixel in pattern image relative to pixel size of DIC data
-            
-        i.e 1 means they are the same size and 2 means the pixels in
-            the pattern are half the size of the dic data.
+            i.e 1 means they are the same size and 2 means the pixels in
+            the pattern are half the size of pixel in dic data.
 
         """
         path = self.file_name.parent / img_path
@@ -608,7 +593,7 @@ class Map(base.Map):
         Parameters
         ----------
         algorithm : str {'warp', 'floodfill'}
-            Use floodfill or warp algorithm.
+            Use ``warp`` or ``floodfill`` algorithm.
         min_grain_size : int
             Minimum grain area in pixels for floodfill algorithm.
         """
@@ -775,21 +760,12 @@ class Grain(base.Grain):
     ebsd_map : defdap.ebsd.Map
         EBSD map that this DIC grain belongs to.
     points_list : numpy.ndarray
-        Start and end points for lines drawn using defdap.inspector.GrainInspector.
+        Start and end points for lines drawn using :obj:`defdap.inspector.GrainInspector`.
     groups_list : list
         Groups, angles and slip systems detected for
-        lines drawn using defdap.inspector.GrainInspector.
+        lines drawn using :obj:`defdap.inspector.GrainInspector`.
     data : defdap.utils.Datastore
-        Must contain after creating:
-
-            point : list of tuples
-                (x, y) in cropped map
-
-        Generated data:
-            None
-
-        Derived data:
-            Map data to list data from the map the grain is part of
+        Data store.
 
     """
     def __init__(self, grain_id, dicMap, group_id):

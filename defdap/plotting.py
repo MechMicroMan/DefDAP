@@ -91,7 +91,7 @@ class Plot(object):
         ----------
         eventName : str
             Matplotlib event name.
-        eventHandler : callable
+        eventHandler : Callable
             Callback receiving ``(event, plot)``.
 
         """
@@ -129,7 +129,7 @@ class Plot(object):
             Label for the button.
         click_handler
             Click handler to assign.
-        loc : list(float), len 4
+        loc : list of float, len 4
             Left, bottom, width, height.
         kwargs
             All other arguments passed to :class:`matplotlib.widgets.Button`.
@@ -153,7 +153,7 @@ class Plot(object):
             Submit handler to assign.
         change_handler
             Change handler to assign.
-        loc : list(float), len 4
+        loc : list of float, len 4
             Left, bottom, width, height.
         kwargs
             All other arguments passed to :class:`matplotlib.widgets.TextBox`.
@@ -201,7 +201,7 @@ class Plot(object):
 
         Parameters
         ----------
-        start_end : tuple[float, float, float, float]
+        start_end : tuple of float, len 4
             Starting (x, y), Ending (x, y).
         persistent : bool, optional
             If persistent, do not clear arrow with clearPrev.
@@ -445,7 +445,7 @@ class MapPlot(Plot):
             If true, dilate the grain boundaries.
         kwargs
             If line kind then other arguments are passed to 
-            :func:`matplotlib.collections.LineCollection`.
+            :class:`matplotlib.collections.LineCollection`.
 
         Returns
         -------
@@ -649,7 +649,7 @@ class MapPlot(Plot):
 
         Parameters
         ----------
-        calling_map : base.Map
+        calling_map : defdap.base.Map
             DIC or EBSD map which called this plot.
         map_data : numpy.ndarray
             Data to be plotted.
@@ -874,7 +874,7 @@ class GrainPlot(Plot):
     def add_slip_bands(self, grain_map_data, colour=None, thres=None, 
                        min_dist=None, **kwargs):
         """Add lines representing slip bands detected by Radon transform
-        in :func:`~defdap.hrdic.grain.calc_slip_bands`.
+        in :func:`defdap.hrdic.Grain.calc_slip_bands`.
 
         Parameters
         ----------
@@ -912,7 +912,7 @@ class GrainPlot(Plot):
 
         Parameters
         ----------
-        calling_grain : base.Grain
+        calling_grain : defdap.base.Grain
             DIC or EBSD grain which called this plot.
         map_data :
             Data to be plotted.
@@ -1110,7 +1110,7 @@ class PolePlot(Plot):
         pad_y : int, optional
             Pad added to y coordinate.
         kwargs
-            Other arguments are passed to :func:`matplotlib.axes.Axes.text`.
+            Other arguments are passed to :meth:`matplotlib.axes.Axes.text`.
 
         """
         labels = [idc_to_string(point, str_type='tex')] if label is None else [label]
@@ -1154,13 +1154,13 @@ class PolePlot(Plot):
             Inclination angle to plot.
         beta_ang
             Azimuthal angle (around z axis from x in anticlockwise as per ISO) to plot.
-        marker_colour : str or list(str), optional
+        marker_colour : str or list of str, optional
             Colour of marker. If two specified, then the point will have two
             semicircles of different colour.
         marker_size : float
             Size of marker.
         kwargs
-            Other arguments are passed to :func:`matplotlib.axes.Axes.scatter`.
+            Other arguments are passed to :meth:`matplotlib.axes.Axes.scatter`.
 
         Raises
         -------
@@ -1259,14 +1259,14 @@ class PolePlot(Plot):
 
         Parameters
         ----------
-        projection_in : str or callable or None
+        projection_in : str or Callable or None
             Projection name/function.
         validate_default : bool, optional
             If ``True``, validate only explicit defaults.
 
         Returns
         -------
-        callable
+        Callable
             Projection function.
 
         Raises
@@ -1477,7 +1477,7 @@ class HistPlot(Plot):
         Parameters
         ----------
         kwargs
-            All arguments passed to :func:`matplotlib.axes.Axes.legend`.
+            All arguments passed to :meth:`matplotlib.axes.Axes.legend`.
 
         """
         self.ax.legend(**kwargs)

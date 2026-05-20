@@ -71,9 +71,9 @@ You can print a list of all the attributed stored: ``print(dic_map.data)`` and a
     * - ``max_shear``
       - Maximum shear strain field.
     * - ``pattern``
-      - Image/pattern data associated with DIC, set this with :class:`defdap.hridic.set_pattern`.
+      - Image/pattern data associated with DIC, set this with :class:`defdap.hrdic.set_pattern`.
     * - ``mask``
-      - Validity mask for data points, set this with :class:`defdap.hridic.generate_mask`.
+      - Validity mask for data points, set this with :class:`defdap.hrdic.generate_mask`.
 
 When linked to a :class:`defdap.ebsd.EBSDMap` object, the HRDIC Map also stores the following data structures:
 
@@ -98,7 +98,7 @@ Setting and plotting pattern
 The undeformed pattern image, from which the DIC data was derived can contain microstructural information which will be useful to link the HRDIC to EBSD data later.
 First, scale the image down, ideally a factor of the interregation window size for the DIC data.
 For example, if the DIC interregation window size was (16 x 16) pixels, then the pattern image should be scaled down by a factor of 16.
-The path can then set with :class:`defdap.hridic.set_pattern`, where the second argument is the scaling factor of the pattern image relative to the DIC interregation window size.
+The path can then set with :class:`defdap.hrdic.set_pattern`, where the second argument is the scaling factor of the pattern image relative to the DIC interregation window size.
 
 .. code-block:: python
 
@@ -114,7 +114,7 @@ The path can then set with :class:`defdap.hridic.set_pattern`, where the second 
     DefDAP calculates the expected size of the pattern image based on the size of the DIC map and the scaling factor, 
     so if the pattern image is not the expected size, an error will be raised.
 
-To plot the pattern image, use the :class:`defdap.hridic.plot_map` method with the argument 'pattern'
+To plot the pattern image, use the :class:`defdap.hrdic.plot_map` method with the argument 'pattern'
 
 .. code-block:: python
 
@@ -146,7 +146,7 @@ so it is often desirable to crop the map to a region of interest, which can be d
     # Crop to region of interest
     dic_map.crop(left=100, right=100, top=100, bottom=100)
 
-Finally, a mask can be generated to identify valid and invalid points in the DIC map, using the :class:`defdap.hridic.generate_mask` method.
+Finally, a mask can be generated to identify valid and invalid points in the DIC map, using the :class:`defdap.hrdic.generate_mask` method.
 The boolean array passed as ``mask`` should have the same shape as the DIC map, 
 where ``True`` values indicate invalid points and ``False`` values indicate valid points.
 These are some examples of how to generate a mask based on the DIC data:

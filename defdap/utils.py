@@ -82,12 +82,9 @@ class Datastore(object):
     ----------
     _store : dict of dict
         Storage for data and metadata, keyed by data name. Each item is
-        a dict with at least a `data` key, all other items are metadata,
+        a dict with at least a ``data`` key, all other items are metadata,
         possibly including:
 
-        type : str
-            Type of data stored:
-                `map` - at least a 2-axis array, trailing axes are spatial
         order : int
             Tensor order of the data
         unit : str
