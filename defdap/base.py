@@ -953,7 +953,7 @@ class Grain(ABC):
 
         """
         plot = plotting.GrainPlot(self, ax=ax)
-        plot.addMap(self.grain_outline(), **kwargs)
+        plot.add_map(self.grain_outline(), **kwargs)
 
         if plot_scale_bar:
             plot.add_scale_bar()

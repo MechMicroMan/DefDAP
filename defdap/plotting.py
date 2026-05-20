@@ -748,7 +748,7 @@ class GrainPlot(Plot):
         self.ax.set_xticks([])
         self.ax.set_yticks([])
 
-    def addMap(self, map_data, vmin=None, vmax=None, cmap='viridis', **kwargs):
+    def add_map(self, map_data, vmin=None, vmax=None, cmap='viridis', **kwargs):
         """Add a map to a grain plot.
 
         Parameters
@@ -957,7 +957,7 @@ class GrainPlot(Plot):
         if plot is None:
             plot = cls(calling_grain, fig=fig, ax=ax, ax_params=ax_params,
                        make_interactive=make_interactive, **fig_params)
-        plot.addMap(map_data, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+        plot.add_map(map_data, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
         if plot_colour_bar:
             plot.add_colour_bar(clabel)
