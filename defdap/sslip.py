@@ -97,8 +97,9 @@ def run_sslip(def_grad, ori, slip_systems, threshold=0.01):
 
 def plot_sslip_all(
         dic_grain, 
-        slip_amplitudes, 
-        absolute_amplitudes=True,
+        slip_amplitudes: np.ndarray,
+        slip_amplitude_threshold: float = 0.0,
+        absolute_amplitudes: bool = True,
         slip_systems=None, 
         slip_traces=None, 
         vmax=None, 
@@ -120,6 +121,8 @@ def plot_sslip_all(
     absolute_amplitudes : bool, optional
         If True, plot absolute values. If False, plot signed values.
         Default is True.
+    slip_amplitude_threshold : float , optional
+        Minimum total slip amplitude threshold for a grain to be plotted.
     slip_systems : list[crystal.SlipSystem], optional
         List of slip system objects. If None, computed from grain's EBSD data.
     slip_traces : list or np.ndarray, optional
@@ -132,6 +135,10 @@ def plot_sslip_all(
 
     """
 
+    # Calculate slip system amplitudes
+    total_slip_sys_ampl = np.sum(np.abs(slip_amplitudes), axis=1)
+    total = total_slip_sys_ampl.sum()
+
     if slip_systems is None:
         dic_grain.ebsd_grain.calc_average_ori()
         slip_systems = sum(dic_grain.ebsd_grain.phase.slip_systems, start=[])
@@ -141,17 +148,22 @@ def plot_sslip_all(
                 for ss in group:
                     slip_traces.append(dic_grain.ebsd_grain.slip_traces[i])
 
-    if vmax is None:
-        vmax = np.max(np.abs(slip_amplitudes))
-    if layout is None:
-        layout = subplot_grid(len(slip_systems))
+    # Calculate mask for minimum threshold
+    if slip_amplitude_threshold > 0.0:
+        mask = (total_slip_sys_ampl/total) >= slip_amplitude_threshold
+        assert np.any(mask), "No slip systems exceed the thresholdt."
 
-    fig, axes = plt.subplots(*layout, figsize=(8, 8), sharex=True, sharey=True,
-        constrained_layout=True)
+        slip_amplitudes = slip_amplitudes[mask]
+        slip_systems = [ss for ss, m in zip(slip_systems, mask) if m]
+        slip_traces = [t for t, m in zip(slip_traces, mask) if m]
+
+    # Plotting
+    vmax = np.max(np.abs(slip_amplitudes)) if vmax is None else vmax
+    layout = subplot_grid(len(slip_systems)) if layout is None else layout
+
+    fig, axes = plt.subplots(*layout, figsize=(8, 8), sharex=True, sharey=True, constrained_layout=True)
     axes = axes.ravel()
 
-    total_slip_sys_ampl = np.sum(np.abs(slip_amplitudes), axis=1)
-    total = total_slip_sys_ampl.sum()
 
     for ax, slip_amp, ss, t in zip(axes, slip_amplitudes, slip_systems, slip_traces):
         perc = np.sum(np.abs(slip_amp)) / total * 100
