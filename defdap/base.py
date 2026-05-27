@@ -216,60 +216,91 @@ class Map(ABC):
                 grain.plot_default(plot=self.grain_plot)
                 self.grain_plot.draw()
 
-    def draw_line_profile(self, **kwargs):
+    def draw_line_profile(self, map_name=None, **kwargs):
         """Interactive plot for drawing a line profile of data.
 
         Parameters
         ----------
+        map_name : str, optional
+            Name of map data to plot for line selection. If ``None``,
+            uses :func:`defdap.base.Map.plot_default`.
         kwargs : dict, optional
             Keyword arguments passed to :func:`defdap.base.Map.plot_default`
 
         """
-        plot = self.plot_default(make_interactive=True, **kwargs)
+        if map_name is None:
+            plot = self.plot_default(make_interactive=True, **kwargs)
+        else:
+            plot = self.plot_map(map_name, make_interactive=True, **kwargs)
 
         plot.add_event_handler('button_press_event', plot.line_slice)
         plot.add_event_handler(
             'button_release_event',
-            lambda e, p: plot.line_slice(e, p, action=self.calc_line_profile)
+            lambda e, p: plot.line_slice(e, p,
+                action=lambda plot, start_end: self.calc_line_profile(
+                    plot.img_layers[0].get_array(),
+                    start_end,
+                    map_name=map_name
+                )
+            )
         )
 
         return plot
 
-    def calc_line_profile(self, plot, start_end, **kwargs):
-        """Calculate and plot the line profile.
+    def calc_line_profile(self, map_data, start_end, map_name=None,
+                          show_plot=True, order=None, **kwargs):
+        """Calculate and optionally plot the line profile.
 
         Parameters
         ----------
-        plot : defdap.plotting.MapPlot
-            Plot to calculate the line profile for.
+        map_data : numpy.ndarray
+            Map data to calculate the line profile from.
         start_end : array_like
             Selected points (x0, y0, x1, y1).
-        kwargs : dict, optional
+        map_name : str, optional
+            Name of map data used to generate the profile.
+        show_plot : bool, optional
+            If true, show the line profile plot. Default is True.
+        order : int, optional
+            Order of the polynomial to fit to the data. Default is 0 for bool, 1 otherwise.
+        **kwargs
             Keyword arguments passed to :func:`matplotlib.pyplot.plot`
 
         """
+        start_end = np.array(start_end, dtype=int)
         x0, y0 = start_end[0:2]
         x1, y1 = start_end[2:4]
         profile_length = np.sqrt((y1 - y0) ** 2 + (x1 - x0) ** 2)
 
         # Extract the values along the line
         zi = profile_line(
-            plot.img_layers[0].get_array(),
+            map_data,
             (start_end[1], start_end[0]),
             (start_end[3], start_end[2]),
-            mode='nearest'
+            mode='nearest',
+            order=order,
+            reduce_func=np.mean
         )
         xi = np.linspace(0, profile_length, len(zi))
 
-        if self.profile_plot is None or not self.profile_plot.exists:
-            self.profile_plot = Plot(make_interactive=True)
-        else:
-            self.profile_plot.clear()
+        if show_plot:   
+            
+            if self.profile_plot is None or not self.profile_plot.exists:
+                self.profile_plot = Plot(make_interactive=True)
+            else:
+                self.profile_plot.clear()
 
-        self.profile_plot.ax.plot(xi, zi, **kwargs)
-        self.profile_plot.ax.set_xlabel('Distance (pixels)')
-        self.profile_plot.ax.set_ylabel('Intensity')
-        self.profile_plot.draw()
+            self.profile_plot.ax.plot(xi, zi, **kwargs)
+            self.profile_plot.ax.set_xlabel('Distance (pixels)')
+            self.profile_plot.ax.set_ylabel('Intensity')
+            profile_title = f'x0={x0}, y0={y0} to x1={x1}, y1={y1}'
+            if map_name is not None:
+                profile_title = f'{map_name}: {profile_title}'
+            self.profile_plot.ax.set_title(profile_title)
+            self.profile_plot.draw()
+
+        return xi, zi
+    
 
     @report_progress("constructing neighbour network")
     def build_neighbour_network(self):
