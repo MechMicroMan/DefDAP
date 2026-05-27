@@ -248,7 +248,7 @@ class Map(ABC):
         return plot
 
     def calc_line_profile(self, map_data, start_end, map_name=None,
-                          show_plot=True, order=None, **kwargs):
+                          show_plot=True, order=None, linewidth=1, **kwargs):
         """Calculate and optionally plot the line profile.
 
         Parameters
@@ -263,6 +263,8 @@ class Map(ABC):
             If true, show the line profile plot. Default is True.
         order : int, optional
             Order of the polynomial to fit to the data. Default is 0 for bool, 1 otherwise.
+        linewidth : int, optional
+            Width of the line in the plot. Default is 1.
         **kwargs
             Keyword arguments passed to :func:`matplotlib.pyplot.plot`
 
@@ -279,7 +281,8 @@ class Map(ABC):
             (start_end[3], start_end[2]),
             mode='nearest',
             order=order,
-            reduce_func=np.mean
+            linewidth=linewidth,
+            reduce_func=np.nanmean
         )
         xi = np.linspace(0, profile_length, len(zi))
 
