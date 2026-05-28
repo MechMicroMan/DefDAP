@@ -640,7 +640,8 @@ class DICDataLoader(ABC):
                 'openpiv': OpenPivTextLoader,    #Backwards compatability
                 'openpivtext': OpenPivTextLoader,
                 'openpivbinary': OpenPivBinaryLoader,
-                'pyvale': PyValeLoader
+                'pyvale': PyValeLoader,
+                'matflow': MatflowLoader,
             }[data_type]
         except KeyError:
             raise ValueError(f"No loader for DIC data of type {data_type}.")
@@ -790,6 +791,7 @@ class OpenPivTextLoader(DICDataLoader):
 
         self.check_data()
 
+
 class OpenPivBinaryLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
         """ Load from Open PIV .npz file.
@@ -898,6 +900,45 @@ class PyValeLoader(DICDataLoader):
 
         self.loaded_data.coordinate = coord_dense
         self.loaded_data.displacement = disp_dense
+
+        self.check_data()
+
+
+class MatflowLoader(DICDataLoader):
+    def load(self, data_dict: Dict[str, Any], step_index: int = 0) -> None:
+        """ Load from matflow workflow element output.
+
+        Parameters
+        ----------
+        data_dict
+            Dictionary with keys:
+                'ss_x'
+                'ss_y'
+                'u'
+                'v'
+
+        """
+        # Software name and version
+        self.loaded_metadata['format'] = 'PyVale'
+        self.loaded_metadata['version'] = 'n/a'
+
+        # Sub-window width in pixels
+        binning_x = np.diff(data_dict['ss_x'], axis=1)
+        binning = int(binning_x[0, 0])
+        assert np.all(binning_x == binning)
+        binning_y = np.diff(data_dict['ss_y'], axis=0)
+        assert np.all(binning_y == binning)
+        self.loaded_metadata['binning'] = binning
+        self.loaded_metadata['shape'] = data_dict['ss_x'].shape
+
+        self.checkMetadata()
+
+        self.loaded_data.coordinate = np.stack(
+            (data_dict['ss_x'], data_dict['ss_y'])
+        )
+        self.loaded_data.displacement = np.stack(
+            (data_dict['u'][step_index], data_dict['v'][step_index])
+        )
 
         self.check_data()
 

@@ -44,7 +44,7 @@ class Map(ABC):
 
     """
     def __init__(self, file_name, data_type=None, experiment=None,
-                 increment=None, frame=None, map_name=None):
+                 increment=None, frame=None, map_name=None, **kwargs):
         """
 
         Parameters
@@ -83,8 +83,12 @@ class Map(ABC):
         self.grain_plot = None
         self.profile_plot = None
 
-        self.file_name = Path(file_name)
-        self.load_data(self.file_name, data_type=data_type)
+        self.file_name = None
+        if isinstance(file_name, str):
+            file_name = Path(file_name)
+        if isinstance(file_name, (str, Path)):
+            self.file_name = file_name
+        self.load_data(file_name, data_type=data_type, **kwargs)
 
         self.data.add_generator(
             'proxigram', self.calc_proxigram, unit='', type='map', order=0,

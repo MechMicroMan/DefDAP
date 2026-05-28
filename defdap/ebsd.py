@@ -148,7 +148,7 @@ class Map(base.Map):
         )
 
     @report_progress("loading EBSD data")
-    def load_data(self, file_name, data_type=None):
+    def load_data(self, file_name, data_type=None, **kwargs):
         """Load in EBSD data from file.
 
         Parameters
@@ -160,7 +160,7 @@ class Map(base.Map):
 
         """
         data_loader = EBSDDataLoader.get_loader(data_type, file_name)
-        data_loader.load(file_name)
+        data_loader.load(file_name, **kwargs)
 
         metadata_dict = data_loader.loaded_metadata
         self.shape = metadata_dict['shape']
