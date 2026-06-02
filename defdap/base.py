@@ -131,6 +131,13 @@ class Map(ABC):
         return map_data
 
     def set_homog_point(self, **kwargs):
+        """Set the map homologous reference points.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Keyword arguments forwarded to :meth:`defdap.experiment.Frame.set_homog_point`.
+        """
         return self.frame.set_homog_point(self, **kwargs)
 
     def plot_grain_numbers(self, dilate_boundaries=False, ax=None, **kwargs):
