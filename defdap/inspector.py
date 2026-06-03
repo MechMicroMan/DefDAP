@@ -89,7 +89,7 @@ class GrainInspector:
                                submit_handler=self.goto_grain)
         self.plot.add_text_box(label='Remove\nID:', loc=(div_frac + 0.1, 0.48, 0.05, 0.04),
                                submit_handler=self.remove_line)
-        self.rdr_group_text_box = self.plot.add_text_box(label='Run RDR only\non group:', loc=(0.78, 0.07, 0.05, 0.04),
+        self.rdr_group_text_box = self.plot.add_text_box(label='Run RDR\non group:', loc=(0.78, 0.07, 0.05, 0.04),
                                                          submit_handler=self.run_rdr_group)
 
         # Axes
