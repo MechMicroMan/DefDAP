@@ -1,5 +1,17 @@
 # Change Log
 
+## v1.2.0 (2026-06-04)
+
+### Feat
+
+- Load data from a matflow workflow
+
+### Fix
+
+- Error when plotting grains in the inspector
+- Bug with drawing figure canvas in new versions of mpl with ipympl
+- Update .ang file reader to work with more files
+
 ## v1.1.2 (2026-01-16)
 
 ### Fix
