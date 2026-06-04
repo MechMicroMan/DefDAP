@@ -55,6 +55,7 @@ Data Structure
 --------------
 
 The grain inspector stores data for each grain under ``points_list`` and ``groups_list`` attributes.
+
 - The ``points_list`` contains a list of [[x1, y1, x2, y2], angle, group] each line drawn on the grain.
 - The ``groups_list`` contains a list of [id, angle, active plane(s), deviation(s), rdr] corresponding to each group.
 
