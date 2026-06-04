@@ -1,5 +1,12 @@
 # Change Log
 
+## v1.2.1 (2026-06-04)
+
+### Fix
+
+- experiment notebook (#155)
+- experiment notebook
+
 ## v1.2.0 (2026-06-04)
 
 ### Feat
