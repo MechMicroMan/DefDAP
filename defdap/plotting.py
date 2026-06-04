@@ -309,7 +309,7 @@ class Plot(object):
         """Draw plot
 
         """
-        self.fig.canvas.draw()
+        self.fig.canvas.draw_idle()
 
 
 class MapPlot(Plot):

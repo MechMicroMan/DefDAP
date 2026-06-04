@@ -289,6 +289,8 @@ class EdaxAngLoader(EBSDDataLoader):
         self.check_metadata()
 
         # Construct fixed data format
+        # .ang format seems to take all sorts of forms, only columns that seem
+        # to be agreed on by most files are loaded
         self.data_format = np.dtype([
             ('ph1', 'float32'),
             ('phi', 'float32'),
@@ -298,10 +300,8 @@ class EdaxAngLoader(EBSDDataLoader):
             ('IQ', 'float32'),
             ('CI', 'float32'),
             ('phase', 'uint8'),
-            # ('SE_signal', 'float32'),
-            ('FF', 'float32'),
         ])
-        load_cols = (0, 1, 2, 5, 6, 7, 8, 9)
+        load_cols = (0, 1, 2, 5, 6, 7)
 
         # now read the data from file
         data = np.loadtxt(
@@ -325,15 +325,8 @@ class EdaxAngLoader(EBSDDataLoader):
                 'clabel': 'Confidence index',
             }
         )
-        self.loaded_data.add(
-            'fit_factor', data['FF'].reshape(shape),
-            unit='', type='map', order=0,
-            plot_params={
-                'plot_colour_bar': True,
-                'clabel': 'Fit factor',
-            }
-        )
-        self.loaded_data.phase = data['phase'].reshape(shape) + 1
+        add_phase = 1 if data['phase'].min() == 0 else 0
+        self.loaded_data.phase = data['phase'].reshape(shape) + add_phase
         self.loaded_data['phase', 'plot_params']['vmax'] = len(self.loaded_metadata['phases'])
 
         # flatten the structured dtype
@@ -647,7 +640,8 @@ class DICDataLoader(ABC):
                 'openpiv': OpenPivTextLoader,    #Backwards compatability
                 'openpivtext': OpenPivTextLoader,
                 'openpivbinary': OpenPivBinaryLoader,
-                'pyvale': PyValeLoader
+                'pyvale': PyValeLoader,
+                'matflow': MatflowLoader,
             }[data_type]
         except KeyError:
             raise ValueError(f"No loader for DIC data of type {data_type}.")
@@ -797,6 +791,7 @@ class OpenPivTextLoader(DICDataLoader):
 
         self.check_data()
 
+
 class OpenPivBinaryLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
         """ Load from Open PIV .npz file.
@@ -905,6 +900,45 @@ class PyValeLoader(DICDataLoader):
 
         self.loaded_data.coordinate = coord_dense
         self.loaded_data.displacement = disp_dense
+
+        self.check_data()
+
+
+class MatflowLoader(DICDataLoader):
+    def load(self, data_dict: Dict[str, Any], step_index: int = 0) -> None:
+        """ Load from matflow workflow element output.
+
+        Parameters
+        ----------
+        data_dict
+            Dictionary with keys:
+                'ss_x'
+                'ss_y'
+                'u'
+                'v'
+
+        """
+        # Software name and version
+        self.loaded_metadata['format'] = 'PyVale'
+        self.loaded_metadata['version'] = 'n/a'
+
+        # Sub-window width in pixels
+        binning_x = np.diff(data_dict['ss_x'], axis=1)
+        binning = int(binning_x[0, 0])
+        assert np.all(binning_x == binning)
+        binning_y = np.diff(data_dict['ss_y'], axis=0)
+        assert np.all(binning_y == binning)
+        self.loaded_metadata['binning'] = binning
+        self.loaded_metadata['shape'] = data_dict['ss_x'].shape
+
+        self.checkMetadata()
+
+        self.loaded_data.coordinate = np.stack(
+            (data_dict['ss_x'], data_dict['ss_y'])
+        )
+        self.loaded_data.displacement = np.stack(
+            (data_dict['u'][step_index], data_dict['v'][step_index])
+        )
 
         self.check_data()
 
