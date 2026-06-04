@@ -56,7 +56,7 @@ class Map(base.Map):
     ydim : int
         Size of map along y (from header).
     shape : tuple
-        Size of map (after cropping, like *Dim).
+        Size of map (after cropping, like ``*Dim``).
     corrVal : numpy.ndarray
         Correlation value.
     ebsd_map : defdap.ebsd.Map
@@ -71,22 +71,8 @@ class Map(base.Map):
         File name.
     crop_dists : numpy.ndarray
         Crop distances (default all zeros).
-
     data : defdap.utils.Datastore
-        Must contain after loading data (maps):
-            coordinate : numpy.ndarray
-                X and Y coordinates
-            displacement : numpy.ndarray
-                X and Y displacements
-        Generated data:
-            f : numpy.ndarray
-                Components of the deformation gradient (0=x, 1=y).
-            e : numpy.ndarray
-                Components of the green strain (0=x, 1=y).
-            max_shear : numpy.ndarray
-                Max shear component np.sqrt(((e11 - e22) / 2.)**2 + e12**2).
-        Derived data:
-            Grain list data to map data from all grains
+        Data store.
 
     """
     MAPNAME = 'hrdic'
@@ -178,10 +164,12 @@ class Map(base.Map):
 
     @property
     def original_shape(self):
+        """Original map shape before cropping as ``(y, x)``."""
         return self.ydim, self.xdim
 
     @property
     def crystal_sym(self):
+        """Crystal symmetry of the linked EBSD map."""
         return self.ebsd_map.crystal_sym
 
     @report_progress("loading HRDIC data")
@@ -217,7 +205,7 @@ class Map(base.Map):
                f"sub-window size: {self.binning} x {self.binning} pixels)")
 
     def load_corr_val_data(self, file_name, data_type=None):
-        """Load correlation value for DIC data
+        """Load correlation value map for the DIC data.
 
         Parameters
         ----------
@@ -243,7 +231,7 @@ class Map(base.Map):
             "Dimensions of imported data and dic data do not match"
 
     def retrieve_name(self):
-        """Gets the first name assigned to the a map, as a string
+        """Get the first variable name bound to this map instance.
 
         """
         for fi in reversed(inspect.stack()):
@@ -274,14 +262,14 @@ class Map(base.Map):
         return self.bse_scale * self.binning
 
     def print_stats_table(self, percentiles, components):
-        """Print out a statistics table for a DIC map
+        """Print a statistics table for selected DIC map components.
 
         Parameters
         ----------
         percentiles : list of float
-            list of percentiles to print i.e. 0, 50, 99.
+            list of percentiles to print i.e. ``[0, 50, 99]``.
         components : list of str
-            list of map components to print i.e. e, f, max_shear.
+            list of map components to print i.e. ``[e, f, max_shear]``.
 
         """
 
@@ -318,15 +306,15 @@ class Map(base.Map):
         Parameters
         ----------
         left : int
-            Distance to crop from left in pixels (formally `xMin`)
+            Distance to crop from left in pixels (was ``xMin``)
         right : int
-            Distance to crop from right in pixels (formally `xMax`)
+            Distance to crop from right in pixels (was ``xMax``)
         top : int
-            Distance to crop from top in pixels (formally `yMin`)
+            Distance to crop from top in pixels (was  ``yMin``)
         bottom : int
-            Distance to crop from bottom in pixels (formally `yMax`)
+            Distance to crop from bottom in pixels (was ``yMax``)
         update_homog_points : bool, optional
-            If true, change homologous points to reflect crop.
+            If ``True``, change homologous points to reflect crop.
 
         """
         # changes in homog points
@@ -363,9 +351,15 @@ class Map(base.Map):
         Parameters
         ----------
         map_data : numpy.ndarray
-            Bap data to crop.
-        binning : int
-            True if mapData is binned i.e. binned BSE pattern.
+            Map data to crop.
+        binning : int, optional
+            Scale factor applied to crop distances (for binned data).
+
+        Returns
+        -------
+        numpy.ndarray
+            Cropped map data.
+
         """
         binning = 1 if binning is None else binning
 
@@ -385,9 +379,9 @@ class Map(base.Map):
         ebsd_map : defdap.ebsd.Map
             EBSD map object to link.
         transform_type : str, optional
-            affine, piecewiseAffine or polynomial.
+            ``affine``, ``piecewiseAffine`` or ``polynomial``.
         kwargs
-            All arguments are passed to `estimate` method of the transform.
+            All arguments are passed to ``estimate`` method of the transform.
 
         """
         self.ebsd_map = ebsd_map
@@ -407,12 +401,12 @@ class Map(base.Map):
         """Check if an EBSD map has been linked.
 
         Returns
-        ----------
+        -------
         bool
-            Returns True if EBSD map linked.
+            Returns ``True`` if EBSD map linked.
 
         Raises
-        ----------
+        ------
         Exception
             If EBSD map not linked.
 
@@ -422,17 +416,17 @@ class Map(base.Map):
         return True
 
     def warp_to_dic_frame(self, map_data, **kwargs):
-        """Warps a map to the DIC frame.
+        """Warp map data into the DIC frame.
 
         Parameters
         ----------
         map_data : numpy.ndarray
             Data to warp.
         kwargs
-            All other arguments passed to :func:`defdap.experiment.Experiment.warp_map`.
+            All other arguments passed to :func:`defdap.experiment.Experiment.warp_image`.
 
         Returns
-        ----------
+        -------
         numpy.ndarray
             Map (i.e. EBSD map data) warped to the DIC frame.
 
@@ -450,33 +444,11 @@ class Map(base.Map):
 
         Parameters
         ----------
-        mask: numpy.array(bool) or None
+        mask: numpy.array of bool or None
             A boolean array where points to be removed are True. Set to None to disable masking.
         dilation: int, optional
             Number of pixels to dilate the mask by. Useful to remove anomalous points
             around masked values. No dilation applied if not specified.
-
-        Examples
-        ----------
-        
-        To disable masking:
-
-        >>> mask = None
-               
-        To remove data points in dic_map where `max_shear` is above 0.8, use:
-        
-        >>> mask = dic_map.data.max_shear > 0.8
-
-        To remove data points in dic_map where e11 is above 1 or less than -1, use:
-
-        >>> mask = (dic_map.data.e[0, 0] > 1) | (dic_map.data.e[0, 0] < -1)
-
-        To remove data points in dic_map where corrVal is less than 0.4, use:
-
-        >>> mask = dic_map.corr_val < 0.4
-
-        Note: correlation value data needs to be loaded seperately from the DIC map,
-        see :func:`defdap.hrdic.load_corr_val_data`
 
         """
         if mask is None:
@@ -501,7 +473,18 @@ class Map(base.Map):
         return mask
 
     def mask(self, map_data):
-        """ Values set to False in mask will be set to nan in map.
+        """Apply the current mask to map data.
+
+        Parameters
+        ----------
+        map_data : numpy.ndarray
+            Data to mask.
+
+        Returns
+        -------
+        numpy.ndarray or numpy.ma.MaskedArray
+            Input data if no mask is set, otherwise masked data.
+
         """
         if self.data.mask is None:
             return map_data
@@ -518,8 +501,8 @@ class Map(base.Map):
             Path to image.
         window_size : int
             Size of pixel in pattern image relative to pixel size of DIC data
-            i.e 1 means they  are the same size and 2 means the pixels in
-            the pattern are half the size of the dic data.
+            i.e 1 means they are the same size and 2 means the pixels in
+            the pattern are half the size of pixel in dic data.
 
         """
         path = self.file_name.parent / img_path
@@ -527,6 +510,22 @@ class Map(base.Map):
         self.data['pattern', 'binning'] = window_size
 
     def load_pattern(self):
+        """Load and validate the linked pattern image. Set a pattern image with 
+        :func:`defdap.hrdic.Map.set_pattern`.
+
+        Returns
+        -------
+        numpy.ndarray
+            Pattern image array.
+
+        Raises
+        ------
+        FileNotFoundError
+            If no pattern path has been configured.
+        ValueError
+            If image dimensions do not match expected binned size.
+
+        """
         print('Loading img')
         path = self.data.get_metadata('pattern', 'path')
         binning = self.data.get_metadata('pattern', 'binning', 1)
@@ -545,7 +544,7 @@ class Map(base.Map):
     def plot_grain_av_max_shear(self, **kwargs):
         """Plot grain map with grains filled with average value of max shear.
         This uses the max shear values stored in grain objects, to plot other data
-        use :func:`~defdap.hrdic.Map.plotGrainAv`.
+        use :func:`defdap.base.Map.plot_grain_data_map`.
 
         Parameters
         ----------
@@ -572,7 +571,7 @@ class Map(base.Map):
         Parameters
         ----------
         algorithm : str {'warp', 'floodfill'}
-            Use floodfill or warp algorithm.
+            Use ``warp`` or ``floodfill`` algorithm.
         min_grain_size : int
             Minimum grain area in pixels for floodfill algorithm.
         """
@@ -739,19 +738,12 @@ class Grain(base.Grain):
     ebsd_map : defdap.ebsd.Map
         EBSD map that this DIC grain belongs to.
     points_list : numpy.ndarray
-        Start and end points for lines drawn using defdap.inspector.GrainInspector.
-    groups_list :
+        Start and end points for lines drawn using :obj:`defdap.inspector.GrainInspector`.
+    groups_list : list
         Groups, angles and slip systems detected for
-        lines drawn using defdap.inspector.GrainInspector.
-
+        lines drawn using :obj:`defdap.inspector.GrainInspector`.
     data : defdap.utils.Datastore
-        Must contain after creating:
-            point : list of tuples
-                (x, y) in cropped map
-        Generated data:
-
-        Derived data:
-            Map data to list data from the map the grain is part of
+        Data store.
 
     """
     def __init__(self, grain_id, dicMap, group_id):
@@ -807,7 +799,7 @@ class Grain(base.Grain):
         """Calculates list of slip trace angles based on EBSD grain orientation.
 
         Parameters
-        -------
+        ----------
         slip_systems : defdap.crystal.SlipSystem, optional
 
         """
@@ -826,8 +818,8 @@ class Grain(base.Grain):
             Minimum angle between bands.
 
         Returns
-        ----------
-        list(float)
+        -------
+        list of float
             Detected slip band angles
 
         """
@@ -875,13 +867,28 @@ class Grain(base.Grain):
 
 
 class BoundarySet(object):
+    """Boundary points and line segments represented in DIC coordinates."""
+
     def __init__(self, dic_map, points, lines):
+        """Initialise a boundary set.
+
+        Parameters
+        ----------
+        dic_map : defdap.hrdic.Map
+            Parent DIC map.
+        points : iterable
+            Boundary point coordinates.
+        lines : iterable
+            Boundary line segments.
+
+        """
         self.dic_map = dic_map
         self.points = set(points)
         self.lines = lines
 
     @classmethod
     def from_ebsd_boundaries(cls, dic_map, ebsd_boundaries):
+        """Create DIC frame boundaries by warping EBSD boundaries."""
         if len(ebsd_boundaries.points) == 0:
             return cls(dic_map, [], [])
 
@@ -896,10 +903,12 @@ class BoundarySet(object):
         return cls(dic_map, points, lines)
 
     def _image(self, points):
+        """Convert boundary points to a boolean image."""
         image = np.zeros(self.dic_map.shape, dtype=bool)
         image[tuple(zip(*points))[::-1]] = True
         return image
 
     @property
     def image(self):
+        """Boolean image of all boundary points."""
         return self._image(self.points)

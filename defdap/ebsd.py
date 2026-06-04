@@ -47,34 +47,11 @@ class Map(base.Map):
         Map of misorientation.
     mis_ori_axis : list of numpy.ndarray
         Map of misorientation axis components.
-    origin : tuple(int)
+    origin : tuple of int
         Map origin (x, y). Used by linker class where origin is a
         homologue point of the maps.
-
     data : defdap.utils.Datastore
-        Must contain after loading data (maps):
-            phase : numpy.ndarray
-                1-based, 0 is non-indexed points
-            euler_angle : numpy.ndarray
-                stored as (3, y_dim, x_dim) in radians
-        Generated data:
-            orientation : numpy.ndarray of defdap.quat.Quat
-                Quaterion for each point of map. Shape (y_dim, x_dim).
-            grain_boundaries : BoundarySet
-            phase_boundaries : BoundarySet
-            grains : numpy.ndarray of int
-                Map of grains. Grain numbers start at 1 here but everywhere else
-                grainID starts at 0. Regions that are smaller than the minimum
-                grain size are given value -2. Remnant boundary points are -1.
-            KAM : numpy.ndarray
-                Kernal average misorientaion map.
-            GND : numpy.ndarray
-                GND scalar map.
-            Nye_tensor : numpy.ndarray
-                3x3 Nye tensor at each point.
-        Derived data:
-            grain_data_to_map : numpy.ndarray
-                Grain list data to map data from all grains
+        Data store.
 
     """
     MAPNAME = 'ebsd'
@@ -224,6 +201,14 @@ class Map(base.Map):
 
     @property
     def num_phases(self):
+        """Number of phases in the EBSD map.
+
+        Returns
+        -------
+        int or None
+            Number of phases, or ``None`` if no phases are defined.
+
+        """
         return len(self.phases) or None
 
     @property
@@ -240,6 +225,7 @@ class Map(base.Map):
 
     @property
     def scale(self):
+        """Spatial scale of the map in microns per pixel."""
         return self.step_size
 
     @report_progress("rotating EBSD data")
@@ -264,6 +250,23 @@ class Map(base.Map):
         yield 1.
 
     def calc_euler_colour(self, map_data, phases=None, bg_colour=None):
+        """Calculate RGB colours using Euler colouring.
+
+        Parameters
+        ----------
+        map_data : numpy.ndarray
+            Euler-angle map data with shape ``(3, y, x)``.
+        phases : list of int, optional
+            Phase IDs to include. If omitted, include all phases.
+        bg_colour : numpy.ndarray, optional
+            Background RGB colour used where phases are excluded.
+
+        Returns
+        -------
+        numpy.ndarray
+            RGB map array with shape ``(y, x, 3)``.
+
+        """
         if phases is None:
             phases = self.phases
             phase_ids = range(len(phases))
@@ -292,6 +295,25 @@ class Map(base.Map):
 
     def calc_ipf_colour(self, map_data, direction, phases=None,
                         bg_colour=None):
+        """Calculate RGB colours from IPF colouring.
+
+        Parameters
+        ----------
+        map_data : numpy.ndarray
+            Orientation data as quaternion objects.
+        direction : numpy.ndarray
+            Sample reference direction for IPF colouring.
+        phases : list of int, optional
+            Phase IDs to include. If omitted, include all phases.
+        bg_colour : numpy.ndarray, optional
+            Background RGB colour used where phases are excluded.
+
+        Returns
+        -------
+        numpy.ndarray
+            RGB map array with shape ``(y, x, 3)``.
+
+        """
         if phases is None:
             phases = self.phases
             phase_ids = range(len(phases))
@@ -345,11 +367,11 @@ class Map(base.Map):
 
         Parameters
         ----------
-        direction : np.array len 3
+        direction : numpy.ndarray, shape 3
             Sample direction.
         phases : list of int
             Which phases to plot IPF data for.
-        bg_colour : np.array len 3
+        bg_colour : numpy.ndarray, shape 3
             Colour of background (i.e. for phases not plotted).
         kwargs
             Other arguments passed to :func:`defdap.plotting.MapPlot.create`.
@@ -580,6 +602,19 @@ class Map(base.Map):
         return quats
 
     def filter_data(self, misori_tol=5):
+        """Apply a Kuwahara-style quaternion filter.
+
+        Parameters
+        ----------
+        misori_tol : float, optional
+            Misorientation tolerance in degrees.
+
+        Returns
+        -------
+        numpy.ndarray
+            Last processed quadrant quaternion subset.
+
+        """
         # Kuwahara filter
         print("8 quadrants")
         misori_tol *= np.pi / 180
@@ -751,6 +786,7 @@ class Map(base.Map):
 
     @report_progress("constructing neighbour network")
     def build_neighbour_network(self):
+        """Construct the grain-neighbour network from boundary pixels."""
         # create network
         nn = nx.Graph()
         nn.add_nodes_from(self.grains)
@@ -985,7 +1021,7 @@ class Map(base.Map):
         Parameters
         ----------
         calc_axis : bool
-            Calculate the misorientation axis if True.
+            Calculate the misorientation axis if ``True``.
 
         """
         num_grains = len(self)
@@ -1000,8 +1036,8 @@ class Map(base.Map):
 
         Parameters
         ----------
-        component : int, {0, 1, 2, 3}
-            0 gives misorientation, 1, 2, 3 gives rotation about x, y, z
+        component : int
+            ``0`` gives misorientation, ``1``, ``2``, ``3`` gives rotation about ``x``, ``y``, ``z``
         kwargs
             All other arguments are passed to :func:`defdap.plotting.MapPlot.create`.
 
@@ -1054,8 +1090,8 @@ class Map(base.Map):
 
         Parameters
         ----------
-        load_vector :
-            Loading vector, e.g. [1, 0, 0].
+        load_vector : list or numpy.ndarray, shape 3
+            Loading vector, e.g. ``[1, 0, 0]``.
         slip_systems : list, optional
             Slip planes to calculate Schmid factor for, maximum of all
             planes calculated if not given.
@@ -1152,18 +1188,7 @@ class Grain(base.Grain):
     phase : defdap.crystal.Phase
 
     data : defdap.utils.Datastore
-        Must contain after creating:
-            point : list of tuples
-                (x, y)
-        Generated data:
-            GROD : numpy.ndarray
-                Grain reference orientation distribution magnitude
-            GROD_axis : numpy.ndarray
-                Grain reference orientation distribution direction
-        Derived data:
-            Map data to list data from the map the grain is part of
-
-
+        Data store.
     mis_ori_list : list
         MisOri at each point in grain.
     mis_ori_axis_list : list
@@ -1222,7 +1247,7 @@ class Grain(base.Grain):
 
     @property
     def crystal_sym(self):
-        """Temporary"""
+        """Crystal symmetry name of the grain phase."""
         return self.phase.crystal_structure.name
 
     def calc_average_ori(self):
@@ -1239,7 +1264,7 @@ class Grain(base.Grain):
         Parameters
         ----------
         calc_axis : bool
-            Calculate the misorientation axis if True.
+            Calculate the misorientation axis if ``True``.
 
         """
         quat_comps_sym = Quat.calc_sym_eqvs(self.data.orientation, self.crystal_sym)
@@ -1285,6 +1310,14 @@ class Grain(base.Grain):
                 self.mis_ori_axis_list.append(row)
 
     def calc_grod(self):
+        """Calculate GROD magnitude and axis for all grain points.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            GROD magnitudes and GROD axis vectors.
+
+        """
         quat_comps = Quat.calc_sym_eqvs(self.data.orientation, self.crystal_sym)
 
         if self.ref_ori is None:
@@ -1310,7 +1343,22 @@ class Grain(base.Grain):
 
         return misori, misori_axis
     
-    def calc_ipf_colour(self, grain_data, direction, bg_colour=None):
+    def calc_ipf_colour(self, grain_data, direction):
+        """Calculate grain colours from IPF colouring.
+
+        Parameters
+        ----------
+        grain_data : numpy.ndarray
+            Grain orientation data as quaternions.
+        direction : numpy.ndarray
+            Sample reference direction for IPF colouring.
+
+        Returns
+        -------
+        numpy.ndarray
+            RGB colour array for the grain.
+
+        """
 
         grain_colours = Quat.calc_ipf_colours(
             grain_data, direction, self.phase.crystal_structure.name
@@ -1318,7 +1366,20 @@ class Grain(base.Grain):
 
         return grain_colours
     
-    def calc_euler_colour(self, grain_data, bg_colour=None):
+    def calc_euler_colour(self, grain_data):
+        """Calculate grain colours from normalised Euler angles.
+
+        Parameters
+        ----------
+        grain_data : numpy.ndarray
+            Euler-angle data with shape ``(3, n_points)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            RGB colour array for the grain.
+
+        """
 
         if self.phase.crystal_structure.name == 'cubic':
             norm = np.array([2 * np.pi, np.pi / 2, np.pi / 2])
@@ -1378,8 +1439,8 @@ class Grain(base.Grain):
         ----------
         fig : matplotlib.figure.Figure
             Matplotlib figure to plot on
-        ax : matplotlib.figure.Figure
-            Matplotlib figure to plot on
+        ax : matplotlib.axes.Axes
+            Matplotlib axis to plot on
         plot : defdap.plotting.PolePlot
             defdap plot to plot the figure to.
         kwargs
@@ -1397,10 +1458,10 @@ class Grain(base.Grain):
 
         Parameters
         ----------
-        component : int, {0, 1, 2, 3}
-            0 gives misorientation, 1, 2, 3 gives rotation about x, y, z.
+        component : int
+            ``0`` gives misorientation, ``1``, ``2``, ``3`` gives rotation about ``x``, ``y``, ``z``.
         kwargs
-            All other arguments are passed to :func:`defdap.ebsd.plot_grain_data`.
+            All other arguments are passed to :func:`defdap.base.Grain.plot_grain_data`.
 
         Returns
         -------
@@ -1440,8 +1501,8 @@ class Grain(base.Grain):
 
         Parameters
         ----------
-        load_vector : numpy.ndarray
-            Loading vector, i.e. [1, 0, 0]
+        load_vector : list or numpy.ndarray, shape 3
+            Loading vector, i.e. ``[1, 0, 0]``
         slip_systems : list, optional
             Slip planes to calculate Schmid factor for. Maximum for all planes
             used if not set.
@@ -1492,7 +1553,7 @@ class Grain(base.Grain):
         Returns
         -------
         list
-            Slip trace angles based on grain orientation in calc_slip_traces.
+            Slip trace angles based on grain orientation in :func:`defdap.ebsd.Map.calc_slip_traces`.
 
         """
         if self.slip_trace_angles is None:
@@ -1571,17 +1632,20 @@ class Grain(base.Grain):
 
 
 class BoundarySet(object):
+    """Container for phase and grain boundary point sets."""
     # boundaries : numpy.ndarray
     #     Map of boundaries. -1 for a boundary, 0 otherwise.
     # phaseBoundaries : numpy.ndarray
     #     Map of phase boundaries. -1 for boundary, 0 otherwise.
     def __init__(self, ebsd_map, points_x, points_y):
+        """Initialise a boundary set from horizontal and vertical points."""
         self.ebsd_map = ebsd_map
         self.points_x = set(points_x)
         self.points_y = set(points_y)
 
     @classmethod
     def from_image(cls, ebsd_map, image_x, image_y):
+        """Create a boundary set from boolean boundary images."""
         return cls(
             ebsd_map,
             zip(*image_x.transpose().nonzero()),
@@ -1590,6 +1654,7 @@ class BoundarySet(object):
 
     @classmethod
     def from_boundary_segments(cls, b_segs):
+        """Create a boundary set from boundary segments."""
         points_x = []
         points_y = []
         for b_seg in b_segs:
@@ -1600,27 +1665,33 @@ class BoundarySet(object):
 
     @property
     def points(self):
+        """Combined boundary points from horizontal and vertical sets."""
         return self.points_x.union(self.points_y)
 
     def _image(self, points):
+        """Convert a point collection to a boolean map image."""
         image = np.zeros(self.ebsd_map.shape, dtype=bool)
         image[tuple(zip(*points))[::-1]] = True
         return image
 
     @property
     def image_x(self):
+        """Boolean image of horizontal boundary points."""
         return self._image(self.points_x)
 
     @property
     def image_y(self):
+        """Boolean image of vertical boundary points."""
         return self._image(self.points_y)
 
     @property
     def image(self):
+        """Boolean image of all boundary points."""
         return self._image(self.points)
 
     @property
     def lines(self):
+        """Line segments representing all boundary points."""
         _, _, lines = self.boundary_points_to_lines(
             boundary_points_x=self.points_x,
             boundary_points_y=self.points_y
@@ -1630,6 +1701,21 @@ class BoundarySet(object):
     @staticmethod
     def boundary_points_to_lines(*, boundary_points_x=None,
                                  boundary_points_y=None):
+        """Convert boundary points to line segments for plotting.
+
+        Parameters
+        ----------
+        boundary_points_x : iterable of tuple, optional
+            Horizontal boundary points.
+        boundary_points_y : iterable of tuple, optional
+            Vertical boundary points.
+
+        Returns
+        -------
+        list or tuple
+            Line-segment collections for provided boundary directions.
+
+        """
         boundary_data = {}
         if boundary_points_x is not None:
             boundary_data['x'] = boundary_points_x
@@ -1660,7 +1746,10 @@ class BoundarySet(object):
 
 
 class BoundarySegment(object):
+    """Boundary segment between two neighbouring grains."""
+
     def __init__(self, ebsdMap, grain1, grain2):
+        """Initialise a boundary segment for a grain pair."""
         self.ebsdMap = ebsdMap
 
         self.grain1 = grain1
@@ -1688,6 +1777,18 @@ class BoundarySegment(object):
         return len(self.boundary_points_x) + len(self.boundary_points_y)
 
     def addBoundaryPoint(self, point, kind, owner_grain):
+        """Add a boundary point and its owner grain.
+
+        Parameters
+        ----------
+        point : tuple of int
+            Boundary point coordinates.
+        kind : int
+            Boundary type: ``0`` for horizontal, ``1`` for vertical.
+        owner_grain
+            Grain that owns the point side.
+
+        """
         if kind == 0:
             self.boundary_points_x.append(point)
             self.boundary_point_owners_x.append(owner_grain is self.grain1)
@@ -1744,6 +1845,14 @@ class BoundarySegment(object):
         return lines
 
     def misorientation(self):
+        """Calculate misorientation angle and axis between neighbouring grains.
+
+        Returns
+        -------
+        tuple of float and numpy.ndarray
+            Misorientation angle (radians) and unit rotation axis.
+
+        """
         mis_ori, minSymm = self.grain1.ref_ori.mis_ori(
             self.grain2.ref_ori, self.ebsdMap.crystal_sym, return_quat=2
         )
@@ -1768,12 +1877,12 @@ class Linker(object):
 
     Attributes
     ----------
-    ebsd_maps : list(ebsd.Map)
-        List of `ebsd.Map` objects that are linked.
-    links : list(tuple(int))
+    ebsd_maps : list of defdap.ebsd.Map
+        List of EBSD maps that are linked.
+    links : list of tuple of int
         List of grain link. Each link is stored as a tuple of
         grain IDs (one from each map stored in same order of maps).
-    plots : list(plotting.MapPlot)
+    plots : list of defdap.plotting.MapPlot
         List of last opened plot of each map.
 
     """
@@ -1782,7 +1891,7 @@ class Linker(object):
 
         Parameters
         ----------
-        ebsd_maps : list(ebsd.Map)
+        ebsd_maps : list of defdap.ebsd.Map
             List of `ebsd.Map` objects that are linked.
 
         """
@@ -1796,7 +1905,7 @@ class Linker(object):
         Parameters
         ----------
         kwargs
-            Keyword arguments passed to :func:`defdap.ebsd.Map.plot_default`
+            Keyword arguments passed to :func:`defdap.ebsd.Map.plot_default`.
 
         """
         self.plots = []
@@ -1918,7 +2027,7 @@ class Linker(object):
 
     def set_ref_ori_from_master(self):
         """Loop over each map (not first/reference) and each link.
-        Sets refOri of linked grains to refOri of grain in first map.
+        Sets ``ref_ori`` of linked grains to ``ref_ori`` of grain in first map.
 
         """
         for i, ebsd_map in enumerate(self.ebsd_maps[1:], start=1):
@@ -1933,7 +2042,7 @@ class Linker(object):
         Parameters
         ----------
         calc_axis : bool
-            Calculate the misorientation axis if True.
+            Calculate the misorientation axis if ``True``.
 
         """
         for i, ebsd_map in enumerate(self.ebsd_maps[1:], start=1):

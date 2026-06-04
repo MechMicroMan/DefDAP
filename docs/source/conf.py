@@ -6,40 +6,57 @@ import os
 import shutil
 import sys
 
-# -- Path setup --------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Path setup
+# -----------------------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../../')) 	# Reference the root directory so autodocs can find the python modules
 
+# -----------------------------------------------------------------------------
+# Generate 'how to use' page from example notebook
+# -----------------------------------------------------------------------------
+
 # Copy the example notebook into the docs source
-shutil.copyfile('../../notebooks/example_notebook.ipynb', 'howtouse.ipynb')
+shutil.copyfile('../../notebooks/example_notebook.ipynb', 'userguide/howtouse.ipynb')
 
 # Open file
-with open('howtouse.ipynb') as f:
+with open('userguide/howtouse.ipynb') as f:
     old_text = f.read()
 
 # change %matplotlib to inline
 new_text = old_text.replace('%matplotlib tk', r'%matplotlib inline')
 
 # change directory so that paths still work
-new_text = new_text.replace('../tests/data/', r'../../tests/data/')
+new_text = new_text.replace('../tests/data/', r'../../../tests/data/')
 
 # Change title to 'How to use'
-new_text = new_text.replace('DefDAP Example notebook', r'How to use')
+new_text = new_text.replace('DefDAP Example notebook', r'Example notebook')
 new_text = new_text.replace('This notebook', r'These pages')
 
 # Write back to notebook
-with open('howtouse.ipynb', "w") as f:
+with open('userguide/howtouse.ipynb', "w") as f:
     f.write(new_text)
 
-# -- Project information -----------------------------------------------------
+nbsphinx_allow_errors = True
+nbsphinx_execute = 'always'
+nbsphinx_kernel_name = 'python3'
+
+nbsphinx_prolog = """
+This page was built from the example_notebook Jupyter notebook available on `Github <https://github.com/MechMicroMan/DefDAP/blob/master/notebooks/example_notebook.ipynb>`_
+
+----
+"""
+
+# -----------------------------------------------------------------------------
+# Project information
+# -----------------------------------------------------------------------------
 
 project = 'DefDAP'
-copyright = '2023, Mechanics of Microstructures Group at The University of Manchester'
+copyright = '2026, Mechanics of Microstructures Group at The University of Manchester'
 author = 'Michael D. Atkinson, Rhys Thomas, João Quinta da Fonseca'
-
 
 def get_version():
     ver_path = '../../defdap/_version.py'
@@ -55,17 +72,16 @@ release = get_version()
 # The short X.Y version
 version = '.'.join(release.split('.')[:2])
 
-# -- General configuration ---------------------------------------------------
-
-# If your documentation needs a minimal Sphinx version, state it here.
-#
-# needs_sphinx = '1.0'
+# -----------------------------------------------------------------------------
+# General configuration
+# -----------------------------------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    #'sphinx.ext.apidoc',   # Need sphinx.ext.apidoc for this, which needs sphinx 8.2.3, which needs python 3.11
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
@@ -73,24 +89,13 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'sphinx_autodoc_typehints',
-    'sphinx_rtd_theme',
-    'nbsphinx'
+    'pydata_sphinx_theme',
+    'nbsphinx',
+    'sphinx_design'
 ]
 
-nbsphinx_allow_errors = True
-nbsphinx_execute = 'always'
-nbsphinx_kernel_name = 'python3'
-
-nbsphinx_prolog = """
-This page was built from the example_notebook Jupyter notebook available on `Github <https://github.com/MechMicroMan/DefDAP>`_
-
-.. image:: https://mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/MechMicroMan/DefDAP/master?filepath=example_notebook.ipynb
-
-----
-"""
-
 napoleon_use_param = True
+napoleon_preprocess_types = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -118,37 +123,61 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'defdap/defdap.rst']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+# -----------------------------------------------------------------------------
+# Options for HTML these
+# -----------------------------------------------------------------------------
 
-# -- Options for HTML output -------------------------------------------------
+html_theme = "pydata_sphinx_theme"
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-html_theme = "sphinx_rtd_theme"
+html_static_path = ["_static"]
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
 html_theme_options = {
-    'collapse_navigation': False,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/MechMicroMan/DefDAP",  
+            "icon": "fa-brands fa-square-github",
+            "type": "fontawesome"
+        },        
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/defdap",
+            "icon": "fa-custom fa-pypi",              # defined in file `_static/custom-icons.js`
+        }
+        ],
+    "use_edit_page_button": True,
   }
 
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_context = {
+    "github_user": "MechMicroMan",
+    "github_repo": "DefDAP",
+    "github_version": "master",
+    "doc_path": "docs/source",
+}
 
+html_js_files = [
+   ("custom-icons.js", {"defer": "defer"}),
+]
 
-# -- Options for HTMLHelp output ---------------------------------------------
+html_copy_source = False
+
+html_favicon = '_static/favicon.png'
+
+# -----------------------------------------------------------------------------
+# Options for HTMLHelp output
+# -----------------------------------------------------------------------------
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'DefDAPdoc'
 
+# -----------------------------------------------------------------------------
+# Autodoc
+# -----------------------------------------------------------------------------
+
+autodoc_member_order = 'bysource'
+autodoc_default_options = {
+    'inherited-members': True,
+}
 
 # -- Generate API docs during sphinx-build (for readthedocs) ------------------
 
@@ -175,11 +204,29 @@ def setup(app):
     if ON_RTD:
         app.connect('builder-inited', run_apidoc)
 
-# -- Extension configuration -------------------------------------------------
+# -----------------------------------------------------------------------------
+# Apidoc
+# Need sphinx.ext.apidoc for this, which needs sphinx 8.2.3, which needs python 3.11
+# -----------------------------------------------------------------------------
 
-autodoc_member_order = 'bysource'
+# apidoc_modules = [
+#     {
+#         'path': '../../defdap',
+#         'destination': 'defdap',
+#         'exclude_patterns': ['*base*'],
+#         'separate_modules': True,
+#         'module_first': False,
+#         'automodule_options': {'members', 'show-inheritance', 'undoc-members'}
+#         }
+# ]
+
+
+# -----------------------------------------------------------------------------
+# Intersphinx
+# -----------------------------------------------------------------------------
+
 intersphinx_mapping = {'python': ('https://docs.python.org/3.7/', None),
                        'numpy': ('https://numpy.org/doc/stable/', None),
-                       'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
-                       'matplotlib': ('https://matplotlib.org/', None),
+                       'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+                       'matplotlib': ('https://matplotlib.org/stable/', None),
                        'skimage': ('https://scikit-image.org/docs/dev/', None)}

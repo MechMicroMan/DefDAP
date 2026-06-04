@@ -23,18 +23,46 @@ from defdap.crystal_utils import *
 
 
 class Phase(object):
+    """
+    Represents a crystallographic phase.
+
+    Stores phase information including crystal structure, lattice parameters,
+    and associated slip systems.
+
+    Attributes
+    ----------
+    name : str
+        Name of the phase.
+    laue_group : int
+        Laue group number.
+    spaceGroup : int
+        Space group number.
+    lattice_params : tuple of float
+        Lattice parameters (a, b, c, alpha, beta, gamma) 
+        where lengths are in angstrom and angles are in radians.
+    crystal_structure : defdap.crystal.CrystalStructure
+        Crystal structure object for the phase.
+    slip_systems : list of list of SlipSystem or list of SlipSystem, optional
+        Slip systems for the phase.
+    slip_trace_colours : list of str, optional
+        Colors for slip plane traces.
+
+    """
     def __init__(self, name, laue_group, space_group, lattice_params):
         """
+        Initialize a Phase object.
+
         Parameters
         ----------
         name : str
-            Name of the phase
+            Name of the phase.
         laue_group : int
-            Laue group
+            Laue group number (e.g., 9 for hexagonal, 11 for cubic).
         space_group : int
-            Space group
-        lattice_params : tuple
-            Lattice parameters in order (a,b,c,alpha,beta,gamma)
+            Space group number.
+        lattice_params : tuple of float
+            Lattice parameters in order (a, b, c, alpha, beta, gamma)
+            where lengths are in angstrom and angles are in radians.
 
         """
         self.name = name
@@ -71,7 +99,7 @@ class Phase(object):
 
     def __str__(self):
         text = ("Phase: {:}\n  Crystal structure: {:}\n  Lattice params: "
-                "({:.2f}, {:.2f}, {:.2f}, {:.0f}, {:.0f}, {:.0f})\n"
+                "({:.3f} Å, {:.3f} Å, {:.3f} Å, {:.0f} °, {:.0f} °, {:.0f} °)\n"
                 "  Slip systems: {:}")
         return text.format(self.name, self.crystal_structure.name,
                            *self.lattice_params[:3],
@@ -80,12 +108,14 @@ class Phase(object):
 
     @property
     def c_over_a(self):
+        """Crystal c over a ratio for hexagonal crystals."""
         if self.crystal_structure is crystalStructures['hexagonal']:
             return self.lattice_params[2] / self.lattice_params[0]
         return None
 
     def print_slip_systems(self):
-        """Print a list of slip planes (with colours) and slip directions.
+        """Print slip plane family and their associated colors. 
+        For each slip plane, print corresponding slip directions.
 
         """
         # TODO: this should be moved to static method of the SlipSystem class
@@ -217,8 +247,11 @@ crystalStructures = {
 
 
 class SlipSystem(object):
-    """Class used for defining and performing operations on a slip system.
+    """
+    Class for defining and performing operations on a slip system.
 
+    Handles slip system operations including plane and direction transformations
+    for both cubic and hexagonal crystal structures.
     """
     def __init__(self, slip_plane, slip_dir, crystal_structure, c_over_a=None):
         """Initialise a slip system object.
@@ -282,42 +315,44 @@ class SlipSystem(object):
         return self.slip_plane_label + self.slip_dir_label
 
     def __repr__(self):
-        return (f"SlipSystem(slipPlane={self.slip_plane_label}, "
-                f"slipDir={self.slip_dir_label}, "
+        return (f"SlipSystem(slip_plane={self.slip_plane_label}, "
+                f"slip_dir={self.slip_dir_label}, "
                 f"symmetry={self.crystal_structure.name})")
 
     @property
     def slip_plane_label(self):
-        """Return the slip plane label. For example '(111)'.
+        """Slip plane label.
 
         Returns
         -------
         str
-            Slip plane label.
+            Slip plane label in the format '(hkl)'. For example, '(111)'.
 
         """
         return idc_to_string(self.plane_idc, '()')
 
     @property
     def slip_dir_label(self):
-        """Returns the slip direction label. For example '[110]'.
+        """Slip direction label.
 
         Returns
         -------
         str
-            Slip direction label.
+            Slip direction label in the format '[uvw]'. For example, '[110]'.
 
         """
         return idc_to_string(self.dir_idc, '[]')
 
     def generate_family(self):
-        """Generate the family of slip systems which this system belongs to.
+        """
+        Generate the family of slip systems to which this system belongs by
+        applying symmetry operations to generate equivalent slip systems.
 
         Returns
         -------
-        list of SlipSystem
-            The family of slip systems.
-
+        set of SlipSystem
+            Symmetrically equivalent slip systems.
+            
         """
         #
         symms = self.crystal_structure.symmetries
@@ -365,32 +400,36 @@ class SlipSystem(object):
     @staticmethod
     def load(name, crystal_structure, c_over_a=None, group_by='plane'):
         """
-        Load in slip systems from file. 3 integers for slip plane
-        normal and 3 for slip direction. Returns a list of list of slip
-        systems grouped by slip plane.
+        Reads slip system definitions from a text file. File should contain
+        Miller (or Miller-Bravais for hexagonal) indices: 3 (or 4) integers
+        for slip plane normal and 3 (or 4) for slip direction.
 
         Parameters
         ----------
         name : str
-            Name of the slip system file (without file extension)
-            stored in the defdap install dir or path to a file.
+            Slip system file name (without extension) in defdap's 
+            slip_systems directory, or full file path.
         crystal_structure : defdap.crystal.CrystalStructure
             Crystal structure of the slip systems.
         c_over_a : float, optional
-            C over a ratio for hexagonal crystals.
+            C over a ratio (required for hexagonal crystals).
         group_by : str, optional
-            How to group the slip systems, either by slip plane ('plane')
-            or slip system family ('family') or don't group (None).
+            Grouping method: 'plane' (default) to group by slip plane,
+            'family' to group by slip system family, or None for no grouping.
 
         Returns
         -------
-        list of list of SlipSystem
-            A list of list of slip systems grouped slip plane.
+        list of list of SlipSystem or list of SlipSystem
+            Slip systems, optionally grouped according to `group_by`.
+        list of str
+            RGB color codes for each slip-plane group.
 
         Raises
         ------
+        FileNotFoundError
+            If slip system file cannot be found.
         IOError
-            Raised if not 6/8 integers per line.
+            If file format is invalid (not 6/8 integers per line).
 
         """
         # try and load from package dir first
@@ -442,20 +481,25 @@ class SlipSystem(object):
     @staticmethod
     def group(slip_systems, group_by):
         """
-        Groups slip systems by their slip plane.
+        Groups slip systems by their slip plane or family.
 
         Parameters
         ----------
         slip_systems : list of SlipSystem
-            A list of slip systems.
+            List of slip systems to group.
         group_by : str
-            How to group the slip systems, either by slip plane ('plane')
-            or slip system family ('family').
+            Grouping method - either 'plane' to group by slip plane
+            or 'family' to group by slip system equivalence family.
 
         Returns
         -------
         list of list of SlipSystem
-            A list of list of grouped slip systems.
+            Grouped slip systems.
+
+        Raises
+        ------
+        ValueError
+            If `group_by` is not 'plane' or 'family'.
 
         """
         if group_by.lower() == 'plane':

@@ -36,9 +36,7 @@ from defdap.crystal_utils import project_to_orth, equavlent_indicies, idc_to_str
 
 
 class Plot(object):
-    """ Class used for creating and manipulating plots.
-
-    """
+    """Base class for creating and manipulating plots."""
 
     def __init__(self, ax=None, ax_params={}, fig=None, make_interactive=False,
                  title=None, **kwargs):
@@ -87,23 +85,34 @@ class Plot(object):
             raise Exception("Plot must be interactive")
 
     def add_event_handler(self, eventName, eventHandler):
+        """Register an interactive matplotlib event handler.
+
+        Parameters
+        ----------
+        eventName : str
+            Matplotlib event name.
+        eventHandler : Callable
+            Callback receiving ``(event, plot)``.
+
+        """
         self.check_interactive()
 
         self.fig.canvas.mpl_connect(eventName, lambda e: eventHandler(e, self))
 
     def add_axes(self, loc, proj='2d'):
-        """Add axis to current plot
+        """Add an axis to the current plot.
 
         Parameters
         ----------
-        loc
+        loc : tuple
             Location of axis.
-        proj : str, {2d, 3d}
+        proj : str, {'2d', '3d'}
             2D or 3D projection.
 
         Returns
         -------
-        matplotlib.Axes.axes
+        matplotlib.axes.Axes
+            Created axes object.
 
         """
         if proj == '2d':
@@ -120,7 +129,7 @@ class Plot(object):
             Label for the button.
         click_handler
             Click handler to assign.
-        loc : list(float), len 4
+        loc : list of float, len 4
             Left, bottom, width, height.
         kwargs
             All other arguments passed to :class:`matplotlib.widgets.Button`.
@@ -144,14 +153,14 @@ class Plot(object):
             Submit handler to assign.
         change_handler
             Change handler to assign.
-        loc : list(float), len 4
+        loc : list of float, len 4
             Left, bottom, width, height.
         kwargs
             All other arguments passed to :class:`matplotlib.widgets.TextBox`.
 
         Returns
         -------
-        matplotlotlib.widgets.TextBox
+        matplotlib.widgets.TextBox
 
         """
         self.check_interactive()
@@ -192,13 +201,13 @@ class Plot(object):
 
         Parameters
         ----------
-        start_end: 4-tuple
+        start_end : tuple of float, len 4
             Starting (x, y), Ending (x, y).
-        persistent :
+        persistent : bool, optional
             If persistent, do not clear arrow with clearPrev.
-        clear_previous :
+        clear_previous : bool, optional
             Clear all non-persistent arrows.
-        label
+        label : str, optional
             Label to place near arrow.
 
         """
@@ -306,7 +315,7 @@ class Plot(object):
         self.draw()
 
     def draw(self):
-        """Draw plot
+        """Draw the plot.
 
         """
         self.fig.canvas.draw()
@@ -346,6 +355,7 @@ class MapPlot(Plot):
         self.set_empty_state()
 
     def set_empty_state(self):
+        """Reset map-plot layer and annotation state."""
         self.img_layers = []
         self.highlights_layer_id = None
         self.points_layer_ids = []
@@ -425,11 +435,6 @@ class MapPlot(Plot):
             of coordinates representing the start and end of each boundary 
             segment. If not provided the boundaries are loaded from the 
             calling map.
-
-        boundaries : various, defdap.ebsd.BoundarySet
-            Boundaries to plot. If not provided the boundaries are loaded from
-            the calling map.
-
         colour : various
             One of:
               - Colour of all boundaries as a string (only option pixel kind)
@@ -440,12 +445,12 @@ class MapPlot(Plot):
             If true, dilate the grain boundaries.
         kwargs
             If line kind then other arguments are passed to 
-            :func:`matplotlib.collections.LineCollection`.
+            :class:`matplotlib.collections.LineCollection`.
 
         Returns
         -------
-        Various :
-            matplotlib.image.AxesImage if type is pixel
+        matplotlib.artist.Artist
+            Added image or line collection artist.
 
         """
         if colour is None:
@@ -644,7 +649,7 @@ class MapPlot(Plot):
 
         Parameters
         ----------
-        calling_map : base.Map
+        calling_map : defdap.base.Map
             DIC or EBSD map which called this plot.
         map_data : numpy.ndarray
             Data to be plotted.
@@ -737,12 +742,13 @@ class GrainPlot(Plot):
         self.set_empty_state()
 
     def set_empty_state(self):
+        """Reset grain-plot layer state."""
         self.img_layers = []
 
         self.ax.set_xticks([])
         self.ax.set_yticks([])
 
-    def addMap(self, map_data, vmin=None, vmax=None, cmap='viridis', **kwargs):
+    def add_map(self, map_data, vmin=None, vmax=None, cmap='viridis', **kwargs):
         """Add a map to a grain plot.
 
         Parameters
@@ -868,7 +874,7 @@ class GrainPlot(Plot):
     def add_slip_bands(self, grain_map_data, colour=None, thres=None, 
                        min_dist=None, **kwargs):
         """Add lines representing slip bands detected by Radon transform
-        in :func:`~defdap.hrdic.grain.calc_slip_bands`.
+        in :func:`defdap.hrdic.Grain.calc_slip_bands`.
 
         Parameters
         ----------
@@ -906,7 +912,7 @@ class GrainPlot(Plot):
 
         Parameters
         ----------
-        calling_grain : base.Grain
+        calling_grain : defdap.base.Grain
             DIC or EBSD grain which called this plot.
         map_data :
             Data to be plotted.
@@ -951,7 +957,7 @@ class GrainPlot(Plot):
         if plot is None:
             plot = cls(calling_grain, fig=fig, ax=ax, ax_params=ax_params,
                        make_interactive=make_interactive, **fig_params)
-        plot.addMap(map_data, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+        plot.add_map(map_data, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
 
         if plot_colour_bar:
             plot.add_colour_bar(clabel)
@@ -969,9 +975,7 @@ class GrainPlot(Plot):
 
 
 class PolePlot(Plot):
-    """ Class for creating an inverse pole figure plot.
-
-    """
+    """Plot class for inverse pole figure visualisation."""
 
     def __init__(self, plot_type, crystal_sym, projection=None,
                  fig=None, ax=None, ax_params={}, make_interactive=False,
@@ -1106,7 +1110,7 @@ class PolePlot(Plot):
         pad_y : int, optional
             Pad added to y coordinate.
         kwargs
-            Other arguments are passed to :func:`matplotlib.axes.Axes.text`.
+            Other arguments are passed to :meth:`matplotlib.axes.Axes.text`.
 
         """
         labels = [idc_to_string(point, str_type='tex')] if label is None else [label]
@@ -1150,13 +1154,13 @@ class PolePlot(Plot):
             Inclination angle to plot.
         beta_ang
             Azimuthal angle (around z axis from x in anticlockwise as per ISO) to plot.
-        marker_colour : str or list(str), optional
+        marker_colour : str or list of str, optional
             Colour of marker. If two specified, then the point will have two
             semicircles of different colour.
         marker_size : float
             Size of marker.
         kwargs
-            Other arguments are passed to :func:`matplotlib.axes.Axes.scatter`.
+            Other arguments are passed to :meth:`matplotlib.axes.Axes.scatter`.
 
         Raises
         -------
@@ -1251,6 +1255,26 @@ class PolePlot(Plot):
 
     @staticmethod
     def _validateProjection(projection_in, validate_default=False):
+        """Validate and resolve a projection specification.
+
+        Parameters
+        ----------
+        projection_in : str or Callable or None
+            Projection name/function.
+        validate_default : bool, optional
+            If ``True``, validate only explicit defaults.
+
+        Returns
+        -------
+        Callable
+            Projection function.
+
+        Raises
+        ------
+        ValueError
+            If no valid default projection is available.
+
+        """
         if validate_default:
             default_projection = None
         else:
@@ -1351,21 +1375,19 @@ class PolePlot(Plot):
 
 
 class HistPlot(Plot):
-    """ Class for creating a histogram.
-
-    """
+    """Plot class for histogram visualisation."""
 
     def __init__(self, plot_type="scatter", axes_type="linear", density=True, fig=None,
                  ax=None, ax_params={}, make_interactive=False, **kwargs):
-        """Initialise a histogram plot
+        """Initialise a histogram plot.
 
         Parameters
         ----------
-        plot_type: str, {'scatter', 'bar', 'step'}
-            Type of plot to use
+        plot_type : str, {'scatter', 'bar', 'step'}
+            Type of plot to use.
         axes_type : str, {'linear', 'logx', 'logy', 'loglog', 'None'}, optional
             If 'log' is specified, logarithmic scale is used.
-        density :
+        density : bool, optional
             If true, histogram is normalised such that the integral sums to 1.
         fig : matplotlib.figure.Figure
             Matplotlib figure to plot on.
@@ -1411,7 +1433,7 @@ class HistPlot(Plot):
 
     def add_hist(self, hist_data, bins=100, range=None, line='o',
                  label=None, **kwargs):
-        """Add a histogram to the current plot
+        """Add a histogram to the current plot.
 
         Parameters
         ----------
@@ -1455,7 +1477,7 @@ class HistPlot(Plot):
         Parameters
         ----------
         kwargs
-            All arguments passed to :func:`matplotlib.axes.Axes.legend`.
+            All arguments passed to :meth:`matplotlib.axes.Axes.legend`.
 
         """
         self.ax.legend(**kwargs)
@@ -1482,14 +1504,14 @@ class HistPlot(Plot):
         ax_params :
             Passed to defdap.plotting.Plot as ax_params.
         plot : defdap.plotting.HistPlot
-            Plot where histgram is created. If none, a new plot is created.
+            Plot where histogram is created. If ``None``, a new plot is created.
         make_interactive : bool, optional
             If true, make plot interactive.
-        plot_type: str, {'scatter', 'bar', 'barfilled', 'step'}
-            Type of plot to use
+        plot_type : str, {'scatter', 'bar', 'step'}
+            Type of plot to use.
         axes_type : str, {'linear', 'logx', 'logy', 'loglog', 'None'}, optional
             If 'log' is specified, logarithmic scale is used.
-        density :
+        density : bool, optional
             If true, histogram is normalised such that the integral sums to 1.
         bins : int
             Number of bins to use for histogram.
@@ -1518,9 +1540,7 @@ class HistPlot(Plot):
 
 
 class CrystalPlot(Plot):
-    """ Class for creating a 3D plot for plotting unit cells.
-
-    """
+    """Plot class for 3D unit-cell visualisation."""
 
     def __init__(self, fig=None, ax=None, ax_params={},
                  make_interactive=False, **kwargs):
@@ -1558,7 +1578,7 @@ class CrystalPlot(Plot):
         )
 
     def add_verts(self, verts, **kwargs):
-        """Plots planes, defined by the vertices provided.
+        """Plot planes defined by the provided vertices.
 
         Parameters
         ----------

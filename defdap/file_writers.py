@@ -22,6 +22,8 @@ from defdap.quat import Quat
 
 
 class EBSDDataWriter(object):
+    """Base class for writing EBSD data to supported file formats."""
+
     def __init__(self) -> None:
         self.metadata = {
             'shape': (0, 0),
@@ -37,7 +39,7 @@ class EBSDDataWriter(object):
         self.data_format = None
 
     @staticmethod
-    def get_writer(datatype: str) -> "Type[EBSDDataLoader]":
+    def get_writer(datatype: str) -> "Type[EBSDDataWriter]":
         if datatype is None:
             datatype = "OxfordText"
 
@@ -49,15 +51,19 @@ class EBSDDataWriter(object):
 
 class OxfordTextWriter(EBSDDataWriter):
     def write(self, file_name: str, file_dir: str = "") -> None:
-        """ Write an Oxford Instruments .ctf file, which is a HKL single
-        orientation file.
+        """Write an Oxford Instruments ``.ctf`` file.
 
         Parameters
         ----------
-        file_name
+        file_name : str
             File name.
-        file_dir
+        file_dir : str, optional
             Path to file.
+
+        Raises
+        ------
+        FileExistsError
+            If the destination file already exists.
 
         """
 

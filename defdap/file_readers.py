@@ -20,7 +20,7 @@ from abc import ABC, abstractmethod
 import pathlib
 import re
 
-from typing import TextIO, Dict, List, Callable, Any, Type, Optional
+from typing import TextIO, Dict, List, Callable, Any, Optional
 
 from defdap.crystal import Phase
 from defdap.quat import Quat
@@ -28,9 +28,7 @@ from defdap.utils import Datastore
 
 
 class EBSDDataLoader(ABC):
-    """Class containing methods for loading and checking EBSD data
-
-    """
+    """Base class for loading and validating EBSD datasets."""
     def __init__(self) -> None:
         # required metadata
         self.loaded_metadata = {
@@ -56,7 +54,7 @@ class EBSDDataLoader(ABC):
         self.data_format = None
 
     @staticmethod
-    def get_loader(data_type: str, file_name: pathlib.Path) -> 'Type[EBSDDataLoader]':
+    def get_loader(data_type: str, file_name: pathlib.Path) -> 'EBSDDataLoader':
         if data_type is None:
             data_type = {
                 '.crc': 'oxfordbinary',
@@ -87,6 +85,7 @@ class EBSDDataLoader(ABC):
             assert type(phase) is Phase
 
     def check_data(self) -> None:
+        """Validate the shape of required loaded EBSD data arrays."""
         shape = self.loaded_metadata['shape']
 
         assert self.loaded_data.phase.shape == shape
@@ -100,13 +99,12 @@ class EBSDDataLoader(ABC):
 
 class OxfordTextLoader(EBSDDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
-        """ Read an Oxford Instruments .ctf file, which is a HKL single
-        orientation file.
+        """Read an Oxford Instruments ``.ctf`` orientation file.
 
         Parameters
         ----------
-        file_name
-            Path to file
+        file_name : pathlib.Path
+            Path to file.
 
         """
         # open data file and read in metadata
@@ -236,12 +234,12 @@ class OxfordTextLoader(EBSDDataLoader):
 
 class EdaxAngLoader(EBSDDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
-        """ Read an EDAX .ang file.
+        """Read an EDAX ``.ang`` file.
 
         Parameters
         ----------
-        file_name
-            Path to file
+        file_name : pathlib.Path
+            Path to file.
 
         """
         # open data file and read in metadata
@@ -347,6 +345,24 @@ class EdaxAngLoader(EBSDDataLoader):
 
     @staticmethod
     def parse_phase(lines) -> Phase:
+        """Parse phase metadata lines from an EDAX ``.ang`` header.
+
+        Parameters
+        ----------
+        lines : list of str
+            Header lines describing a single phase.
+
+        Returns
+        -------
+        Phase
+            Parsed phase definition.
+
+        Raises
+        ------
+        ValueError
+            If an unsupported crystal symmetry is encountered.
+
+        """
         for line in lines:
             line = line.split()
 
@@ -378,12 +394,12 @@ class EdaxAngLoader(EBSDDataLoader):
 
 class OxfordBinaryLoader(EBSDDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
-        """Read Oxford Instruments .cpr/.crc file pair.
+        """Read Oxford Instruments ``.cpr``/``.crc`` file pair.
 
         Parameters
         ----------
-        file_name
-            Path to file
+        file_name : pathlib.Path
+            Path to file.
 
         """
         self.load_oxford_cpr(file_name)
@@ -391,13 +407,13 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
     def load_oxford_cpr(self, file_name: pathlib.Path) -> None:
         """
-        Read an Oxford Instruments .cpr file, which is a metadata file
+        Read an Oxford Instruments ``.cpr`` file, which is a metadata file
         describing EBSD data.
 
         Parameters
         ----------
-        file_name
-            Path to file
+        file_name : pathlib.Path
+            Path to file.
 
         """
         comment_char = ';'
@@ -505,12 +521,12 @@ class OxfordBinaryLoader(EBSDDataLoader):
         self.data_format = np.dtype(data_format)
 
     def load_oxford_crc(self, file_name: pathlib.Path) -> None:
-        """Read binary EBSD data from an Oxford Instruments .crc file
+        """Read binary EBSD data from an Oxford Instruments ``.crc`` file.
 
         Parameters
         ----------
-        file_name
-            Path to file
+        file_name : pathlib.Path
+            Path to file.
 
         """
         shape = self.loaded_metadata['shape']
@@ -577,13 +593,13 @@ class PythonDictLoader(EBSDDataLoader):
 
         Parameters
         ----------
-        data_dict
+        data_dict : dict
             Dictionary with keys:
-                'step_size'
-                'phases'
-                'phase'
-                'euler_angle'
-                'band_contrast'
+                ``step_size``, 
+                ``phases``, 
+                ``phase``, 
+                ``euler_angle``, 
+                ``band_contrast``
 
         """
         self.loaded_metadata['shape'] = data_dict['phase'].shape
@@ -603,9 +619,7 @@ class PythonDictLoader(EBSDDataLoader):
 
 
 class DICDataLoader(ABC):
-    """Class containing methods for loading and checking HRDIC data
-
-    """
+    """Base class for loading and validating DIC datasets."""
     def __init__(self, file_type : str = '') -> None:
         self.file_type = file_type
         self.loaded_metadata = {
@@ -634,7 +648,7 @@ class DICDataLoader(ABC):
         )
 
     @staticmethod
-    def get_loader(data_type: str) -> 'Type[DICDataLoader]':
+    def get_loader(data_type: str) -> 'DICDataLoader':
         if data_type is None:
             data_type = "Davis"
 
@@ -657,8 +671,7 @@ class DICDataLoader(ABC):
         return
 
     def check_data(self) -> None:
-        """ Calculate size of map from loaded data and check it matches
-        values from metadata.
+        """Validate DIC coordinate spacing and map shape against metadata.
 
         """
         # check binning
@@ -688,12 +701,12 @@ class DICDataLoader(ABC):
 
 class DavisLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
-        """ Load from Davis .txt file.
+        """Load a DaVis ``.txt`` displacement file.
 
         Parameters
         ----------
-        file_name
-            Path to file
+        file_name : pathlib.Path
+            Path to file.
 
         """
         if not file_name.is_file():
@@ -725,12 +738,12 @@ class DavisLoader(DICDataLoader):
 
     @staticmethod
     def load_davis_image_data(file_name: pathlib.Path) -> np.ndarray:
-        """ A .txt file from DaVis containing a 2D image
+        """Load a DaVis ``.txt`` file containing a 2D image.
 
         Parameters
         ----------
-        file_name
-            Path to file
+        file_name : pathlib.Path
+            Path to file.
 
         Returns
         -------
@@ -749,12 +762,12 @@ class DavisLoader(DICDataLoader):
 
 class OpenPivTextLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
-        """ Load from Open PIV .txt file.
+        """Load an OpenPIV ``.txt`` file.
 
         Parameters
         ----------
-        file_name
-            Path to file
+        file_name : pathlib.Path
+            Path to file.
 
         """
         if not file_name.is_file():
@@ -799,12 +812,12 @@ class OpenPivTextLoader(DICDataLoader):
 
 class OpenPivBinaryLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
-        """ Load from Open PIV .npz file.
+        """Load an OpenPIV binary ``.npz`` file.
 
         Parameters
         ----------
-        file_name
-            Path to file
+        file_name : pathlib.Path
+            Path to file.
 
         """
         if not file_name.is_file():
@@ -835,12 +848,12 @@ class OpenPivBinaryLoader(DICDataLoader):
 
 class PyValeLoader(DICDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
-        """ Load from PyVale csv or binary file.
+        """Load a PyVale CSV or binary file.
 
         Parameters
         ----------
-        file_name
-            Path to file
+        file_name : pathlib.Path
+            Path to file.
 
         """
         if not file_name.is_file():
@@ -916,22 +929,22 @@ def read_until_string(
     line_process: Optional[Callable[[str], Any]] = None,
     exact: bool = False
 ) -> List[Any]:
-    """Read lines in a file until a line starting with the `termString`
+    """Read lines in a file until a line starting with the ``termString``
     is encountered. The file position is returned before the line starting
-    with the `termString` when found. Comment and empty lines are ignored.
+    with the ``termString`` when found. Comment and empty lines are ignored.
 
     Parameters
     ----------
-    file
+    file : TextIO
         An open python text file object.
-    term_string
+    term_string : str
         String to terminate reading.
-    comment_char
+    comment_char : str, optional
         Character at start of a comment line to ignore.
-    line_process
+    line_process : Callable, optional
         Function to apply to each line when loaded.
-    exact
-        A line must exactly match `termString` to stop.
+    exact : bool, optional
+        If ``True``, a line must exactly match ``term_string`` to stop.
 
     Returns
     -------

@@ -1,5 +1,5 @@
 # Plane normal then slip direction
-blue,green,red,white
+blue,green,red,black
 1	1	1	0	1	-1
 1	1	1	-1	0	1
 1	1	1	1	-1	0
