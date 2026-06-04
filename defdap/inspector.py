@@ -331,7 +331,7 @@ class GrainInspector:
         # Draw slip bands
         bands = [elem[1] for elem in self.selected_dic_grain.groups_list]
         if self.selected_dic_grain.groups_list != None:
-            slipPlot.add_slip_bands(top_only=True, angles=list(np.deg2rad(bands)))
+            slipPlot.add_traces(list(np.deg2rad(bands)), ["black"], top_only=True)
 
     def run_rdr_group(self,
                       event: int,
