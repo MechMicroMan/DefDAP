@@ -42,31 +42,71 @@ class Experiment(object):
                 continue
             yield i, map_obj
 
+class Maps(object):
+    def __init__(self, allow_multiple: bool):
+        self.allow_multiple = allow_multiple
+        self.maps: dict[str, list["Map"]] = {}
+
+    def add_map(self, map_name, map_obj, primary: bool=False):
+        if map_name in self.maps:
+            if not self.allow_multiple:
+                raise ValueError(f"Map with name {map_name} already exists.")
+            self.maps[map_name].append(map_obj)
+        else:
+            self.maps[map_name] = [map_obj]
+    
+    def get_map(self, map_name):
+        pass
+
+    def __getitem__(self, key):
+        if key not in self.maps:
+            raise KeyError(f"Map with name `{key}` does not exist.")
+        maps = self.maps[key]
+        if len(maps) == 1:
+            return maps[0]
+        raise ValueError(f"More than one map exists with name `{key}`")
+    
+    def get(self, key, value=None):
+        try:
+            return self[key]
+        except KeyError:
+            return value
+        
+    def get_all(self):
+        return sum(self.maps.values(), start=[])
+
 
 class Increment(object):
     # def __init__(self, experiment, **kwargs):
     def __init__(self, experiment, **kwargs):
-
-        self.maps = {}
+        self.experiment = experiment
+        self.maps = Maps(False)
         # ex: (name, map, frame)
         # default behaviour for no frame, different frame for
         # each EBSD map, initial increment frame for DIC maps
 
-        self.experiment = experiment
         self.metadata = kwargs
 
-    def add_map(self, name, map_obj):
-        self.maps[name] = map_obj
+    @property
+    def inc_id(self):
+        return self.experiment.increments.index(self)
+
+    def __str__(self):
+        return f"Increment({self.inc_id})"
+
+    def add_map(self, map_name, map_obj):
+        self.maps.add_map(map_name, map_obj)
 
 
 class Frame(object):
     def __init__(self, experiment):
         self.experiment = experiment
-        self.maps = []
+        # self.maps = []
+        self.maps = Maps(True)
         self.homog_points = []
 
-    def add_map(self, map_obj):
-        self.maps.append(map_obj)
+    def add_map(self, map_name, map_obj):
+        self.maps.add_map(map_name, map_obj)
 
     def link_frames(self, other, transform_type=None, **kwargs):
         if self.experiment != other.experiment:
@@ -126,7 +166,7 @@ class Frame(object):
         if map_type is None:
             map_type = object
 
-        return [m for f in self.get_linked_frames() for m in f.maps 
+        return [m for f in self.get_linked_frames() for m in f.maps.get_all() 
                 if isinstance(m, map_type)]
 
     def warp_image(self, map_data, other, crop=True, **kwargs):
