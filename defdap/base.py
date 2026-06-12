@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import networkx as nx
 
-import defdap
+from defdap import defaults, anonymous_experiment
 from defdap.quat import Quat
 from defdap import plotting
 from defdap.plotting import Plot, MapPlot, GrainPlot
@@ -64,7 +64,7 @@ class Map(ABC):
         if frame is not None:
             experiments.append(frame.experiment)
         if len(experiments) == 0:
-            self.experiment = defdap.anonymous_experiment
+            self.experiment = anonymous_experiment
         else:
             if any(experiments[0] != x for x in experiments[1:]):
                 raise ValueError('Experiments not equal for inputs.')
@@ -787,7 +787,7 @@ class Grain(ABC):
     owner_map : defdap.base.Map
 
     """
-    def __init__(self, grain_id, owner_map, group_id):
+    def __init__(self, point, grain_id, owner_map, group_id):
         self.data = Datastore(group_id=group_id)
         self.data.add_derivative(
             owner_map.data, self.grain_data,
@@ -799,7 +799,7 @@ class Grain(ABC):
             }
         )
         self.data.add(
-            'point', [],
+            'point', point,
             unit='', type='list', order=1
         )
 
@@ -1214,3 +1214,73 @@ class Grain(ABC):
         list_data = self._extract_component(self.data[map_name], comp)
 
         return self.plot_grain_data(grain_data=list_data, **plot_params)
+
+def grains_image_flood_fill(
+    grains, 
+    points_left, 
+    flood_fill_func, 
+    flood_fill_args=(), 
+    min_grain_size=10
+):
+    """_summary_
+
+    Parameters
+    ----------
+    grains : _type_
+        grains starting point
+    points_left : _type_
+        _description_
+    flood_fill_func : _type_
+        _description_
+    flood_fill_args : _type_
+        _description_
+    """    """_summary_
+
+    Parameters
+    ----------
+    grains : _type_
+        grains starting point
+    """
+
+    coords_buffer = np.zeros((points_left.size, 2), dtype=np.intp)
+    total_points = points_left.sum()
+    found_point = 0
+    next_point = points_left.tobytes().find(b'\x01')
+
+    # Start counter for grains
+    points = []
+    grain_index = 1
+    # Loop until all points (except boundaries) have been assigned
+    # to a grain or ignored
+    i = 0
+    while found_point >= 0:
+        # Flood fill first unknown point and return grain object
+        seed = np.unravel_index(next_point, grains.shape)
+        point = flood_fill_func(
+            (seed[1], seed[0]), grain_index, points_left, grains,
+            coords_buffer, *flood_fill_args
+        )
+        coords_buffer = coords_buffer[len(point):]
+
+        if len(point) < min_grain_size:
+            # if grain size less than minimum, ignore grain and set
+            # values in grain map to -2
+            for p in point:
+                grains[p[1], p[0]] = -2
+        else:
+            # add grain to list and increment grain index
+            points.append(point)
+            grain_index += 1
+
+        # find next search point
+        points_left_sub = points_left.reshape(-1)[next_point + 1:]
+        found_point = points_left_sub.tobytes().find(b'\x01')
+        next_point += found_point + 1
+
+        # report progress
+        i += 1
+        if i == defaults['find_grain_report_freq']:
+            yield 1. - points_left_sub.sum() / total_points
+            i = 0
+
+    return grains, points

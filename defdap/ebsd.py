@@ -860,59 +860,28 @@ class Map(base.Map):
             Minimum grain area in pixels.
 
         """
+        group_id = Datastore.generate_id()
+
         # Initialise the grain map
         # TODO: Look at grain map compared to boundary map
         grains = np.zeros(self.shape, dtype=int)
-        grain_list = []
 
         boundary_im_x = self.data.grain_boundaries.image_x
         boundary_im_y = self.data.grain_boundaries.image_y
 
         # List of points where no grain has be set yet
         points_left = self.data.phase != 0
-        total_points = points_left.sum()
-        found_point = 0
-        next_point = points_left.tobytes().find(b'\x01')
 
-        # Start counter for grains
-        grain_index = 1
-        group_id = Datastore.generate_id()
-
-        # Loop until all points (except boundaries) have been assigned
-        # to a grain or ignored
-        i = 0
-        coords_buffer = np.zeros((boundary_im_y.size, 2), dtype=np.intp)
-        while found_point >= 0:
-            # Flood fill first unknown point and return grain object
-            seed = np.unravel_index(next_point, self.shape)
-
-            grain = Grain(grain_index - 1, self, group_id)
-            grain.data.point = flood_fill(
-                (seed[1], seed[0]), grain_index, points_left, grains,
-                boundary_im_x, boundary_im_y, coords_buffer
-            )
-            coords_buffer = coords_buffer[len(grain.data.point):]
-
-            if len(grain) < min_grain_size:
-                # if grain size less than minimum, ignore grain and set
-                # values in grain map to -2
-                for point in grain.data.point:
-                    grains[point[1], point[0]] = -2
-            else:
-                # add grain to list and increment grain index
-                grain_list.append(grain)
-                grain_index += 1
-
-            # find next search point
-            points_left_sub = points_left.reshape(-1)[next_point + 1:]
-            found_point = points_left_sub.tobytes().find(b'\x01')
-            next_point += found_point + 1
-
-            # report progress
-            i += 1
-            if i == defaults['find_grain_report_freq']:
-                yield 1. - points_left_sub.sum() / total_points
-                i = 0
+        generator = base.grains_image_flood_fill(
+            grains, points_left, flood_fill, 
+            flood_fill_args=(boundary_im_x, boundary_im_y)
+        )
+        try:
+            while True:
+                yield next(generator)
+        except StopIteration as e:
+            grains, points = e.value
+        grain_list = [Grain(p, i, self, group_id) for i, p in enumerate(points)]
 
         # Assign phase to each grain
         for grain in grain_list:
@@ -1180,9 +1149,9 @@ class Grain(base.Grain):
          Angle between slip plane and screen plane.
 
     """
-    def __init__(self, grain_id, ebsdMap, group_id):
+    def __init__(self, point, grain_id, ebsd_map, group_id):
         # Call base class constructor
-        super(Grain, self).__init__(grain_id, ebsdMap, group_id)
+        super(Grain, self).__init__(point, grain_id, ebsd_map, group_id)
 
         self.ebsd_map = self.owner_map            # ebsd map this grain is a member of
         self.mis_ori_list = None                  # list of mis_ori at each point in grain

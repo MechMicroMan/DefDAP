@@ -25,8 +25,8 @@ def find_first(arr):
 
 
 @njit
-def flood_fill(seed, index, points_remaining, grains, boundary_x, boundary_y,
-               added_coords):
+def flood_fill(seed, index, points_remaining, grains, added_coords,
+               boundary_x, boundary_y):
     """Flood fill algorithm that uses the x and y boundary arrays to
     fill a connected area around the seed point. The points are inserted
     into a grain object and the grain map array is updated.

@@ -559,7 +559,7 @@ class Map(base.Map):
         return plot
 
     @report_progress("finding grains")
-    def find_grains(self, algorithm=None, min_grain_size=10):
+    def find_grains(self, algorithm=None, min_grain_size=10, force=False):
         """Finds grains in the DIC map.
 
         Parameters
@@ -574,7 +574,6 @@ class Map(base.Map):
             algorithm = defaults['hrdic_grain_finding_method']
         algorithm = algorithm.lower()
 
-        grain_list = []
         group_id = Datastore.generate_id()
 
         if algorithm == 'warp':
@@ -595,86 +594,68 @@ class Map(base.Map):
             grains = new[index].reshape(self.shape)
             grainprops = measure.regionprops(grains)
             props_dict = {prop.label: prop for prop in grainprops}
-
-            for dic_grain_id, ebsd_grain_id in enumerate(ebsd_grain_ids):
-                yield dic_grain_id / len(ebsd_grain_ids)
-
-                # Make grain object
-                grain = Grain(dic_grain_id, self, group_id)
-
-                # Find (x,y) coordinates and corresponding max shears of grain
-                coords = props_dict[dic_grain_id + 1].coords  # (y, x)
-                grain.data.point = np.flip(coords, axis=1)  # (x, y)
-
-                # Assign EBSD grain ID to DIC grain and increment grain list
-                grain.ebsd_grain = self.ebsd_map[ebsd_grain_id - 1]
-                grain.ebsd_map = self.ebsd_map
-                grain_list.append(grain)
+            
+            grain_list = [Grain(
+                np.flip(props_dict[i + 1].coords, axis=1), 
+                i, 
+                self, 
+                self.ebsd_map, 
+                self.ebsd_map[ebsd_grain_id - 1], 
+                group_id
+            ) for i, ebsd_grain_id in enumerate(ebsd_grain_ids)]
+            yield 1.
 
         elif algorithm == 'floodfill':
-            # Initialise the grain map
-            grains = -np.copy(self.data.grain_boundaries.image.astype(int))
+            calc = True
+            if not force:
+                # Look for other maps in same experiment frame
+                for dic_map in self.frame.maps.maps[self.map_name]: ##TODO: eww
+                    if dic_map is self:
+                        continue
+                    if dic_map.data.exists("grains"):
+                        print(f"Getting data from dic map in inc `{dic_map.increment}")
+                        grains = dic_map.data.grains
+                        points = [g.data.point for g in dic_map]
+                        ebsd_grains = [g.ebsd_grain for g in dic_map]
+                        calc = False
+                        yield 1
+                        break
 
-            # List of points where no grain has been set yet
-            points_left = grains == 0
-            coords_buffer = np.zeros((points_left.size, 2), dtype=np.intp)
-            total_points = points_left.sum()
-            found_point = 0
-            next_point = points_left.tobytes().find(b'\x01')
+            if calc:
+                # Initialise the grain map
+                grains = -np.copy(self.data.grain_boundaries.image.astype(int))
+                # List of points where no grain has been set yet
+                points_left = grains == 0
 
-            # Start counter for grains
-            grain_index = 1
-            # Loop until all points (except boundaries) have been assigned
-            # to a grain or ignored
-            i = 0
-            while found_point >= 0:
-                # Flood fill first unknown point and return grain object
-                seed = np.unravel_index(next_point, self.shape)
-
-                grain = Grain(grain_index - 1, self, group_id)
-                grain.data.point = flood_fill_dic(
-                    (seed[1], seed[0]), grain_index, points_left,
-                    grains, coords_buffer
+                generator = base.grains_image_flood_fill(
+                    grains, points_left, flood_fill_dic
                 )
-                coords_buffer = coords_buffer[len(grain.data.point):]
+                try:
+                    while True:
+                        yield next(generator)
+                except StopIteration as e:
+                    grains, points = e.value
 
-                if len(grain) < min_grain_size:
-                    # if grain size less than minimum, ignore grain and set
-                    # values in grain map to -2
-                    for point in grain.data.point:
-                        grains[point[1], point[0]] = -2
-                else:
-                    # add grain to list and increment grain index
-                    grain_list.append(grain)
-                    grain_index += 1
+                # Now link grains to those in ebsd Map
+                # Warp DIC grain map to EBSD frame
+                warped_dic_grains = self.frame.warp_image(
+                    self.ebsd_map.frame, grains.astype(float),
+                    output_shape=self.ebsd_map.shape, order=0
+                ).astype(int)
+                ebsd_grains = []
+                for i in range(len(points)):
+                    # Find grain by masking the native ebsd grain image with
+                    # selected grain from the warped dic grain image. The modal
+                    # value is the EBSD grain label.
+                    ebsd_grain_ids = self.ebsd_map.data.grains[warped_dic_grains == i+1]
+                    if len(ebsd_grain_ids) == 0:
+                        ebsd_grains.append(None)
+                        continue
+                    mode_id, _ = mode(ebsd_grain_ids, keepdims=False)
+                    ebsd_grains.append(self.ebsd_map[mode_id - 1])
 
-                # find next search point
-                points_left_sub = points_left.reshape(-1)[next_point + 1:]
-                found_point = points_left_sub.tobytes().find(b'\x01')
-                next_point += found_point + 1
-
-                # report progress
-                i += 1
-                if i == defaults['find_grain_report_freq']:
-                    yield 1. - points_left_sub.sum() / total_points
-                    i = 0
-
-            # Now link grains to those in ebsd Map
-            # Warp DIC grain map to EBSD frame
-            warped_dic_grains = self.frame.warp_image(
-                grains.astype(float), self.ebsd_map.frame,
-                output_shape=self.ebsd_map.shape, order=0
-            ).astype(int)
-            for i, grain in enumerate(grain_list):
-                # Find grain by masking the native ebsd grain image with
-                # selected grain from the warped dic grain image. The modal
-                # value is the EBSD grain label.
-                mode_id, _ = mode(
-                    self.ebsd_map.data.grains[warped_dic_grains == i+1],
-                    keepdims=False
-                )
-                grain.ebsd_grain = self.ebsd_map[mode_id - 1]
-                grain.ebsd_map = self.ebsd_map
+            grain_list = [Grain(p, i, self, self.ebsd_map, ebsd_grain, group_id) 
+                          for i, (p, ebsd_grain) in enumerate(zip(points, ebsd_grains))]
 
         else:
             raise ValueError(f"Unknown grain finding algorithm '{algorithm}'.")
@@ -745,13 +726,13 @@ class Grain(base.Grain):
             Map data to list data from the map the grain is part of
 
     """
-    def __init__(self, grain_id, dicMap, group_id):
+    def __init__(self, point_list, grain_id, dic_map, ebsd_map, ebsd_grain, group_id):
         # Call base class constructor
-        super(Grain, self).__init__(grain_id, dicMap, group_id)
+        super(Grain, self).__init__(point_list, grain_id, dic_map, group_id)
 
         self.dic_map = self.owner_map     # DIC map this grain is a member of
-        self.ebsd_grain = None
-        self.ebsd_map = None
+        self.ebsd_map = ebsd_map
+        self.ebsd_grain = ebsd_grain
 
         self.points_list = []            # Lines drawn for STA
         self.groups_list = []            # Unique angles drawn for STA
