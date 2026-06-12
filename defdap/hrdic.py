@@ -434,7 +434,7 @@ class Map(base.Map):
         """
         # Check a EBSD map is linked
         return self.ebsd_map.frame.warp_image(
-            map_data, self.frame, output_shape=self.shape, **kwargs
+            self.frame, map_data, output_shape=self.shape, **kwargs
         )
 
     def calc_mask(self, mask=None, dilation=0):
@@ -857,12 +857,12 @@ class BoundarySet(object):
         if len(ebsd_boundaries.points) == 0:
             return cls(dic_map, [], [])
 
-        points = dic_map.ebsd_map.frame.warp_points(
-            ebsd_boundaries.image.astype(float), dic_map.frame,
+        points = dic_map.ebsd_map.frame.warp_points_img(
+            dic_map.frame, ebsd_boundaries.image.astype(float),
             output_shape=dic_map.shape
         )
         lines = dic_map.ebsd_map.frame.warp_lines(
-            ebsd_boundaries.lines, dic_map.frame
+             dic_map.frame, ebsd_boundaries.lines
         )
         return cls(dic_map, points, lines)
 

@@ -18,6 +18,9 @@ from skimage import transform as tf
 from skimage import morphology as mph
 import networkx as nx
 
+point_type = tuple[int | float, int | float]
+line_type = tuple[point_type, point_type]
+
 
 class Experiment(object):
     def __init__(self):
@@ -169,8 +172,8 @@ class Frame(object):
         return [m for f in self.get_linked_frames() for m in f.maps.get_all() 
                 if isinstance(m, map_type)]
 
-    def warp_image(self, map_data, other, crop=True, **kwargs):
-        """Warps a map to the DIC frame.
+    def warp_image(self, other, map_data, crop=True, **kwargs):
+        """Warps a map to the `other` frame.
 
         Parameters
         ----------
@@ -199,14 +202,19 @@ class Frame(object):
             kwargs['output_shape'] = output_shape.astype(int)
 
         return tf.warp(map_data, transform, **kwargs)
-
-    def warp_lines(self, lines, other):
-        """Warp a set of lines to the DIC reference frame.
+    
+    def warp_points(
+            self, 
+            other, 
+            points: list[point_type], 
+            round=True
+        ) -> list[point_type]:
+        """Warp a list of points to the `other` reference frame.
 
         Parameters
         ----------
-        lines : list of tuples
-            Lines to warp. Each line is represented as a tuple of start
+        points : list of tuples
+            Points to warp. Each line is represented as a tuple of start
             and end coordinates (x, y).
 
         Returns
@@ -217,15 +225,45 @@ class Frame(object):
         """
         # Transform
         transform = self.get_frame_transform(other)
+        points = transform(np.array(points))
+        # Round to nearest
+        if round:
+            points = np.round(points - 0.5) + 0.5
+        points = list(map(tuple, points))
+        return points
+
+    def warp_lines(
+        self, 
+        other, 
+        lines: list[line_type], 
+        round=True
+    ) -> list[line_type]:
+        """Warp a list of lines to the `other` reference frame.
+
+        Parameters
+        ----------
+        lines : list of tuple of tuple
+            Lines to warp. Each line is represented as a tuple of start
+            and end coordinates (x, y).
+
+        Returns
+        -------
+        list of tuple of tuple
+            List of warped lines with same representation as input.
+
+        """
+        # Transform
+        transform = self.get_frame_transform(other)
         lines = transform(np.array(lines).reshape(-1, 2)).reshape(-1, 2, 2)
         # Round to nearest
-        lines = np.round(lines - 0.5) + 0.5
+        if round:
+            lines = np.round(lines - 0.5) + 0.5
         lines = [(tuple(line[0]), tuple(line[1])) for line in lines]
         return lines
 
-    def warp_points(self, points_img, other, **kwargs):
+    def warp_points_img(self, other, points_img, **kwargs):
         input_shape = np.array(points_img.shape)
-        points_img = self.warp_image(points_img, other, crop=False, **kwargs)
+        points_img = self.warp_image(other, points_img, crop=False, **kwargs)
 
         points_img = mph.skeletonize(points_img > 0.1)
         mph.remove_small_objects(points_img, min_size=10, connectivity=2,
