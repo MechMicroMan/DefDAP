@@ -99,7 +99,7 @@ class Datastore(object):
         '_derivatives',
         '_group_id',
         '_crop_func',
-        '_mask_func'
+        '_mask_func',
     ]
     _been_to = None
 
@@ -237,6 +237,36 @@ class Datastore(object):
         for derivative in self._derivatives:
             keys += self.lookup_derivative_keys(derivative)
         return keys
+    
+    # @property
+    # def derivatives(self):
+    #     for derivative in self._derivatives:
+    #         yield derivative
+    #     if self._frame is None:
+    #         return
+    #     for linked_map in self._frame.get_linked_maps():
+    #         derivative = {
+    #             'type': 'map_link',
+    #             'source': linked_map.data,
+    #             'func': functools.partial(linked_map.frame.warp_image, self._frame),
+    #             'in_props': {'type': 'map'},
+    #             'out_props': {},
+    #             'pass_ref': False,
+    #             'map': linked_map,
+    #         }
+    #         yield derivative
+
+    def exists(self, key):
+        """Check if value has been generated. Does not consider derived data.
+
+        Parameters
+        ----------
+        key : str
+
+        """
+        if key not in self._store:
+            return False
+        return self._store[key]["data"] is not None
 
     def lookup_derivative_keys(self, derivative):
         root_call = False
@@ -346,15 +376,11 @@ class Datastore(object):
 
     def add_derivative(self, datastore, derive_func, in_props=None,
                        out_props=None, pass_ref=False):
-        if in_props is None:
-            in_props = {}
-        if out_props is None:
-            out_props = {}
         new_derivative = {
             'source': datastore,
             'func': derive_func,
-            'in_props': in_props,
-            'out_props': out_props,
+            'in_props': in_props or {},
+            'out_props': out_props or {},
             'pass_ref': pass_ref,
         }
         # check if exists and update

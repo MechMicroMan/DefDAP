@@ -54,8 +54,6 @@ class Map(ABC):
             Format of EBSD data file.
 
         """
-        self.data = Datastore(crop_func=self.crop, mask_func=self.mask)
-
         experiments = []
         if experiment is not None:
             experiments.append(experiment)
@@ -74,11 +72,15 @@ class Map(ABC):
         self.increment = (increment if increment is not None 
                           else self.experiment.add_increment())
 
-        self.frame.add_map(self)
         self.map_name = self.MAPTYPE.value if map_name is None else map_name
         self.increment.add_map(self.map_name, self)
+        self.frame.add_map(self.map_name, self)
 
-        self.shape = (0, 0)
+        self.data = Datastore(
+            crop_func=self.crop, mask_func=self.mask
+        )
+
+        self.shape = (0, 0)   # (y, x)
 
         self._grains = None
 
@@ -542,6 +544,11 @@ class Map(ABC):
                 return self.calc_ipf_colour(map_data, direction)
 
         raise ValueError(f'Invalid component `{comp}`')
+    
+    def get_map_data(self, map_name, component=None):
+        self._validate_map(map_name)
+        comp = self._validate_component(map_name, component)
+        return self._extract_component(self.data[map_name], comp)
 
     def plot_map(self, map_name, component=None, **kwargs):
         """Plot a map of the data.
@@ -563,7 +570,7 @@ class Map(ABC):
             Plot containing map.
 
         """
-        self._validate_map(map_name)
+        map_data = self.get_map_data(map_name, component=component)
         comp = self._validate_component(map_name, component)
 
         # Set default plot parameters then update with any input
@@ -591,8 +598,6 @@ class Map(ABC):
             plot_params['scale'] = self.scale / binning
 
         plot_params.update(kwargs)
-
-        map_data = self._extract_component(self.data[map_name], comp)
 
         return MapPlot.create(self, map_data, **plot_params)
 
