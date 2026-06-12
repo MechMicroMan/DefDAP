@@ -1,5 +1,39 @@
 # Change Log
 
+## v1.2.0 (2026-06-04)
+
+### Feat
+
+- Load data from a matflow workflow
+
+### Fix
+
+- Error when plotting grains in the inspector
+- Bug with drawing figure canvas in new versions of mpl with ipympl
+- Update .ang file reader to work with more files
+
+## v1.1.2 (2026-01-16)
+
+### Fix
+
+- Added pyvale to list of loaders so pyvale files can actually be loaded
+
+## v1.1.1 (2026-01-06)
+
+### Fix
+
+- Update license name
+
+## v1.1.0 (2026-01-06)
+
+### Feat
+
+- Add IPF and Euler colours for EBSD grain
+
+### Fix
+
+- Inspector data was being cropped twice
+
 ## v1.0.1 (03-12-2025)
 
 ### Fixed

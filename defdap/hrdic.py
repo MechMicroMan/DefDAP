@@ -202,7 +202,7 @@ class Map(base.Map):
         return self.ebsd_map.crystal_sym
 
     @report_progress("loading HRDIC data")
-    def load_data(self, file_name, data_type=None):
+    def load_data(self, file_name, data_type=None, **kwargs):
         """Load DIC data from file.
 
         Parameters
@@ -214,7 +214,7 @@ class Map(base.Map):
 
         """
         data_loader = DICDataLoader.get_loader(data_type)
-        data_loader.load(file_name)
+        data_loader.load(file_name, **kwargs)
 
         metadata_dict = data_loader.loaded_metadata
         self.format = metadata_dict['format']      # Software name
