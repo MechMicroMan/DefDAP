@@ -172,10 +172,15 @@ class Map(base.Map):
             cropped=True, apply_mask=False
         )
 
-        self.plot_default = lambda *args, **kwargs: self.plot_map(
-            map_name='max_shear', plot_gbs=True, *args, **kwargs
-        )
         self.homog_map_name = 'max_shear'
+
+    def plot_default(self, **kwargs):
+        plot_params = {
+            "map_name": "max_shear",
+            "plot_gbs": True,
+        }
+        plot_params.update(kwargs)
+        return self.plot_map(**plot_params)
 
     @property
     def original_shape(self):
@@ -594,7 +599,7 @@ class Map(base.Map):
             grains = new[index].reshape(self.shape)
             grainprops = measure.regionprops(grains)
             props_dict = {prop.label: prop for prop in grainprops}
-            
+
             grain_list = [Grain(
                 np.flip(props_dict[i + 1].coords, axis=1), 
                 i, 
