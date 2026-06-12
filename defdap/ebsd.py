@@ -27,7 +27,7 @@ from defdap.quat import Quat
 from defdap import base
 from defdap._accelerated import flood_fill
 
-from defdap import defaults
+from defdap import defaults, MapType
 from defdap.plotting import MapPlot
 from defdap.utils import report_progress
 
@@ -77,7 +77,7 @@ class Map(base.Map):
                 Grain list data to map data from all grains
 
     """
-    MAPNAME = 'ebsd'
+    MAPTYPE = MapType.EBSD
 
     def __init__(self, *args, **kwargs):
         """

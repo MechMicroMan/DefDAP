@@ -1,4 +1,11 @@
+from enum import StrEnum, auto
+
 from defdap.experiment import Experiment
+
+class MapType(StrEnum):
+    HRDIC = auto()
+    EBSD = auto()
+
 
 defaults = {
     # Convention to use when attaching an orthonormal frame to a crystal

@@ -74,9 +74,9 @@ class Map(ABC):
         self.increment = (increment if increment is not None 
                           else self.experiment.add_increment())
 
-        map_name = self.MAPNAME if map_name is None else map_name
-        self.increment.add_map(map_name, self)
         self.frame.add_map(self)
+        self.map_name = self.MAPTYPE.value if map_name is None else map_name
+        self.increment.add_map(self.map_name, self)
 
         self.shape = (0, 0)
 

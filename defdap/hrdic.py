@@ -32,7 +32,7 @@ from defdap.utils import Datastore
 from defdap.file_readers import DICDataLoader, DavisLoader
 from defdap import base
 
-from defdap import defaults
+from defdap import defaults, MapType
 from defdap.plotting import MapPlot, GrainPlot
 from defdap.inspector import GrainInspector
 from defdap.utils import report_progress
@@ -90,7 +90,7 @@ class Map(base.Map):
             Grain list data to map data from all grains
 
     """
-    MAPNAME = 'hrdic'
+    MAPTYPE = MapType.HRDIC
 
     def __init__(self, *args, **kwargs):
         """Initialise class and import DIC data from file.
