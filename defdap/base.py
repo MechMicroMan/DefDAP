@@ -1243,26 +1243,38 @@ def grains_image_flood_fill(
     flood_fill_args=(), 
     min_grain_size=10
 ):
-    """_summary_
-
-    Parameters
-    ----------
-    grains : _type_
-        grains starting point
-    points_left : _type_
-        _description_
-    flood_fill_func : _type_
-        _description_
-    flood_fill_args : _type_
-        _description_
-    """    """_summary_
-
-    Parameters
-    ----------
-    grains : _type_
-        grains starting point
     """
+    Find grains in an a maps my iteratively applying a floodfill function until 
+    all points have been assigned a grain.
 
+    Parameters
+    ----------
+    grains : numpy.ndarray of int
+        Initial grain id image to pass to floodfill function.
+    points_left : numpy.ndarray of bool
+        Binary image of points to assign grains, e.g. non-indexed points of an 
+        EBSD should be False.
+    flood_fill_func : callable
+        Function to run at each seed point to floodfill up to boundaries.
+    flood_fill_args : tuple, optional
+        Extra arguments to pass to floodfill function, by default ().
+    min_grain_size : int, optional
+        Minimum grain area in pixels, by default 10.
+
+    Returns
+    -------
+    numpy.ndarray of int
+        Grain ID image starting at 1. 0 is for non-indexed points and -2 for 
+        grains smaller than minimum area.
+    list of list of tuple of int
+        Lists of coordinates for each grain.
+
+    Yields
+    ------
+    float
+        Fraction complete
+
+    """
     coords_buffer = np.zeros((points_left.size, 2), dtype=np.intp)
     total_points = points_left.sum()
     found_point = 0
