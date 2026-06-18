@@ -833,7 +833,19 @@ class Grain(ABC):
             minimum x, minimum y, maximum x, maximum y.
 
         """
-        return *self.data.point.min(axis=0), *self.data.point.max(axis=0)
+        return (
+            *self.data.point.min(axis=0).tolist(), 
+            *self.data.point.max(axis=0).tolist()
+        )
+    
+    @property
+    def on_edge(self):
+        min_x, min_y, max_x, max_y = self.extreme_coords
+        return (
+            min_x == 0 or min_y == 0
+            or max_x == self.owner_map.shape[1]-1
+            or max_y == self.owner_map.shape[0]-1
+        )
 
     def centre_coords(self, centre_type="box", grain_coords=True):
         """
