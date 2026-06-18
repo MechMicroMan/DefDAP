@@ -106,12 +106,15 @@ class Frame(object):
         self.experiment = experiment
         # self.maps = []
         self.maps = Maps(True)
-        self.homog_points = []
+        self.homog_points = {}
 
     def add_map(self, map_name, map_obj):
         self.maps.add_map(map_name, map_obj)
 
-    def link_frames(self, other, transform_type=None, **kwargs):
+    def link_frames(
+        self, other, points_names: tuple[str, str], 
+        transform_type=None, **kwargs
+    ):
         if self.experiment != other.experiment:
             raise ValueError('Frames are in different experiments.')
         
@@ -122,6 +125,7 @@ class Frame(object):
         edge_props = {
             'start': self,
             'transform_props': kwargs,
+            'points_names': points_names,
         }
         if self.experiment.frame_relations.has_edge(self, other):
             if edge_props != self.experiment.frame_relations[self][other]:
@@ -143,15 +147,26 @@ class Frame(object):
         
         transform_props = frame_relation['transform_props']
         transform = transform_lookup[transform_props['type']]()
+        points_names = frame_relation['points_names']
 
         frames = (self, other)
+        if frame_relation['start'] is not self:
+            points_names = points_names[::-1]
+        transform.estimate(
+            np.array(frames[0].homog_points[points_names[0]]),
+            np.array(frames[1].homog_points[points_names[1]]),
+            **{k: v for k, v in transform_props.items() if k != 'type'}
+        )
+        return transform
+
         invert = (frame_relation['start'] is not self 
                   and transform_props['type'] != 'polynomial')
         if invert:
             frames = frames[::-1]
+            points_names = points_names[::-1]
         transform.estimate(
-            np.array(frames[0].homog_points),
-            np.array(frames[1].homog_points),
+            np.array(frames[0].homog_points[points_names[0]]),
+            np.array(frames[1].homog_points[points_names[1]]),
             **{k: v for k, v in transform_props.items() if k != 'type'}
         )
         if invert:
@@ -254,7 +269,16 @@ class Frame(object):
         """
         # Transform
         transform = self.get_frame_transform(other)
-        lines = transform(np.array(lines).reshape(-1, 2)).reshape(-1, 2, 2)
+        points = transform(np.array(lines).reshape(-1, 2))
+        lines = points.reshape(-1, 2, 2)
+
+        # Remove any lines with an invalid point (-1, -1)
+        if isinstance(transform, tf.PiecewiseAffineTransform):
+            bad_points = np.nonzero(np.all(points == -1, axis=1))[0]
+            good_lines = np.ones(len(points) // 2, dtype=bool)
+            good_lines[bad_points // 2] = False
+            lines = lines[good_lines]
+   
         # Round to nearest
         if round:
             lines = np.round(lines - 0.5) + 0.5
@@ -283,7 +307,7 @@ class Frame(object):
 
         return zip(*points_img.transpose().nonzero())
 
-    def set_homog_points(self, points):
+    def set_homog_points(self, points_name, points):
         """
 
         Parameters
@@ -291,9 +315,9 @@ class Frame(object):
         points : numpy.ndarray, optional
             Array of (x,y) homologous points to set explicitly.
         """
-        self.homog_points = points
+        self.homog_points[points_name] = points
 
-    def set_homog_point(self, map_obj, map_name=None, **kwargs):
+    def set_homog_point(self, map_obj, points_name=None, map_name=None, **kwargs):
         """
         Interactive tool to set homologous points. Right-click on a point
         then click 'save point' to append to the homologous points list.
@@ -311,12 +335,16 @@ class Frame(object):
         if map_name is None:
             map_name = map_obj.homog_map_name
 
+        if points_name is None:
+            points_name = map_obj.name
+
         binning = map_obj.data.get_metadata(map_name, 'binning', 1)
         plot = map_obj.plot_map(map_name, make_interactive=True, **kwargs)
 
         # Plot stored homog points if there are any
-        if len(self.homog_points) > 0:
-            homog_points = np.array(self.homog_points) * binning
+        homog_points = self.homog_points.get(points_name, [])
+        if len(homog_points) > 0:
+            homog_points = np.array(homog_points) * binning
             plot.add_points(homog_points[:, 0], homog_points[:, 1], c='y', s=60)
         else:
             # add empty points layer to update later
@@ -328,7 +356,7 @@ class Frame(object):
         plot.add_event_handler('button_press_event', self.homog_click)
         plot.add_event_handler('key_press_event', self.homog_key)
         plot.add_button("Save point",
-                        lambda e, p: self.homog_click_save(e, p, binning),
+                        lambda e, p: self.homog_click_save(e, p, points_name, binning),
                         color="0.85", hovercolor="blue")
 
         return plot
@@ -390,7 +418,7 @@ class Frame(object):
 
         plot.add_points([sel_point[0]], [sel_point[1]], update_layer=1)
 
-    def homog_click_save(self, event, plot, binning):
+    def homog_click_save(self, event, plot, points_name, binning):
         """Append the selected point on the map to homogPoints.
 
         Parameters
@@ -413,13 +441,15 @@ class Frame(object):
 
         # then scale and add to homog points list
         sel_point = tuple((sel_point / binning).round().astype(int).tolist())
-        self.homog_points.append(sel_point)
+        homog_points = self.homog_points.get(points_name, [])
+        homog_points.append(sel_point)
+        self.homog_points[points_name] = homog_points
 
         # update the plotted homog points
-        homog_points = np.array(self.homog_points) * binning
+        homog_points = np.array(homog_points) * binning
         plot.add_points(homog_points[:, 0], homog_points[:, 1], update_layer=0)
 
-    def update_homog_points(self, homog_idx, new_point=None, delta=None):
+    def update_homog_points(self, points_name, homog_idx, new_point=None, delta=None):
         """
         Update a homog point by either over writing it with a new point or
         incrementing the current values.
@@ -434,15 +464,17 @@ class Frame(object):
             Increments to current point (dx, dy).
 
         """
+        homog_points = self.homog_points.get(points_name, [])
+
         if type(homog_idx) is not int:
             raise Exception("homog_idx must be an integer.")
-        if homog_idx >= len(self.homog_points):
+        if homog_idx >= len(homog_points):
             raise Exception("homog_idx is out of range.")
 
         # Update all points
         if homog_idx < 0:
-            for i in range(len(self.homog_points)):
-                self.update_homog_points(homog_idx=i, delta=delta)
+            for i in range(len(homog_points)):
+                self.update_homog_points(points_name, i, delta=delta)
             return
 
         # Update a single point
@@ -454,9 +486,7 @@ class Frame(object):
         elif delta is not None:
             if type(delta) is not tuple and len(delta) != 2:
                 raise Exception("delta must be a 2 component tuple")
-            new_point = list(self.homog_points[homog_idx])
-            new_point[0] += delta[0]
-            new_point[1] += delta[1]
-            new_point = tuple(new_point)
+            new_point = tuple(x+d for x, d in zip(homog_points[homog_idx], delta))
 
-        self.homog_points[homog_idx] = new_point
+        homog_points[homog_idx] = new_point
+        self.homog_points[points_name] = homog_points

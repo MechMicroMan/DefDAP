@@ -394,7 +394,7 @@ class Map(base.Map):
 
         return map_data[..., min_y:max_y, min_x:max_x]
 
-    def link_ebsd_map(self, ebsd_map, transform_type=None, **kwargs):
+    def link_ebsd_map(self, ebsd_map, points_names=None, transform_type=None, **kwargs):
         """Calculates the transformation required to align EBSD dataset to DIC.
 
         Parameters
@@ -407,9 +407,11 @@ class Map(base.Map):
             All arguments are passed to `estimate` method of the transform.
 
         """
+        if points_names is None:
+            points_names = (self.map_name, ebsd_map.map_name)
         # self.ebsd_map = ebsd_map
         self.frame.link_frames(
-            ebsd_map.frame, transform_type=transform_type, **kwargs
+            ebsd_map.frame, points_names, transform_type=transform_type, **kwargs
         )
         self.data.add_derivative(
             self.ebsd_map.data,
