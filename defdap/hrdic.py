@@ -35,6 +35,7 @@ from defdap import base
 from defdap import defaults
 from defdap.plotting import MapPlot, GrainPlot
 from defdap.inspector import GrainInspector
+from defdap.sslip import run_sslip
 from defdap.utils import report_progress
 
 
@@ -872,6 +873,18 @@ class Grain(base.Grain):
         slip_band_angles = peaks
         slip_band_angles = slip_band_angles * np.pi / 180
         return slip_band_angles
+    
+    def run_sslip_grain(self, slip_systems=None, threshold=0.01):
+        if slip_systems is None:
+            self.ebsd_grain.calc_average_ori()
+            slip_systems = sum(self.ebsd_grain.phase.slip_systems, start=[])
+
+        return run_sslip(
+            def_grad = self.data.f, 
+            ori = self.ebsd_grain.ref_ori, 
+            slip_systems = slip_systems, 
+            threshold = threshold
+        )
 
 
 class BoundarySet(object):
