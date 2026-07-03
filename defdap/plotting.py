@@ -14,17 +14,19 @@
 # limitations under the License.
 
 from functools import partial
+from copy import deepcopy
 
 import numpy as np
+import networkx as nx
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
 from matplotlib.widgets import Button, TextBox
 from matplotlib.collections import LineCollection
-from matplotlib_scalebar.scalebar import ScaleBar
+from matplotlib.ticker import FuncFormatter
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.ticker import FuncFormatter
+from matplotlib_scalebar.scalebar import ScaleBar
 
 from skimage import morphology as mph
 
@@ -592,13 +594,10 @@ class MapPlot(Plot):
         """
         # Find colour values for given values
         img = self.img_layers[layer]
-        colors = [img.cmap(img.norm(value)) for value in values]
 
         # Get colour patches for each phase and make legend
-        patches = [mpl.patches.Patch(
-            color=colors[i], label=labels[i]
-        ) for i in range(len(values))]
-
+        patches = [mpl.patches.Patch(color=img.cmap(img.norm(val)), label=label) 
+                   for val, label in zip(values, labels)]
         self.ax.legend(handles=patches, **kwargs)
 
     def add_points(self, x, y, update_layer=None, **kwargs):
@@ -1580,3 +1579,207 @@ class CrystalPlot(Plot):
         # Add list of planes defined by given vertices to the 3D plot
         pc = Poly3DCollection(verts, **plot_params)
         self.ax.add_collection3d(pc)
+
+
+class GrainBoundaryPlot:
+    # Network of node positions for every point, plot with a line collection, 
+    # move with mouse
+
+    epsilon = 5  # max pixel distance to count as a vertex hit
+    point_size = 10
+
+    def __init__(self, boundary_graph, fig, ax):
+        self.graph = boundary_graph
+        self.num_nodes = self.graph.number_of_nodes()
+
+        # self.fig, self.ax = plt.subplots(1, 1)
+        self.fig, self.ax = fig, ax
+        self.canvas = self.fig.canvas
+
+        line_segments = []
+        for i, (n1, n2, edge_data) in enumerate(self.graph.edges.data(True)):
+            if n1 != edge_data['start']:
+                n1, n2 = n2, n1
+            line_segments.append(np.array([
+                self.graph.nodes[n1]["point"], self.graph.nodes[n2]["point"]
+            ]))
+            edge_data['line_idx'] = i
+        lc = LineCollection(
+            line_segments, colors=mpl.colors.to_rgba('black'), zorder=10,
+            animated=True
+        )
+        self.lines = self.ax.add_collection(lc)
+
+        node_points = [self.graph.nodes[i]["point"] for i in range(self.num_nodes)]
+        self.points = self.ax.scatter(
+            *np.array(node_points).T, c='k', s=10, marker='o', zorder=20,
+            animated=True
+        )
+
+        self.selected = self.ax.scatter(
+            [None], [None], c='y', s=10, marker='x', zorder=30, animated=True
+        )
+
+        self._artists = [self.lines, self.points, self.selected]
+
+        self.selected_idx = None     # idx of point in self.points
+        self.selected_points = []   # tuple of idx of line segment and idx of point
+        self.dragging = False
+
+        self.canvas.mpl_connect('draw_event', self.on_draw)
+        self.canvas.mpl_connect('button_press_event', self.on_button_press)
+        self.canvas.mpl_connect('button_release_event', self.on_button_release)
+        self.canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
+        self.canvas.mpl_connect('key_press_event', self.on_key_press)
+
+    def draw_animated(self):
+        """Draw all of the animated artists."""
+        for a in self._artists:
+            self.ax.draw_artist(a)
+
+    def on_draw(self, event):
+        """Callback to register with 'draw_event'."""
+        self.bg = self.canvas.copy_from_bbox(self.ax.bbox)
+        self.draw_animated()
+
+    def update(self):
+        self.canvas.restore_region(self.bg)
+        self.draw_animated()
+        self.canvas.blit(self.ax.bbox)
+
+    def on_button_press(self, event):
+        """Callback for mouse button presses."""
+        if event.inaxes is None:
+            return
+        if event.button != 1:
+            return
+        if self.canvas.widgetlock.locked():
+            return
+        
+        # find closest point to cursor
+        points = self.points.get_offsets().data
+        target = (event.xdata, event.ydata)
+        dists = np.hypot(points[:, 0] - target[0], points[:, 1] - target[1])
+        min_i = np.argmin(dists)
+        if dists[min_i] > self.epsilon:
+            return
+        self.selected_idx = min_i
+        self.dragging = True
+
+        self.selected_points = []
+        for n1, n2, edge_data in self.graph.edges(self.selected_idx, data=True):
+            self.selected_points.append(
+                (edge_data['line_idx'], -int(edge_data['start'] != self.selected_idx))
+            )
+
+        self.selected.set_offsets(points[None, min_i])
+
+        self.update()
+
+    def on_button_release(self, event):
+        """Callback for mouse button releases."""
+        if event.button != 1:
+            return
+        if not self.dragging:
+            return
+        if self.selected_idx is None:
+            return
+        if self.canvas.widgetlock.locked():
+            return
+        
+        self.graph.nodes[self.selected_idx]["point"] = (event.xdata, event.ydata)
+
+        self.dragging = False
+        # self.selected_idx = None
+        # self.selected_points = []
+
+    def on_mouse_move(self, event):
+        """Callback for mouse movements."""
+        if not self.dragging:
+            return
+        if self.selected_idx is None:
+            return
+        if event.inaxes is None:
+            return
+        if event.button != 1:
+            return
+        if self.canvas.widgetlock.locked():
+            return
+
+        pos = event.xdata, event.ydata
+        self.points.get_offsets()[self.selected_idx] = pos
+        self.selected.set_offsets([pos])
+        for seg_idx, line_idx in self.selected_points:
+            self.lines._paths[seg_idx]._vertices[line_idx] = pos
+        self.update()
+
+    def on_key_press(self, event):
+        if self.selected_idx is None:
+            return
+        if self.dragging:
+            return
+        if self.canvas.widgetlock.locked():
+            return
+
+        moves = {
+            "left": np.array([-1, 0]),
+            "right": np.array([1, 0]),
+            "up": np.array([0, -1]),
+            "down": np.array([0, 1]),
+        }
+        keys = event.key.split('+')
+        key = keys[-1]
+        if key not in moves.keys():
+            return
+        move = 1
+        if len(keys) == 2:
+            if keys[0] == 'shift':
+                move = 10
+            elif keys[0] == 'alt':
+                move = 0.1
+        move = moves[key] * move
+
+        self.points.get_offsets()[self.selected_idx] += move
+        self.selected.get_offsets()[0] += move
+        for seg_idx, line_idx in self.selected_points:
+            self.lines._paths[seg_idx]._vertices[line_idx] += move
+        self.update()
+
+        point = tuple(self.selected.get_offsets()[0].tolist())
+        self.graph.nodes[self.selected_idx]["point"] = point
+
+    @staticmethod
+    def convert_graph(graph):
+        """
+        Convert between boundary network represented with coordinate tuples 
+        node and integer nodes.
+
+        Parameters
+        ----------
+        graph : networkx.Graph
+            Graph representing boundaries
+
+        Returns
+        -------
+        networkx.Graph
+            Converted graph
+
+        """
+        # int nodes to coordinates
+        if isinstance(next(iter(graph.nodes)), int):
+            raise NotImplementedError()
+
+        # coordinate nodes to ints
+        node_points = list(deepcopy(graph.nodes))
+        node_point_to_idx = {p: i for i, p in enumerate(node_points)}
+        graph_idx_nodes = nx.Graph()
+        graph_idx_nodes.add_nodes_from([
+            (i, {"point": p}) for i, p in enumerate(node_points)
+        ])
+        graph_idx_nodes.add_edges_from([
+            (node_point_to_idx[p1], 
+            node_point_to_idx[p2], 
+            { "start": node_point_to_idx[p1] }
+            ) for p1, p2 in graph.edges
+        ])
+        return graph_idx_nodes
