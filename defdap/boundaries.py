@@ -202,7 +202,7 @@ class EbsdBoundaries(Boundaries):
             return all_lines[0]
         
 
-class DerivedBoundaries(object):
+class DerivedBoundaries(Boundaries):
     def __init__(self, owner_map, points=None, lines=None, graph=None):
         super().__init__(owner_map)
         self.points = set(points) if points is not None else None
@@ -236,6 +236,14 @@ class DerivedBoundaries(object):
         if self.points is None:
             raise ValueError("Image not available for these boundaries.")
         return self._image_from_points(self.points)
+    
+    @property
+    def lines(self):
+        return self._lines
+    
+    @lines.setter
+    def lines(self, value):
+        self._lines = value
 
 
 def order_boundary_lines(boundary_lines : list[line_type]) -> list[list[line_type]]:
