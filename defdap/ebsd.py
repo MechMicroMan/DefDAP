@@ -16,8 +16,8 @@
 import numpy as np
 from skimage import morphology as mph
 import networkx as nx
+from scipy.stats import mode
 
-import copy
 from warnings import warn
 
 from defdap.utils import Datastore
@@ -660,6 +660,59 @@ class Map(base.Map):
         self.data.orientation = quat_array_new
 
         return quats
+    
+    def clean(self):
+        """
+        Replace non-indexed points with data from grain with most adjacent 
+        points. Apply iteratively until all non-indexed points removed.
+
+        """
+        shifts = np.array([
+            [[-1, -1], [-1, 0], [-1, 1]],
+            [[0, -1], [0, 0], [0, 1]],
+            [[1, -1], [1, 0], [1, 1]],
+        ])
+        def get_adjacent(grid, i, j):
+            vals = grid[max(0, i-1):i+2, max(0, j-1):j+2]
+            il, jl = int(i == 0), int(j == 0)
+            shifts_sub = shifts[il:il+vals.shape[0], jl:jl+vals.shape[1]]
+            return vals.flatten(), shifts_sub.reshape(-1, 2)
+
+        def update_point(ebsd_map, point, donor_point):
+            ebsd_map.data.euler_angle[:, *point] = ebsd_map.data.euler_angle[:, *donor_point]
+            ebsd_map.data.phase[*point] = ebsd_map.data.phase[*donor_point]
+
+        grains = self.data.grains
+
+        while np.count_nonzero(grains < 1):
+            grains_new = np.copy(grains)
+            for (i, j) in zip(*np.nonzero(grains < 1)):
+                adj_vals, adj_shifts = get_adjacent(grains, i, j)
+                good_vals = adj_vals > 0
+                adj_vals = adj_vals[good_vals]
+                adj_shifts = adj_shifts[good_vals]
+
+                if len(adj_vals) == 0:
+                    continue
+
+                if len(adj_vals) == 1:
+                    update_point(self, (i, j), adj_shifts[0] + (i, j))
+                    grains_new[i, j] = adj_vals[0]
+                    continue
+                
+                modal_val = mode(adj_vals)[0]
+                modal_idx = np.argmax(adj_vals == modal_val)
+                update_point(self, (i, j), adj_shifts[modal_idx] + (i, j))
+                grains_new[i, j] = modal_val
+
+            grains = grains_new
+        
+        self.data.grain_boundaries = None
+        self.data.phase_boundaries = None
+        self.data.orientation = None
+        self.data.grains = None
+        self._grains = None
+        self.data._derivatives.pop(-1)
 
     @report_progress("finding grain boundaries")
     def find_boundaries(self, misori_tol=10):
