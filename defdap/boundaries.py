@@ -4,6 +4,7 @@ from typing import Literal
 
 import numpy as np
 import networkx as nx
+from simplification.cutil import simplify_coords, simplify_coords_vw, simplify_coords_vwp
 
 point_type = tuple[int | float, int | float]
 line_type = tuple[point_type, point_type]
@@ -236,3 +237,97 @@ class DerivedBoundaries(object):
             raise ValueError("Image not available for these boundaries.")
         return self._image_from_points(self.points)
 
+
+def order_boundary_lines(boundary_lines : list[line_type]) -> list[list[line_type]]:
+    """Sort a list of lines into ordered connected sections"""
+    
+    def connect_edge(edge: line_type, direction: int):
+        if direction > 1 or direction < 0:
+            connect_edge(edge, 0)
+            connect_edge(edge, 1)
+            return
+
+        # find connecting verticies
+        new_edge_generator = (
+            idx for idx, new_edge in enumerate(boundary_lines) 
+            if new_edge[0] == edge[direction] or new_edge[1] == edge[direction]
+        )
+        # grab the first matching edge
+        try:
+            idx = next(new_edge_generator)
+        except StopIteration:
+            # end of line
+            return
+
+        new_edge = boundary_lines.pop(idx)
+        # switch round edge if in wrong direction
+        if (new_edge[0] == edge[direction]) ^ bool(direction):
+            new_edge = (new_edge[1], new_edge[0])
+
+        # add to ordered list
+        if direction == 1:
+            ordered_line.append(new_edge)
+        else:
+            ordered_line.insert(0, new_edge)
+
+        # continue along the edge
+        connect_edge(new_edge, direction)
+
+        for idx in new_edge_generator:
+            print("found branching point. this is new")
+    
+    boundary_lines = copy(boundary_lines)
+    ordered_lines = []
+    while boundary_lines:
+        ordered_line = [boundary_lines.pop(0)]
+        connect_edge(ordered_line[0], 2)
+        ordered_lines.append(ordered_line)
+
+    return ordered_lines
+
+def simplify_boundary_line(
+    ordered_boundary_line : list[line_type], 
+    point_type: Literal["centre", "vertex"] = "centre", 
+    tol: float = 10., 
+    method: Literal["simple", "vw", "vwp"] = "vwp"
+) -> list[line_type]:
+    if point_type == "vertex":
+        boundary_points = [edge[0] for edge in ordered_boundary_line]
+        boundary_points.append(ordered_boundary_line[-1][1])
+    else:
+        boundary_points = [
+            ((edge[0][0] + edge[1][0]) / 2, (edge[0][1] + edge[1][1]) / 2) 
+            for edge in ordered_boundary_line[1:-1]
+        ]
+        boundary_points.insert(0, ordered_boundary_line[0][0])
+        boundary_points.append(ordered_boundary_line[-1][1])
+
+    simplify = {
+        "vw": simplify_coords_vw,
+        "vwp": simplify_coords_vwp,
+    }.get(method, simplify_coords)
+    simple_points = simplify(np.ascontiguousarray(boundary_points), tol)
+    return [(tuple(p1.tolist()), tuple(p2.tolist())) 
+            for p1, p2 in zip(simple_points[:-1], simple_points[1:])]
+
+def simpify_boundaries(grain_graph, point_type="centre", tol=10., method="vwp"):
+    boundary_graph = nx.Graph()
+    boundary_lines = []
+
+    for _, _, bseg in grain_graph.edges.data('boundary'):
+        for line in order_boundary_lines(bseg.boundary_lines):
+            line_simple = simplify_boundary_line(
+                line, point_type=point_type, tol=tol, method=method
+            )
+            for line_seg in line_simple:
+                # Some lines end up the same if a grain with < 3 neighbours 
+                # collapses to a single line
+                try:
+                    boundary_graph[line_seg[0]][line_seg[1]]["boundary"]
+                    print(f"edge {line_seg[0]}, {line_seg[1]} already exists")
+                except KeyError:
+                    pass
+                boundary_graph.add_edge(*line_seg, boundary=bseg)
+                boundary_lines.append(line_seg)
+
+    return boundary_graph, boundary_lines
