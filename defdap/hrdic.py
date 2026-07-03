@@ -31,12 +31,11 @@ from defdap._accelerated import flood_fill_dic
 from defdap.utils import Datastore
 from defdap.file_readers import DICDataLoader, DavisLoader
 from defdap import base
-
 from defdap import defaults, MapType
-from defdap.plotting import MapPlot, GrainPlot
 from defdap.inspector import GrainInspector
 from defdap.utils import report_progress
 from defdap.ebsd import Map as ebsd_Map
+from defdap.boundaries import DerivedBoundaries
 
 
 class Map(base.Map):
@@ -415,8 +414,8 @@ class Map(base.Map):
         )
         self.data.add_derivative(
             self.ebsd_map.data,
-            lambda boundaries: BoundarySet.from_ebsd_boundaries(
-                self, boundaries
+            lambda boundaries: DerivedBoundaries.from_warped_boundaries(
+                boundaries, self
             ),
             in_props={
                 'type': 'boundaries'
