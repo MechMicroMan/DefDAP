@@ -22,7 +22,7 @@ __all__ = [
     'create_l_matrix', 
     'create_q_matrix', 
     'convert_idc', 
-    'equavlent_indicies', 
+    'equivalent_indices', 
     'project_to_orth', 
     'pos_idc', 
     'reduce_idc', 
@@ -171,7 +171,7 @@ def convert_idc(in_type, *, dir=None, plane=None):
     return tuple(out)
 
 
-def equavlent_indicies(
+def equivalent_indices(
     crystal_symm,
     symmetries,
     *, 

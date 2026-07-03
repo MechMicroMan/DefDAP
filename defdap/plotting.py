@@ -30,7 +30,7 @@ from skimage import morphology as mph
 
 from defdap import defaults
 from defdap import quat
-from defdap.crystal_utils import project_to_orth, equavlent_indicies, idc_to_string
+from defdap.crystal_utils import project_to_orth, equivalent_indices, idc_to_string
 
 # TODO: add plot parameter to add to current figure
 
@@ -1127,7 +1127,7 @@ class PolePlot(Plot):
             if label is None:
                 labels = map(
                     partial(idc_to_string, str_type='tex'), 
-                    equavlent_indicies(
+                    equivalent_indices(
                         self.crystal_sym, 
                         quat.Quat.sym_eqv(self.crystal_sym), 
                         dir=point_idc, 
