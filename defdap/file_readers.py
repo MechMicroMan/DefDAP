@@ -19,6 +19,7 @@ import pandas as pd
 from abc import ABC, abstractmethod
 import pathlib
 import re
+import h5py
 
 from typing import TextIO, Dict, List, Callable, Any, Type, Optional
 
@@ -61,6 +62,7 @@ class EBSDDataLoader(ABC):
             data_type = {
                 '.crc': 'oxfordbinary',
                 '.cpr': 'oxfordbinary',
+                '.h5oina': 'oxfordh5',
                 '.ctf': 'oxfordtext',
                 '.ang': 'edaxang',
             }.get(file_name.suffix, 'oxfordbinary')
@@ -70,6 +72,7 @@ class EBSDDataLoader(ABC):
             loader = {
                 'oxfordbinary': OxfordBinaryLoader,
                 'oxfordtext': OxfordTextLoader,
+                'oxfordh5': Oxfordh5Loader,
                 'edaxang': EdaxAngLoader,
                 'pythondict': PythonDictLoader,
             }[data_type]
@@ -233,6 +236,91 @@ class OxfordTextLoader(EBSDDataLoader):
 
         self.check_data()
 
+
+class Oxfordh5Loader(EBSDDataLoader):
+    def load(self, file_name: pathlib.Path) -> None:
+        """Read an Oxford Instruments ``.h5oina`` orientation file.
+
+        Parameters
+        ----------
+        file_name : pathlib.Path
+            Path to file.
+
+        """
+        # open data file and read in metadata
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
+
+        file = h5py.File(file_name)
+
+        header = file['1']['EBSD']['Header']
+        data = file['1']['EBSD']['Data']
+
+        x_dim = int(header['X Cells'][0])
+        y_dim = int(header['Y Cells'][0])
+        shape = (y_dim, x_dim)
+        self.loaded_metadata['shape'] = shape
+
+        self.loaded_metadata['step_size'] = float(header['X Step'][0])
+
+        ## Check this is acquisition orientataion from ctf
+        self.loaded_metadata['acquisition_rotation'] = Quat.from_euler_angles(*header['Specimen Orientation Euler'][0])
+
+        for phase_data in header['Phases'].values():
+
+            phase = Phase(
+                    phase_data['Phase Name'][0].decode(),
+                    phase_data['Laue Group'][0],
+                    phase_data['Space Group'][0],
+                    np.concatenate([
+                        phase_data['Lattice Dimensions'][0],
+                        phase_data['Lattice Angles'][0]
+                    ]))
+
+            self.loaded_metadata['phases'].append(phase)
+            
+        self.check_metadata()
+
+        # Data also available: Bands, Detector Distance, Error, Pattern Center X, Pattern Center Y
+
+        self.loaded_data.add(
+            'band_contrast', np.array(data['Band Contrast']).reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'cmap': 'gray',
+                'clabel': 'Band contrast',
+            }
+        )
+        self.loaded_data.add(
+            'band_slope', np.array(data['Band Slope']).reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'cmap': 'gray',
+                'clabel': 'Band slope',
+            }
+        )
+        self.loaded_data.add(
+            'mean_angular_deviation', np.array(data['Mean Angular Deviation']).reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Mean angular deviation',
+            }
+        )
+        self.loaded_data.add(
+            'pattern_quality', np.array(data['Pattern Quality']).reshape(shape),
+            unit='', type='map', order=0,
+            plot_params={
+                'plot_colour_bar': True,
+                'clabel': 'Pattern quality',
+            }
+        )
+        self.loaded_data.phase = np.array(data['Phase']).reshape(shape)
+        self.loaded_data.euler_angle = data['Euler'][:].reshape(shape + (3,)).transpose((2, 0, 1))
+
+        self.check_data()
 
 class EdaxAngLoader(EBSDDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
