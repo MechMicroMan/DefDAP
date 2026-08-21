@@ -929,7 +929,8 @@ class Map(base.Map):
 
         generator = base.grains_image_flood_fill(
             grains, points_left, flood_fill, 
-            flood_fill_args=(boundary_im_x, boundary_im_y)
+            flood_fill_args=(boundary_im_x, boundary_im_y),
+            min_grain_size=min_grain_size
         )
         try:
             while True:
