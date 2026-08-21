@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-from numpy.lib.recfunctions import structured_to_unstructured
-import pandas as pd
 from abc import ABC, abstractmethod
 import pathlib
 import re
-import h5py
-
 from typing import TextIO, Dict, List, Callable, Any, Type, Optional
+
+import h5py
+import numpy as np
+from numpy.lib.recfunctions import structured_to_unstructured
+import pandas as pd
 
 from defdap.crystal import Phase
 from defdap.quat import Quat
@@ -57,7 +57,9 @@ class EBSDDataLoader(ABC):
         self.data_format = None
 
     @staticmethod
-    def get_loader(data_type: str, file_name: pathlib.Path) -> 'Type[EBSDDataLoader]':
+    def get_loader(
+        data_type: str, file_name: pathlib.Path
+    ) -> 'Type[EBSDDataLoader]':
         if data_type is None:
             data_type = {
                 '.crc': 'oxfordbinary',
@@ -256,18 +258,15 @@ class Oxfordh5Loader(EBSDDataLoader):
         header = file['1']['EBSD']['Header']
         data = file['1']['EBSD']['Data']
 
-        x_dim = int(header['X Cells'][0])
-        y_dim = int(header['Y Cells'][0])
-        shape = (y_dim, x_dim)
+        shape = (int(header['Y Cells'][0]), int(header['X Cells'][0]))
         self.loaded_metadata['shape'] = shape
-
         self.loaded_metadata['step_size'] = float(header['X Step'][0])
-
         ## Check this is acquisition orientataion from ctf
-        self.loaded_metadata['acquisition_rotation'] = Quat.from_euler_angles(*header['Specimen Orientation Euler'][0])
+        self.loaded_metadata['acquisition_rotation'] = Quat.from_euler_angles(
+            *header['Specimen Orientation Euler'][0]
+        )
 
         for phase_data in header['Phases'].values():
-
             phase = Phase(
                     phase_data['Phase Name'][0].decode(),
                     phase_data['Laue Group'][0],
@@ -276,13 +275,12 @@ class Oxfordh5Loader(EBSDDataLoader):
                         phase_data['Lattice Dimensions'][0],
                         phase_data['Lattice Angles'][0]
                     ]))
-
             self.loaded_metadata['phases'].append(phase)
-            
+
         self.check_metadata()
 
-        # Data also available: Bands, Detector Distance, Error, Pattern Center X, Pattern Center Y
-
+        # Data also available: Bands, Detector Distance, Error, Pattern Center 
+        # X, Pattern Center Y
         self.loaded_data.add(
             'band_contrast', np.array(data['Band Contrast']).reshape(shape),
             unit='', type='map', order=0,
@@ -302,7 +300,8 @@ class Oxfordh5Loader(EBSDDataLoader):
             }
         )
         self.loaded_data.add(
-            'mean_angular_deviation', np.array(data['Mean Angular Deviation']).reshape(shape),
+            'mean_angular_deviation', 
+            np.array(data['Mean Angular Deviation']).reshape(shape),
             unit='', type='map', order=0,
             plot_params={
                 'plot_colour_bar': True,
@@ -310,7 +309,8 @@ class Oxfordh5Loader(EBSDDataLoader):
             }
         )
         self.loaded_data.add(
-            'pattern_quality', np.array(data['Pattern Quality']).reshape(shape),
+            'pattern_quality', 
+            np.array(data['Pattern Quality']).reshape(shape),
             unit='', type='map', order=0,
             plot_params={
                 'plot_colour_bar': True,
@@ -318,9 +318,12 @@ class Oxfordh5Loader(EBSDDataLoader):
             }
         )
         self.loaded_data.phase = np.array(data['Phase']).reshape(shape)
-        self.loaded_data.euler_angle = data['Euler'][:].reshape(shape + (3,)).transpose((2, 0, 1))
+        self.loaded_data.euler_angle = (
+            data['Euler'][:].reshape(shape + (3,)).transpose((2, 0, 1))
+        )
 
         self.check_data()
+
 
 class EdaxAngLoader(EBSDDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
@@ -415,7 +418,9 @@ class EdaxAngLoader(EBSDDataLoader):
         )
         add_phase = 1 if data['phase'].min() == 0 else 0
         self.loaded_data.phase = data['phase'].reshape(shape) + add_phase
-        self.loaded_data['phase', 'plot_params']['vmax'] = len(self.loaded_metadata['phases'])
+        self.loaded_data['phase', 'plot_params']['vmax'] = len(
+            self.loaded_metadata['phases']
+        )
 
         # flatten the structured dtype
         euler_angle = structured_to_unstructured(
@@ -512,8 +517,10 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
                 group_name = group_pat.match(line.strip()).group(1)
                 group_dict = dict()
-                read_until_string(cpr_file, '[', comment_char=comment_char,
-                                  line_process=lambda l: parse_line(l, group_dict))
+                read_until_string(
+                    cpr_file, '[', comment_char=comment_char,
+                    line_process=lambda l: parse_line(l, group_dict)
+                )
                 metadata[group_name] = group_dict
 
         # Create phase objects and move metadata to object metadata dict
@@ -637,7 +644,8 @@ class OxfordBinaryLoader(EBSDDataLoader):
             data[['ph1', 'phi', 'ph2']].reshape(shape)).transpose((2, 0, 1))
 
         if self.loaded_metadata['edx']['Count'] > 0:
-            EDXFields = [key for key in data.dtype.fields.keys() if key.startswith('EDX')]
+            EDXFields = [key for key in data.dtype.fields.keys() 
+                         if key.startswith('EDX')]
             for field in EDXFields:
                 self.loaded_data.add(
                     field,
@@ -678,7 +686,9 @@ class PythonDictLoader(EBSDDataLoader):
             unit='', type='map', order=0
         )
         self.loaded_data.phase = data_dict['phase']
-        self.loaded_data['phase', 'plot_params']['vmax'] = len(self.loaded_metadata['phases'])
+        self.loaded_data['phase', 'plot_params']['vmax'] = len(
+            self.loaded_metadata['phases']
+        )
         self.loaded_data.euler_angle = data_dict['euler_angle']
         self.check_data()
 
@@ -907,8 +917,12 @@ class OpenPivBinaryLoader(DICDataLoader):
         
         # if y descending, flip
         if np.all(np.diff(data['y'][:,0])) > 0:
-            self.loaded_data.coordinate = np.array([data['x'][::-1], data['y'][::-1]])
-            self.loaded_data.displacement = np.array([data['u'][::-1], data['v'][::-1]])
+            self.loaded_data.coordinate = np.array(
+                [data['x'][::-1], data['y'][::-1]]
+            )
+            self.loaded_data.displacement = np.array(
+                [data['u'][::-1], data['v'][::-1]]
+            )
         else:
             self.loaded_data.coordinate = np.array([data['x'], data['y']])
             self.loaded_data.displacement = np.array([data['u'], data['v']])
