@@ -21,6 +21,8 @@ import numpy as np
 import networkx as nx
 from simplification.cutil import simplify_coords, simplify_coords_vw, simplify_coords_vwp
 
+from shapely import box, linestrings
+
 point_type = tuple[int | float, int | float]
 line_type = tuple[point_type, point_type]
 
@@ -221,22 +223,72 @@ class DerivedBoundaries(Boundaries):
 
     @classmethod
     def from_warped_boundaries(cls, boundaries, other_map):
-        if len(boundaries.points) == 0:
-            return cls(other_map, points=[], lines=[])
-        assert other_map.ebsd_map == boundaries.owner_map
+        # Should this input frame +output_shape instead?
+        """Create boundaries by warping boundaries to another maps frame.
 
-        points = boundaries.owner_map.frame.warp_points_img(
-            other_map.frame, boundaries.image.astype(float),
-            output_shape=other_map.shape
-        )
+        Parameters
+        ----------
+        boundaries : Boundaries
+            Source boundaries
+        other_map : defdap.base.Map
+            Map to warp into frame of
+
+        Returns
+        -------
+        DerivedBoundaries
+            Warped boundaries
+
+        """
+        # if len(boundaries.points) == 0:
+        #     return cls(other_map, points=[], lines=[])
+        # assert other_map.ebsd_map == boundaries.owner_map
+        points = None
+        try:
+            points = boundaries.owner_map.frame.warp_points_img(
+                other_map.frame, boundaries.image.astype(float),
+                output_shape=other_map.shape
+            )
+        except ValueError:
+            pass
         lines = boundaries.owner_map.frame.warp_lines(
-             other_map.frame, boundaries.lines
+            other_map.frame, boundaries.lines, round=False
         )
+
+        # remove lines outside of map
+        lines = np.array(lines)
+        point_in_box = (lines >= -0.5) & (lines <= np.array(other_map.shape[::-1])-0.5)
+        point_in_box = point_in_box[:, :, 0] & point_in_box[:, :, 1]
+        line_in_box = point_in_box[:, 0] | point_in_box[:, 1]
+        line_on_edge = np.logical_xor(
+            point_in_box[line_in_box, 0], point_in_box[line_in_box, 1]
+        )
+        lines = lines[line_in_box]
+
+        # clip lines passing over box edges
+        bbox = box(-0.5, -0.5, other_map.shape[1]-0.5, other_map.shape[0]-0.5)
+        clipped_edge_lines = (
+            ls.intersection(bbox) for ls in linestrings(lines[line_on_edge])
+        )
+        clipped_edge_lines = np.array([
+            tuple(ls.coords) 
+            for ls in clipped_edge_lines 
+            if not ls.is_empty and len(ls.coords) > 1
+        ])
+
+        lines = np.concatenate(
+            (lines[np.logical_not(line_on_edge)], clipped_edge_lines), axis=0
+        )
+        # convert back to list of nested tuples
+        lines = [(tuple(line[0]), tuple(line[1])) for line in lines]
+
+        ##TODO: rounding here used to be correct, does rounding not cause issues 
+        # with any of the old grain finding?
+        ##TODO: transform graph if set, or create from lines?
         return cls(other_map, points=points, lines=lines)
     
     @classmethod
     def from_simplified_boundaries(cls, ebsd_map, **kwargs):
-        graph, lines = simpify_boundaries(
+        graph, lines = simplify_boundaries(
             ebsd_map.neighbour_network, **kwargs
         )
         return cls(ebsd_map, lines=lines, graph=graph)
@@ -265,7 +317,7 @@ def order_boundary_lines(boundary_lines : list[line_type]) -> list[list[line_typ
             connect_edge(edge, 1)
             return
 
-        # find connecting verticies
+        # find connecting vertices
         new_edge_generator = (
             idx for idx, new_edge in enumerate(boundary_lines) 
             if new_edge[0] == edge[direction] or new_edge[1] == edge[direction]
@@ -328,7 +380,7 @@ def simplify_boundary_line(
     return [(tuple(p1.tolist()), tuple(p2.tolist())) 
             for p1, p2 in zip(simple_points[:-1], simple_points[1:])]
 
-def simpify_boundaries(grain_graph, point_type="centre", tol=10., method="vwp"):
+def simplify_boundaries(grain_graph, point_type="centre", tol=10., method="vwp"):
     boundary_graph = nx.Graph()
     boundary_lines = []
 
