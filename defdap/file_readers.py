@@ -19,6 +19,7 @@ import re
 from typing import TextIO, Dict, List, Callable, Any, Type, Optional
 
 import h5py
+from isort import file
 import numpy as np
 from numpy.lib.recfunctions import structured_to_unstructured
 import pandas as pd
@@ -240,33 +241,50 @@ class OxfordTextLoader(EBSDDataLoader):
 
 
 class Oxfordh5Loader(EBSDDataLoader):
-    def load(self, file_name: pathlib.Path) -> None:
+    def load(self, file_name: pathlib.Path, dataset = None) -> None:
         """Read an Oxford Instruments ``.h5oina`` orientation file.
 
         Parameters
         ----------
         file_name : pathlib.Path
             Path to file.
+        dataset : str (raw or processed), optional
+            Dataset to load. If None, defaults to raw data.
 
         """
-        # open data file and read in metadata
+        # Open data file and read in metadata
         if not file_name.is_file():
             raise FileNotFoundError(f"Cannot open file {file_name}")
 
         file = h5py.File(file_name)
 
-        header = file['1']['EBSD']['Header']
-        data = file['1']['EBSD']['Data']
-
-        shape = (int(header['Y Cells'][0]), int(header['X Cells'][0]))
+        # This header contains all the information in the map that does not change with processing
+        raw_header = file['1']['EBSD']['Header']
+        shape = (int(raw_header['Y Cells'][0]), int(raw_header['X Cells'][0]))
         self.loaded_metadata['shape'] = shape
-        self.loaded_metadata['step_size'] = float(header['X Step'][0])
-        ## Check this is acquisition orientataion from ctf
+        self.loaded_metadata['step_size'] = float(raw_header['X Step'][0])
         self.loaded_metadata['acquisition_rotation'] = Quat.from_euler_angles(
-            *header['Specimen Orientation Euler'][0]
+            *raw_header['Specimen Orientation Euler'][0]
         )
 
-        for phase_data in header['Phases'].values():
+        # Check if `Data Processing` dataset exists in the h5
+        if 'Data' in file['1']['Data Processing'] and dataset is None:
+            print('\n\t' + 'Multiple datasets in h5 file, defaulting to raw data.')
+            print('\tProcessed data can be accessed by passing `processed` to the `dataset` argument.')
+
+        # Handle `raw` or `processed` selection
+        if dataset is None or dataset is 'raw':
+            root = file['1']['EBSD']
+        if dataset is 'processed':
+            if 'Data Processing' not in file['1']:
+                raise ValueError('No processed data in h5 file.')
+            elif 'Data' not in file['1']['Data Processing']:
+                raise ValueError('No processed data in h5 file.')
+            else:
+                root = file['1']['Data Processing']
+
+        # Phase data from relevant dataset
+        for phase_data in root['Header']['Phases'].values():
             phase = Phase(
                     phase_data['Phase Name'][0].decode(),
                     phase_data['Laue Group'][0],
@@ -279,47 +297,61 @@ class Oxfordh5Loader(EBSDDataLoader):
 
         self.check_metadata()
 
-        # Data also available: Bands, Detector Distance, Error, Pattern Center 
-        # X, Pattern Center Y
-        self.loaded_data.add(
-            'band_contrast', np.array(data['Band Contrast']).reshape(shape),
-            unit='', type='map', order=0,
-            plot_params={
-                'plot_colour_bar': True,
-                'cmap': 'gray',
-                'clabel': 'Band contrast',
-            }
-        )
-        self.loaded_data.add(
-            'band_slope', np.array(data['Band Slope']).reshape(shape),
-            unit='', type='map', order=0,
-            plot_params={
-                'plot_colour_bar': True,
-                'cmap': 'gray',
-                'clabel': 'Band slope',
-            }
-        )
-        self.loaded_data.add(
-            'mean_angular_deviation', 
-            np.array(data['Mean Angular Deviation']).reshape(shape),
-            unit='', type='map', order=0,
-            plot_params={
-                'plot_colour_bar': True,
-                'clabel': 'Mean angular deviation',
-            }
-        )
-        self.loaded_data.add(
+        # Some data is only avaiable and relevant for the raw data, for example band contrast
+        if dataset is 'raw':
+            self.loaded_data.add(
+                'band_contrast', np.array(root['Data']['Band Contrast']).reshape(shape),
+                unit='', type='map', order=0,
+                plot_params={
+                    'plot_colour_bar': True,
+                    'cmap': 'gray',
+                    'clabel': 'Band contrast',
+                }
+            )
+            self.loaded_data.add(
+                'band_slope', np.array(root['Data']['Band Slope']).reshape(shape),
+                unit='', type='map', order=0,
+                plot_params={
+                    'plot_colour_bar': True,
+                    'cmap': 'gray',
+                    'clabel': 'Band slope',
+                }
+            )
+            self.loaded_data.add(
+                'mean_angular_deviation', 
+                np.array(root['Data']['Mean Angular Deviation']).reshape(shape),
+                unit='', type='map', order=0,
+                plot_params={
+                    'plot_colour_bar': True,
+                    'clabel': 'Mean angular deviation',
+                }
+            )
+            self.loaded_data.add(
+                'pattern_quality', 
+                np.array(root['Data']['Pattern Quality']).reshape(shape),
+                unit='', type='map', order=0,
+                plot_params={
+                    'plot_colour_bar': True,
+                    'clabel': 'Pattern quality',
+                }
+            )
+
+        # If pattern matching is performed, the cross correlation coefficient is useful
+        if dataset is 'processed' and 'Pattern Matching' in root:
+            self.loaded_data.add(
             'pattern_quality', 
-            np.array(data['Pattern Quality']).reshape(shape),
+            np.array(root['Pattern Matching']['Data']['Cross Correlation Coefficient']).reshape(shape),
             unit='', type='map', order=0,
             plot_params={
                 'plot_colour_bar': True,
-                'clabel': 'Pattern quality',
+                'clabel': 'Cross Correlation Coefficient',
             }
         )
-        self.loaded_data.phase = np.array(data['Phase']).reshape(shape)
+
+        # Get Euler angles from relevant dataset
+        self.loaded_data.phase = np.array(root['Data']['Phase']).reshape(shape)
         self.loaded_data.euler_angle = (
-            data['Euler'][:].reshape(shape + (3,)).transpose((2, 0, 1))
+            root['Data']['Euler'][:].reshape(shape + (3,)).transpose((2, 0, 1))
         )
 
         self.check_data()
