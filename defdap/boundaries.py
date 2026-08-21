@@ -131,11 +131,11 @@ class Boundaries(ABC):
 
     @property
     def image(self):
-        raise NotImplementedError("Image not available for these boundaries.")
+        raise ValueError("Image not available for these boundaries.")
     
     @property
     def lines(self):
-        raise NotImplementedError("Lines not available for these boundaries.")
+        raise ValueError("Lines not available for these boundaries.")
 
 
 class EbsdBoundaries(Boundaries):
@@ -186,36 +186,31 @@ class EbsdBoundaries(Boundaries):
         )[2]
 
     @staticmethod
-    def boundary_points_to_lines(*, boundary_points_x=None,
-                                 boundary_points_y=None):
-        boundary_data = {}
-        if boundary_points_x is not None:
-            boundary_data['x'] = boundary_points_x
-        if boundary_points_y is not None:
-            boundary_data['y'] = boundary_points_y
-        if not boundary_data:
+    def boundary_points_to_lines(
+        *, boundary_points_x=None, boundary_points_y=None
+    ):
+        if boundary_points_x is None and boundary_points_y is None:
             raise ValueError("No boundaries provided.")
 
-        deltas = {
-            'x': (0.5, -0.5, 0.5, 0.5),
-            'y': (-0.5, 0.5, 0.5, 0.5)
-        }
         all_lines = []
-        for mode, points in boundary_data.items():
-            lines = []
-            for i, j in points:
-                lines.append((
-                    (i + deltas[mode][0], j + deltas[mode][1]),
-                    (i + deltas[mode][2], j + deltas[mode][3])
-                ))
+        for points, delta in (
+            (boundary_points_x, np.array([0.5, -0.5, 0.5, 0.5])), 
+            (boundary_points_y, np.array([-0.5, 0.5, 0.5, 0.5])),
+        ):
+            if points is None:
+                continue
+            points = np.array(list(points))
+            lines = np.concatenate(
+                (points + delta[:2], points + delta[2:]), axis=1
+            ).reshape(-1, 2, 2)
             all_lines.append(lines)
 
         if len(all_lines) == 2:
-            all_lines.append(all_lines[0] + all_lines[1])
+            all_lines.append(np.concatenate(all_lines, axis=0))
             return tuple(all_lines)
         else:
             return all_lines[0]
-        
+
 
 class DerivedBoundaries(Boundaries):
     def __init__(self, owner_map, points=None, lines=None, graph=None):
