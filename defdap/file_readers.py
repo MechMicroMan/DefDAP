@@ -257,7 +257,8 @@ class Oxfordh5Loader(EBSDDataLoader):
 
         file = h5py.File(file_name)
 
-        # This header contains all the information in the map that does not change with processing
+        # This header contains all the information in the map that does not 
+        # change with processing
         raw_header = file['1']['EBSD']['Header']
         shape = (int(raw_header['Y Cells'][0]), int(raw_header['X Cells'][0]))
         self.loaded_metadata['shape'] = shape
@@ -268,19 +269,21 @@ class Oxfordh5Loader(EBSDDataLoader):
 
         # Check if `Data Processing` dataset exists in the h5
         if 'Data' in file['1']['Data Processing'] and dataset is None:
-            print('\n\t' + 'Multiple datasets in h5 file, defaulting to raw data.')
-            print('\tProcessed data can be accessed by passing `processed` to the `dataset` argument.')
+            print('\n\tMultiple datasets in h5 file, defaulting to raw data.')
+            print(
+                '\tProcessed data can be accessed by passing `processed` to '
+                'the `dataset` argument.'
+            )
 
         # Handle `raw` or `processed` selection
-        if dataset is None or dataset is 'raw':
+        if dataset is None or dataset == 'raw':
             root = file['1']['EBSD']
-        if dataset is 'processed':
+        if dataset == 'processed':
             if 'Data Processing' not in file['1']:
                 raise ValueError('No processed data in h5 file.')
-            elif 'Data' not in file['1']['Data Processing']:
+            if 'Data' not in file['1']['Data Processing']:
                 raise ValueError('No processed data in h5 file.')
-            else:
-                root = file['1']['Data Processing']
+            root = file['1']['Data Processing']
 
         # Phase data from relevant dataset
         for phase_data in root['Header']['Phases'].values():
@@ -296,10 +299,13 @@ class Oxfordh5Loader(EBSDDataLoader):
 
         self.check_metadata()
 
-        # Some data is only avaiable and relevant for the raw data, for example band contrast
-        if dataset is 'raw':
+        # Some data is only available and relevant for the raw data, for 
+        # example band contrast
+        if dataset == 'raw':
+            raw_data = root['Data']
             self.loaded_data.add(
-                'band_contrast', np.array(root['Data']['Band Contrast']).reshape(shape),
+                'band_contrast', 
+                np.array(raw_data['Band Contrast']).reshape(shape),
                 unit='', type='map', order=0,
                 plot_params={
                     'plot_colour_bar': True,
@@ -308,7 +314,8 @@ class Oxfordh5Loader(EBSDDataLoader):
                 }
             )
             self.loaded_data.add(
-                'band_slope', np.array(root['Data']['Band Slope']).reshape(shape),
+                'band_slope', 
+                np.array(raw_data['Band Slope']).reshape(shape),
                 unit='', type='map', order=0,
                 plot_params={
                     'plot_colour_bar': True,
@@ -318,7 +325,7 @@ class Oxfordh5Loader(EBSDDataLoader):
             )
             self.loaded_data.add(
                 'mean_angular_deviation', 
-                np.array(root['Data']['Mean Angular Deviation']).reshape(shape),
+                np.array(raw_data['Mean Angular Deviation']).reshape(shape),
                 unit='', type='map', order=0,
                 plot_params={
                     'plot_colour_bar': True,
@@ -327,7 +334,7 @@ class Oxfordh5Loader(EBSDDataLoader):
             )
             self.loaded_data.add(
                 'pattern_quality', 
-                np.array(root['Data']['Pattern Quality']).reshape(shape),
+                np.array(raw_data['Pattern Quality']).reshape(shape),
                 unit='', type='map', order=0,
                 plot_params={
                     'plot_colour_bar': True,
@@ -335,17 +342,21 @@ class Oxfordh5Loader(EBSDDataLoader):
                 }
             )
 
-        # If pattern matching is performed, the cross correlation coefficient is useful
-        if dataset is 'processed' and 'Pattern Matching' in root:
+        # If pattern matching is performed, the cross correlation coefficient 
+        # is useful
+        if dataset == 'processed' and 'Pattern Matching' in root:
+            pattern_data = root['Pattern Matching']['Data']
             self.loaded_data.add(
-            'pattern_quality', 
-            np.array(root['Pattern Matching']['Data']['Cross Correlation Coefficient']).reshape(shape),
-            unit='', type='map', order=0,
-            plot_params={
-                'plot_colour_bar': True,
-                'clabel': 'Cross Correlation Coefficient',
-            }
-        )
+                'pattern_quality', 
+                np.array(
+                    pattern_data['Cross Correlation Coefficient']
+                ).reshape(shape),
+                unit='', type='map', order=0,
+                plot_params={
+                    'plot_colour_bar': True,
+                    'clabel': 'Cross Correlation Coefficient',
+                }
+            )
 
         # Get Euler angles from relevant dataset
         self.loaded_data.phase = np.array(root['Data']['Phase']).reshape(shape)
