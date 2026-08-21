@@ -19,7 +19,6 @@ import re
 from typing import TextIO, Dict, List, Callable, Any, Type, Optional
 
 import h5py
-from isort import file
 import numpy as np
 from numpy.lib.recfunctions import structured_to_unstructured
 import pandas as pd
