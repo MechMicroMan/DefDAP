@@ -414,7 +414,7 @@ class MapPlot(Plot):
         self.ax.add_artist(ScaleBar(scale * 1e-6))
 
     def add_grain_boundaries(self, kind="pixel", boundaries=None, colour=None,
-                             dilate=False, draw=True, **kwargs):
+                             dilate=False, draw=True, update_layer=None, **kwargs):
         """Add grain boundaries to the plot.
 
         Parameters
@@ -456,6 +456,7 @@ class MapPlot(Plot):
         if boundaries is None:
             boundaries = self.calling_map.data.grain_boundaries
 
+        # Line grain boundaries
         if kind == "line":
             if isinstance(colour, str):
                 colour = mpl.colors.to_rgba(colour)
@@ -471,28 +472,43 @@ class MapPlot(Plot):
 
             lc = LineCollection(boundaries.lines, colors=colour_lc, **kwargs)
             lc.set_array(colour_array)
-            img = self.ax.add_collection(lc)
 
-        else:
-            boundaries_image = boundaries.image.astype(int)
+            if update_layer is None:
+                self.ax.add_collection(lc)
+                self.img_layers.append(lc)
+            else:
+                self.img_layers[update_layer].remove()
+                self.ax.add_collection(lc)
+                self.img_layers[update_layer] = lc
 
-            if dilate:
-                boundaries_image = mph.binary_dilation(boundaries_image)
+            if draw:
+                self.draw()
+            return lc
 
-            # create colourmap for boundaries going from transparent to
-            # opaque of the given colour
-            boundaries_cmap = mpl.colors.LinearSegmentedColormap.from_list(
-                'my_cmap', ['white', colour], 256
+        # Image grain boundaries
+        if update_layer is not None:
+            raise NotImplementedError(
+                "Updating boundary image layer not available."
             )
-            boundaries_cmap._init()
-            boundaries_cmap._lut[:, -1] = np.linspace(0, 1, boundaries_cmap.N + 3)
+        boundaries_image = boundaries.image.astype(int)
 
-            img = self.ax.imshow(boundaries_image, cmap=boundaries_cmap,
-                                 interpolation='None', vmin=0, vmax=1)
+        if dilate:
+            boundaries_image = mph.binary_dilation(boundaries_image)
+
+        # create colourmap for boundaries going from transparent to
+        # opaque of the given colour
+        boundaries_cmap = mpl.colors.LinearSegmentedColormap.from_list(
+            'my_cmap', ['white', colour], 256
+        )
+        boundaries_cmap._init()
+        boundaries_cmap._lut[:, -1] = np.linspace(0, 1, boundaries_cmap.N + 3)
+
+        img = self.ax.imshow(boundaries_image, cmap=boundaries_cmap,
+                                interpolation='None', vmin=0, vmax=1)
+        self.img_layers.append(img)
 
         if draw:
             self.draw()
-        self.img_layers.append(img)
         return img
 
     def add_grain_highlights(self, grain_ids, grain_colours=None, alpha=None,
