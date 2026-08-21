@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial
+
 import numpy as np
 from skimage import transform as tf
 from skimage import morphology as mph
@@ -127,9 +129,11 @@ class Frame(object):
             'transform_props': kwargs,
             'points_names': points_names,
         }
-        if self.experiment.frame_relations.has_edge(self, other):
-            if edge_props != self.experiment.frame_relations[self][other]:
-                print("Overwriting transform")
+        if (
+            self.experiment.frame_relations.has_edge(self, other)
+            and edge_props != self.experiment.frame_relations[self][other]
+        ):
+            print("Overwriting transform")
         self.experiment.frame_relations.add_edge(self, other, **edge_props)
 
     def get_frame_transform(self, other):
@@ -152,9 +156,14 @@ class Frame(object):
         frames = (self, other)
         if frame_relation['start'] is not self:
             points_names = points_names[::-1]
+        homog_points_0 = np.array(frames[0].homog_points[points_names[0]])
+        homog_points_1 = np.array(frames[1].homog_points[points_names[1]])
+        # Only use number of points that exist in both
+        n_points = min(len(homog_points_0),len(homog_points_1))
+        homog_points_0 = homog_points_0[:n_points]
+        homog_points_1 = homog_points_1[:n_points]
         transform.estimate(
-            np.array(frames[0].homog_points[points_names[0]]),
-            np.array(frames[1].homog_points[points_names[1]]),
+            homog_points_0, homog_points_1,
             **{k: v for k, v in transform_props.items() if k != 'type'}
         )
         return transform
@@ -312,10 +321,73 @@ class Frame(object):
 
         Parameters
         ----------
+        points_name : str
+            Name of the set of homog points in the frame
         points : numpy.ndarray, optional
-            Array of (x,y) homologous points to set explicitly.
+            Array of (x, y) homologous points to set explicitly.
+    
         """
         self.homog_points[points_name] = points
+
+    def add_homog_point(self, points_name, point):
+        """Add a single homog point to the frame
+
+        Parameters
+        ----------
+        points_name : str
+            Name of the set of homog points in the frame
+        point : tuple of int
+            homog point to add
+        """
+        homog_points = self.homog_points.get(points_name, [])
+        homog_points.append(point)
+        self.homog_points[points_name] = homog_points
+
+    def update_homog_points(
+        self, points_name, homog_idx, new_point=None, delta=None
+    ):
+        """
+        Update a homog point by either over writing it with a new point or
+        incrementing the current values.
+
+        Parameters
+        ----------
+        points_name : str
+            Name of the set of homog points in the frame
+        homog_idx : int
+            ID (place in list) of point to update or -1 for all.
+        new_point : tuple, optional
+            (x, y) coordinates of new point.
+        delta : tuple, optional
+            Increments to current point (dx, dy).
+
+        """
+        homog_points = self.homog_points.get(points_name, [])
+
+        if type(homog_idx) is not int:
+            raise ValueError("`homog_idx` must be an integer.")
+        if homog_idx >= len(homog_points):
+            raise ValueError("`homog_idx` is out of range.")
+
+        # Update all points
+        if homog_idx < 0:
+            for i in range(len(homog_points)):
+                self.update_homog_points(points_name, i, delta=delta)
+            return
+
+        # Update a single point
+        # overwrite point
+        if new_point is not None:
+            if type(new_point) is not tuple and len(new_point) != 2:
+                raise ValueError("`new_point` must be a 2 component tuple")
+        # increment current point
+        elif delta is not None:
+            if type(delta) is not tuple and len(delta) != 2:
+                raise ValueError("`delta` must be a 2 component tuple")
+            new_point = tuple(x+d for x, d in zip(homog_points[homog_idx], delta))
+
+        homog_points[homog_idx] = new_point
+        self.homog_points[points_name] = homog_points
 
     def set_homog_point(self, map_obj, points_name=None, map_name=None, **kwargs):
         """
@@ -326,17 +398,19 @@ class Frame(object):
         ----------
         map_name : str, optional
             Map data to plot for selecting points.
-        points : numpy.ndarray, optional
-            Array of (x,y) homologous points to set explicitly.
+        points_name : str
+            Name of the set of homog points in the frame
+        map_name : str, optional
+            Name of the map data to plot
         kwargs : dict, optional
-            Keyword arguments passed to :func:`defdap.base.Map.plotHomog`
+            Keyword arguments passed to :func:`defdap.base.Map.plot_map`
 
         """
         if map_name is None:
             map_name = map_obj.homog_map_name
 
         if points_name is None:
-            points_name = map_obj.name
+            points_name = map_obj.map_name
 
         binning = map_obj.data.get_metadata(map_name, 'binning', 1)
         plot = map_obj.plot_map(map_name, make_interactive=True, **kwargs)
@@ -362,7 +436,7 @@ class Frame(object):
         return plot
 
     @staticmethod
-    def homog_click(event, plot):
+    def homog_click(event, plot, new_point_layer=1):
         """Event handler for capturing position when clicking on a map.
 
         Parameters
@@ -371,6 +445,8 @@ class Frame(object):
             Click event.
         plot : defdap.plotting.MapPlot
             Plot to monitor.
+        new_point_layer : int, optional
+            Layer in the plot used for displaying the trial point.
 
         """
         # check if click was on the map
@@ -380,10 +456,13 @@ class Frame(object):
         # right mouse click or shift + left mouse click
         # shift click doesn't work in osx backend
         if event.button == 3 or (event.button == 1 and event.key == 'shift'):
-            plot.add_points([int(event.xdata)], [int(event.ydata)], update_layer=1)
+            plot.add_points(
+                [int(event.xdata)], [int(event.ydata)], 
+                update_layer=new_point_layer
+            )
 
     @staticmethod
-    def homog_key(event, plot):
+    def homog_key(event, plot, new_point_layer=1):
         """Event handler for moving position using keyboard after clicking on
         a map.
 
@@ -393,6 +472,8 @@ class Frame(object):
             Keypress event.
         plot : defdap.plotting.MapPlot
             Plot to monitor.
+        new_point_layer : int, optional
+            Layer in the plot used for displaying the trial point.
 
         """
         arrow_keys = ['left', 'right', 'up', 'down']
@@ -402,7 +483,7 @@ class Frame(object):
             return
 
         # get the selected point
-        sel_point = plot.img_layers[plot.points_layer_ids[1]].get_offsets()[0]
+        sel_point = plot.img_layers[plot.points_layer_ids[new_point_layer]].get_offsets()[0]
         if sel_point[0] is None or sel_point[1] is None:
             return
 
@@ -416,10 +497,22 @@ class Frame(object):
         elif key == arrow_keys[3]:
             sel_point[1] += move
 
-        plot.add_points([sel_point[0]], [sel_point[1]], update_layer=1)
+        plot.add_points(
+            [sel_point[0]], [sel_point[1]], update_layer=new_point_layer
+        )
 
-    def homog_click_save(self, event, plot, points_name, binning):
-        """Append the selected point on the map to homogPoints.
+    def homog_click_save(
+        self, 
+        event, 
+        plot, 
+        points_name, 
+        binning, 
+        points_layer=0, 
+        new_point_layer=1,
+        point_set_transform=None,
+        point_plot_transform=None,
+    ):
+        """Append the selected point to the frames homog points.
 
         Parameters
         ----------
@@ -427,66 +520,176 @@ class Frame(object):
             Button click event.
         plot : defdap.plotting.MapPlot
             Plot to monitor.
+        points_name : str
+            Name of the set of homog points in the frame
         binning : int, optional
             Binning applied to image, if applicable.
+        points_layer : int, optional
+            Layer in the plot used for displaying the homog points.
+        new_point_layer : int, optional
+            Layer in the plot used for displaying the trial point.
+        point_set_transform : Callable, optional
+            Transform function to apply to selected point before saving.
+        point_plot_transform : Callable, optional
+            Transform function to stored homog points before plotting.
 
         """
         # get the selected point
-        sel_point = plot.img_layers[plot.points_layer_ids[1]].get_offsets()[0]
+        sel_point = plot.img_layers[plot.points_layer_ids[new_point_layer]].get_offsets()[0]
         if any(np.isnan(sel_point)) or sel_point[0] is None or sel_point[1] is None:
             return
 
         # remove selected point from plot
-        plot.add_points([None], [None], update_layer=1)
+        plot.add_points([None], [None], update_layer=new_point_layer)
 
         # then scale and add to homog points list
         sel_point = tuple((sel_point / binning).round().astype(int).tolist())
-        homog_points = self.homog_points.get(points_name, [])
-        homog_points.append(sel_point)
-        self.homog_points[points_name] = homog_points
+        if point_set_transform is not None:
+            sel_point = point_set_transform(sel_point)
+        self.add_homog_point(points_name, sel_point)
 
-        # update the plotted homog points
-        homog_points = np.array(homog_points) * binning
-        plot.add_points(homog_points[:, 0], homog_points[:, 1], update_layer=0)
+        self.update_plotted_homog_points(
+            plot, points_name, binning, points_layer, point_plot_transform
+        )
 
-    def update_homog_points(self, points_name, homog_idx, new_point=None, delta=None):
-        """
-        Update a homog point by either over writing it with a new point or
-        incrementing the current values.
+    def update_plotted_homog_points(
+        self, 
+        plot, 
+        points_name, 
+        binning, 
+        points_layer=0, 
+        point_plot_transform=None,
+    ):
+        """Update the homog plotting homog points
 
         Parameters
         ----------
-        homog_idx : int
-            ID (place in list) of point to update or -1 for all.
-        new_point : tuple, optional
-            (x, y) coordinates of new point.
-        delta : tuple, optional
-            Increments to current point (dx, dy).
+        plot : defdap.plotting.MapPlot
+            Plot to monitor.
+        points_name : str
+            Name of the set of homog points in the frame
+        binning : int, optional
+            Binning applied to image, if applicable.
+        points_layer : int, optional
+            Layer in the plot used for displaying the homog points.
+        point_plot_transform : Callable, optional
+            Transform function to stored homog points before plotting.
 
         """
-        homog_points = self.homog_points.get(points_name, [])
+        homog_points = np.array(self.homog_points.get(points_name)) * binning
+        if point_plot_transform is not None:
+            homog_points = point_plot_transform(homog_points)
+        plot.add_points(*homog_points.T, update_layer=points_layer)
 
-        if type(homog_idx) is not int:
-            raise Exception("homog_idx must be an integer.")
-        if homog_idx >= len(homog_points):
-            raise Exception("homog_idx is out of range.")
+    @staticmethod
+    def refine_homog_points(
+        consumer_map,
+        boundary_map,
+        consumer_points_name=None,
+        boundary_points_name=None,
+        map_name=None
+    ):
+        """
+        Interactive tool to refine frame transform. A map is plotted from the 
+        `consumer_map` and the boundaries from the `boundary_map`. Right-click 
+        on a point then save this to either map. Use the `Update map` button to
+        update the plotted boundaries with an updated transform. The maps must 
+        already be linked together with the minimum number of points to define 
+        the transform type (e.g 3 for affine)
 
-        # Update all points
-        if homog_idx < 0:
-            for i in range(len(homog_points)):
-                self.update_homog_points(points_name, i, delta=delta)
-            return
+        Parameters
+        ----------
+        consumer_map : defdap.base.Map
+            Map to plot data from
+        boundary_map : defdap.base.Map
+            Map to plot boundaries from
+        consumer_points_name : str, optional
+            Name of the set of homog points in the `consumer_map` frame
+        boundary_points_name : str, optional
+            Name of the set of homog points in the `boundary_map` frame
+        map_name : str, optional
+            Name of the map data to plot from the `consumer_map`
 
-        # Update a single point
-        # overwrite point
-        if new_point is not None:
-            if type(new_point) is not tuple and len(new_point) != 2:
-                raise Exception("newPoint must be a 2 component tuple")
-        # increment current point
-        elif delta is not None:
-            if type(delta) is not tuple and len(delta) != 2:
-                raise Exception("delta must be a 2 component tuple")
-            new_point = tuple(x+d for x, d in zip(homog_points[homog_idx], delta))
+        """
+        if map_name is None:
+            map_name = consumer_map.homog_map_name
+        if consumer_points_name is None:
+            consumer_points_name = consumer_map.map_name
+        if boundary_points_name is None:
+            boundary_points_name = boundary_map.map_name
+        consumer_frame = consumer_map.frame
+        boundary_frame = boundary_map.frame
 
-        homog_points[homog_idx] = new_point
-        self.homog_points[points_name] = homog_points
+        binning = 1
+        # binning = consumer_map.data.get_metadata(map_name, 'binning', 1)
+        plot = consumer_map.plot_map(map_name, make_interactive=True)
+        plot.add_grain_boundaries(kind="line")
+
+        # Consumer map homog points
+        homog_points = np.array(consumer_frame.homog_points.get(consumer_points_name, []))
+        if len(homog_points) == 0:
+            raise ValueError()
+        homog_points *= binning
+        plot.add_points(*homog_points.T, c='r', s=60, marker='+')
+
+        # Boundary map homog points
+        def point_plot_transform(homog_points):
+            return np.array(boundary_frame.warp_points(
+                consumer_frame, homog_points, round=False
+            ))
+        def point_set_transform(homog_point):
+            return consumer_frame.warp_points(
+                boundary_frame, [homog_point], round=False
+            )[0]
+        homog_points_b = boundary_frame.homog_points.get(boundary_points_name, [])
+        if len(homog_points_b) != len(homog_points):
+            raise ValueError()
+        plot.add_points(
+            *point_plot_transform(homog_points_b).T, 
+            c='y', s=60, marker='x'
+        )
+
+        # add empty points layer for current selected point
+        plot.add_points([None], [None], c='w', s=60, marker='x')
+
+        plot.add_event_handler(
+            'button_press_event', partial(Frame.homog_click, new_point_layer=2)
+        )
+        plot.add_event_handler(
+            'key_press_event', partial(Frame.homog_key, new_point_layer=2)
+        )
+        plot.fig.subplots_adjust(bottom=0.2)
+        plot.add_button(
+            "Save to map",
+            lambda e, p: consumer_frame.homog_click_save(
+                e, p, consumer_points_name, binning, 
+                points_layer=0, new_point_layer=2
+            ),
+            loc=(0.59, 0.05, 0.1, 0.075),
+            color="0.85", hovercolor="blue")
+        plot.add_button(
+            "Save to boundary",
+            lambda e, p: boundary_frame.homog_click_save(
+                e, p, boundary_points_name, 1, 
+                points_layer=1, new_point_layer=2,
+                point_set_transform=point_set_transform,
+                point_plot_transform=point_plot_transform,
+            ),
+            loc=(0.7, 0.05, 0.1, 0.075),
+            color="0.85", hovercolor="blue")
+        
+        def update_btn_action(event, plot):
+            plot.add_grain_boundaries(kind="line", update_layer=1)
+            consumer_frame.update_plotted_homog_points(
+                plot, consumer_points_name, binning, points_layer=0
+            )
+            boundary_frame.update_plotted_homog_points(
+                plot, boundary_points_name, 1, points_layer=1,
+                point_plot_transform=point_plot_transform
+            )
+        plot.add_button(
+            "Update", update_btn_action, 
+            loc=(0.81, 0.05, 0.1, 0.075),
+            color="0.85", hovercolor="blue")
+
+        return plot
