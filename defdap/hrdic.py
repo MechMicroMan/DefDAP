@@ -634,7 +634,8 @@ class Map(base.Map):
                 points_left = grains == 0
 
                 generator = base.grains_image_flood_fill(
-                    grains, points_left, flood_fill_dic
+                    grains, points_left, flood_fill_dic, 
+                    min_grain_size=min_grain_size
                 )
                 try:
                     while True:
