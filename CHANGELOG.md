@@ -1,5 +1,21 @@
 # Change Log
 
+## v1.3.0 (2026-08-24)
+
+### Feat
+
+- Add Oxford h5oina support (#156)
+- Support for processed dataset in h5oina
+- Add Oxford h5oina support
+
+### Fix
+
+- code typo
+
+### Refactor
+
+- tidy h5 file reader
+
 ## v1.2.2 (2026-08-18)
 
 ## v1.2.1 (2026-06-04)
