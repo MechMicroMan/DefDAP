@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-from numpy.lib.recfunctions import structured_to_unstructured
-import pandas as pd
 from abc import ABC, abstractmethod
 import pathlib
 import re
-
 from typing import TextIO, Dict, List, Callable, Any, Type, Optional
+
+import h5py
+import numpy as np
+from numpy.lib.recfunctions import structured_to_unstructured
+import pandas as pd
 
 from defdap.crystal import Phase
 from defdap.quat import Quat
@@ -56,11 +57,14 @@ class EBSDDataLoader(ABC):
         self.data_format = None
 
     @staticmethod
-    def get_loader(data_type: str, file_name: pathlib.Path) -> 'Type[EBSDDataLoader]':
+    def get_loader(
+        data_type: str, file_name: pathlib.Path
+    ) -> 'Type[EBSDDataLoader]':
         if data_type is None:
             data_type = {
                 '.crc': 'oxfordbinary',
                 '.cpr': 'oxfordbinary',
+                '.h5oina': 'oxfordh5',
                 '.ctf': 'oxfordtext',
                 '.ang': 'edaxang',
             }.get(file_name.suffix, 'oxfordbinary')
@@ -70,6 +74,7 @@ class EBSDDataLoader(ABC):
             loader = {
                 'oxfordbinary': OxfordBinaryLoader,
                 'oxfordtext': OxfordTextLoader,
+                'oxfordh5': Oxfordh5Loader,
                 'edaxang': EdaxAngLoader,
                 'pythondict': PythonDictLoader,
             }[data_type]
@@ -234,6 +239,134 @@ class OxfordTextLoader(EBSDDataLoader):
         self.check_data()
 
 
+class Oxfordh5Loader(EBSDDataLoader):
+    def load(self, file_name: pathlib.Path, dataset = None) -> None:
+        """Read an Oxford Instruments ``.h5oina`` orientation file.
+
+        Parameters
+        ----------
+        file_name : pathlib.Path
+            Path to file.
+        dataset : str (raw or processed), optional
+            Dataset to load. If None, defaults to raw data.
+
+        """
+        # Open data file and read in metadata
+        if not file_name.is_file():
+            raise FileNotFoundError(f"Cannot open file {file_name}")
+
+        file = h5py.File(file_name)
+
+        # This header contains all the information in the map that does not 
+        # change with processing
+        raw_header = file['1']['EBSD']['Header']
+        shape = (int(raw_header['Y Cells'][0]), int(raw_header['X Cells'][0]))
+        self.loaded_metadata['shape'] = shape
+        self.loaded_metadata['step_size'] = float(raw_header['X Step'][0])
+        self.loaded_metadata['acquisition_rotation'] = Quat.from_euler_angles(
+            *raw_header['Specimen Orientation Euler'][0]
+        )
+
+        # Check if `Data Processing` dataset exists in the h5
+        if 'Data' in file['1']['Data Processing'] and dataset is None:
+            print('\n\tMultiple datasets in h5 file, defaulting to raw data.')
+            print(
+                '\tProcessed data can be accessed by passing `processed` to '
+                'the `dataset` argument.'
+            )
+
+        # Handle `raw` or `processed` selection
+        if dataset is None or dataset == 'raw':
+            root = file['1']['EBSD']
+        if dataset == 'processed':
+            if 'Data Processing' not in file['1']:
+                raise ValueError('No processed data in h5 file.')
+            if 'Data' not in file['1']['Data Processing']:
+                raise ValueError('No processed data in h5 file.')
+            root = file['1']['Data Processing']
+
+        # Phase data from relevant dataset
+        for phase_data in root['Header']['Phases'].values():
+            phase = Phase(
+                    phase_data['Phase Name'][0].decode(),
+                    phase_data['Laue Group'][0],
+                    phase_data['Space Group'][0],
+                    np.concatenate([
+                        phase_data['Lattice Dimensions'][0],
+                        phase_data['Lattice Angles'][0]
+                    ]))
+            self.loaded_metadata['phases'].append(phase)
+
+        self.check_metadata()
+
+        # Some data is only available and relevant for the raw data, for 
+        # example band contrast
+        if dataset == 'raw':
+            raw_data = root['Data']
+            self.loaded_data.add(
+                'band_contrast', 
+                np.array(raw_data['Band Contrast']).reshape(shape),
+                unit='', type='map', order=0,
+                plot_params={
+                    'plot_colour_bar': True,
+                    'cmap': 'gray',
+                    'clabel': 'Band contrast',
+                }
+            )
+            self.loaded_data.add(
+                'band_slope', 
+                np.array(raw_data['Band Slope']).reshape(shape),
+                unit='', type='map', order=0,
+                plot_params={
+                    'plot_colour_bar': True,
+                    'cmap': 'gray',
+                    'clabel': 'Band slope',
+                }
+            )
+            self.loaded_data.add(
+                'mean_angular_deviation', 
+                np.array(raw_data['Mean Angular Deviation']).reshape(shape),
+                unit='', type='map', order=0,
+                plot_params={
+                    'plot_colour_bar': True,
+                    'clabel': 'Mean angular deviation',
+                }
+            )
+            self.loaded_data.add(
+                'pattern_quality', 
+                np.array(raw_data['Pattern Quality']).reshape(shape),
+                unit='', type='map', order=0,
+                plot_params={
+                    'plot_colour_bar': True,
+                    'clabel': 'Pattern quality',
+                }
+            )
+
+        # If pattern matching is performed, the cross correlation coefficient 
+        # is useful
+        if dataset == 'processed' and 'Pattern Matching' in root:
+            pattern_data = root['Pattern Matching']['Data']
+            self.loaded_data.add(
+                'pattern_quality', 
+                np.array(
+                    pattern_data['Cross Correlation Coefficient']
+                ).reshape(shape),
+                unit='', type='map', order=0,
+                plot_params={
+                    'plot_colour_bar': True,
+                    'clabel': 'Cross Correlation Coefficient',
+                }
+            )
+
+        # Get Euler angles from relevant dataset
+        self.loaded_data.phase = np.array(root['Data']['Phase']).reshape(shape)
+        self.loaded_data.euler_angle = (
+            root['Data']['Euler'][:].reshape(shape + (3,)).transpose((2, 0, 1))
+        )
+
+        self.check_data()
+
+
 class EdaxAngLoader(EBSDDataLoader):
     def load(self, file_name: pathlib.Path) -> None:
         """ Read an EDAX .ang file.
@@ -327,7 +460,9 @@ class EdaxAngLoader(EBSDDataLoader):
         )
         add_phase = 1 if data['phase'].min() == 0 else 0
         self.loaded_data.phase = data['phase'].reshape(shape) + add_phase
-        self.loaded_data['phase', 'plot_params']['vmax'] = len(self.loaded_metadata['phases'])
+        self.loaded_data['phase', 'plot_params']['vmax'] = len(
+            self.loaded_metadata['phases']
+        )
 
         # flatten the structured dtype
         euler_angle = structured_to_unstructured(
@@ -424,8 +559,10 @@ class OxfordBinaryLoader(EBSDDataLoader):
 
                 group_name = group_pat.match(line.strip()).group(1)
                 group_dict = dict()
-                read_until_string(cpr_file, '[', comment_char=comment_char,
-                                  line_process=lambda l: parse_line(l, group_dict))
+                read_until_string(
+                    cpr_file, '[', comment_char=comment_char,
+                    line_process=lambda l: parse_line(l, group_dict)
+                )
                 metadata[group_name] = group_dict
 
         # Create phase objects and move metadata to object metadata dict
@@ -549,7 +686,8 @@ class OxfordBinaryLoader(EBSDDataLoader):
             data[['ph1', 'phi', 'ph2']].reshape(shape)).transpose((2, 0, 1))
 
         if self.loaded_metadata['edx']['Count'] > 0:
-            EDXFields = [key for key in data.dtype.fields.keys() if key.startswith('EDX')]
+            EDXFields = [key for key in data.dtype.fields.keys() 
+                         if key.startswith('EDX')]
             for field in EDXFields:
                 self.loaded_data.add(
                     field,
@@ -590,7 +728,9 @@ class PythonDictLoader(EBSDDataLoader):
             unit='', type='map', order=0
         )
         self.loaded_data.phase = data_dict['phase']
-        self.loaded_data['phase', 'plot_params']['vmax'] = len(self.loaded_metadata['phases'])
+        self.loaded_data['phase', 'plot_params']['vmax'] = len(
+            self.loaded_metadata['phases']
+        )
         self.loaded_data.euler_angle = data_dict['euler_angle']
         self.check_data()
 
@@ -819,8 +959,12 @@ class OpenPivBinaryLoader(DICDataLoader):
         
         # if y descending, flip
         if np.all(np.diff(data['y'][:,0])) > 0:
-            self.loaded_data.coordinate = np.array([data['x'][::-1], data['y'][::-1]])
-            self.loaded_data.displacement = np.array([data['u'][::-1], data['v'][::-1]])
+            self.loaded_data.coordinate = np.array(
+                [data['x'][::-1], data['y'][::-1]]
+            )
+            self.loaded_data.displacement = np.array(
+                [data['u'][::-1], data['v'][::-1]]
+            )
         else:
             self.loaded_data.coordinate = np.array([data['x'], data['y']])
             self.loaded_data.displacement = np.array([data['u'], data['v']])
