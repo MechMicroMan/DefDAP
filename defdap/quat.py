@@ -21,7 +21,7 @@ from defdap import defaults
 from typing import Union, Tuple, List, Optional
 
 
-class Quat(object):
+class Quat:
     """Class used to define and perform operations on quaternions. These
     are interpreted in the passive sense.
 

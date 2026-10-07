@@ -135,6 +135,21 @@ class Map(ABC):
     def mask(self, map_data, **kwargs):
         return map_data
 
+    def set_homog_points(self, points, points_name=None):
+        if points_name is None:
+            points_name = self.map_name        
+        self.frame.set_homog_points(points_name, points)
+
+    def add_homog_point(self, point, points_name=None):
+        if points_name is None:
+            points_name = self.map_name        
+        self.frame.add_homog_point(points_name, point)
+
+    def update_homog_points(self, homog_idx, points_name=None, **kwargs):
+        if points_name is None:
+            points_name = self.map_name        
+        self.frame.update_homog_points(points_name, homog_idx, **kwargs)
+
     def set_homog_point(self, **kwargs):
         return self.frame.set_homog_point(self, **kwargs)
 
@@ -525,7 +540,7 @@ class Map(ABC):
             return map_data[comp]
         if isinstance(comp, str):
             comp = comp.lower()
-            if comp == 'norm':
+            if comp in ['norm', 'magnitude']:
                 if len(map_data.shape) == 3:
                     axis = 0
                 elif len(map_data.shape) == 4:

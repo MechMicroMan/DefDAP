@@ -37,7 +37,7 @@ from defdap.crystal_utils import project_to_orth, equivalent_indices, idc_to_str
 # TODO: add plot parameter to add to current figure
 
 
-class Plot(object):
+class Plot:
     """ Class used for creating and manipulating plots.
 
     """
@@ -210,9 +210,15 @@ class Plot(object):
             'xycoords': 'data',
             'xytext': start_end[2:4],  # Arrow end coordinates
             'textcoords': 'data',
-            'arrowprops': dict(arrowstyle="<-", connectionstyle="arc3",
-                               color='red', alpha=0.7, linewidth=2,
-                               shrinkA=0, shrinkB=0)
+            'arrowprops': {
+                "arrowstyle": "<-", 
+                "connectionstyle": "arc3",
+                "color": 'red', 
+                "alpha": 0.7, 
+                "linewidth": 2,
+                "shrinkA": 0, 
+                "shrinkB": 0
+            }
         }
 
         # If persisent, add the arrow onto the plot directly

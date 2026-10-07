@@ -337,7 +337,7 @@ class Datastore(object):
         if key in self:
             raise ValueError(f'Data with name `{key}` already exists.')
         if 'data' in kwargs:
-            raise ValueError(f'Metadata name `data` is not allowed.')
+            raise ValueError('Metadata name `data` is not allowed.')
 
         self._store[key] = {
             'data': data,

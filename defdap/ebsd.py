@@ -282,7 +282,7 @@ class Map(base.Map):
             elif phase.crystal_structure.name == 'hexagonal':
                 norm = np.array([np.pi, np.pi, np.pi / 3])
             else:
-                ValueError("Only hexagonal and cubic symGroup supported")
+                raise ValueError("Only hexagonal and cubic symGroup supported")
 
             # Apply normalisation for each phase
             phase_mask = self.data.phase == phase_id + 1
