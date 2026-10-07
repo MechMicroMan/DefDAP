@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from pathlib import Path
 
-import defdap.file_readers
+import defdap.io.file_readers
 from defdap.crystal import crystalStructures, Phase
 from defdap.utils import Datastore
 
@@ -16,7 +16,7 @@ class TestEBSDDataLoader:
     @staticmethod
     @pytest.fixture
     def data_loader_oxford_binary():
-        return defdap.file_readers.OxfordBinaryLoader()
+        return defdap.io.file_readers.OxfordBinaryLoader()
 
     @staticmethod
     @pytest.fixture
@@ -121,7 +121,7 @@ class TestDICDataLoader:
     @staticmethod
     @pytest.fixture
     def davis_loader():
-        return defdap.file_readers.DavisLoader()
+        return defdap.io.file_readers.DavisLoader()
 
     @staticmethod
     @pytest.fixture

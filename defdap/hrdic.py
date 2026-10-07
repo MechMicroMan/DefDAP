@@ -30,7 +30,7 @@ import peakutils
 
 from defdap._accelerated import flood_fill_dic
 from defdap.utils import Datastore
-from defdap.file_readers import DICDataLoader, DavisLoader
+from defdap.io.file_readers import DICDataLoader, DavisLoader
 from defdap import base
 from defdap import defaults, MapType
 from defdap.inspector import GrainInspector

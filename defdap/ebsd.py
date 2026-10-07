@@ -21,8 +21,8 @@ from scipy.stats import mode
 from warnings import warn
 
 from defdap.utils import Datastore
-from defdap.file_readers import EBSDDataLoader
-from defdap.file_writers import EBSDDataWriter
+from defdap.io.file_readers import EBSDDataLoader
+from defdap.io.file_writers import EBSDDataWriter
 from defdap.quat import Quat
 from defdap import base
 from defdap._accelerated import flood_fill
