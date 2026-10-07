@@ -25,6 +25,7 @@ from skimage import measure
 from scipy.stats import mode
 from scipy.ndimage import binary_dilation
 
+import shapely
 import peakutils
 
 from defdap._accelerated import flood_fill_dic
@@ -35,7 +36,7 @@ from defdap import defaults, MapType
 from defdap.inspector import GrainInspector
 from defdap.utils import report_progress
 from defdap.ebsd import Map as ebsd_Map
-from defdap.boundaries import DerivedBoundaries
+from defdap.boundaries import DerivedBoundaries, clip_boundary_lines
 
 
 class Map(base.Map):
@@ -114,7 +115,6 @@ class Map(base.Map):
 
         # self.ebsd_map = None                 # EBSD map linked to DIC map
         self.highlight_alpha = 0.6
-        self.bse_scale = None                # size of pixels in pattern images
         self.bse_scale = None                # size of pixels in pattern images
         self.crop_dists = np.array(((0, 0), (0, 0)), dtype=int)
 
@@ -588,7 +588,8 @@ class Map(base.Map):
                 self.ebsd_map.data.grains, order=0, preserve_range=True
             )
 
-            # Find all unique values (these are the EBSD grain IDs in the DIC area, sorted)
+            # Find all unique values (these are the EBSD grain IDs in the DIC 
+            # area, sorted)
             ebsd_grain_ids = np.unique(grains)
             neg_vals = ebsd_grain_ids[ebsd_grain_ids <= 0]
             ebsd_grain_ids = ebsd_grain_ids[ebsd_grain_ids > 0]
@@ -619,7 +620,8 @@ class Map(base.Map):
                     if dic_map is self:
                         continue
                     if dic_map.data.exists("grains"):
-                        print(f"Getting data from dic map in inc `{dic_map.increment}")
+                        print(f"Getting data from dic map in inc "
+                              f"`{dic_map.increment}")
                         grains = dic_map.data.grains
                         points = [g.data.point for g in dic_map]
                         ebsd_grains = [g.ebsd_grain for g in dic_map]
@@ -660,6 +662,67 @@ class Map(base.Map):
                         continue
                     mode_id, _ = mode(ebsd_grain_ids, keepdims=False)
                     ebsd_grains.append(self.ebsd_map[mode_id - 1])
+
+            grain_list = [Grain(p, i, self, self.ebsd_map, ebsd_grain, group_id) 
+                          for i, (p, ebsd_grain) in enumerate(zip(points, ebsd_grains))]
+
+        elif algorithm == 'polygon':
+            clipped_lines = clip_boundary_lines(
+                self.data.simple_boundaries.lines, 
+                np.array(self.shape[::-1])-0.5,
+                add_box_lines=True
+            )
+            polygons = shapely.polygonize(shapely.linestrings(clipped_lines))
+
+            grains = np.full(self.shape[::-1], -1)
+            grain_id = 0
+            for i, polygon in enumerate(polygons.geoms):
+                if polygon.area < min_grain_size:
+                    continue
+                grain_id += 1
+
+                mins = np.floor(polygon.bounds[:2]).astype(int)
+                maxes = np.ceil(polygon.bounds[2:]).astype(int)
+                mins = np.max([mins, [0, 0]], axis=0)
+                maxes = np.min([maxes, np.array(self.shape[::-1])-1], axis=0)
+
+                grains_sub = grains[mins[0]:maxes[0]+1, mins[1]:maxes[1]+1]
+                unassigned_mask = grains_sub == -1
+
+                # check outside shape of map
+                unassigned_points = np.nonzero(unassigned_mask)
+                unassigned_points = shapely.points(
+                    unassigned_points[0] + mins[0],
+                    unassigned_points[1] + mins[1]
+                )
+                grain_mask = shapely.contains(polygon, unassigned_points)
+                unassigned_mask[unassigned_mask] = grain_mask
+
+                grains_sub[unassigned_mask] = grain_id
+            grains = grains.T
+            n_grains = grain_id
+
+            # Now link grains to those in ebsd Map
+            ###TODO
+            # As above with floodfill, can be improved using boundary network
+            # Warp DIC grain map to EBSD frame
+            warped_dic_grains = self.frame.warp_image(
+                self.ebsd_map.frame, grains.astype(float),
+                output_shape=self.ebsd_map.shape, order=0
+            ).astype(int)
+            ebsd_grains = []
+            points = []
+            for i in range(n_grains):
+                # Find grain by masking the native ebsd grain image with
+                # selected grain from the warped dic grain image. The modal
+                # value is the EBSD grain label.
+                points.append(list(zip(*np.asarray(np.nonzero(grains == i+1))[::-1].tolist())))
+                ebsd_grain_ids = self.ebsd_map.data.grains[warped_dic_grains == i+1]
+                if len(ebsd_grain_ids) == 0:
+                    ebsd_grains.append(None)
+                    continue
+                mode_id, _ = mode(ebsd_grain_ids, keepdims=False)
+                ebsd_grains.append(self.ebsd_map[mode_id - 1])
 
             grain_list = [Grain(p, i, self, self.ebsd_map, ebsd_grain, group_id) 
                           for i, (p, ebsd_grain) in enumerate(zip(points, ebsd_grains))]

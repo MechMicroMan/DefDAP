@@ -27,7 +27,7 @@ point_type = tuple[int | float, int | float]
 line_type = tuple[point_type, point_type]
 
 
-class BoundarySegment(object):
+class BoundarySegment:
     def __init__(self, ebsdMap, grain1, grain2):
         self.ebsdMap = ebsdMap
 
@@ -105,7 +105,7 @@ class BoundarySegment(object):
     @property
     def boundary_lines(self):
         """Return line points along this boundary segment"""
-        _, _, lines = EbsdBoundaries.boundary_points_to_lines(
+        _, _, lines = boundary_points_to_lines(
             boundary_points_x=self.boundary_points_x,
             boundary_points_y=self.boundary_points_y
         )
@@ -182,36 +182,10 @@ class EbsdBoundaries(Boundaries):
 
     @property
     def lines(self):
-        return self.boundary_points_to_lines(
+        return boundary_points_to_lines(
             boundary_points_x=self.points_x,
             boundary_points_y=self.points_y
         )[2]
-
-    @staticmethod
-    def boundary_points_to_lines(
-        *, boundary_points_x=None, boundary_points_y=None
-    ):
-        if boundary_points_x is None and boundary_points_y is None:
-            raise ValueError("No boundaries provided.")
-
-        all_lines = []
-        for points, delta in (
-            (boundary_points_x, np.array([0.5, -0.5, 0.5, 0.5])), 
-            (boundary_points_y, np.array([-0.5, 0.5, 0.5, 0.5])),
-        ):
-            if points is None:
-                continue
-            points = np.array(list(points))
-            lines = np.concatenate(
-                (points + delta[:2], points + delta[2:]), axis=1
-            ).reshape(-1, 2, 2)
-            all_lines.append(lines)
-
-        if len(all_lines) == 2:
-            all_lines.append(np.concatenate(all_lines, axis=0))
-            return tuple(all_lines)
-        else:
-            return all_lines[0]
 
 
 class DerivedBoundaries(Boundaries):
@@ -253,33 +227,12 @@ class DerivedBoundaries(Boundaries):
         lines = boundaries.owner_map.frame.warp_lines(
             other_map.frame, boundaries.lines, round=False
         )
-
-        # remove lines outside of map
-        lines = np.array(lines)
-        point_in_box = (lines >= -0.5) & (lines <= np.array(other_map.shape[::-1])-0.5)
-        point_in_box = point_in_box[:, :, 0] & point_in_box[:, :, 1]
-        line_in_box = point_in_box[:, 0] | point_in_box[:, 1]
-        line_on_edge = np.logical_xor(
-            point_in_box[line_in_box, 0], point_in_box[line_in_box, 1]
+        # lines, clipped_edge_lines_original = clip_boundary_lines(
+        #     lines, np.array(other_map.shape[::-1])-0.5
+        # )
+        lines = clip_boundary_lines(
+            lines, np.array(other_map.shape[::-1])-0.5
         )
-        lines = lines[line_in_box]
-
-        # clip lines passing over box edges
-        bbox = box(-0.5, -0.5, other_map.shape[1]-0.5, other_map.shape[0]-0.5)
-        clipped_edge_lines = (
-            ls.intersection(bbox) for ls in linestrings(lines[line_on_edge])
-        )
-        clipped_edge_lines = np.array([
-            tuple(ls.coords) 
-            for ls in clipped_edge_lines 
-            if not ls.is_empty and len(ls.coords) > 1
-        ])
-
-        lines = np.concatenate(
-            (lines[np.logical_not(line_on_edge)], clipped_edge_lines), axis=0
-        )
-        # convert back to list of nested tuples
-        lines = [(tuple(line[0]), tuple(line[1])) for line in lines]
 
         ##TODO: rounding here used to be correct, does rounding not cause issues 
         # with any of the old grain finding?
@@ -308,7 +261,167 @@ class DerivedBoundaries(Boundaries):
         self._lines = value
 
 
-def order_boundary_lines(boundary_lines : list[line_type]) -> list[list[line_type]]:
+def clip_boundary_lines(
+    lines : list[line_type], 
+    max_bounds : point_type, 
+    min_bounds : point_type | None = None, 
+    add_box_lines : bool = False
+) -> list[line_type]:
+    """Takes a list of lines and returns only inside a box defined by 
+    `max_bounds` and `min_bounds`. Any lines crossing out of the box will be 
+    clipped to only keep the section inside the box. Segmented sections of the 
+    bounded box lines can also be optionally added.
+
+    Parameters
+    ----------
+    lines : _type_
+        _description_
+    max_bounds : tuple of float
+        (x, y)
+    min_bounds : tuple of float, optional
+        (x, y), by default 
+    add_box_lines : bool, optional
+        Add segmented section of the bounding box lines
+
+
+    """
+    max_bounds = np.array(max_bounds)
+    if min_bounds is None:
+        min_bounds = [-0.5, -0.5]
+    min_bounds = np.array(min_bounds)
+
+    lines = np.array(lines)
+    box_lines = [
+        ((min_bounds[0], min_bounds[1]), (min_bounds[0], max_bounds[1])),
+        ((max_bounds[0], min_bounds[1]), (max_bounds[0], max_bounds[1])),
+        ((min_bounds[0], min_bounds[1]), (max_bounds[0], min_bounds[1])),
+        ((min_bounds[0], max_bounds[1]), (max_bounds[0], max_bounds[1])),
+    ]
+
+    # remove lines outside of the area
+    # 1) crudely remove any lines where either point is outside the area dilated 
+    # by the maximum line length on each side
+    max_length = np.max(np.hypot(*(lines[:, 0] - lines[:, 1]).T)) + 1
+    point_in_box = ((lines >= min_bounds-max_length) 
+                    & (lines <= max_bounds+max_length))
+    point_in_box = point_in_box[:, :, 0] & point_in_box[:, :, 1]
+    line_in_box = point_in_box[:, 0] & point_in_box[:, 1]
+    lines = lines[line_in_box]
+
+    # 2) find lines with at least one point inside the area
+    point_in_box = (lines >= min_bounds) & (lines <= max_bounds)
+    point_in_box = point_in_box[:, :, 0] & point_in_box[:, :, 1]
+    line_in_box = point_in_box[:, 0] | point_in_box[:, 1]
+    line_on_edge = np.logical_xor(point_in_box[:, 0], point_in_box[:, 1])
+
+    # 3) find edge cases where a line crosses the area but neither end point is 
+    # inside by finding lines that intersect an edge of the box
+    check_lines = lines[np.logical_not(line_in_box)]
+    extra_edge_line_idxs = []
+    for i, box_line in enumerate(box_lines):
+        mat = np.column_stack((
+            np.broadcast_to(box_line[1][0] - box_line[0][0], len(check_lines)),
+            check_lines[:, 0, 0] - check_lines[:, 1, 0],
+            np.broadcast_to(box_line[1][1] - box_line[0][1], len(check_lines)),
+            check_lines[:, 0, 1] - check_lines[:, 1, 1],
+        )).reshape(-1, 2, 2)
+        vec = np.column_stack((
+            check_lines[:, 0, 0] - box_line[0][0],
+            check_lines[:, 0, 1] - box_line[0][1],
+        ))
+        soln = np.linalg.solve(mat, vec[..., None])[..., 0]
+        extra_edge_line_idxs.append(
+            np.nonzero(np.all((soln >= 0) & (soln <= 1), axis=1))[0]
+        )
+    extra_edge_line_idxs = np.unique(np.concat(extra_edge_line_idxs))
+    check_lines_idxs = np.arange(len(lines))[np.logical_not(line_in_box)]
+    extra_edge_line_idxs = check_lines_idxs[extra_edge_line_idxs]
+    line_in_box[extra_edge_line_idxs] = True
+    line_on_edge[extra_edge_line_idxs] = True
+    
+    lines = lines[line_in_box]
+    line_on_edge = line_on_edge[line_in_box]
+
+    # clip lines passing over box edges
+    bbox = box(*min_bounds, *max_bounds)
+    clipped_edge_lines = (
+        ls.intersection(bbox) for ls in linestrings(lines[line_on_edge])
+    )
+    # clipped_edge_lines = np.array([
+    #     [line, ls.coords]
+    #     for ls, line in zip(clipped_edge_lines, lines[line_on_edge]) 
+    #     if not ls.is_empty and len(ls.coords) > 1
+    # ])
+    # clipped_edge_lines_original = clipped_edge_lines[:, 0]
+    # clipped_edge_lines = clipped_edge_lines[:, 1]
+    clipped_edge_lines = np.array([
+        ls.coords
+        for ls in clipped_edge_lines
+        if not ls.is_empty and len(ls.coords) > 1
+    ])
+    if len(clipped_edge_lines) > 0:
+        lines = np.concatenate(
+            (clipped_edge_lines, lines[np.logical_not(line_on_edge)])
+        )
+    
+    if add_box_lines:
+        all_points = lines.reshape(-1, 2)
+        box_line_segments = []
+        for i, box_line in enumerate(box_lines):
+            const_comp = int(i > 1)
+            const_val = box_line[0][const_comp]
+            box_points = all_points[all_points[:, const_comp] == const_val]
+            box_points = np.sort(box_points, axis=0)
+            box_points = np.concatenate(
+                ([box_line[0]], box_points, [box_line[1]])
+            )
+            box_line_segments.append(
+                np.array(list(zip(box_points[:-1], box_points[1:])))
+            )
+        lines = np.concatenate(
+            [lines] + box_line_segments
+        )
+
+    # convert back to list of nested tuples. Slow for large arrays. Is this 
+    # needed, should we just pass around arrays?
+    lines = [(tuple(l[0]), tuple(l[1])) for l in lines.tolist()]
+    # return lines, clipped_edge_lines_original
+    return lines
+
+
+def boundary_points_to_lines(
+    *, boundary_points_x=None, boundary_points_y=None
+):
+    if boundary_points_x is None and boundary_points_y is None:
+        raise ValueError("No boundaries provided.")
+
+    all_lines = []
+    for points, delta in (
+        (boundary_points_x, np.array([0.5, -0.5, 0.5, 0.5])), 
+        (boundary_points_y, np.array([-0.5, 0.5, 0.5, 0.5])),
+    ):
+        if points is None:
+            continue
+        if len(points) == 0:
+            all_lines.append([])
+            continue
+        points = np.array(list(points))
+        lines = np.concatenate(
+            (points + delta[:2], points + delta[2:]), axis=1
+        ).reshape(-1, 2, 2)
+        lines = [(tuple(l[0]), tuple(l[1])) for l in lines.tolist()]
+        all_lines.append(lines)
+
+    if len(all_lines) == 2:
+        # all_lines.append(np.concatenate(all_lines, axis=0))
+        all_lines.append(all_lines[0] + all_lines[1])
+        return tuple(all_lines)
+    else:
+        return all_lines[0]
+
+def order_boundary_lines(
+    boundary_lines : list[line_type]
+) -> list[list[line_type]]:
     """Sort a list of lines into ordered connected sections"""
     
     def connect_edge(edge: line_type, direction: int):
@@ -389,6 +502,13 @@ def simplify_boundaries(grain_graph, point_type="centre", tol=10., method="vwp")
             line_simple = simplify_boundary_line(
                 line, point_type=point_type, tol=tol, method=method
             )
+            if (
+                len(line_simple) == 1 
+                and np.hypot(*(np.array(line_simple[0][0]) - line_simple[0][1])) < 1e-3
+            ):
+                print(f"edge {line_simple[0][0]} has 0 length")
+                continue
+
             for line_seg in line_simple:
                 # Some lines end up the same if a grain with < 3 neighbours 
                 # collapses to a single line
