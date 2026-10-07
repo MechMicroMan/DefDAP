@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 from skimage.measure import profile_line
 import skimage.draw as draw
 
+from defdap.boundaries import clip_boundary_lines
 point_type = tuple[int | float, int | float]
 
 
@@ -124,6 +125,46 @@ class Polygon(Area):
         mask = np.zeros(shape, dtype=bool)
         mask[mask_points[0], mask_points[1]] = True
         return mask
+
+
+class Rectangle(Polygon):
+    def __init__(self, frame, top_left: point_type, size: point_type):
+        self.top_left = top_left
+        self.size = size
+        super().__init__(frame, self.polygon_points)
+
+    @classmethod
+    def from_plot(cls, plot):
+        plot_roi = np.array([plot.ax.get_xlim(), plot.ax.get_ylim()[::-1]])
+        top_left = tuple(plot_roi[:, 0].round().astype(int).tolist())
+        size = plot_roi[:, 1] - plot_roi[:, 0]
+        size = tuple(size.round().astype(int).tolist())
+        return cls(plot.calling_map.frame, top_left, size)
+
+    @property
+    def polygon_points(self):
+        return [
+            self.top_left,
+            (self.top_left[0] + self.size[0] - 1, self.top_left[1]),
+            (self.top_left[0] + self.size[0] - 1, self.top_left[1] + self.size[1] - 1),
+            (self.top_left[0], self.top_left[1] + self.size[1] - 1),
+        ]
+
+    def get_data(self, map_obj, map_name):
+        data_vals = super().get_data(map_obj, map_name)
+        return data_vals.reshape(data_vals.shape[:-2] + self.size)
+
+    def clip_lines(self, lines, **kwargs):
+        roi_lines = clip_boundary_lines(
+            lines,
+            (
+                self.top_left[0] + self.size[0] - 1, 
+                self.top_left[1] + self.size[1] - 1
+            ),
+            min_bounds=self.top_left,
+            **kwargs,
+        )
+        return np.copy(roi_lines) - self.top_left
 
 
 class Circle(Area):
