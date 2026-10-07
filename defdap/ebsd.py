@@ -715,7 +715,7 @@ class Map(base.Map):
         self.data._derivatives.pop(-1)
 
     @report_progress("finding grain boundaries")
-    def find_boundaries(self, misori_tol=10):
+    def find_boundaries(self, misori_tol=10, pair_factor=1):
         """Find grain and phase boundaries
 
         Parameters
@@ -785,6 +785,23 @@ class Map(base.Map):
         misori_x = 2 * np.arccos(np.max(misori_x, axis=0))
         misori_y = 2 * np.arccos(np.max(misori_y, axis=0))
 
+        # boundaries where misorientation is spread over two points
+        if pair_factor < 1:
+            reduced_misori_tol = misori_tol * pair_factor
+            pair_misori_x = np.zeros_like(misori_x, dtype=bool)
+            pair_misori_x[:, :-1] = (
+                (misori_x[:, :-1] > reduced_misori_tol) & 
+                (misori_x[:, 1:] > reduced_misori_tol)
+            )
+            pair_misori_y = np.zeros_like(misori_y, dtype=bool)
+            pair_misori_y[:-1] = (
+                (misori_y[:-1] > reduced_misori_tol) & 
+                (misori_y[1:] > reduced_misori_tol)
+            )
+        else:
+            pair_misori_x = False
+            pair_misori_y = False
+
         # PHASE boundary POINTS
         phase_im = self.data.phase
         pb_im_x = np.not_equal(phase_im, np.roll(phase_im, -1, axis=1))
@@ -795,8 +812,8 @@ class Map(base.Map):
         phase_boundaries = EbsdBoundaries.from_image(self, pb_im_x, pb_im_y)
         grain_boundaries = EbsdBoundaries.from_image(
             self,
-            (misori_x > misori_tol) | pb_im_x,
-            (misori_y > misori_tol) | pb_im_y
+            (misori_x > misori_tol) | pb_im_x | pair_misori_x,
+            (misori_y > misori_tol) | pb_im_y | pair_misori_y
         )
 
         yield 1.
