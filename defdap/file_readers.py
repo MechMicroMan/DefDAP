@@ -984,7 +984,13 @@ class PyValeLoader(DICDataLoader):
         """
         if not file_name.is_file():
             raise FileNotFoundError(f"Cannot open file {file_name}")
-        
+
+        # Column can be called 'cost' or 'cost_zncc'
+        with open(str(file_name), 'r') as f:
+            header = f.readline()
+            if 'cost_zncc' in header: cost_key = 'cost_zncc'
+            elif 'cost' in header: cost_key = 'cost'
+
         int_type = 'int32'
         double_type = 'double'
         data_format = np.dtype([
@@ -994,7 +1000,7 @@ class PyValeLoader(DICDataLoader):
             ('v', double_type),
             ('displacement_mag', double_type),
             ('converged', 'uint8'),
-            ('cost', double_type),
+            (cost_key, double_type),
             ('ftol', double_type),
             ('xtol', double_type),
             ('num_iterations', int_type),
@@ -1045,7 +1051,7 @@ class PyValeLoader(DICDataLoader):
         self.loaded_data.coordinate = coord_dense
         self.loaded_data.displacement = disp_dense
         self.loaded_data.add(
-            'cost', data['cost'].reshape(shape),
+            'cost', data[cost_key].reshape(shape),
             unit='', type='map', order=0,
             plot_params={
                 'plot_colour_bar': True,
