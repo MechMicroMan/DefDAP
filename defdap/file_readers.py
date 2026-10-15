@@ -988,8 +988,8 @@ class PyValeLoader(DICDataLoader):
         int_type = 'int32'
         double_type = 'double'
         data_format = np.dtype([
-            ('x', int_type),
-            ('y', int_type),
+            ('x', double_type),
+            ('y', double_type),
             ('u', double_type),
             ('v', double_type),
             ('displacement_mag', double_type),
@@ -1026,12 +1026,12 @@ class PyValeLoader(DICDataLoader):
         yx_max = yx_array.max(axis=0)
         shape = yx_max - yx_min
         assert np.allclose(shape % binning, 0.)
+        shape = np.rint(shape).astype(int)
         shape = tuple((shape // binning + 1).tolist())
         self.loaded_metadata['shape'] = shape
 
         self.checkMetadata()
-
-        index_array = (yx_array - yx_min) // binning
+        index_array = np.rint((yx_array - yx_min) / binning).astype(int)
         disp_dense = np.zeros(shape + (2,))
         disp_dense[index_array[:, 0], index_array[:, 1]] = (
             structured_to_unstructured(data[['u', 'v']]))
