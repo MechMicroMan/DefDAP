@@ -534,12 +534,27 @@ class Map(base.Map):
             raise FileNotFoundError("First set path to pattern image.")
 
         img = imread(path)
-        exp_shape = tuple(v * binning for v in self.original_shape)
-        if img.shape != exp_shape:
+
+        bounds = {
+            'DaVis': (-1, 0),    # Davis rounds up to nearest subwindow
+            'PyVale': (0, 1),    # PyVale rounds down to nearest subwindow
+            'OpenPIV': (0, 1)    # OpenPIV rounds down to nearest subwindow
+        }
+        lower, upper = bounds[self.format]
+
+        img_shape = np.array(img.shape)
+        dic_shape = np.array(self.original_shape)
+
+        min_shape = np.array((dic_shape + lower) * binning, dtype=int)
+        max_shape = np.array((dic_shape + upper) * binning, dtype=int)
+
+        if not np.all((min_shape <= img_shape) & (img_shape <= max_shape)):
             raise ValueError(
                 f'Incorrect size of pattern image. For binning of {binning} '
-                f'expected size {exp_shape[::-1]} but got {img.shape[::-1]}'
+                f'expected size {min_shape[::-1]} to {max_shape[::-1]} '
+                f'but got {img_shape[::-1]}'
             )
+
         return img
 
     def plot_grain_av_max_shear(self, **kwargs):
