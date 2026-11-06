@@ -1,5 +1,15 @@
 # Change Log
 
+## v1.3.1 (2026-11-06)
+
+### Fix
+
+- Minor bug fixes (#158)
+- Revert change to file_reader
+- Relax pattern image size check in HRDIC Map
+- cost column in csv has different name
+- Handle non-integer x, y in pyvale
+
 ## v1.3.0 (2026-08-24)
 
 ### Feat
